@@ -1,0 +1,182 @@
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  /* Margin bottom by footer height */
+  margin-bottom: 130px;
+}
+
+body > .container {
+  padding: 60px 15px 0;
+}
+
+.alert-small {
+  width: 300px;
+}
+
+/*
+ * Mailbox folder
+ */
+#folder {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+#folder > table {
+  font-size: 80%;
+}
+
+/*
+ * Message viewer
+ */
+#message_view {
+  display: none;
+  font-size: 80%;
+}
+
+#composer {
+  display: none;
+  font-size: 80%;
+}
+
+.primary.modal-header {
+  background-color: #337ab7;
+  color: #fff;
+}
+
+.primay.modal-body {
+  padding: 0px 0;
+  margin-left: 5px;
+}
+
+.primary.modal-footer {
+  background-color: #333;
+}
+
+#composer_attachments {
+  margin-top: 10px;
+}
+
+#body {
+  border: none;
+  white-space: pre-wrap;
+  min-height: 50px;
+  margin: 3px;
+}
+
+#msg_body {
+  min-height: 150px;
+  white-space: pre-wrap;
+}
+
+.panel-title {
+  font-size: 115%;
+  font-weight: bolder;
+}
+
+@media screen and ( min-width: 1024px ) {
+  #body {
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto!important;
+    white-space: pre-wrap;
+  }
+  #msg_body {
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto!important;
+    white-space: pre-wrap;
+  }
+  #message_view {
+    font-size: 80%;
+  }
+  #folder {
+    max-height: 700px;
+    overflow-y: auto;
+    }
+}
+
+.panel-fluid {
+  margin: 0px 0;
+  padding: 0px 0;
+}
+
+.panel-heading p {
+    margin: 0px 0;
+}
+
+/*
+ * Log console
+ */
+.footer {
+  position: absolute;
+  bottom: 15px;
+  width: 100%;
+  height: 120px;
+}
+#console {
+  height: 120px;
+  overflow-y: auto;
+  background-color: #272822;
+  color: #ffffff;
+  line-height: 0.5em;
+  padding: 3px;
+}
+#console .terminal {
+  font-size: 0.6em;
+}
+
+@media screen and ( min-width: 1024px ) {
+  .footer {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    height: 130px;
+  }
+  #console {
+    height: 120px;
+    overflow-y: auto;
+    background-color: #272822;
+    color: #ffffff;
+    line-height: 1em;
+    padding: 3px;
+  }
+  #console .terminal {
+    font-size: 0.9em;
+  }
+}
+
+/* Attachment add */
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+
+.compose-options
+{
+	margin-top:10px;
+	margin-bottom:-10px;
+}
+
+input[type=checkbox], input[type=radio]
+{
+  vertical-align: -2px;
+  margin: 0;
+  padding: 0;
+}

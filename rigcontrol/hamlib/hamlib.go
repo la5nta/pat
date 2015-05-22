@@ -104,7 +104,7 @@ func (r *Rig) VFOA() VFO {
 	return VFO{C.RIG_VFO_A, r}
 }
 
-// Returns the Rig's A vfo.
+// Returns the Rig's B vfo.
 func (r *Rig) VFOB() VFO {
 	return VFO{C.RIG_VFO_B, r}
 }

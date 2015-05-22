@@ -1,0 +1,39 @@
+{
+  "mycall": "LA5NTA",
+  "auxiliary_addresses": ["LE1OF"],
+  "locator": "JP20qe",
+  "connect_defaults": ["ax25:LA1B-10", "telnet"],
+  "hamlib_rigs": {
+    "ft897": {
+      "rig_model": 123,
+      "tty_path": "/dev/ttyUSB0",
+      "baudrate": 4800
+    }
+  },
+  "ax25": {
+    "port": "tmd710",
+    "beacon": {
+      "every": 3600,
+      "message": "Winlink P2P",
+      "destination": "IDENT"
+    }
+  },
+  "serial-tnc": {
+    "path": "/dev/ttyUSB0",
+    "baudrate": 9600,
+    "type": "Kenwood"
+  },
+  "winmor": {
+    "addr": "la5nta.local.mesh:8500",
+    "inbound_bandwidth": 500,
+    "rig": "ft897",
+    "ptt_ctrl": false
+  },
+  "telnet": {
+    "listen_addr": ":8774",
+    "password": ""
+  },
+  "schedule": {
+    "*/10 * * * *": "connect telnet"
+  }
+}

@@ -1,0 +1,101 @@
+diff --git a/lzhuf.c b/lzhuf.c
+index b265fc0..b6406b7 100644
+--- a/lzhuf.c
++++ b/lzhuf.c
+@@ -21 +20,0 @@
+-#include "global.h"
+@@ -23,0 +23,2 @@
++
++#ifdef YAPP
+@@ -29,0 +31 @@
++#endif
+@@ -35 +37 @@
+-#include "mailbox.h"
++//#include "mailbox.h"
+@@ -53,0 +56,35 @@ static char EarlyDisconnect[] = "lzhuf: unexpected disconnect";
++// added by martin
++void no_log(int i, char const* args, ...){};
++int pwait(void* event){};
++
++struct lzhufstruct* AllocStruct() {
++	struct lzhufstruct *lzhuf = (struct lzhufstruct *)calloc(sizeof(struct lzhufstruct),1);
++  lzhuf->data = (struct lzhufdata *)malloc(sizeof(struct lzhufdata));
++  lzhuf->dad       = lzhuf->data->dad;
++  lzhuf->rson      = lzhuf->data->rson;
++  lzhuf->lson      = lzhuf->data->lson;
++  lzhuf->text_buf  = lzhuf->data->text_buf;
++  lzhuf->freq      = lzhuf->data->freq;
++  lzhuf->prnt      = lzhuf->data->prnt;
++  lzhuf->son       = lzhuf->data->son;
++  return lzhuf;
++}
++
++void FreeStruct(struct lzhufstruct* lzhuf) {
++   if(lzhuf->data_type == 1) {
++      // Free lower memory blocks.
++      free(lzhuf->dad);
++      free(lzhuf->lson);
++      free(lzhuf->rson);
++      free(lzhuf->text_buf);
++      free(lzhuf->freq);
++      free(lzhuf->prnt);
++      free(lzhuf->son);
++   } else
++      free(lzhuf->data);
++   free(lzhuf);
++}
++
++//
++
++#ifdef YAPP
+@@ -123,0 +161 @@ void FreeDataBuffers(struct fwd *f) {
++#endif // YAPP
+@@ -785 +822,0 @@ int Encode (int usock, char *iFile, char *oFile, struct lzhufstruct *lzhuf, int
+-
+@@ -910,2 +947,3 @@ int Decode(int usock, char* iFile, char* oFile, struct lzhufstruct *lzhuf, int b
+-	if (b2f)
+-		filesize -= 2;	/* skip the B2F CRC bytes - implement later */
++	// Martin: Removed, the CRC bytes has already been skipped
++	//if (b2f)
++	//	filesize -= 2;	/* skip the B2F CRC bytes - implement later */
+@@ -1008,0 +1047 @@ static void hfddfixsend (int usock, char *buffer, int len)
++#ifdef YAPP
+@@ -1186 +1224,0 @@ int send_yapp(int usock, struct fwd *f, char *subj, int b2f)
+-
+@@ -1403,0 +1442 @@ recvbuf(int s, char *buf, int len, int32 timeoutms) {
++#endif // yapp
+diff --git a/lzhuf.h b/lzhuf.h
+index 82ec265..e9fb56c 100644
+--- a/lzhuf.h
++++ b/lzhuf.h
+@@ -3,0 +4,22 @@
++
++// Added by MARTIN
++#ifndef log
++#define log no_log
++#endif
++void no_log(int s,const char *fmt, ...);
++
++#include <stdio.h>
++
++int pwait(void *event); // Some sort of signal to let other threads run?
++
++#include <stdint.h>
++typedef int32_t int32;
++typedef int16_t int16;
++
++#define errno 0
++#define NULLFILE 0
++
++struct lzhufstruct* AllocStruct();
++void FreeStruct(struct lzhufstruct*);
++// END
++
+@@ -5 +27 @@
+-#include "mailbox.h"
++//#include "mailbox.h"
+@@ -65,0 +88,2 @@ int Decode(int, char *, char *, struct lzhufstruct *, int);
++
++#ifdef YAPP
+@@ -71,0 +96 @@ void FreeDataBuffers(struct fwd *);
++#endif

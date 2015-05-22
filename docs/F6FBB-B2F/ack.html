@@ -1,0 +1,45 @@
+<html>
+
+<head>
+<title>F6FBB Pages : FBB</title>
+<link title="fbbmain" rel="stylesheet" href="fbbmain.css" type="text/css">
+</head>
+
+<body text="#000000" bgcolor="#C0C0C0" link="#0000EE" vlink="#551A8B" alink="#FF0000"
+background="back_fbb.jpg">
+
+<h1 align="center">ACK messages</h1>
+
+<p>An ACK messages gives the confirmation that a PRIVATE arrived in tis destination back
+to the sender.</p>
+
+<h3>How does an ACK message work ?</h3>
+
+<ul class="txt">
+  <li>An ACK message is requested with the string <br>
+    /ACK <br>
+    written by the sender inside his message in 1st column.</li>
+  <li>When the message arrives in its destination, an ACK message is generated and sent back
+    to the requester, including the date and eventually other informations.</li>
+</ul>
+
+<h3>Protocol</h3>
+
+<ul class="txt">
+  <li>The SID of the BBS including this feature will have the letter &quot;A&quot;</li>
+  <li>An ACK message is a short message including only text</li>
+  <li>An ACK message is generated only on private mail, not on bulletins</li>
+  <li>The message has a type &quot;A&quot; (private are &quot;P&quot;, bulletins are
+    &quot;B&quot;)</li>
+  <li>Only the first header forwarding line is generated, other BBS will not add their header
+    forwarding line</li>
+  <li>If the BBS which is forwarded does not include this feature, the message is changed to
+    type &quot;P&quot; (Private).</li>
+  <li>Type &quot;A&quot; message are not seen by users.</li>
+  <li>When arriving back to its destination, the type of the ACK message is changed to type
+    &quot;P&quot; (private) to be read by the requester.</li>
+</ul>
+
+<p>&nbsp;</p>
+</body>
+</html>

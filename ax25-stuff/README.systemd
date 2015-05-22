@@ -1,0 +1,5 @@
+For AX.25 as a systemd service:
+ * Edit and copy ax25.service into /etc/systemd/ax25.service.
+ * sudo systemctl enable ax25
+ * sudo systemctl start ax25
+ * systemctl status ax25 (optional)

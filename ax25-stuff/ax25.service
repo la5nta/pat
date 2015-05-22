@@ -1,0 +1,10 @@
+[Unit]
+Description=AX.25 KISS interface
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/axup.sh /dev/ttyS0 tmd710 9600
+
+[Install]
+WantedBy=default.target

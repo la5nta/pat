@@ -1,0 +1,10 @@
+[Unit]
+Description=AX.25 mheard daemon
+After=ax25.service
+
+[Service]
+Type=forking
+ExecStart=/bin/sh -c "/usr/sbin/mheardd -l &"
+
+[Install]
+WantedBy=default.target

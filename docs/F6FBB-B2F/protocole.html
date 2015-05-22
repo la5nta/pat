@@ -1,0 +1,533 @@
+<html>
+
+<head>
+<title>F6FBB Pages : FBB</title>
+<link title="fbbmain" rel="stylesheet" href="fbbmain.css" type="text/css">
+</head>
+
+<body text="#000000" bgcolor="#C0C0C0" link="#0000EE" vlink="#551A8B" alink="#FF0000" background="back_fbb.jpg">
+
+<h1 align="center">FBB forwarding protocol</h1>
+
+<p>Fbb forwarding protocols can operate either in ASCII or binary compressed modes.</p>
+
+<p>This page describes the three versions of this protocol.&nbsp;Each version is backwards
+compatible with the previous one. These versions are : 
+
+<ul>
+  <li><img src="blue.gif" hspace="8" WIDTH="14" HEIGHT="14"><a href="protocole.html#Basic">Ascii basic protocol</a></li>
+  <li><img src="blue.gif" hspace="8" WIDTH="14" HEIGHT="14"><a href="protocole.html#version0">Binary compressed
+    protocol version 0</a></li>
+  <li><img src="blue.gif" hspace="8" WIDTH="14" HEIGHT="14"><a href="protocole.html#version1">Binary compressed
+    protocol version 1</a></li>
+</ul>
+
+<p>Source code is available.&nbsp;Click <a href="ftp://ftp.f6fbb.org/pub/f6fbb/utils/lzhuf_1.zip">here</a>.</p>
+
+<hr width="100%">
+
+<p><a name="Basic"></a></p>
+
+<h3><img src="blue.gif" border="0" align="absmiddle" hspace="5" WIDTH="14" HEIGHT="14">Ascii Basic Protocol </h3>
+
+<ul class="txt">
+  <li>The Ascii protocol in FBB software implements two forward protocols. The first one is
+    the standard MBL/RLI protocol. The second one was developed for greater efficiency,
+    particularly on long links where the command propagation delays occupy a significant
+    portion of time. The exchange of commands and data is reduced to a minimum by sending
+    several requests at a time. In normal VHF use up to five requests or messages are sent in
+    one block. The data transfer direction is reversed after every block of data, This
+    minimises the delaying effect of long links through Nodes and digipeaters, and also saves
+    some time over short links (eg HF...). <br>
+  </li>
+  <li>FBB protocol is very simple in operation. It is based on MID/BID message identification.
+    The protocol availability is indicated by the F letter in the SID (system type identifier
+    contained in square brackets). All protocol command lines start in first column with the
+    'F' character. All protocol command lines are terminated by a return (CR) character. <br>
+  </li>
+  <li>This is the specification of the basic Ascii protocol. When I connect to another BBS
+    that is FBB protocol capable, I will receive the SID followed by some text and the prompt
+    (&quot;&gt;&quot;). The SID must contain the F flag, I send immediately my SID and the
+    first proposal. <br clear="both">
+  </li>
+  <li>Proposals looks like : </li>
+</ul>
+
+<ul class="txt">
+  <dl>
+    <dd><pre>FB P F6FBB FC1GHV FC1MVP 24657_F6FBB 1345
+F&gt; </pre>
+    </dd>
+    <blockquote>
+      <blockquote>
+        <p>FB : Identifies the type of the command (proposal)<br>
+        P : Type of message (P = Private, B = Bulletin).<br>
+        F6FBB : Sender (from field).<br>
+        FC1GHV : BBS of recipient (@field).<br>
+        FC1MVP : Recipient (to field).<br>
+        24657_F6FBB : BID ou MID.<br>
+        1345 : Size of message in bytes.<br>
+        F&gt; : End of proposal. <br clear="both">
+        </p>
+      </blockquote>
+    </blockquote>
+  </dl>
+  <li>ALL the fields are necessary. This kind of command must hold seven fields. If a field is
+    missing upon receipt, an error message will be sent immediately followed by a
+    disconnection. <br>
+  </li>
+  <li>Messages are sent in blocks. There can be up to five FB command proposals per block. The
+    number of command proposals are determined by the maximum size of a block of messages. In
+    FBB software there is a parameter in INIT.SRV file which defines the maximum size of the
+    message block. It is set by default to 10KB for VHF use. It can be adjusted according to
+    the quality of the link. <br clear="both">
+  </li>
+  <li>Example of proposal : <br>
+  </li>
+  <dl class="txt">
+    <dd><pre>FB P F6FBB FC1GHV.FFPC.FRA.EU FC1MVP 24657_F6FBB 1345
+FB P FC1CDC F6ABJ F6AXV 24643_F6FBB 5346
+FB B F6FBB FRA FBB 22_456_F6FBB 8548
+F&gt;</pre>
+    </dd>
+  </dl>
+  <li>This proposal is limited to three FB lines, as the total size of the messages overran
+    the 10KB limit defined for this link. <br>
+  </li>
+  <li><pre>When receiving the proposal, the other BBS will reject, accept or defer each message. This done with an FS line :</pre>
+    <blockquote>
+      <pre>FS -+= </pre>
+    </blockquote>
+  </li>
+</ul>
+
+<ul class="txt">
+  <li>This means : <br>
+  </li>
+  <ul>
+    <li>I don't want the first message (-). I need the second message (+). Defer the third
+      message, as I'm already receiving it (=). <br>
+    </li>
+    <li>You would defer a message if you are already receiving it on a other channel, or if you
+      think that the message is too big, or for some other reason. The message should be
+      proposed again at the next connection. <br clear="both">
+    </li>
+  </ul>
+  <li>FS line MUST have as many +,-,= signs as lines in the proposal. <br>
+  </li>
+  <li>After receiving the FS lines, the block of messages will be sent. Each message is has :<br>
+  </li>
+  <ul>
+    <li>the title on the first line, </li>
+    <li>the text, </li>
+    <li>the Ctrl Z in the last line. </li>
+  </ul>
+  <li>Then the next message<br>
+  </li>
+  <ul>
+    <li>the title on the first line, </li>
+    <li>the text, </li>
+    <li>the Ctrl Z in the last line. </li>
+  </ul>
+  <li>And so on until the number of messages in the block has been sent. <br clear="both">
+  </li>
+  <li>When the other BBS has received all the messages in a block, it implicitly acknowledges
+    by sending its proposal for messages that it wants to send back to you, and thus the
+    direction of transfer is reversed. <br>
+  </li>
+  <li>If there are no message to send, it only sends a line : </li>
+</ul>
+
+<ul class="txt">
+  <blockquote>
+    <pre>FF </pre>
+  </blockquote>
+</ul>
+
+<blockquote>
+  <p>This line must not to be followed by a F&gt;. <br>
+  If the other side has no message (after receiving an FF), it sends a line :<ul class="txt">
+    <pre>FQ </pre>
+  </ul>
+</blockquote>
+
+<blockquote>
+  <p class="txt">and disconnects. </p>
+</blockquote>
+
+<ul>
+  <li><hr width="98%" size="3">
+  </li>
+  <li><blockquote>
+    </blockquote>
+  </li>
+</ul>
+
+<blockquote>
+  <blockquote>
+    <p><font color="#00FFFF">Connects xxxxx<br>
+    Connected to xxxxx</font><ul>
+      <ul>
+      </ul>
+    </ul>
+    <pre><font color="#00FF00"><i>[FBB-5.11-FHM$]
+Welcome, Jean-Paul. 
+&gt; </i></font></pre>
+    <pre><font color="#FF0000">[FBB-5.11-FHM$] <b>(F6FBB has the F flag in the SID)</b> 
+FB P F6FBB FC1GHV.FFPC.FRA.EU FC1MVP 24657_F6FBB 1345 
+FB P FC1CDC F6ABJ F6AXV 24643_F6FBB 5346 
+FB B F6FBB FRA FBB 22_456_F6FBB 8548 
+F&gt; </font></pre>
+    <pre><font color="#00FF00"><i>FS +-+ <b>(accept the 1st and the 3rd)</b></i></font>
+<font color="#FF0000">Title 1st message
+Text 1st message ...... 
+^Z 
+Title 3rd message 
+Text 3rd message ...... 
+^Z </font></pre>
+    <pre><font color="#00FF00"><i>FB P FC1GHV F6FBB F6FBB 2734_FC1GHV 234 
+FB B FC1GHV F6FBB FC1CDC 2745_FC1GHV 3524 
+F&gt; </i></font></pre>
+    <pre><font color="#FF0000">FS -- <b>(Don't need them, and I send immediately the proposal)</b>
+FB P FC1CDC F6ABJ F6AXV 24754_F6FBB 345 
+F&gt; </font></pre>
+    <pre><font color="#00FF00"><i>FS + <b>(Accepts the message)</b></i></font>
+<font color="#FF0000">Title message 
+Text message ...... 
+^Z </font></pre>
+    <pre><font color="#00FF00"><i>FF <b>(no more message)</b></i>
+FB B F6FBB TEST FRA 24654_F6FBB 145 
+F&gt;</font> </pre>
+    <pre><font color="#FF0000"><i>FS + <b>(Accepts the message)</b> </i></font>
+<font color="#00FF00">Title message 
+Text message ...... 
+^Z </font></pre>
+    <pre><font color="#FF0000"><i>FF <b>(still no message)</b> </i></font></pre>
+    <pre><font color="#00FF00">FQ <b>(No more message)</b></font></pre>
+    <p><font color="#00FFFF">Disconnection<br>
+    Disconnection of the link.</font></p>
+    <p>&nbsp;</p>
+  </blockquote>
+</blockquote>
+
+<ul class="txt">
+  <li>In this example, FBB protocol is used as the two BBSs had the F flag in their SIDs. If
+    F6FBB had sent the SID [FBB-5.10-MH$] when answering FC1GHV, the protocol would have been
+    standard MBL/RLI. </li>
+</ul>
+
+<ul class="txt">
+  <li><hr width="98%" size="4">
+  </li>
+</ul>
+
+<h3><a name="version0"></a><img src="blue.gif" border="0" align="absmiddle" hspace="5" WIDTH="14" HEIGHT="14">Binary
+Compressed Forward Version 0 </h3>
+
+<ul class="txt">
+  <li>The compressed version of the protocol is an extension to the basic Ascii protocol.
+    Compressed forward is indicated a letter B in the SID [FBB-5.15-BFHM$]. As it is an
+    extension of the basic protocol, the SID must also have a letter F. A SID with just a
+    letter B (and no F) will be treated as having neither letter. <br>
+  </li>
+  <li>In the message proposal section there are now two possible commands: FA means that the
+    transfer will be an ascii compressed message and FB means that the message will be a
+    binary compressed file (this last possibility is not yet implemented). <br clear="both">
+  </li>
+  <li>The submission of an ascii message will be in the form : <br>
+  </li>
+  <blockquote>
+    <pre>FA P FC1CDC F6ABJ F6AXV 24754_F6FBB 345</pre>
+  </blockquote>
+</ul>
+
+<ul class="txt">
+  <li>The submission of a binary file will be in the form :<br>
+  </li>
+  <blockquote>
+    <pre>FB P FC1CDC F6ABJ F6AXV 24754_F6FBB 345 </pre>
+  </blockquote>
+</ul>
+
+<ul class="txt">
+  <li>The actual message content is transfered in a different format from the Ascii protocol.
+    The transfer is done in binary mode. The format used is derived from the YAPP protocol
+    which is very reliable. Each message is made up of a header, blocks of data, an end of
+    message marker and a checksum. This is directly equivalent to the transfer of one message
+    in the Ascii protocol. Unlike YAPP transfers, there is no individual packet
+    acknowledgement during the transmission of messages, the protocol is thus simpler and more
+    efficient. <br>
+  </li>
+  <li><p class="txt"><b>Format of header for an ascii compressed message (type FA) : </b></p>
+  </li>
+  <blockquote>
+    <pre>&lt;SOH&gt; 1 byte = 01 hex
+Length of the header 1 byte = Length of the title and offset, including the two separating &lt;NUL&gt; characters
+Title of the message 1 to 80 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex 
+Offset 1 to 6 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex</pre>
+  </blockquote>
+</ul>
+
+<blockquote>
+  <p><b>Format of header for a binary compressed file (type FB) : </b></p>
+</blockquote>
+
+<ul class="txt">
+  <blockquote>
+    <pre>&lt;SOH&gt; 1 byte = 01 hex 
+Length of the header 1 byte = Length of the filename and offset, including the two &lt;NUL&gt; characters. 
+Name of the file 1 to 80 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex 
+Offset 1 to 6 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex </pre>
+  </blockquote>
+</ul>
+
+<ul class="txt">
+  <li>French regulations require that the title of the message or the file name are
+    transmitted in readable ascii and are not compressed. <p>The offset is also transmitted in
+    ascii and specifies the offset at which the data should be inserted in the file (in case
+    of a fragmented file). In the version 5.12, this parameter is not utilized and is always
+    equal to zero. </p>
+    <p>A data block contains from one to 256 bytes. It begins by two bytes which specify the
+    format. <br>
+    </p>
+  </li>
+  <li><b>Data block format : <br>
+    </b><ul class="txt">
+      <li><pre>&lt;STX&gt; 1 byte = 02 hex 
+Size of data 1 byte = 00 to ff hex. if length is 256 bytes, the value is 00. 
+Data bytes 1 to 256 bytes 
+The last data block is followed by the end of file specifier and the checksum. 
+End of file specifier format : 
+&lt;EOT&gt; 1 byte = 04 hex 
+Checksum 1 byte = 00 to ff hex 
+The checksum is equal to the sum of all the data bytes of the transmitted file, modulo 256 (8 bits) and then two's complemented. 
+The checking of the checksum is very simple : The sum of the data bytes from the file and the checksum received modulo 256 shall be equal to zero. 
+In case of a checksum error, the message or the file is ignored and the system issues a disconnect request after having sent the comment : </pre>
+      </li>
+      <li><pre>*** Erreur checksum 
+</pre>
+      </li>
+      <li><pre>Ascii values of the characters (1 byte) used in the protocol : </pre>
+        <pre>&lt;NUL&gt; = 00 hex 
+&lt;SOH&gt; = 01 hex 
+&lt;STX&gt; = 02 hex 
+&lt;EOT&gt; = 04 hex 
+</pre>
+      </li>
+    </ul>
+  </li>
+  <li>Most of ideas for this binary transmission comes from YAPP protocol. Thanks to WA7MBL. </li>
+</ul>
+
+<ul>
+  <li><hr width="100%">
+  </li>
+</ul>
+
+<h3><a name="version1"></a><img src="blue.gif" border="0" align="absmiddle" hspace="5" WIDTH="14" HEIGHT="14">Binary
+Compressed Forward Version 1 </h3>
+
+<p>&nbsp; 
+
+<ul class="txt">
+  <li>This protocol, used for the transfer of compressed ascii messages or binary files, is an
+    extension to the existing version 0 protocol. This version is indicated by the presence of
+    the letters B1 in the SID :</li>
+</ul>
+
+<blockquote>
+  <blockquote>
+    <pre class="txt">[FBB-5.15-B1FHLM$].
+</pre>
+  </blockquote>
+</blockquote>
+
+<ul class="txt">
+  <li>As in version 0, there must also be a letter F in the SID for this version to be used.<p>The
+    differences with regard to the version 0 are: <ul>
+      <ul>
+        <li>A variable number of extra fields in each submit line including at least the seven
+          fields of the previous version.</li>
+        <li>A new set of answers in an FS line :<br>
+        </li>
+        <ul>
+          <li>+ or Y : Yes, message accepted</li>
+          <li>- or N : No, message already received</li>
+          <li>= or L : Later, already receiving this message</li>
+          <li>H : Message is accepted but will be held</li>
+          <li>R : Message is rejected</li>
+          <li>E : There is an error in the line</li>
+          <li>!offset or Aoffset : Yes, message accepted from (Offset)</li>
+        </ul>
+        <li>Most of these answer do not need explanation or were already used in previous version. +
+          and Y, - and N, = and L, ! and A are equivalent but are still available for compatibility. </li>
+        <li>Aoffset asks the remote BBS to start transfer from Offset. </li>
+      </ul>
+    </ul>
+    <p>For instance, YLA3350RH (or +L!3350RH) means that : <ul>
+      <ul>
+        <li>1st message is accepted </li>
+        <li>2nd message is delayed </li>
+        <li>3rd message will be sent from offset 3350 (in compressed file) </li>
+        <li>4th message is refused </li>
+        <li>5th message is accepted but will be held <br>
+        </li>
+      </ul>
+    </ul>
+    <p>The submission of an ascii message will be in the form : </p>
+  </li>
+  <blockquote>
+    <pre>FA P FC1CDC F6ABJ F6AXV 24754_F6FBB 345</pre>
+  </blockquote>
+</ul>
+
+<blockquote>
+  <p>The submission of a binary file will be in the form : </p>
+  <blockquote>
+    <p>FB P FC1CDC F6ABJ F6AXV 24754_F6FBB 345</p>
+  </blockquote>
+</blockquote>
+
+<ul class="txt">
+  <li>The actual message content is transfered in a different format from the Ascii protocol.
+    The transfer is done in binary mode. The format used is derived from the YAPP protocol
+    which is very reliable. Each message is made up of a header, blocks of data, an end of
+    message marker and a checksum. This is directly equivalent to the transfer of one message
+    in the Ascii protocol. Unlike YAPP transfers, there is no individual packet
+    acknowledgement during the transmission of messages, the protocol is thus simpler and more
+    efficient. <br>
+    <ul>
+      <li><b>Format of header for an ascii compressed message (type FA) : <br>
+        </b></li>
+    </ul>
+  </li>
+  <blockquote>
+    <pre>&lt;SOH&gt; 1 byte = 01 hex 
+Length of the header 1 byte = Length of the title and offset, including the two separating &lt;NUL&gt; characters
+Title of the message 1 to 80 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex 
+Offset 1 to 6 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex</pre>
+  </blockquote>
+</ul>
+
+<blockquote>
+  <blockquote>
+    <p><b>Format of header for a binary compressed file (type FB) : </b></p>
+  </blockquote>
+</blockquote>
+
+<blockquote>
+  <blockquote>
+    <pre><font color="#FFFFFF">&lt;SOH&gt; 1 byte = 01 hex 
+Length of the header 1 byte = Length of the filename and offset, including the two &lt;NUL&gt; characters. 
+Name of the file 1 to 80 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex 
+Offset 1 to 6 ascii bytes 
+&lt;NUL&gt; 1 byte = 00 hex </font></pre>
+  </blockquote>
+</blockquote>
+
+<blockquote>
+  <p>French regulations require that the title of the message or the file name are
+  transmitted in readable ascii and are not compressed. </p>
+</blockquote>
+
+<blockquote>
+  <p>The offset is also transmitted in ascii and specifies the offset at which the data
+  should be inserted in the file (in case of a fragmented file). In the version 5.12, this
+  parameter is not utilized and is always equal to zero. </p>
+</blockquote>
+
+<blockquote>
+  <p>A data block contains from one to 256 bytes. It begins by two bytes which specify the
+  format. <br>
+  </p>
+</blockquote>
+
+<blockquote>
+  <blockquote>
+    <p><b>Data block format : </b></p>
+  </blockquote>
+</blockquote>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <pre><font color="#FFFFFF">&lt;STX&gt; 1 byte = 02 hex </font></pre>
+    </blockquote>
+  </blockquote>
+</blockquote>
+
+<blockquote>
+  <p>Size of data 1 byte = 00 to ff hex. if length is 256 bytes, the value is 00. </p>
+</blockquote>
+
+<blockquote>
+  <p>Data bytes 1 to 256 bytes </p>
+</blockquote>
+
+<blockquote>
+  <ul class="txt">
+    <li>The first transmitted block of data must contain a header containing :<br>
+    </li>
+    <ul>
+      <li>the CRC16 of the full binary file (2 bytes)</li>
+      <li>the size of the full uncompressed file (4 bytes)</li>
+    </ul>
+    <li>This data is in little-endian Intel format (less significant first). <br>
+    </li>
+    <li>The last data block is followed by the end of file specifier and the checksum of the
+      data sent. <br>
+    </li>
+    <li>End of file specifier format : </li>
+  </ul>
+  <blockquote>
+    <blockquote>
+      <pre><font color="#FFFFFF">&lt;EOT&gt; 1 byte = 04 hex Checksum 1 byte = 00 to ff hex </font></pre>
+    </blockquote>
+  </blockquote>
+  <ul class="txt">
+    <li>The checksum is equal to the sum of all the data bytes of the transmitted data, modulo
+      256 (8 bits) and then two's complemented. <br>
+    </li>
+    <li>The checking of the checksum is very simple : <br>
+    </li>
+    <li>The sum of the data bytes from the file and the checksum received modulo 256 shall be
+      equal to zero. <br>
+    </li>
+    <li><pre class="txt">In case of a checksum error, the message or the file is ignored and the system issues a disconnect request after having sent the comment : 
+
+*** Erreur checksum </pre>
+    </li>
+    <li>A CRC16 is computed for the full binary file including the length of the uncompressed
+      file (4 bytes in top of file). In the case of a resume, it will be the only means
+      available to ensure that all the parts of the message or file has been received correctly.
+      <br>
+    </li>
+    <li>The LZHUF_1 program, when used with option &quot;e1&quot;, generates a binary compressed
+      file in the following format : CRC16 : 2bytes Length: 4 bytes Data : rest of the file <br>
+    </li>
+    <li>In case of forwarding with a BBS using version 0, only the part from offset 2 will be
+      sent <br>
+    </li>
+    <li>In case of forwarding with a BBS using version 1, the 6 top bytes will be always sent,
+      then if resume seek to asked offset, then send data. <br>
+    </li>
+    <li>Ascii values of the characters (1 byte) used in the protocol : <br>
+    </li>
+    <blockquote>
+      <pre>&lt;NUL&gt; = 00 hex 
+&lt;SOH&gt; = 01 hex 
+&lt;STX&gt; = 02 hex 
+&lt;EOT&gt; = 04 hex </pre>
+    </blockquote>
+    <li>Comments will be welcome. </li>
+  </ul>
+</blockquote>
+</body>
+</html>

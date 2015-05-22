@@ -1,0 +1,56 @@
+<html>
+
+<head>
+<title>F6FBB Pages : FBB</title>
+<link title="fbbmain" rel="stylesheet" href="fbbmain.css" type="text/css">
+</head>
+
+<body text="#000000" bgcolor="#C0C0C0" link="#0000EE" vlink="#551A8B" alink="#FF0000"
+background="back_fbb.jpg">
+
+<h1 align="center">SID letters</h1>
+
+<p>FBB software presents a SID which looks like : <font color="#FF0000"><strong>[FBB-7.00-AB1FHMX$]</strong></font></p>
+
+<h3>What is a SID ?</h3>
+
+<ul class="txt">
+  <li>SID means System IDentifier</li>
+  <li>A SID allows a system which connects the BBS to know if standard (or specific) features
+    are supported or not</li>
+</ul>
+
+<h3>Protocol</h3>
+
+<ul class="txt">
+  <li>The SID is always sent by the BBS as the first line after the connection</li>
+  <li>A SID is composed of fields (at least two, maximum three) separated by a hyphen
+    &quot;-&quot; .</li>
+  <li>In FBB SID, I use three fields which are :<br>
+  </li>
+  <ul class="txt">
+    <li>The author string (&quot;FBB&quot; in my case)</li>
+    <li>A version number or author data (&quot;7.00&quot; for instance)</li>
+    <li>A list of features symbolized by letters optionnaly followed by a digit giving the
+      version number. If no digit is given, version 0 is assumed</li>
+  </ul>
+  <li>The version number (ot author data) is optionnal</li>
+  <li>The features of FBB software are :<br>
+  </li>
+  <ul>
+    <li>A : Acknowledge for personal messages</li>
+    <li>B : FBB compressed protocole V0 supported</li>
+    <li>B1 : FBB compressed protocole V1 supported</li>
+    <li>F : FBB basic protocole supported</li>
+    <li>H : Hierarchical Location designators supported</li>
+    <li>M : Message identifier supported</li>
+    <li>X : Compressed batch forwarding supported</li>
+    <li>$ : BID supported (must be the last character of the list)</li>
+  </ul>
+</ul>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+</body>
+</html>

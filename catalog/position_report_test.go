@@ -16,8 +16,9 @@ func TestDecToDM(t *testing.T) {
 		-4.974: "04-58.4400S",
 	}
 	lonTests := map[float64]string{
-		003.50: "03-30.0000E",
-		-60.50: "60-30.0000W",
+		003.50: "003-30.0000E",
+		153.50: "153-30.0000E",
+		-60.50: "060-30.0000W",
 	}
 
 	for deg, expect := range latTests {

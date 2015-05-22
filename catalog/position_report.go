@@ -83,5 +83,12 @@ func decToMinDec(dec float64, latitude bool) string {
 		sign = ' '
 	}
 
-	return fmt.Sprintf("%02.0f-%.4f%c", math.Abs(float64(deg)), math.Abs(min), sign)
+	var format string
+	if latitude {
+		format = "%02.0f-%.4f%c"
+	} else {
+		format = "%03.0f-%.4f%c"
+	}
+
+	return fmt.Sprintf(format, math.Abs(float64(deg)), math.Abs(min), sign)
 }

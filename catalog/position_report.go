@@ -35,7 +35,7 @@ func (c Course) String() string {
 	}
 }
 
-func (p PosReport) Message(from string) *wl2k.Message {
+func (p PosReport) Message(mycall string) *wl2k.Message {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "DATE: %s\r\n", p.Date.UTC().Format(wl2k.DateLayout))
 
@@ -54,10 +54,10 @@ func (p PosReport) Message(from string) *wl2k.Message {
 	}
 
 	return &wl2k.Message{
-		MID:     wl2k.GenerateMid(from),
+		MID:     wl2k.GenerateMid(mycall),
 		To:      []wl2k.Address{wl2k.Address{Addr: "QTH"}},
-		From:    wl2k.AddressFromString(from),
-		Mbo:     from,
+		From:    wl2k.AddressFromString(mycall),
+		Mbo:     mycall,
 		Date:    time.Now(),
 		Type:    "Position Report",
 		Subject: "POSITION REPORT",

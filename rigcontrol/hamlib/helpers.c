@@ -10,7 +10,6 @@ void setBaudRate(RIG *r, int rate) {
 
 int add_to_list(const struct rig_caps *rc, void* f)
 {
-	int i = 1;
 	rigListCb(rc);
 	return 1;
 }

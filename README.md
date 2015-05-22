@@ -6,6 +6,8 @@ The project's goal is to encourage and faciliate development of cross-platform W
 
 wl2k-go is not affiliated with The Winlink Development Team nor the Winlink 2000 project [http://winlink.org].
 
+_This project is under heavy development and breaking API changes are to be expected._
+
 ## wl2k - Winlink 2000/B2F protocol implementation
 
 An implementation of the B2 Forwarding Protocol and Winlink 2000 Message Structure (the WL2K-protocol).

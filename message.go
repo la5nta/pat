@@ -52,7 +52,7 @@ const (
 	DefaultTransferEncoding = "8bit"
 
 	// The date (in UTC) format as described in the Winlink
-	// Message Structure docs.
+	// Message Structure docs (YYYY/MM/DD HH:MM).
 	DateLayout = `2006/01/02 15:04`
 )
 

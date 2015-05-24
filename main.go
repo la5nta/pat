@@ -109,14 +109,6 @@ func init() {
 	flag.StringVar(&fPosReport, "pos-report", "", "Prepare a position report message from this position (format [lat]:[lon]:[comment] ie. 60.1:005.3:I'm OK)")
 	flag.BoolVar(&fRigList, "rig-list", false, "List hamlib rig models (use in config for winmor PTT control)")
 	flag.StringVar(&fHttp, "http", "", "Address to listen for http connections (ie. :8080)")
-
-	// Logger
-	f, err := os.Create(fLogPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	logWriter = io.MultiWriter(f, os.Stdout)
-	log.SetOutput(logWriter)
 }
 
 func cleanup() {
@@ -145,6 +137,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to load/write config: %s", err)
 	}
+
+	// Logger
+	f, err := os.Create(fLogPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	logWriter = io.MultiWriter(f, os.Stdout)
+	log.SetOutput(logWriter)
 
 	if fMyCall == "" && config.MyCall == "" {
 		fmt.Println("Missing mycall")

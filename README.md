@@ -77,17 +77,7 @@ Listen (P2P) methods:
 * Winmor TNC
 * AX.25 (Linux)
 
-Build with "-tags libax25" to get libax25 support in Linux.
-
-See lzhuf section for how to prepare that package.
-
-Other dependencies: libhamlib-dev, libreadline-dev and optionally imagemagick (for auto resize of image attachments)
-
-To install: `go install -tags libax25 github.com/martinhpedersen/wl2k-go/wl2k`
-
-For simple usage try `wl2k --help`
-
-A configuration file is automatically created on the first run at `$HOME/.wl2k/config.json`.
+See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
 
 ## lzhuf - the compression
 

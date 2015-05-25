@@ -11,22 +11,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fiorix/go-readline"
 	"github.com/la5nta/wl2k-go/transport/ax25"
+	"github.com/peterh/liner"
 )
 
 func Interactive() {
+	line := liner.NewLiner()
+	defer line.Close()
+
 	for {
-		prompt := getPrompt()
-		line := readline.Readline(&prompt)
-		if line == nil {
-			break
+		str, _ := line.Prompt(getPrompt())
+		if str == "" {
+			continue
 		}
 
-		if quit := execCmd(*line); quit {
+		if quit := execCmd(str); quit {
 			break
 		}
-		readline.AddHistory(*line)
+		line.AppendHistory(str)
 	}
 }
 

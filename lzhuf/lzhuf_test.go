@@ -30,27 +30,6 @@ func TestDecode(t *testing.T) {
 	}
 }
 
-func TestRoundTrip(t *testing.T) {
-	t.Skip("TODO")
-}
-
-/*func TestReader(t *testing.T) {
-	sample := samples[2]
-
-	r := bytes.NewReader(sample.compressed)
-	lz := NewReader(r)
-	var buf bytes.Buffer
-
-	_, err := buf.ReadFrom(lz)
-	if err != nil {
-		t.Errorf("Reading from lzhuf.Reader failed: %s", err)
-	}
-
-	if !bytes.Equal(buf.Bytes(), sample.plain) {
-		t.Errorf("lzhuf.Reader failed, got %#v", string(buf.Bytes()))
-	}
-}*/
-
 type sample struct {
 	plain      []byte
 	compressed []byte

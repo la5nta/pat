@@ -11,14 +11,14 @@ type Config struct {
 	// Auxiliary callsigns to fetch email on behalf of.
 	AuxAddrs []string `json:"auxiliary_addresses"`
 
-	// Maidenhead grid square (ie. JP20qe)
+	// Maidenhead grid square (e.g. JP20qe)
 	Locator string `json:"locator"`
 
-	// Default connect METHOD:[URI] (ie. "telnet", "ax25:LA1B-10").
+	// Default connect METHOD:[URI] (e.g. "telnet", "ax25:LA1B-10").
 	ConnectDefaults []string `json:"connect_defaults"`
 
 	// Methods to listen for incoming P2P connections by default
-	// (ie. "ax25", "winmor", "telnet").
+	// (e.g. "ax25", "winmor", "telnet").
 	Listen []string `json:"listen"`
 
 	// Hamlib rigs available (with reference name) for ptt and frequency
@@ -46,15 +46,15 @@ type HamlibConfig struct {
 	// The rig model number as reported by --rig-list.
 	RigModel int `json:"rig_model"`
 
-	// Serial port (ie. /dev/ttyUSB0 or COM1).
+	// Serial port (e.g. /dev/ttyUSB0 or COM1).
 	TTYPath string `json:"tty_path"`
 
-	// Baudrate for the serial port (ie. 4800).
+	// Baudrate for the serial port (e.g. 4800).
 	Baudrate int `json:"baudrate"`
 }
 
 type WinmorConfig struct {
-	// Network address of the Winmor TNC (ie. localhost:8500).
+	// Network address of the Winmor TNC (e.g. localhost:8500).
 	Addr string `json:"addr"`
 
 	// Bandwidth to use when getting an inbound connection (500/1600).
@@ -68,7 +68,7 @@ type WinmorConfig struct {
 }
 
 type TelnetConfig struct {
-	// Network address (and port) to listen for telnet-p2p connections (ie. :8774).
+	// Network address (and port) to listen for telnet-p2p connections (e.g. :8774).
 	ListenAddr string `json:"listen_addr"`
 
 	// Telnet-p2p password.
@@ -76,10 +76,10 @@ type TelnetConfig struct {
 }
 
 type SerialTNCConfig struct {
-	// Serial port (ie. /dev/ttyUSB0 or COM1).
+	// Serial port (e.g. /dev/ttyUSB0 or COM1).
 	Path string `json:"path"`
 
-	// Baudrate for the serial port (ie. 57600).
+	// Baudrate for the serial port (e.g. 57600).
 	Baudrate int `json:"baudrate"`
 
 	// Type of TNC (currently only 'kenwood').
@@ -95,13 +95,13 @@ type AX25Config struct {
 }
 
 type BeaconConfig struct {
-	// Beacon interval in seconds (ie. 3600 for once every 1 hour)
+	// Beacon interval in seconds (e.g. 3600 for once every 1 hour)
 	Every int `json:"every"` // (seconds)
 
 	// Beacon data/message
 	Message string `json:"message"`
 
-	// Beacon destination (ie. IDENT)
+	// Beacon destination (e.g. IDENT)
 	Destination string `json:"destination"`
 }
 

@@ -95,8 +95,8 @@ func init() {
 	}
 
 	flag.StringVar(&fMyCall, `mycall`, ``, `Your callsign (winlink user)`)
-	flag.StringVar(&fListen, "listen", "", "Listen mode: Comma-separated list of methods to listen on. Ie. winmor,telnet,ax25")
-	flag.StringVar(&fConnect, "connect", "", "Connect mode: Method and target to use in the form [method:target call]. Ie. winmor:N0CALL")
+	flag.StringVar(&fListen, "listen", "", "Listen mode: Comma-separated list of methods to listen on (e.g. winmor,telnet,ax25).")
+	flag.StringVar(&fConnect, "connect", "", "Connect mode: Method and target to use in the form [method:target call] (e.g. winmor:N0CALL).")
 	flag.BoolVar(&fInteractive, "interactive", false, "Interactive mode")
 	flag.StringVar(&fMailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
 	flag.StringVar(&fConfigPath, "config", fConfigPath, "Path to config file")
@@ -106,9 +106,9 @@ func init() {
 	flag.BoolVar(&fCompose, `compose`, false, `Compose email and exit`)
 	flag.BoolVar(&fReadMail, "read", false, "Read emails (interactive mailbox browser)")
 	flag.BoolVar(&fIgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node")
-	flag.StringVar(&fPosReport, "pos-report", "", "Prepare a position report message from this position (format [lat]:[lon]:[comment] ie. 60.1:005.3:I'm OK)")
+	flag.StringVar(&fPosReport, "pos-report", "", "Prepare a position report message from this position (format [lat]:[lon]:[comment], e.g. 60.1:005.3:I'm OK)")
 	flag.BoolVar(&fRigList, "rig-list", false, "List hamlib rig models (use in config for winmor PTT control)")
-	flag.StringVar(&fHttp, "http", "", "Address to listen for http connections (ie. :8080)")
+	flag.StringVar(&fHttp, "http", "", "Address to listen for http connections (e.g. :8080 or localhost:8080).")
 }
 
 func cleanup() {

@@ -72,16 +72,16 @@ func Connect(connectStr string) (success bool) {
 		close(done)
 	case MethodTelnet:
 		if address == "" {
-			conn, err = telnet.DialCMS(fMyCall)
+			conn, err = telnet.DialCMS(fOptions.MyCall)
 			targetcall = telnet.CMSTargetCall
 			break
 		}
-		conn, err = telnet.Dial(address, fMyCall, password)
+		conn, err = telnet.Dial(address, fOptions.MyCall, password)
 
 	case MethodAX25:
 		conn, err = ax25.DialAX25Timeout(
 			config.AX25.Port,
-			fMyCall,
+			fOptions.MyCall,
 			targetcall,
 			45*time.Second,
 		)
@@ -89,7 +89,7 @@ func Connect(connectStr string) (success bool) {
 	case MethodSerialTNC:
 		conn, err = ax25.DialKenwood(
 			config.SerialTNC.Path,
-			fMyCall,
+			fOptions.MyCall,
 			targetcall,
 			ax25.NewConfig(ax25.Baudrate(config.SerialTNC.Baudrate)),
 			nil,
@@ -178,7 +178,7 @@ func waitBusy(b transport.BusyChannelChecker) {
 	printed := false
 
 	for b.Busy() {
-		if !printed && fIgnoreBusy {
+		if !printed && fOptions.IgnoreBusy {
 			log.Println("Ignoring busy channel!")
 			break
 		} else if !printed {

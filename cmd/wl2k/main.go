@@ -8,7 +8,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,12 +15,13 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ogier/pflag"
 
 	"github.com/la5nta/wl2k-go"
 	"github.com/la5nta/wl2k-go/catalog"
@@ -39,23 +39,68 @@ const (
 	MethodSerialTNC = "serial-tnc"
 )
 
-var (
-	fIgnoreBusy  bool
-	fMyCall      string
-	fListen      string
-	fConnect     string
-	fMailboxPath string
-	fConfigPath  string
-	fLogPath     string
-	fExtract     string
-	fCompose     bool
-	fSendOnly    bool
-	fReadMail    bool
-	fInteractive bool
-	fRigList     bool
-	fPosReport   string
-	fHttp        string
-)
+var commands = []Command{
+	{
+		Str:        "connect",
+		Desc:       "Connect to a remote station.",
+		HandleFunc: connectHandle,
+		Usage:      UsageConnect,
+		Example:    ExampleConnect,
+	},
+	{
+		Str:  "interactive",
+		Desc: "Run interactive mode.",
+		HandleFunc: func(args []string) {
+			Interactive()
+		},
+	},
+	{
+		Str:   "http",
+		Desc:  "Run http server for web UI.",
+		Usage: "[options]",
+		Options: map[string]string{
+			"--addr, -a": "Listen address. Default is :8080.",
+		},
+		HandleFunc: httpHandle,
+	},
+	{
+		Str:  "compose",
+		Desc: "Compose a new email.",
+		HandleFunc: func(args []string) {
+			composeEmail(nil)
+		},
+	},
+	{
+		Str:  "read",
+		Desc: "Read emails.",
+		HandleFunc: func(args []string) {
+			readMail()
+		},
+	},
+	{
+		Str:        "position",
+		Aliases:    []string{"pos"},
+		Desc:       "Post a position report.",
+		Usage:      "lat:lon[:comment]",
+		HandleFunc: posReportHandle,
+	},
+	{
+		Str:        "extract",
+		Desc:       "Extract attachments from an email file.",
+		Usage:      "file",
+		HandleFunc: extractEmailHandle,
+	},
+	{
+		Str:        "riglist",
+		Usage:      "[search term]",
+		Desc:       "Print/search a list of rigcontrol supported transceivers.",
+		HandleFunc: riglistHandle,
+	},
+	{
+		Str:  "help",
+		Desc: "Print detailed help for a given command.",
+	},
+}
 
 var (
 	config    cfg.Config
@@ -69,46 +114,154 @@ var (
 	wmTNC        *winmor.TNC             // Pointer to the WINMOR TNC used by Listen and Connect
 )
 
-/*
-wl2k -mycall LA5NTA -listen winmor,telnet,ax25
-wl2k -mycall LA5NTA -connect winmor:LE1OF
-wl2k -mycall LA5NTA -connect ax25:LE1OF
-wl2k -mycall LA5NTA -connect serial-tnc:LE1OF
-wl2k -mycall LA5NTA -connect telnet:[callsign(:password)]@[ip]:[port]
-wl2k -mycall LA5NTA -connect telnet // For wl2k CMS
-wl2k -interactive
-wl2k -compose
-wl2k -extract ~/foo/123ASDOIJD
-wl2k -pos-report "60.1:005.3:I'm OK"
-*/
+var fOptions struct {
+	IgnoreBusy bool // Move to connect?
+	SendOnly   bool // Move to connect?
+
+	MyCall      string
+	Listen      string
+	MailboxPath string
+	ConfigPath  string
+	LogPath     string
+}
+
+func optionsSet() *pflag.FlagSet {
+	set := pflag.NewFlagSet("options", pflag.ExitOnError)
+
+	defaultMBox, _ := mailbox.DefaultMailboxPath()
+
+	set.StringVar(&fOptions.MyCall, `mycall`, ``, `Your callsign (winlink user).`)
+	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,telnet,ax25).")
+	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
+	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
+	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
+	set.BoolVar(&fOptions.SendOnly, `send-only`, false, `Download inbound messages later, send only.`)
+	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
+
+	return set
+}
 
 func init() {
 	listeners = make(map[string]net.Listener)
 
-	defaultMBox, _ := mailbox.DefaultMailboxPath()
-
 	if appDir, err := mailbox.DefaultAppDir(); err != nil {
 		log.Fatal(err)
 	} else {
-		fConfigPath = path.Join(appDir, "config.json")
-		fLogPath = path.Join(appDir, "wl2k.log")
+		fOptions.ConfigPath = path.Join(appDir, "config.json")
+		fOptions.LogPath = path.Join(appDir, "wl2k.log")
 	}
 
-	flag.StringVar(&fMyCall, `mycall`, ``, `Your callsign (winlink user)`)
-	flag.StringVar(&fListen, "listen", "", "Listen mode: Comma-separated list of methods to listen on (e.g. winmor,telnet,ax25).")
-	flag.StringVar(&fConnect, "connect", "", "Connect mode: Method and target to use in the form [method:target call] (e.g. winmor:N0CALL).")
-	flag.BoolVar(&fInteractive, "interactive", false, "Interactive mode")
-	flag.StringVar(&fMailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
-	flag.StringVar(&fConfigPath, "config", fConfigPath, "Path to config file")
-	flag.StringVar(&fLogPath, "log", fLogPath, "Path to log file. The file is truncated on each startup.")
-	flag.BoolVar(&fSendOnly, `send-only`, false, `Download inbound messages later, send only.`)
-	flag.StringVar(&fExtract, `extract`, ``, `Extract email given and exit`)
-	flag.BoolVar(&fCompose, `compose`, false, `Compose email and exit`)
-	flag.BoolVar(&fReadMail, "read", false, "Read emails (interactive mailbox browser)")
-	flag.BoolVar(&fIgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node")
-	flag.StringVar(&fPosReport, "pos-report", "", "Prepare a position report message from this position (format [lat]:[lon]:[comment], e.g. 60.1:005.3:I'm OK)")
-	flag.BoolVar(&fRigList, "rig-list", false, "List hamlib rig models (use in config for winmor PTT control)")
-	flag.StringVar(&fHttp, "http", "", "Address to listen for http connections (e.g. :8080 or localhost:8080).")
+	pflag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] command [arguments]\n", os.Args[0])
+
+		fmt.Fprintln(os.Stderr, "\nCommands:")
+		for _, cmd := range commands {
+			fmt.Fprintf(os.Stderr, "  %-15s %s\n", cmd.Str, cmd.Desc)
+		}
+
+		fmt.Fprintln(os.Stderr, "\nOptions:")
+		optionsSet().PrintDefaults()
+		fmt.Fprint(os.Stderr, "\n")
+	}
+}
+
+func main() {
+	cmd, args := parseFlags(os.Args)
+	if cmd.Str == "help" { // Avoid initialization loop
+		helpHandle(args)
+		return
+	}
+
+	defer cleanup()
+	var err error
+
+	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
+	if err != nil {
+		log.Fatalf("Unable to load/write config: %s", err)
+	}
+
+	// Logger
+	f, err := os.Create(fOptions.LogPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	logWriter = io.MultiWriter(f, os.Stdout)
+	log.SetOutput(logWriter)
+
+	if fOptions.MyCall == "" && config.MyCall == "" {
+		fmt.Fprint(os.Stderr, "Missing mycall")
+		os.Exit(1)
+	} else if fOptions.MyCall == "" {
+		fOptions.MyCall = config.MyCall
+	}
+
+	if fOptions.Listen == "" && len(config.Listen) > 0 {
+		fOptions.Listen = strings.Join(config.Listen, ",")
+	}
+
+	loadMBox()
+
+	switch cmd.Str {
+	case "connect", "http", "interactive":
+		rigs = loadHamlibRigs()
+		exchangeChan = exchangeLoop()
+		scheduleLoop()
+	}
+
+	if fOptions.Listen != "" {
+		Listen(fOptions.Listen)
+	}
+
+	cmd.HandleFunc(args)
+}
+
+func httpHandle(args []string) {
+	set := pflag.NewFlagSet("http", pflag.ExitOnError)
+	addr := set.StringP("addr", "a", ":8080", "Listen address.")
+	set.Parse(args)
+
+	if addr == nil {
+		set.Usage()
+		os.Exit(1)
+	}
+
+	if err := ListenAndServe(*addr); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func connectHandle(args []string) {
+	Connect(args[0])
+}
+
+func helpHandle(args []string) {
+	arg := args[0]
+
+	var cmd *Command
+	for _, c := range commands {
+		if c.Str == arg {
+			cmd = &c
+			break
+		}
+	}
+	if arg == "" || cmd == nil {
+		pflag.Usage()
+		return
+	}
+	cmd.PrintUsage()
+}
+
+func riglistHandle(args []string) {
+	term := strings.ToLower(args[0])
+
+	fmt.Print("id\ttransceiver\n")
+	for m, str := range hamlib.Rigs() {
+		if !strings.Contains(strings.ToLower(str), term) {
+			continue
+		}
+		fmt.Printf("%d\t%s\n", m, str)
+	}
 }
 
 func cleanup() {
@@ -127,101 +280,10 @@ func cleanup() {
 	}
 }
 
-func main() {
-	defer cleanup()
-
-	flag.Parse()
-	var err error
-
-	config, err = LoadConfig(fConfigPath, cfg.DefaultConfig)
-	if err != nil {
-		log.Fatalf("Unable to load/write config: %s", err)
-	}
-
-	// Logger
-	f, err := os.Create(fLogPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	logWriter = io.MultiWriter(f, os.Stdout)
-	log.SetOutput(logWriter)
-
-	if fMyCall == "" && config.MyCall == "" {
-		fmt.Println("Missing mycall")
-		return
-	} else if fMyCall == "" {
-		fMyCall = config.MyCall
-	}
-
-	if fListen == "" && len(config.Listen) > 0 {
-		fListen = strings.Join(config.Listen, ",")
-	}
-
-	rigs = loadHamlibRigs()
-
-	loadMBox()
-	exchangeChan = exchangeLoop()
-
-	switch {
-	case fRigList:
-		for m, str := range hamlib.Rigs() {
-			fmt.Printf("%d\t%s\n", m, str)
-		}
-		return
-
-	case len(fExtract) > 0:
-		extractEmail(fExtract)
-		return
-
-	case len(fMyCall) == 0:
-		log.Fatal("Missing -mycall")
-
-	case fReadMail:
-		readMail()
-		return
-
-	case fCompose:
-		composeEmail(nil)
-		return
-
-	case len(fPosReport) > 0:
-		posReport()
-		return
-
-	case fConnect != "":
-		Connect(fConnect)
-		return
-
-	case fListen != "":
-		Listen(fListen)
-	}
-
-	if fHttp != "" {
-		go ListenAndServe(fHttp)
-	}
-	scheduleLoop()
-
-	switch {
-	case fInteractive:
-		Interactive()
-	case fListen != "" || fHttp != "":
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt)
-		<-c
-		log.Println("Shutting down...")
-	default:
-		printUsage()
-	}
-}
-
-func printUsage() {
-	fmt.Println("Need -listen, -connect, -interactive, -compose, -pos-report or -extract. (See -help)")
-}
-
 func loadMBox() {
 	mbox = mailbox.NewDirHandler(
-		path.Join(fMailboxPath, fMyCall),
-		fSendOnly,
+		path.Join(fOptions.MailboxPath, fOptions.MyCall),
+		fOptions.SendOnly,
 	)
 
 	// Ensure the mailbox handler is ready
@@ -246,7 +308,7 @@ func loadHamlibRigs() map[string]*hamlib.Rig {
 
 func initWmTNC() {
 	var err error
-	wmTNC, err = winmor.Open(config.Winmor.Addr, fMyCall, config.Locator)
+	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
 	if err != nil {
 		log.Fatalf("WINMOR TNC initialization failed: %s", err)
 	}
@@ -269,8 +331,12 @@ func initWmTNC() {
 	}
 }
 
-func extractEmail(path string) {
-	file, _ := os.Open(path)
+func extractEmailHandle(args []string) {
+	if len(args) == 0 || args[0] == "" {
+		panic("TODO: usage")
+	}
+
+	file, _ := os.Open(args[0])
 	defer file.Close()
 
 	msg := new(wl2k.Message)
@@ -294,13 +360,13 @@ func EditorName() string {
 }
 
 func composeEmail(replyMsg *wl2k.Message) {
-	msg := wl2k.NewMessage(fMyCall)
+	msg := wl2k.NewMessage(fOptions.MyCall)
 	in := bufio.NewReader(os.Stdin)
 
-	fmt.Printf(`From [%s]: `, fMyCall)
+	fmt.Printf(`From [%s]: `, fOptions.MyCall)
 	from := readLine(in)
 	if from == "" {
-		from = fMyCall
+		from = fOptions.MyCall
 	}
 	msg.From = wl2k.AddressFromString(from)
 
@@ -325,7 +391,7 @@ func composeEmail(replyMsg *wl2k.Message) {
 	ccCand := make([]wl2k.Address, 0)
 	if replyMsg != nil {
 		for _, addr := range append(replyMsg.To, replyMsg.Cc...) {
-			if !addr.EqualString(fMyCall) {
+			if !addr.EqualString(fOptions.MyCall) {
 				ccCand = append(ccCand, addr)
 			}
 		}
@@ -428,8 +494,12 @@ func readLine(r *bufio.Reader) string {
 	return strings.TrimSpace(str)
 }
 
-func posReport() {
-	parts := strings.Split(fPosReport, ":")
+func posReportHandle(args []string) {
+	if len(args) == 0 {
+		panic("TODO: Usage")
+	}
+
+	parts := strings.Split(args[0], ":")
 	if len(parts) != 3 {
 		log.Fatal(`Invalid position format. Expected "lat:lon:comment".`)
 	}
@@ -449,7 +519,7 @@ func posReport() {
 		Lon:     &lon,
 		Date:    time.Now(),
 		Comment: parts[2],
-	}.Message(fMyCall)
+	}.Message(fOptions.MyCall)
 
 	postMessage(msg)
 }

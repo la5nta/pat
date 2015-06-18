@@ -106,7 +106,7 @@ func listenWinmor(incoming chan<- incomingConnect) {
 
 func listenAX25(incoming chan<- incomingConnect) {
 	if config.AX25.Beacon.Every > 0 {
-		b, err := ax25.NewAX25Beacon(config.AX25.Port, fMyCall, config.AX25.Beacon.Destination, config.AX25.Beacon.Message)
+		b, err := ax25.NewAX25Beacon(config.AX25.Port, fOptions.MyCall, config.AX25.Beacon.Destination, config.AX25.Beacon.Message)
 		if err != nil {
 			log.Printf("Unable to activate beacon: %s", err)
 		} else {
@@ -114,7 +114,7 @@ func listenAX25(incoming chan<- incomingConnect) {
 		}
 	}
 
-	ln, err := ax25.ListenAX25(config.AX25.Port, fMyCall)
+	ln, err := ax25.ListenAX25(config.AX25.Port, fOptions.MyCall)
 	if err != nil {
 		log.Printf("Unable to start AX.25 listener: %s", err)
 		return

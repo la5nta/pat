@@ -51,7 +51,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	// New wl2k Session
 	targetCall = strings.Split(targetCall, ` `)[0]
 	session := wl2k.NewSession(
-		fMyCall,
+		fOptions.MyCall,
 		targetCall,
 		config.Locator,
 		mbox,

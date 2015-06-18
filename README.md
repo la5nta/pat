@@ -42,7 +42,7 @@ Paclink-unix was used as reference implementation for the B2F protocol since the
 cmd/wl2k implements a fully working command-line and responsive (mobile-friendly) webapp Winlink-client with support for various connection methods. It supports some minimalistic mailbox functionality (read/compose/extract emails).
 
 ```
-martinhpedersen@duo:~/wl2k-go$ wl2k -interactive
+martinhpedersen@duo:~/wl2k-go$ wl2k interactive
 > listen winmor,telnet-p2p,ax25
 2015/02/03 10:33:10 Listening for incoming traffic (winmor,telnet-p2p,ax25)...
 > connect winmor:LA3F

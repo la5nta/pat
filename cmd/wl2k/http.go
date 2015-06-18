@@ -24,7 +24,7 @@ import (
 )
 
 //go:generate go-bindata-assetfs res/...
-func ListenAndServe(addr string) {
+func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
 	r := mux.NewRouter()
@@ -43,9 +43,7 @@ func ListenAndServe(addr string) {
 	http.Handle("/", r)
 	http.Handle("/res/", http.StripPrefix("/res/", http.FileServer(assetFS())))
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Println("HTTP:", err)
-	}
+	return http.ListenAndServe(addr, nil)
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +60,7 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	// Post to outbox
-	msg := pos.Message(fMyCall)
+	msg := pos.Message(fOptions.MyCall)
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -79,7 +77,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	m := r.MultipartForm
 
-	msg := wl2k.NewMessage(fMyCall)
+	msg := wl2k.NewMessage(fOptions.MyCall)
 
 	// files
 	files := m.File["files"]
@@ -168,7 +166,7 @@ func consoleHandler(w http.ResponseWriter, r *http.Request) {
 	go wsReadLoop(conn)
 	defer conn.Close()
 
-	lines, done, err := tailFile(fLogPath)
+	lines, done, err := tailFile(fOptions.LogPath)
 	if err != nil {
 		log.Println(err)
 		return
@@ -234,7 +232,7 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	tmplData := struct{ AppName, Mycall, Addr string }{"wl2k-go", fMyCall, r.Host}
+	tmplData := struct{ AppName, Mycall, Addr string }{"wl2k-go", fOptions.MyCall, r.Host}
 
 	err = t.Execute(w, tmplData)
 	if err != nil {

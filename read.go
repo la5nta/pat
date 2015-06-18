@@ -39,7 +39,7 @@ func readMail() {
 
 	for {
 		// Fetch messages
-		msgs, err := mailbox.LoadMessageDir(path.Join(mailbox.UserPath(fMailboxPath, fMyCall), mailboxes[mailboxIdx]))
+		msgs, err := mailbox.LoadMessageDir(path.Join(mailbox.UserPath(fOptions.MailboxPath, fOptions.MyCall), mailboxes[mailboxIdx]))
 		if err != nil {
 			log.Fatal(err)
 		} else if len(msgs) == 0 {

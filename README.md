@@ -1,6 +1,6 @@
 # wl2k-go
 
-wl2k-go is a collection of go packages that implement various parts needed to build a Winlink 2000 client.
+wl2k-go is a collection of Go packages that implement various parts needed to build a Winlink 2000 client.
 
 The project's goal is to encourage and faciliate development of cross-platform Winlink 2000 clients.
 
@@ -80,13 +80,15 @@ for _, msg := range msgs {
 }
 ```
 
+For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go>.
+
 A big thanks to paclink-unix by Nicholas S. Castellano N2QZ (and others). Without their effort and choice to share their knowledge through open source code, this implementation would probably never exist.
 
 Paclink-unix was used as reference implementation for the B2F protocol since the start of this project.
 
 ## lzhuf: The compression
 
-This project does not currently implement the lzhuf compression algorithm required. It does however provide a go wrapper (and a minor patch + install script) for using JNOS's code (http://www.langelaar.net/projects/jnos2). To fetch the source code and apply the provided patch:
+This project does not currently implement the lzhuf compression algorithm required. It does however provide a Go wrapper (and a minor patch + install script) for using JNOS's code (http://www.langelaar.net/projects/jnos2). To fetch the source code and apply the provided patch:
 
 ```bash
 cd lzhuf;make;cd ..
@@ -95,11 +97,15 @@ That's it!
 
 Thanks to the JNOS contributors, Jack Snodgrass and others :-)
 
+For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go/lzhuf>.
+
 ## transport
 
 Package transport provides access to various connected modes commonly used for winlink.
 
 The modes is made available through common interfaces and idioms from the net package, mainly net.Conn and net.Listener.
+
+For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go/transport>.
 
 #### telnet
 * A simple TCP dialer/listener for the "telnet"-method.
@@ -121,6 +127,8 @@ When running WINMOR TNC under wine through pulseaudio, set PULSE_LATENCY_MSEC=60
 
 ## mailbox: Directory based MBoxHandler implementation
 
+For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go/mailbox>.
+
 ```go
 mbox := mailbox.NewDirHandler("/tmp/mailbox", false)
 
@@ -131,6 +139,10 @@ session := wl2k.NewSession(
     mbox,
 )
 ```
+
+## rigcontrol/hamlib
+
+A Go wrapper for a subset of hamlib. See <http://godoc.org/github.com/LA5NTA/wl2k-go/rigcontrol/hamlib> for details.
 
 ## Copyright/License
 

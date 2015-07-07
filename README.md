@@ -8,7 +8,54 @@ wl2k-go is not affiliated with The Winlink Development Team nor the Winlink 2000
 
 _This project is under heavy development and breaking API changes are to be expected._
 
-## wl2k - Winlink 2000/B2F protocol implementation
+## cmd/wl2k: The sandbox client application
+
+cmd/wl2k is a fully working cross-platform Winlink client with basic messaging capabilities.
+
+It is the primary sandbox/prototype application for the various wl2k-go sub-packages, and provides both a command line interface and a responsive (mobile-friendly) web interface.
+
+See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
+
+#### Features
+* Message composer/reader (basic mailbox functionality).
+* Auto-shrink image attachments (EXPERIMENTAL).
+* Post position reports (uses browser location/GPS in http mode).
+* Rig control (using hamlib) for winmor PTT and QSY.
+* CRON-like syntax for execution of scheduled commands (e.g. QSY or connect).
+* Built in http-server for web interface.
+* Git style command line interface.
+
+##### Supported connect/listen methods
+* Telnet
+* WINMOR TNC
+* AX.25 (Linux)
+* Kenwood TH-D7x/TM-D7x0 (connect only, no P2P)
+
+##### Example
+```
+martinhpedersen@duo:~/wl2k-go$ wl2k interactive
+> listen winmor,telnet-p2p,ax25
+2015/02/03 10:33:10 Listening for incoming traffic (winmor,telnet-p2p,ax25)...
+> connect winmor:LA3F
+2015/02/03 10:34:28 Connecting to winmor:LA3F...
+2015/02/03 10:34:33 Connected to WINMOR:LA3F
+RMS Trimode 1.3.3.0 Follo.SE Oslo. Pactor & Winmor Hybrid Gateway
+LA5NTA has 117 minutes remaining with LA3F
+[WL2K-2.8.4.8-B2FWIHJM$]
+Wien CMS via LA3F >
+>FF
+FC EM FOYNU8AKXX59 260 221 0
+F> 68
+1 proposal(s) received
+Accepting FOYNU8AKXX59
+Receiving [//WL2K test til linux] [offset 0]
+>FF
+FQ
+Waiting for remote node to close the connection...
+> _
+```
+
+## wl2k: Winlink 2000/B2F protocol implementation
 
 An implementation of the B2 Forwarding Protocol and Winlink 2000 Message Structure (the WL2K-protocol).
 
@@ -37,49 +84,7 @@ A big thanks to paclink-unix by Nicholas S. Castellano N2QZ (and others). Withou
 
 Paclink-unix was used as reference implementation for the B2F protocol since the start of this project.
 
-## cmd/wl2k - A command line Winlink client
-
-cmd/wl2k implements a fully working command-line and responsive (mobile-friendly) webapp Winlink-client with support for various connection methods. It supports some minimalistic mailbox functionality (read/compose/extract emails).
-
-```
-martinhpedersen@duo:~/wl2k-go$ wl2k interactive
-> listen winmor,telnet-p2p,ax25
-2015/02/03 10:33:10 Listening for incoming traffic (winmor,telnet-p2p,ax25)...
-> connect winmor:LA3F
-2015/02/03 10:34:28 Connecting to winmor:LA3F...
-2015/02/03 10:34:33 Connected to WINMOR:LA3F
-RMS Trimode 1.3.3.0 Follo.SE Oslo. Pactor & Winmor Hybrid Gateway
-LA5NTA has 117 minutes remaining with LA3F
-[WL2K-2.8.4.8-B2FWIHJM$]
-Wien CMS via LA3F >
->FF
-FC EM FOYNU8AKXX59 260 221 0
-F> 68
-1 proposal(s) received
-Accepting FOYNU8AKXX59
-Receiving [//WL2K test til linux] [offset 0]
->FF
-FQ
-Waiting for remote node to close the connection...
-> _
-```
-
-Connection methods:
-
-* telnet
-* WINMOR TNC
-* AX.25 (Linux)
-* Kenwood TH-D7x/TM-D7x0
-
-Listen (P2P) methods:
-
-* telnet
-* Winmor TNC
-* AX.25 (Linux)
-
-See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
-
-## lzhuf - the compression
+## lzhuf: The compression
 
 This project does not currently implement the lzhuf compression algorithm required. It does however provide a go wrapper (and a minor patch + install script) for using JNOS's code (http://www.langelaar.net/projects/jnos2). To fetch the source code and apply the provided patch:
 
@@ -90,20 +95,22 @@ That's it!
 
 Thanks to the JNOS contributors, Jack Snodgrass and others :-)
 
-## transport/telnet - net.Conn interface for connecting to the Winlink 2000 System over tcp
+## transport
 
-A simple TCP dialer/listener for the "telnet"-method.
+Package transport provides access to various connected modes commonly used for winlink.
 
-## transport/ax25 - net.Conn interface for AX.25 connections
+The modes is made available through common interfaces and idioms from the net package, mainly net.Conn and net.Listener.
 
-Various implementations of the net.Conn interface for AX.25 connections:
+#### telnet
+* A simple TCP dialer/listener for the "telnet"-method.
+* Supports both P2P and CMS dialing.
 
-* Wrapper for the Linux AX.25 library (build with tag "libax25")
-* Kenwood TH-D7x/TM-D7x0 (or similar) TNC's over serial
+#### ax25
+* Wrapper for the Linux AX.25 library (build with tag "libax25").
+* Kenwood TH-D7x/TM-D7x0 (or similar) TNCs over serial.
 
-## transport/winmor - net.Conn connection to a remote node using a WINMOR TNC
-
-Provides means of controlling and using a WINMOR TNC (local or over the network).
+#### winmor
+A WINMOR TNC driver that provides dialing and listen capabilities for a local or remote TNC.
 
 TIP: The WINMOR TNC can be run under Wine!
 
@@ -112,7 +119,7 @@ TIP: The WINMOR TNC can be run under Wine!
 
 When running WINMOR TNC under wine through pulseaudio, set PULSE_LATENCY_MSEC=60.
 
-## mailbox - Directory based MBoxHandler implementation
+## mailbox: Directory based MBoxHandler implementation
 
 ```go
 mbox := mailbox.NewDirHandler("/tmp/mailbox", false)

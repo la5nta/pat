@@ -12,6 +12,8 @@ import (
 	"os/signal"
 	"strings"
 
+	"github.com/howeyc/gopass"
+
 	"github.com/la5nta/wl2k-go"
 )
 
@@ -56,6 +58,10 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		config.Locator,
 		mbox,
 	)
+	session.SetSecureLoginHandleFunc(func() (string, error) {
+		fmt.Print("Enter secure login password: ")
+		return string(gopass.GetPasswdMasked()), nil
+	})
 
 	for _, addr := range config.AuxAddrs {
 		session.AddAuxiliaryAddress(wl2k.AddressFromString(addr))

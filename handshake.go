@@ -6,6 +6,7 @@ package wl2k
 
 import (
 	"bufio"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +18,7 @@ var ErrNoFB2 = errors.New("Remote does not support B2 Forwarding Protocol")
 
 func (s *Session) handshake(rw io.ReadWriter) error {
 	if s.master {
-		if err := s.sendHandshake(rw); err != nil {
+		if err := s.sendHandshake(rw, ""); err != nil {
 			return err
 		}
 	}
@@ -35,16 +36,31 @@ func (s *Session) handshake(rw io.ReadWriter) error {
 	s.remoteSID = hs.SID
 	s.remoteFW = hs.FW
 
+	var secureResp string
+	if hs.SecureChallenge != "" {
+		if s.secureLoginHandleFunc == nil {
+			return errors.New("Got secure login challenge, please register a SecureLoginHandleFunc.")
+		}
+
+		password, err := s.secureLoginHandleFunc()
+		if err != nil {
+			return err
+		}
+
+		secureResp = secureLoginResponse(hs.SecureChallenge, password)
+	}
+
 	if !s.master {
-		return s.sendHandshake(rw)
+		return s.sendHandshake(rw, secureResp)
 	} else {
 		return nil
 	}
 }
 
 type handshakeData struct {
-	SID sid
-	FW  []Address
+	SID             sid
+	FW              []Address
+	SecureChallenge string
 }
 
 func (s *Session) readHandshake() (handshakeData, error) {
@@ -89,7 +105,8 @@ func (s *Session) readHandshake() (handshakeData, error) {
 			}
 
 		case strings.HasPrefix(line, ";PQ"):
-			return data, errors.New("Got secure challenge by remote. Secure login not implemented.")
+			data.SecureChallenge = line[5:]
+			//return data, errors.New("Got secure challenge by remote. Secure login not implemented.")
 		}
 
 		if strings.HasSuffix(line, ">") {
@@ -98,7 +115,38 @@ func (s *Session) readHandshake() (handshakeData, error) {
 	}
 }
 
-func (s *Session) sendHandshake(writer io.Writer) error {
+// This salt was found in paclink-unix's source code.
+var winlinkSecureSalt = []byte{
+	77, 197, 101, 206, 190, 249,
+	93, 200, 51, 243, 93, 237,
+	71, 94, 239, 138, 68, 108,
+	70, 185, 225, 137, 217, 16,
+	51, 122, 193, 48, 194, 195,
+	198, 175, 172, 169, 70, 84,
+	61, 62, 104, 186, 114, 52,
+	61, 168, 66, 129, 192, 208,
+	187, 249, 232, 193, 41, 113,
+	41, 45, 240, 16, 29, 228,
+	208, 228, 61, 20}
+
+// This algorithm for generating a secure login response token has been ported
+// to Go from the paclink-unix implementation.
+func secureLoginResponse(challenge, password string) string {
+	payload := strings.ToUpper(challenge+password) + string(winlinkSecureSalt)
+
+	sum := md5.Sum([]byte(payload))
+
+	pr := int32(sum[3] & 0x3f)
+	for i := 2; i >= 0; i-- {
+		pr = (pr << 8) | int32(sum[i])
+	}
+
+	str := fmt.Sprintf("%08d", pr)
+
+	return str[len(str)-8:]
+}
+
+func (s *Session) sendHandshake(writer io.Writer, secureResp string) error {
 	w := bufio.NewWriter(writer)
 
 	// Request messages on behalf of every localFW
@@ -109,6 +157,11 @@ func (s *Session) sendHandshake(writer io.Writer) error {
 	fmt.Fprintf(w, "\r")
 
 	writeSID(w, s.ua.Name, s.ua.Version)
+
+	if secureResp != "" {
+		writeSecureLoginResponse(w, secureResp)
+	}
+
 	fmt.Fprintf(w, "; %s DE %s (%s)", s.targetcall, s.mycall, s.locator)
 	if s.master {
 		fmt.Fprintf(w, ">\r")
@@ -154,6 +207,11 @@ const (
 
 func writeSID(w io.Writer, appName, appVersion string) error {
 	_, err := fmt.Fprintf(w, "[%s-%s-%s]\r", appName, appVersion, localSID)
+	return err
+}
+
+func writeSecureLoginResponse(w io.Writer, response string) error {
+	_, err := fmt.Fprintf(w, ";PR: %s\r", response)
 	return err
 }
 

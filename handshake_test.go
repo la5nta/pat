@@ -25,3 +25,15 @@ func TestParseFW(t *testing.T) {
 		}
 	}
 }
+
+func TestSecureLoginResponse(t *testing.T) {
+	var (
+		challenge = "23753528"
+		password  = "foobar"
+		expect    = "72768415"
+	)
+
+	if got := secureLoginResponse(challenge, password); got != expect {
+		t.Errorf("Got unexpected login response, expected '%s' got '%s'.", expect, got)
+	}
+}

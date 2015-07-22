@@ -81,6 +81,9 @@ type Session struct {
 	h             MBoxHandler
 	statusUpdater StatusUpdater
 
+	// Callback when secure login password is needed
+	secureLoginHandleFunc func() (password string, err error)
+
 	master bool
 
 	remoteSID sid
@@ -259,6 +262,12 @@ func (s *Session) Mycall() string {
 // Targetcall returns the remote stations call sign (if known).
 func (s *Session) Targetcall() string {
 	return s.targetcall
+}
+
+// SetSecureLoginHandleFunc registers a callback function used to prompt for
+// password when a secure login challenge is received.
+func (s *Session) SetSecureLoginHandleFunc(f func() (password string, err error)) {
+	s.secureLoginHandleFunc = f
 }
 
 // This method returns the call signs the remote is requesting

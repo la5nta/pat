@@ -37,3 +37,9 @@ func TestSecureLoginResponse(t *testing.T) {
 		t.Errorf("Got unexpected login response, expected '%s' got '%s'.", expect, got)
 	}
 }
+
+func BenchmarkSecureLoginResponse(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		secureLoginResponse("23753528", "foobar")
+	}
+}

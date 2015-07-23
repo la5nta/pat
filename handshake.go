@@ -106,7 +106,6 @@ func (s *Session) readHandshake() (handshakeData, error) {
 
 		case strings.HasPrefix(line, ";PQ"):
 			data.SecureChallenge = line[5:]
-			//return data, errors.New("Got secure challenge by remote. Secure login not implemented.")
 		}
 
 		if strings.HasSuffix(line, ">") {

@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -355,8 +356,20 @@ func extractEmailHandle(args []string) {
 func EditorName() string {
 	if e := os.Getenv("EDITOR"); e != "" {
 		return e
+	} else if e := os.Getenv("VISUAL"); e != "" {
+		return e
 	}
-	return "editor"
+
+	switch runtime.GOOS {
+	case "windows":
+		return "notepad"
+	case "linux":
+		if path, err := exec.LookPath("editor"); err == nil {
+			return path
+		}
+	}
+
+	return "vi"
 }
 
 func composeEmail(replyMsg *wl2k.Message) {
@@ -435,7 +448,7 @@ func composeEmail(replyMsg *wl2k.Message) {
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	in.ReadString('\n')
 
-	f, err := ioutil.TempFile("", "wl2k_new")
+	f, err := ioutil.TempFile("", fmt.Sprintf("wl2k_new_%d.txt", time.Now().Unix()))
 	if err != nil {
 		log.Fatalf("Unable to prepare temporary file for body: %s", err)
 	}

@@ -1,5 +1,6 @@
 {
   "mycall": "LA5NTA",
+  "secure_login_password": "my_not_so_secret_password",
   "auxiliary_addresses": ["LE1OF"],
   "locator": "JP20qe",
   "connect_defaults": ["ax25:LA1B-10", "telnet"],

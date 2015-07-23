@@ -46,5 +46,5 @@ func WriteConfig(config cfg.Config, filePath string) error {
 	// Ensure path dir is available
 	os.Mkdir(path.Dir(filePath), os.ModePerm|os.ModeDir)
 
-	return ioutil.WriteFile(filePath, b, 0640)
+	return ioutil.WriteFile(filePath, b, 0600)
 }

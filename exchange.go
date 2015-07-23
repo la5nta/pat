@@ -58,7 +58,13 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		config.Locator,
 		mbox,
 	)
+
+	// Handle secure login
 	session.SetSecureLoginHandleFunc(func() (string, error) {
+		if config.SecureLoginPassword != "" {
+			return config.SecureLoginPassword, nil
+		}
+
 		fmt.Print("Enter secure login password: ")
 		return string(gopass.GetPasswdMasked()), nil
 	})

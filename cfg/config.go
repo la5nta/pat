@@ -8,6 +8,11 @@ type Config struct {
 	// This station's callsign.
 	MyCall string `json:"mycall"`
 
+	// Secure login password used when a secure login challenge is received.
+	//
+	// The user is prompted if this is undefined.
+	SecureLoginPassword string `json:"secure_login_password"`
+
 	// Auxiliary callsigns to fetch email on behalf of.
 	AuxAddrs []string `json:"auxiliary_addresses"`
 

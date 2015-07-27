@@ -168,6 +168,11 @@ func init() {
 }
 
 func main() {
+	config, err := LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
+	if err != nil {
+		log.Fatalf("Unable to load/write config: %s", err)
+	}
+
 	cmd, args := parseFlags(os.Args)
 	if cmd.Str == "help" { // Avoid initialization loop
 		helpHandle(args)
@@ -175,12 +180,6 @@ func main() {
 	}
 
 	defer cleanup()
-	var err error
-
-	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
-	if err != nil {
-		log.Fatalf("Unable to load/write config: %s", err)
-	}
 
 	// Logger
 	f, err := os.Create(fOptions.LogPath)

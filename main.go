@@ -136,7 +136,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
 	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
-	set.BoolVar(&fOptions.SendOnly, `send-only`, false, `Download inbound messages later, send only.`)
+	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 
 	return set

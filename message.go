@@ -56,21 +56,20 @@ const (
 	DateLayout = `2006/01/02 15:04`
 )
 
-// Representation of a receiver/sender address
+// Representation of a receiver/sender address.
 type Address struct {
 	Proto string
 	Addr  string
 }
 
-// File represents an attachment
+// File represents an attachment.
 type File struct {
 	data     []byte
 	name     string
 	dataSize int
 }
 
-// Message represent the Winlink 2000 Message Structure
-// as defined in http://winlink.org/B2F
+// Message represent the Winlink 2000 Message Structure as defined in http://winlink.org/B2F.
 type Message struct {
 	MID     string
 	Date    time.Time
@@ -86,8 +85,7 @@ type Message struct {
 	P2POnly bool
 }
 
-// NewMessage returns a new "private" message with
-// MID, Date, Type, From and Mbo set.
+// NewMessage returns a new "private" message with MID, Date, Type, From and Mbo set.
 func NewMessage(mycall string) *Message {
 	return &Message{
 		MID:  GenerateMid(mycall),
@@ -98,8 +96,7 @@ func NewMessage(mycall string) *Message {
 	}
 }
 
-// Returns true if the given Address is the _only_ receiver
-// of this Message.
+// Returns true if the given Address is the only receiver of this Message.
 func (m *Message) IsOnlyReceiver(addr Address) bool {
 	receivers := m.Receivers()
 	if len(receivers) != 1 {
@@ -108,7 +105,7 @@ func (m *Message) IsOnlyReceiver(addr Address) bool {
 	return receivers[0].String() == addr.String()
 }
 
-// Method for generating a proposal of the message
+// Method for generating a proposal of the message.
 func (m *Message) Proposal() *Proposal {
 	return NewProposal(
 		m.MID,
@@ -129,7 +126,7 @@ func (m *Message) Receivers() []Address {
 	return addrs
 }
 
-// Add an attachment
+// AddFile adds the given File as an attachment to m.
 func (m *Message) AddFile(f *File) {
 	m.Files = append(m.Files, f)
 }
@@ -273,8 +270,7 @@ func (m *Message) ReadFrom(r io.Reader) error {
 	return nil
 }
 
-// Writes Message to the given Writer in the Winlink Message
-// format.
+// Writes Message to the given Writer in the Winlink Message format.
 func (m *Message) WriteTo(w io.Writer) (n int64, err error) {
 	writer := bufio.NewWriter(w)
 
@@ -386,6 +382,7 @@ func readHeader(line, key string) (string, error) {
 	}
 }
 
+// Message stringer.
 func (m *Message) String() string {
 	buf := bytes.NewBufferString(``)
 	w := bufio.NewWriter(buf)
@@ -412,7 +409,7 @@ func (m *Message) String() string {
 	return string(buf.Bytes())
 }
 
-// JSON marshaller for File
+// JSON marshaller for File.
 func (f *File) MarshalJSON() ([]byte, error) {
 	b, err := json.Marshal(struct {
 		Name string
@@ -421,25 +418,20 @@ func (f *File) MarshalJSON() ([]byte, error) {
 	return b, err
 }
 
-// The name of this attachment
-func (f *File) Name() string {
-	return f.name
-}
+// Name returns the attachment's filename.
+func (f *File) Name() string { return f.name }
 
-// The size in bytes
-func (f *File) Size() int {
-	return f.dataSize
-}
+// Size returns the attachments's size in bytes.
+func (f *File) Size() int { return f.dataSize }
 
-// Returns the attached data
+// Data returns a copy of the attachment content.
 func (f *File) Data() []byte {
 	cpy := make([]byte, len(f.data))
 	copy(cpy, f.data)
 	return cpy
 }
 
-// Create a new file (attachment) with the given
-// name and data
+// Create a new file (attachment) with the given name and data.
 func NewFile(name string, data []byte) *File {
 	return &File{
 		data:     data,
@@ -448,7 +440,7 @@ func NewFile(name string, data []byte) *File {
 	}
 }
 
-// Textual representation of Address
+// Textual representation of Address.
 func (a Address) String() string {
 	if a.Proto == "" {
 		return a.Addr
@@ -457,19 +449,15 @@ func (a Address) String() string {
 	}
 }
 
-func (a Address) IsZero() bool {
-	return len(a.Addr) == 0
-}
+// IsZero reports whether the Address is unset.
+func (a Address) IsZero() bool { return len(a.Addr) == 0 }
 
-func (a Address) EqualString(b string) bool {
-	return a == AddressFromString(b)
-}
+// EqualString reports whether the given address string is equal to this address.
+func (a Address) EqualString(b string) bool { return a == AddressFromString(b) }
 
-// Function that constructs a proper Address from a string
+// Function that constructs a proper Address from a string.
 //
-// Supported formats: foo@bar.baz (SMTP proto),
-// N0CALL (short winlink address) or N0CALL@winlink.org (full winlink address)
-//
+// Supported formats: foo@bar.baz (SMTP proto), N0CALL (short winlink address) or N0CALL@winlink.org (full winlink address).
 func AddressFromString(addr string) Address {
 	if parts := strings.Split(addr, ":"); len(parts) == 2 {
 		return Address{Proto: parts[0], Addr: parts[1]}

@@ -14,8 +14,7 @@ import (
 // Body is a UTF-8 string representation of a Message's body (textual content).
 type Body string
 
-// ToBytes converts the Body into a slice of bytes with
-// the given charset encoding.
+// ToBytes converts the Body into a slice of bytes with the given charset encoding.
 //
 // If crlf is true all newlines are re-written as CRLF.
 func (b Body) ToBytes(encoding string, crlf bool) ([]byte, error) {
@@ -45,8 +44,7 @@ func (b Body) ToBytes(encoding string, crlf bool) ([]byte, error) {
 	return data, nil
 }
 
-// BodyFromBytes translated the data based on the given charset encoding
-// into a proper Body.
+// BodyFromBytes translated the data based on the given charset encoding into a proper Body.
 func BodyFromBytes(data []byte, encoding string) (Body, error) {
 	translator, err := charset.TranslatorFrom(encoding)
 	if err != nil {

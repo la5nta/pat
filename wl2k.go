@@ -18,8 +18,7 @@ import (
 	"time"
 )
 
-// Objects implementing the MBoxHandler interface can be used to handle
-// inbound and outbound messages for a Session.
+// Objects implementing the MBoxHandler interface can be used to handle inbound and outbound messages for a Session.
 type MBoxHandler interface {
 	InboundHandler
 	OutboundHandler
@@ -32,11 +31,9 @@ type MBoxHandler interface {
 	Prepare() error
 }
 
-// An OutboundHandler offer messages that can be delivered (a proposal) to
-// the remote node and is notified if a message is Sent or Defered.
+// An OutboundHandler offer messages that can be delivered (a proposal) to the remote node and is notified when a message is sent or defered.
 type OutboundHandler interface {
-	// GetOutbound should return all pending (outbound) messages addressed to (and only to) one of
-	// the fw addresses.
+	// GetOutbound should return all pending (outbound) messages addressed to (and only to) one of the fw addresses.
 	//
 	// No fw address implies that the remote node could be a Winlink CMS and all oubound
 	// messages can be delivered through the connected node.
@@ -56,15 +53,12 @@ type OutboundHandler interface {
 
 // An InboundHandler handles all messages that can/is sent from the remote node.
 type InboundHandler interface {
-	// ProcessInbound should persist/save/process all messages received (msgs) returning an
-	// error if the operation was unsuccessful.
+	// ProcessInbound should persist/save/process all messages received (msgs) returning an error if the operation was unsuccessful.
 	//
-	// The error will be delivered (if possble) to the remote to indicate that an
-	// error has occurred.
+	// The error will be delivered (if possble) to the remote to indicate that an error has occurred.
 	ProcessInbound(msg ...*Message) error
 
-	// GetInboundAnswer should return a ProposalAnwer (Accept/Reject/Defer) based on the
-	// remote's message Proposal p.
+	// GetInboundAnswer should return a ProposalAnwer (Accept/Reject/Defer) based on the remote's message Proposal p.
 	//
 	// An already successfully received message (see MID) should be rejected.
 	GetInboundAnswer(p Proposal) ProposalAnswer
@@ -141,29 +135,23 @@ func NewSession(mycall, targetcall, locator string, h MBoxHandler) *Session {
 	}
 }
 
-func (s *Session) IsMaster(isMaster bool) {
-	s.master = isMaster
-}
+// IsMaster sets whether this end should initiate the handshake.
+func (s *Session) IsMaster(isMaster bool) { s.master = isMaster }
 
-// Exchange is the main method for exchanging messages with
-// a remote over the B2F protocol.
+// Exchange is the main method for exchanging messages with a remote over the B2F protocol.
 //
-// Sends outbound messages and downloads inbound messages
-// prepared for this session.
+// Sends outbound messages and downloads inbound messages prepared for this session.
 //
-// Outbound messages should be added as proposals before
-// calling the Exchange() method.
+// Outbound messages should be added as proposals before calling the Exchange() method.
 //
-// After Exchange(), messages that was accepted and
-// delivered successfully to the RMS is available through
-// a call to Sent(). Messages downloaded successfully from
-// the RMS is retrieved by calling Received().
+// After Exchange(), messages that was accepted and delivered successfully to the RMS is
+// available through a call to Sent(). Messages downloaded successfully from the RMS is
+// retrieved by calling Received().
 //
-// The connection is closed at the end of the exchange. If the connection is closed
-// before the exchange is done, is will return io.EOF.
+// The connection is closed at the end of the exchange. If the connection is closed before
+// the exchange is done, is will return io.EOF.
 //
 // Subsequent Exchange calls on the same session is a noop.
-//
 func (s *Session) Exchange(conn net.Conn) (err error) {
 	if s.Done() {
 		return nil
@@ -220,9 +208,7 @@ func (s *Session) Exchange(conn net.Conn) (err error) {
 }
 
 // Done() returns true if either parties have existed from this session.
-func (s *Session) Done() bool {
-	return s.quitReceived || s.quitSent
-}
+func (s *Session) Done() bool { return s.quitReceived || s.quitSent }
 
 // Waits for connection to be closed, returning an error if seen on the line.
 func waitRemoteHangup(conn net.Conn) error {
@@ -255,44 +241,29 @@ func remoteErr(str string) error {
 }
 
 // Mycall returns this stations call sign.
-func (s *Session) Mycall() string {
-	return s.mycall
-}
+func (s *Session) Mycall() string { return s.mycall }
 
 // Targetcall returns the remote stations call sign (if known).
-func (s *Session) Targetcall() string {
-	return s.targetcall
-}
+func (s *Session) Targetcall() string { return s.targetcall }
 
-// SetSecureLoginHandleFunc registers a callback function used to prompt for
-// password when a secure login challenge is received.
+// SetSecureLoginHandleFunc registers a callback function used to prompt for password when a secure login challenge is received.
 func (s *Session) SetSecureLoginHandleFunc(f func() (password string, err error)) {
 	s.secureLoginHandleFunc = f
 }
 
-// This method returns the call signs the remote is requesting
-// traffic on behalf of. The call signs are not available until
-// handshake is done.
+// This method returns the call signs the remote is requesting traffic on behalf of. The call signs are not available until
+// the handshake is done.
 //
-// It will typically be the call sign of the remote P2P station
-// and empty when the remote is a Winlink CMS.
-//
-func (s *Session) RemoteForwarders() []Address {
-	return s.remoteFW
-}
+// It will typically be the call sign of the remote P2P station and empty when the remote is a Winlink CMS.
+func (s *Session) RemoteForwarders() []Address { return s.remoteFW }
 
 // AddAuxiliaryAddress adds one or more addresses to request messages on behalf of.
 //
-// Currently the Winlink System only support requesting messages for call signs,
-// not full email addresses.
-func (s *Session) AddAuxiliaryAddress(aux ...Address) {
-	s.localFW = append(s.localFW, aux...)
-}
+// Currently the Winlink System only support requesting messages for call signs, not full email addresses.
+func (s *Session) AddAuxiliaryAddress(aux ...Address) { s.localFW = append(s.localFW, aux...) }
 
 // Set callback for status updates on receiving / sending messages
-func (s *Session) SetStatusUpdater(updater StatusUpdater) {
-	s.statusUpdater = updater
-}
+func (s *Session) SetStatusUpdater(updater StatusUpdater) { s.statusUpdater = updater }
 
 // Sets custom logger.
 func (s *Session) SetLogger(logger *log.Logger) {
@@ -305,14 +276,10 @@ func (s *Session) SetLogger(logger *log.Logger) {
 }
 
 // Set this session's user agent
-func (s *Session) SetUserAgent(ua UserAgent) {
-	s.ua = ua
-}
+func (s *Session) SetUserAgent(ua UserAgent) { s.ua = ua }
 
 // Get this session's user agent
-func (s *Session) UserAgent() UserAgent {
-	return s.ua
-}
+func (s *Session) UserAgent() UserAgent { return s.ua }
 
 func (s *Session) outbound() (outbound []*Proposal) {
 	if s.h == nil {

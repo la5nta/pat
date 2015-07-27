@@ -21,9 +21,8 @@ const (
 	ProtocolOffsetSizeLimit = 999999
 	MaxBlockSize            = 5
 
-	// Paclink-unix uses 250, protocol maximum is 255.
-	// We use 125 to allow use of AX.25 links with a paclen of 128.
-	// TODO: Consider setting this dynamically
+	// Paclink-unix uses 250, protocol maximum is 255, but we use 125 to allow use of AX.25 links with a paclen of 128.
+	// TODO: Consider setting this dynamically.
 	MaxMsgLength = 125
 )
 
@@ -84,12 +83,11 @@ func (s *Session) handleOutbound(rw io.ReadWriter) (quitSent bool, err error) {
 		return
 	}
 
-	// Error reporting from remote is not defined
-	// by the protocol, but usually indicated by
-	// sending a line prefixed with '***'. The only
-	// valid byte (according to protocol) after a
-	// session turnover is 'F', so we use that to
-	// confirm the block was successfully received.
+	// Error reporting from remote is not defined by the protocol,
+	// but usually indicated by sending a line prefixed with '***'.
+	// The only valid byte (according to protocol) after a session
+	// turnover is 'F', so we use that to confirm the block was
+	// successfully received.
 	var p []byte
 	if p, err = s.rd.Peek(1); err != nil {
 		return
@@ -343,7 +341,6 @@ func parseProposalAnswer(str string, props []*Proposal, l *log.Logger) error {
 	return nil
 }
 
-//TODO: Verify that offset is working properly
 func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 	var checksum int64
 

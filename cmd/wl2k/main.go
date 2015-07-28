@@ -195,7 +195,7 @@ func main() {
 	log.SetOutput(logWriter)
 
 	if fOptions.MyCall == "" && config.MyCall == "" {
-		fmt.Fprint(os.Stderr, "Missing mycall")
+		fmt.Fprint(os.Stderr, "Missing mycall\n")
 		os.Exit(1)
 	} else if fOptions.MyCall == "" {
 		fOptions.MyCall = config.MyCall
@@ -245,7 +245,9 @@ func httpHandle(args []string) {
 }
 
 func connectHandle(args []string) {
-	Connect(args[0])
+	if success := Connect(args[0]); !success {
+		os.Exit(1)
+	}
 }
 
 func helpHandle(args []string) {

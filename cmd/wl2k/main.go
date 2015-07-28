@@ -66,14 +66,14 @@ var commands = []Command{
 	},
 	{
 		Str:  "compose",
-		Desc: "Compose a new email.",
+		Desc: "Compose a new message.",
 		HandleFunc: func(args []string) {
-			composeEmail(nil)
+			composeMessage(nil)
 		},
 	},
 	{
 		Str:  "read",
-		Desc: "Read emails.",
+		Desc: "Read messages.",
 		HandleFunc: func(args []string) {
 			readMail()
 		},
@@ -87,9 +87,9 @@ var commands = []Command{
 	},
 	{
 		Str:        "extract",
-		Desc:       "Extract attachments from an email file.",
+		Desc:       "Extract attachments from a message file.",
 		Usage:      "file",
-		HandleFunc: extractEmailHandle,
+		HandleFunc: extractMessageHandle,
 	},
 	{
 		Str:        "riglist",
@@ -346,7 +346,7 @@ func initWmTNC() {
 	}
 }
 
-func extractEmailHandle(args []string) {
+func extractMessageHandle(args []string) {
 	if len(args) == 0 || args[0] == "" {
 		panic("TODO: usage")
 	}
@@ -386,7 +386,7 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeEmail(replyMsg *wl2k.Message) {
+func composeMessage(replyMsg *wl2k.Message) {
 	msg := wl2k.NewMessage(fOptions.MyCall)
 	in := bufio.NewReader(os.Stdin)
 

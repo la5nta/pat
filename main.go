@@ -98,6 +98,11 @@ var commands = []Command{
 		HandleFunc: riglistHandle,
 	},
 	{
+		Str:        "configure",
+		Desc:       "Open configuration file for editing.",
+		HandleFunc: configureHandle,
+	},
+	{
 		Str:  "help",
 		Desc: "Print detailed help for a given command.",
 	},
@@ -214,6 +219,14 @@ func main() {
 	}
 
 	cmd.HandleFunc(args)
+}
+
+func configureHandle(args []string) {
+	cmd := exec.Command(EditorName(), fOptions.ConfigPath)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("Unable to start editor: %s", err)
+	}
 }
 
 func httpHandle(args []string) {

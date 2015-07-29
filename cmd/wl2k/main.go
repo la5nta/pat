@@ -179,8 +179,14 @@ func main() {
 	}
 
 	cmd, args := parseFlags(os.Args)
-	if cmd.Str == "help" { // Avoid initialization loop
+
+	// Skip initialization for some commands
+	switch cmd.Str {
+	case "help":
 		helpHandle(args)
+		return
+	case "configure":
+		cmd.HandleFunc(args)
 		return
 	}
 

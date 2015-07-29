@@ -47,6 +47,7 @@ var commands = []Command{
 		HandleFunc: connectHandle,
 		Usage:      UsageConnect,
 		Example:    ExampleConnect,
+		MayConnect: true,
 	},
 	{
 		Str:  "interactive",
@@ -54,6 +55,8 @@ var commands = []Command{
 		HandleFunc: func(args []string) {
 			Interactive()
 		},
+		MayConnect: true,
+		LongLived:  true,
 	},
 	{
 		Str:   "http",
@@ -63,6 +66,8 @@ var commands = []Command{
 			"--addr, -a": "Listen address. Default is :8080.",
 		},
 		HandleFunc: httpHandle,
+		MayConnect: true,
+		LongLived:  true,
 	},
 	{
 		Str:  "compose",
@@ -105,6 +110,7 @@ var commands = []Command{
 	{
 		Str:  "help",
 		Desc: "Print detailed help for a given command.",
+		// Avoid initialization loop by invoking helpHandler in main
 	},
 }
 
@@ -190,9 +196,7 @@ func main() {
 		return
 	}
 
-	defer cleanup()
-
-	// Logger
+	// Initialize logger
 	f, err := os.Create(fOptions.LogPath)
 	if err != nil {
 		log.Fatal(err)
@@ -200,6 +204,7 @@ func main() {
 	logWriter = io.MultiWriter(f, os.Stdout)
 	log.SetOutput(logWriter)
 
+	// Read command line options from config if unset
 	if fOptions.MyCall == "" && config.MyCall == "" {
 		fmt.Fprint(os.Stderr, "Missing mycall\n")
 		os.Exit(1)
@@ -211,19 +216,25 @@ func main() {
 		fOptions.Listen = strings.Join(config.Listen, ",")
 	}
 
+	// Make sure we clean up on exit, closing any open resources etc.
+	defer cleanup()
+
+	// Load the mailbox handler
 	loadMBox()
 
-	switch cmd.Str {
-	case "connect", "http", "interactive":
+	if cmd.MayConnect {
 		rigs = loadHamlibRigs()
 		exchangeChan = exchangeLoop()
+	}
+
+	if cmd.LongLived {
+		if fOptions.Listen != "" {
+			Listen(fOptions.Listen)
+		}
 		scheduleLoop()
 	}
 
-	if fOptions.Listen != "" {
-		Listen(fOptions.Listen)
-	}
-
+	// Start command execution
 	cmd.HandleFunc(args)
 }
 

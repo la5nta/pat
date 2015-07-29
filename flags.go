@@ -18,6 +18,9 @@ type Command struct {
 	Usage      string
 	Options    map[string]string
 	Example    string
+
+	LongLived  bool
+	MayConnect bool
 }
 
 func (cmd Command) PrintUsage() {

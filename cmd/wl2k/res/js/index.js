@@ -241,7 +241,7 @@ function displayFolder(dir) {
 
 			//TODO: Cleanup (Sorry about this...)
 			var html = '<tr id="' + msg.MID + '" class="active"><td>';
-			if(msg.Files){
+			if(msg.Files.length > 0){
 				html += '<span class="glyphicon glyphicon-paperclip" />';
 			}
 			html += '</td><td>' + msg.Subject + "</td>"

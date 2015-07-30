@@ -103,16 +103,16 @@ func printMailboxes(w io.Writer) {
 func printMessages(w io.Writer, msgs []*wl2k.Message) {
 	rows := make([][]string, len(msgs))
 	for i, msg := range msgs {
-		to := msg.To[0].Addr
-		if len(msg.To) > 1 {
+		to := msg.To()[0].Addr
+		if len(msg.To()) > 1 {
 			to = to + ", ..."
 		}
 
 		rows[i] = []string{
 			fmt.Sprintf("%2d", i),
-			msg.Subject,
-			msg.From.Addr,
-			msg.Date.String(),
+			msg.Subject(),
+			msg.From().Addr,
+			msg.Date().String(),
 			to,
 		}
 	}

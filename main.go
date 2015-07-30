@@ -376,7 +376,7 @@ func extractMessageHandle(args []string) {
 		log.Fatal(err)
 	} else {
 		fmt.Println(msg)
-		for _, f := range msg.Files {
+		for _, f := range msg.Files() {
 			if err := ioutil.WriteFile(f.Name(), f.Data(), 0664); err != nil {
 				log.Fatal(err)
 			}
@@ -404,7 +404,7 @@ func EditorName() string {
 }
 
 func composeMessage(replyMsg *wl2k.Message) {
-	msg := wl2k.NewMessage(fOptions.MyCall)
+	msg := wl2k.NewMessage(wl2k.Private, fOptions.MyCall)
 	in := bufio.NewReader(os.Stdin)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -412,29 +412,29 @@ func composeMessage(replyMsg *wl2k.Message) {
 	if from == "" {
 		from = fOptions.MyCall
 	}
-	msg.From = wl2k.AddressFromString(from)
+	msg.SetFrom(from)
 
 	fmt.Print(`To`)
 	if replyMsg != nil {
-		fmt.Printf(" [%s]", replyMsg.From)
+		fmt.Printf(" [%s]", replyMsg.From())
 
 	}
 	fmt.Printf(": ")
 	to := readLine(in)
 	if to == "" && replyMsg != nil {
-		msg.To = append(msg.To, replyMsg.From)
+		msg.AddTo(replyMsg.From().String())
 	} else {
-		for _, a := range strings.Split(to, `,`) {
-			a = strings.TrimSpace(a)
-			if a != "" {
-				msg.To = append(msg.To, wl2k.AddressFromString(a))
+		for _, addr := range strings.Split(to, `,`) {
+			addr = strings.TrimSpace(addr)
+			if addr != "" {
+				msg.AddTo(addr)
 			}
 		}
 	}
 
 	ccCand := make([]wl2k.Address, 0)
 	if replyMsg != nil {
-		for _, addr := range append(replyMsg.To, replyMsg.Cc...) {
+		for _, addr := range append(replyMsg.To(), replyMsg.Cc()...) {
 			if !addr.EqualString(fOptions.MyCall) {
 				ccCand = append(ccCand, addr)
 			}
@@ -448,30 +448,34 @@ func composeMessage(replyMsg *wl2k.Message) {
 	fmt.Print(`: `)
 	cc := readLine(in)
 	if cc == "" && replyMsg != nil {
-		msg.Cc = append(msg.Cc, ccCand...)
+		for _, addr := range ccCand {
+			msg.AddCc(addr.String())
+		}
 	} else {
-		for _, a := range strings.Split(cc, `,`) {
-			a = strings.TrimSpace(a)
-			if a != "" {
-				msg.Cc = append(msg.Cc, wl2k.AddressFromString(a))
+		for _, addr := range strings.Split(cc, `,`) {
+			addr = strings.TrimSpace(addr)
+			if addr != "" {
+				msg.AddCc(addr)
 			}
 		}
 	}
 
-	if len(msg.To)+len(msg.Cc) == 1 {
+	if len(msg.Receivers()) == 1 {
 		fmt.Print("P2P only [y/N]: ")
 		ans := readLine(in)
-		msg.P2POnly = (ans == "y" || ans == "Y")
+		if strings.EqualFold("y", ans) {
+			msg.Header.Set("X-P2POnly", "true")
+		}
 	}
 
 	fmt.Print(`Subject: `)
 	if replyMsg != nil {
-		subject := strings.TrimSpace(strings.TrimPrefix(replyMsg.Subject, "Re:"))
+		subject := strings.TrimSpace(strings.TrimPrefix(replyMsg.Subject(), "Re:"))
 		subject = fmt.Sprintf("Re:%s", subject)
 		fmt.Println(subject)
-		msg.Subject = subject
+		msg.SetSubject(subject)
 	} else {
-		msg.Subject = readLine(in)
+		msg.SetSubject(readLine(in))
 	}
 
 	// Read body
@@ -485,9 +489,10 @@ func composeMessage(replyMsg *wl2k.Message) {
 	}
 
 	if replyMsg != nil {
-		fmt.Fprintf(f, "--- %s %s wrote: ---\n", replyMsg.Date, replyMsg.From)
+		fmt.Fprintf(f, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
+		body, _ := replyMsg.Body()
 		orig := ">" + strings.Replace(
-			strings.TrimSpace(string(replyMsg.Body)),
+			strings.TrimSpace(body),
 			"\n",
 			"\n>",
 			-1,
@@ -506,7 +511,7 @@ func composeMessage(replyMsg *wl2k.Message) {
 
 	var buf bytes.Buffer
 	io.Copy(&buf, f)
-	msg.Body = wl2k.Body(buf.String())
+	msg.SetBody(buf.String())
 	f.Close()
 	os.Remove(f.Name())
 

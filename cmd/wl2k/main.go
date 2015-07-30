@@ -179,7 +179,8 @@ func init() {
 }
 
 func main() {
-	config, err := LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
+	var err error
+	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
 	if err != nil {
 		log.Fatalf("Unable to load/write config: %s", err)
 	}

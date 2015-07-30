@@ -337,8 +337,9 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 		Subject string
 		Body    string
 		Files   []*wl2k.File
+		P2POnly bool
 	}{
-		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(),
+		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(), m.Header.Get("X-P2POnly") == "true",
 	}
 
 	return json.Marshal(msg)

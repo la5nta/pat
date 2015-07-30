@@ -5,41 +5,47 @@
 package wl2k
 
 import (
+	"bufio"
 	"bytes"
 
 	"code.google.com/p/go-charset/charset"
 	_ "code.google.com/p/go-charset/data"
 )
 
-// ToBytes converts the Body into a slice of bytes with the given charset encoding.
+// StringToBytes converts the body into a slice of bytes with the given charset encoding.
 //
-// If crlf is true all newlines are re-written as CRLF.
-// bug(martinhpedersen): We should limit line length to 1000 characters (including CRLF).
-func StringToBody(str, encoding string, crlf bool) ([]byte, error) {
-	utf8 := []byte(str)
+// CRLF line break is enforced.
+// Line break are inserted if a line is longer than 1000 characters (including CRLF).
+func StringToBody(str, encoding string) ([]byte, error) {
+	in := bufio.NewScanner(bytes.NewBufferString(str))
+	out := new(bytes.Buffer)
 
-	if crlf {
-		var buf bytes.Buffer
-		for i, b := range utf8 {
-			if b == '\n' && (i == 0 || utf8[i-1] != '\r') {
-				buf.WriteByte('\r')
+	var err error
+	var line []byte
+	for in.Scan() {
+		line = in.Bytes()
+		for {
+			// Lines can not be longer that 1000 characters including CRLF.
+			n := min(len(line), 1000-2)
+
+			out.Write(line[:n])
+			out.WriteString("\r\n")
+
+			line = line[n:]
+			if len(line) == 0 {
+				break
 			}
-			buf.WriteByte(b)
 		}
-		utf8 = buf.Bytes()
 	}
 
-	translator, err := charset.TranslatorTo(encoding)
-	if err != nil {
-		return utf8, err
-	}
+	return out.Bytes(), err
+}
 
-	_, data, err := translator.Translate(utf8, true)
-	if err != nil {
-		return utf8, err
+func min(a, b int) int {
+	if a < b {
+		return a
 	}
-
-	return data, nil
+	return b
 }
 
 // BodyFromBytes translated the data based on the given charset encoding into a proper utf-8 string.

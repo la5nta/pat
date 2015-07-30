@@ -125,7 +125,7 @@ func (m *Message) Date() time.Time {
 // The body is encoded with the character encoding given by m.Charset().
 // All lines are modified to ensure CRLF.
 func (m *Message) SetBody(body string) error {
-	bytes, err := StringToBody(body, m.Charset(), true)
+	bytes, err := StringToBody(body, m.Charset())
 	if err != nil {
 		return err
 	}

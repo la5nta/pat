@@ -281,15 +281,23 @@ func (s *Session) SetUserAgent(ua UserAgent) { s.ua = ua }
 // Get this session's user agent
 func (s *Session) UserAgent() UserAgent { return s.ua }
 
-func (s *Session) outbound() (outbound []*Proposal) {
+func (s *Session) outbound() []*Proposal {
 	if s.h == nil {
 		return []*Proposal{}
 	}
 
 	msgs := s.h.GetOutbound(s.remoteFW...)
-	outbound = make([]*Proposal, len(msgs))
-	for i, m := range msgs {
-		outbound[i] = m.Proposal()
+	props := make([]*Proposal, 0, len(msgs))
+
+	for _, m := range msgs {
+		prop, err := m.Proposal()
+		if err != nil {
+			// TODO: This should result in an error somewhere
+			s.log.Printf("Unable to prepare proposal for '%s'. Corrupt message? Skipping...", prop.MID())
+			continue
+		}
+
+		props = append(props, prop)
 	}
-	return
+	return props
 }

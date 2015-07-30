@@ -11,14 +11,12 @@ import (
 	_ "code.google.com/p/go-charset/data"
 )
 
-// Body is a UTF-8 string representation of a Message's body (textual content).
-type Body string
-
 // ToBytes converts the Body into a slice of bytes with the given charset encoding.
 //
 // If crlf is true all newlines are re-written as CRLF.
-func (b Body) ToBytes(encoding string, crlf bool) ([]byte, error) {
-	utf8 := []byte(b)
+// bug(martinhpedersen): We should limit line length to 1000 characters (including CRLF).
+func StringToBody(str, encoding string, crlf bool) ([]byte, error) {
+	utf8 := []byte(str)
 
 	if crlf {
 		var buf bytes.Buffer
@@ -44,17 +42,13 @@ func (b Body) ToBytes(encoding string, crlf bool) ([]byte, error) {
 	return data, nil
 }
 
-// BodyFromBytes translated the data based on the given charset encoding into a proper Body.
-func BodyFromBytes(data []byte, encoding string) (Body, error) {
+// BodyFromBytes translated the data based on the given charset encoding into a proper utf-8 string.
+func BodyFromBytes(data []byte, encoding string) (string, error) {
 	translator, err := charset.TranslatorFrom(encoding)
 	if err != nil {
-		return Body(data), err
+		return string(data), err
 	}
 
 	_, utf8, err := translator.Translate(data, true)
-	if err != nil {
-		return Body(data), err
-	}
-
-	return Body(utf8), nil
+	return string(utf8), err
 }

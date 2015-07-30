@@ -15,7 +15,7 @@ type ByDate []*Message
 
 func (d ByDate) Len() int           { return len(d) }
 func (d ByDate) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
-func (d ByDate) Less(i, j int) bool { return d[i].Date.Before(d[j].Date) }
+func (d ByDate) Less(i, j int) bool { return d[i].Date().Before(d[j].Date()) }
 
 func ReadLine(rd io.Reader) (string, error) {
 	var lineBuffer bytes.Buffer

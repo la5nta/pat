@@ -53,16 +53,17 @@ func (p PosReport) Message(mycall string) *wl2k.Message {
 		fmt.Fprintf(&buf, "COMMENT: %s\r\n", p.Comment)
 	}
 
-	return &wl2k.Message{
-		MID:     wl2k.GenerateMid(mycall),
-		To:      []wl2k.Address{wl2k.Address{Addr: "QTH"}},
-		From:    wl2k.AddressFromString(mycall),
-		Mbo:     mycall,
-		Date:    time.Now(),
-		Type:    "Position Report",
-		Subject: "POSITION REPORT",
-		Body:    wl2k.Body(buf.Bytes()),
+	msg := wl2k.NewMessage(wl2k.PositionReport, mycall)
+
+	err := msg.SetBody(buf.String())
+	if err != nil {
+		panic(err)
 	}
+
+	msg.SetSubject("POSITION REPORT")
+	msg.AddTo("QTH")
+
+	return msg
 }
 
 // Format: 23-42.3N

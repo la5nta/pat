@@ -77,7 +77,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	m := r.MultipartForm
 
-	msg := wl2k.NewMessage(fOptions.MyCall)
+	msg := wl2k.NewMessage(wl2k.Private, fOptions.MyCall)
 
 	// files
 	files := m.File["files"]
@@ -109,24 +109,22 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		msg.Files = append(msg.Files, wl2k.NewFile(f.Filename, p))
+		msg.AddFile(wl2k.NewFile(f.Filename, p))
 	}
 
 	// Other fields
 	if v := m.Value["to"]; len(v) == 1 {
 		addrs := strings.Split(v[0], ",")
-		for _, str := range addrs {
-			msg.To = append(msg.To, wl2k.AddressFromString(str))
-		}
+		msg.AddTo(addrs...)
 	}
 	if v := m.Value["subject"]; len(v) == 1 {
-		msg.Subject = v[0]
+		msg.SetSubject(v[0])
 	}
 	if v := m.Value["body"]; len(v) == 1 {
-		msg.Body = wl2k.Body(v[0])
+		msg.SetBody(v[0])
 	}
-	if v := m.Value["p2ponly"]; len(v) == 1 {
-		msg.P2POnly = v[0] != ""
+	if v := m.Value["p2ponly"]; len(v) == 1 && v[0] != "" {
+		msg.Header.Set("X-P2POnly", "true")
 	}
 	if v := m.Value["date"]; len(v) == 1 {
 		t, err := time.Parse(time.RFC3339, v[0])
@@ -135,7 +133,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		msg.Date = t
+		msg.SetDate(t)
 	} else {
 		log.Printf("Missing date value")
 		http.Error(w, "Missing date value", http.StatusBadRequest)
@@ -148,7 +146,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
 		var buf bytes.Buffer
-		msg.WriteTo(&buf)
+		msg.Write(&buf)
 		fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
 	}
 }
@@ -317,8 +315,33 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 
 	sort.Sort(sort.Reverse(wl2k.ByDate(messages)))
 
-	json.NewEncoder(w).Encode(messages)
+	jsonSlice := make([]JSONMessage, len(messages))
+	for i, msg := range messages {
+		jsonSlice[i] = JSONMessage{msg}
+	}
+	json.NewEncoder(w).Encode(jsonSlice)
+
 	return
+}
+
+type JSONMessage struct{ *wl2k.Message }
+
+func (m JSONMessage) MarshalJSON() ([]byte, error) {
+	body, _ := m.Body()
+	msg := struct {
+		MID     string
+		Date    time.Time
+		From    wl2k.Address
+		To      []wl2k.Address
+		Cc      []wl2k.Address
+		Subject string
+		Body    string
+		Files   []*wl2k.File
+	}{
+		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(),
+	}
+
+	return json.Marshal(msg)
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
@@ -341,7 +364,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(msg)
+	json.NewEncoder(w).Encode(JSONMessage{msg})
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -366,12 +389,12 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Find and write attachment
 	var found bool
-	for _, f := range msg.Files {
+	for _, f := range msg.Files() {
 		if f.Name() != attachment {
 			continue
 		}
 		found = true
-		http.ServeContent(w, r, f.Name(), msg.Date, bytes.NewReader(f.Data()))
+		http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
 	}
 
 	if !found {

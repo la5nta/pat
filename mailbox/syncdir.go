@@ -68,17 +68,25 @@ func (h *DirHandler) SentCount() int    { return countFiles(path.Join(h.MBoxPath
 func (h *DirHandler) ArchiveCount() int { return countFiles(path.Join(h.MBoxPath, DIR_ARCHIVE)) }
 
 func (h *DirHandler) AddOut(msg *wl2k.Message) error {
-	if msg.MID == "" {
-		return fmt.Errorf("Message is missing MID")
+	data, err := msg.Bytes()
+	if err != nil {
+		return err
 	}
-	return ioutil.WriteFile(path.Join(h.MBoxPath, DIR_OUTBOX, msg.MID), msg.Bytes(), 0644)
+
+	return ioutil.WriteFile(path.Join(h.MBoxPath, DIR_OUTBOX, msg.MID()), data, 0644)
 }
 
 func (h *DirHandler) ProcessInbound(msgs ...*wl2k.Message) (err error) {
 	dir := path.Join(h.MBoxPath, DIR_INBOX)
 	for _, m := range msgs {
-		filename := path.Join(dir, m.MID)
-		if err = ioutil.WriteFile(filename, m.Bytes(), 0664); err != nil {
+		filename := path.Join(dir, m.MID())
+
+		data, err := m.Bytes()
+		if err != nil {
+			return err
+		}
+
+		if err = ioutil.WriteFile(filename, data, 0664); err != nil {
 			err = fmt.Errorf("Unable to write received message (%s): %s", filename, err)
 		}
 	}
@@ -125,7 +133,7 @@ func (h *DirHandler) GetOutbound(fws ...wl2k.Address) []*wl2k.Message {
 
 	deliver := make([]*wl2k.Message, 0, len(all))
 	for _, m := range all {
-		if h.deferred[m.MID] {
+		if h.deferred[m.MID()] {
 			continue
 		}
 
@@ -141,7 +149,7 @@ func (h *DirHandler) GetOutbound(fws ...wl2k.Address) []*wl2k.Message {
 			continue
 		}
 
-		if len(fws) == 0 && m.P2POnly {
+		if len(fws) == 0 && m.Header.Get("X-P2POnly") == "true" {
 			continue // The message is P2POnly and remote is CMS
 		}
 

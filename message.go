@@ -12,48 +12,10 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
-)
-
-const (
-	HEADER_MID     = `MID`
-	HEADER_TO      = `To`
-	HEADER_DATE    = `Date`
-	HEADER_TYPE    = `Type`
-	HEADER_FROM    = `From`
-	HEADER_CC      = `Cc`
-	HEADER_SUBJECT = `Subject`
-	HEADER_MBO     = `Mbo`
-	HEADER_BODY    = `Body`
-	HEADER_FILE    = `File`
-
-	// These headers are stripped by the winlink system, but let's
-	// include it anyway... just in case the winlink team one day
-	// starts taking encoding seriously.
-	HEADER_CONTENT_TYPE              = `Content-Type`
-	HEADER_CONTENT_TRANSFER_ENCODING = `Content-Transfer-Encoding`
-
-	// Internal headers
-	HEADER_X_P2P_ONLY = `X-P2POnly`
-
-	// The default body charset seems to be ISO-8859-1
-	//
-	// The Winlink Message Structure docs says that the body should
-	// be ASCII-only, but RMS Express seems to encode the body as
-	// ISO-8859-1. This is also the charset set (Content-Type header)
-	// when a message reaches an SMTP server.
-	DefaultCharset = "ISO-8859-1"
-
-	// Mails going out over SMTP from the Winlink system is sent
-	// with the header 'Content-Transfer-Encoding: 7bit', but
-	// let's be reasonable...
-	DefaultTransferEncoding = "8bit"
-
-	// The date (in UTC) format as described in the Winlink
-	// Message Structure docs (YYYY/MM/DD HH:MM).
-	DateLayout = `2006/01/02 15:04`
 )
 
 // Representation of a receiver/sender address.
@@ -64,36 +26,246 @@ type Address struct {
 
 // File represents an attachment.
 type File struct {
-	data     []byte
-	name     string
-	dataSize int
+	data []byte
+	name string
+	err  error
 }
 
 // Message represent the Winlink 2000 Message Structure as defined in http://winlink.org/B2F.
 type Message struct {
-	MID     string
-	Date    time.Time
-	From    Address
-	To      []Address
-	Cc      []Address
-	Subject string
-	Type    string
-	Mbo     string
-	Body    Body
-	Files   []*File
+	// The header names are case-insensitive.
+	//
+	// Users should normally access common header fields
+	// using the appropriate Message methods.
+	Header Header
 
-	P2POnly bool
+	body  []byte
+	files []*File
 }
 
-// NewMessage returns a new "private" message with MID, Date, Type, From and Mbo set.
-func NewMessage(mycall string) *Message {
-	return &Message{
-		MID:  GenerateMid(mycall),
-		Date: time.Now(),
-		Type: `Private`,
-		From: AddressFromString(mycall),
-		Mbo:  mycall,
+type MsgType string
+
+const (
+	Private        MsgType = "Private"
+	Service                = "Service"
+	Inquiry                = "Inquiry"
+	PositionReport         = "Position Report"
+	Option                 = "Option"
+	System                 = "System"
+)
+
+// NewMessage initializes and returns a new message with Type, Mbo, From and Date set.
+//
+// If the message type t is empty, it defaults to Private.
+func NewMessage(t MsgType, mycall string) *Message {
+	msg := &Message{
+		Header: make(Header),
 	}
+
+	msg.Header.Set(HEADER_MID, GenerateMid(mycall))
+
+	msg.SetDate(time.Now())
+	msg.SetFrom(mycall)
+	msg.Header.Set(HEADER_MBO, mycall)
+
+	if t == "" {
+		t = Private
+	}
+	msg.Header.Set(HEADER_TYPE, string(t))
+
+	return msg
+}
+
+// MID returns the unique identifier of this message across the winlink system.
+func (m *Message) MID() string { return m.Header.Get(HEADER_MID) }
+
+// SetSubject sets this message's subject field.
+func (m *Message) SetSubject(str string) { m.Header.Set(HEADER_SUBJECT, str) }
+
+// Subject returns this message's subject field.
+func (m *Message) Subject() string { return m.Header.Get(HEADER_SUBJECT) }
+
+// Type returns the message type.
+//
+// See MsgType consts for details.
+func (m *Message) Type() MsgType { return MsgType(m.Header.Get(HEADER_TYPE)) }
+
+// Mbo returns the mailbox operator origin of this message.
+func (m *Message) Mbo() string { return m.Header.Get(HEADER_MBO) }
+
+// Body returns this message's body encoded as utf8.
+func (m *Message) Body() (string, error) { return BodyFromBytes(m.body, m.Charset()) }
+
+// Files returns the message attachments.
+func (m *Message) Files() []*File { return m.files }
+
+// SetFrom sets the From header field.
+//
+// SMTP: prefix is automatically added if needed, see AddressFromString.
+func (m *Message) SetFrom(addr string) { m.Header.Set(HEADER_FROM, AddressFromString(addr).String()) }
+
+// From returns the From header field as an Address.
+func (m *Message) From() Address { return AddressFromString(m.Header.Get(HEADER_FROM)) }
+
+// Set date sets the Date header field.
+//
+// The field is set in the format DateLayout, UTC.
+func (m *Message) SetDate(t time.Time) { m.Header.Set(HEADER_DATE, t.UTC().Format(DateLayout)) }
+
+// Date parses the Date header field according to the winlink format.
+//
+// Parse errors are omitted, but it's checked at serialization.
+func (m *Message) Date() time.Time {
+	date, _ := ParseDate(m.Header.Get(HEADER_DATE))
+	return date
+}
+
+// SetBody sets the given string as message body.
+//
+// The body is encoded with the character encoding given by m.Charset().
+// All lines are modified to ensure CRLF.
+func (m *Message) SetBody(body string) error {
+	bytes, err := StringToBody(body, m.Charset(), true)
+	if err != nil {
+		return err
+	}
+
+	m.body = bytes
+	m.Header.Set(HEADER_BODY, fmt.Sprintf("%d", len(bytes)))
+	return nil
+}
+
+// BodySize returns the expected size of the body (in bytes) as defined in the header.
+func (m *Message) BodySize() int { size, _ := strconv.Atoi(m.Header.Get(HEADER_BODY)); return size }
+
+// Charset returns the body character encoding as defined in the ContentType header field.
+//
+// If the header field is unset, DefaultCharset is returned.
+func (m *Message) Charset() string {
+	_, params, err := mime.ParseMediaType(m.Header.Get(HEADER_CONTENT_TYPE))
+	if err != nil {
+		return DefaultCharset
+	}
+
+	if v, ok := params["charset"]; ok {
+		return v
+	}
+	return DefaultCharset
+}
+
+// AddTo adds a new receiver for this message.
+//
+// It adds a new To header field per given address.
+// SMTP: prefix is automatically added if needed, see AddressFromString.
+func (m *Message) AddTo(addr ...string) {
+	for _, a := range addr {
+		m.Header.Add(HEADER_TO, AddressFromString(a).String())
+	}
+}
+
+// AddCc adds a new carbon copy receiver to this message.
+//
+// It adds a new Cc header field per given address.
+// SMTP: prefix is automatically added if needed, see AddressFromString.
+func (m *Message) AddCc(addr ...string) {
+	for _, a := range addr {
+		m.Header.Add(HEADER_CC, AddressFromString(a).String())
+	}
+}
+
+// To returns primary receivers of this message.
+func (m *Message) To() (to []Address) {
+	for _, str := range m.Header[HEADER_TO] {
+		to = append(to, AddressFromString(str))
+	}
+	return
+}
+
+// Cc returns the carbon copy receivers of this message.
+func (m *Message) Cc() (cc []Address) {
+	for _, str := range m.Header[HEADER_CC] {
+		cc = append(cc, AddressFromString(str))
+	}
+	return
+}
+
+// Implements ReaderFrom for Message.
+//
+// Reads the given io.Reader and fills in values fetched from the stream.
+func (m *Message) ReadFrom(r io.Reader) error {
+	reader := bufio.NewReader(r)
+
+	if h, err := textproto.NewReader(reader).ReadMIMEHeader(); err != nil {
+		return err
+	} else {
+		m.Header = Header(h)
+	}
+
+	// Read body
+	var err error
+	m.body, err = readSection(reader, m.BodySize())
+	if err != nil {
+		return err
+	}
+
+	// Read files
+	m.files = make([]*File, len(m.Header[HEADER_FILE]))
+	for i, value := range m.Header[HEADER_FILE] {
+		file := new(File)
+		m.files[i] = file
+
+		slice := strings.SplitN(value, ` `, 2)
+		if len(slice) != 2 {
+			file.err = errors.New(`Failed to parse file header. Got: ` + value)
+			continue
+		}
+
+		size, _ := strconv.Atoi(slice[0])
+		file.name = slice[1]
+
+		file.data, err = readSection(reader, size)
+		if err != nil {
+			file.err = err
+		}
+	}
+
+	// Return error if date field is not parseable
+	if err == nil {
+		_, err = ParseDate(m.Header.Get(HEADER_DATE))
+	}
+
+	return err
+}
+
+func readSection(reader *bufio.Reader, readN int) ([]byte, error) {
+	buf := make([]byte, readN)
+
+	var err error
+	n := 0
+	for n < readN {
+		m, err := reader.Read(buf[n:])
+		if err != nil {
+			break
+		}
+		n += m
+	}
+
+	if err != nil {
+		return buf, err
+	}
+
+	end, err := reader.ReadString('\n')
+	switch {
+	case n != readN:
+		return buf, io.ErrUnexpectedEOF
+	case err == io.EOF:
+		// That's ok
+	case err != nil:
+		return buf, err
+	case end != "\r\n":
+		return buf, errors.New("Unexpected end of section")
+	}
+	return buf, nil
 }
 
 // Returns true if the given Address is the only receiver of this Message.
@@ -106,280 +278,75 @@ func (m *Message) IsOnlyReceiver(addr Address) bool {
 }
 
 // Method for generating a proposal of the message.
-func (m *Message) Proposal() *Proposal {
-	return NewProposal(
-		m.MID,
-		m.Subject,
-		m.Bytes(),
-	)
+func (m *Message) Proposal() (*Proposal, error) {
+	data, err := m.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewProposal(m.MID(), m.Subject(), data), nil
 }
 
 // Receivers returns a slice of all receivers of this message.
 func (m *Message) Receivers() []Address {
-	addrs := make([]Address, 0, len(m.To)+len(m.Cc))
-	if len(m.To) > 0 {
-		addrs = append(addrs, m.To...)
+	to, cc := m.To(), m.Cc()
+	addrs := make([]Address, 0, len(to)+len(cc))
+	if len(to) > 0 {
+		addrs = append(addrs, to...)
 	}
-	if len(m.Cc) > 0 {
-		addrs = append(addrs, m.Cc...)
+	if len(cc) > 0 {
+		addrs = append(addrs, cc...)
 	}
 	return addrs
 }
 
 // AddFile adds the given File as an attachment to m.
 func (m *Message) AddFile(f *File) {
-	m.Files = append(m.Files, f)
+	m.files = append(m.files, f)
+
+	// Add header
+	value := fmt.Sprintf("%d %s", f.Size(), f.Name())
+	m.Header[HEADER_FILE] = append(m.Header[HEADER_FILE], value)
 }
 
 // Bytes returns the message in the Winlink Message format.
-func (m *Message) Bytes() []byte {
+func (m *Message) Bytes() ([]byte, error) {
 	var buf bytes.Buffer
-	if _, err := m.WriteTo(&buf); err != nil {
-		panic(err)
+	if err := m.Write(&buf); err != nil {
+		return nil, err
 	}
-	return buf.Bytes()
-}
-
-// Implements ReaderFrom for Message.
-//
-// Reads the given io.Reader and fills in values fetched from the stream.
-func (m *Message) ReadFrom(r io.Reader) error {
-	reader := bufio.NewReader(r)
-
-	// MID must be at the top
-	if mid, err := reader.ReadString('\n'); err != nil {
-		return errors.New(`Unable to read from input`)
-	} else if mid, err := readHeader(mid, HEADER_MID+`: `); err != nil {
-		return err
-	} else {
-		m.MID = mid
-	}
-
-	charset := DefaultCharset
-
-	// Parse address header
-	var bodySize int
-	done := false
-	for !done {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-
-		key, value := parseHeaderLine(line)
-		switch lc(key) {
-		case lc(HEADER_TO):
-			m.To = append(m.To, AddressFromString(value))
-		case lc(HEADER_CC):
-			m.Cc = append(m.Cc, AddressFromString(value))
-		case lc(HEADER_DATE):
-			var err error
-			if m.Date, err = time.Parse(DateLayout, value); err != nil {
-				return err
-			}
-		case lc(HEADER_MBO):
-			m.Mbo = value
-		case lc(HEADER_TYPE):
-			m.Type = value
-		case lc(HEADER_FROM):
-			m.From = AddressFromString(value)
-		case lc(HEADER_SUBJECT):
-			//REVIEW:
-			//  This is documented as ASCII only, but
-			//  RMS Express encodes it using latin1?
-			m.Subject = value
-		case lc(HEADER_CONTENT_TYPE):
-			_, params, err := mime.ParseMediaType(value)
-			if err != nil {
-				continue
-			} else if v, ok := params["charset"]; ok {
-				charset = v
-			}
-		case lc(HEADER_BODY):
-			bodySize, _ = strconv.Atoi(value)
-		case lc(HEADER_FILE):
-			slice := strings.SplitN(value, ` `, 2)
-			if len(slice) < 2 {
-				return errors.New(`Failed to parse file header. Got: ` + value)
-			} else {
-				size, _ := strconv.Atoi(slice[0])
-				m.Files = append(m.Files, &File{
-					name:     slice[1],
-					dataSize: size,
-				})
-			}
-		case lc(HEADER_X_P2P_ONLY):
-			if b, err := strconv.ParseBool(value); err != nil {
-				return fmt.Errorf("Unable to parse %s: %s", HEADER_X_P2P_ONLY, err)
-			} else {
-				m.P2POnly = b
-			}
-		case ``:
-			done = true
-		default:
-			// Graceful ignore as specified in format definition.
-		}
-	}
-
-	// Read body
-	var body bytes.Buffer
-	for i := 0; i < bodySize; i++ {
-		if c, err := reader.ReadByte(); err != nil {
-			return err
-		} else {
-			body.WriteByte(c)
-		}
-	}
-	if end, err := reader.ReadString('\n'); err == io.EOF {
-		// that's ok
-	} else if err != nil {
-		return err
-	} else if end != "\r\n" {
-		return errors.New(`Unexpected end of body`)
-	} else if body.Len() != bodySize {
-		return errors.New(fmt.Sprintf(`Expected %d bytes, got %d on body`, bodySize, body.Len()))
-	}
-	if body, err := BodyFromBytes(body.Bytes(), charset); err != nil {
-		panic(err)
-	} else {
-		m.Body = body
-	}
-
-	// Read files
-	for _, file := range m.Files {
-		var buf bytes.Buffer
-		for i := 0; i < file.dataSize; i++ {
-			if c, err := reader.ReadByte(); err != nil {
-				return err
-			} else {
-				buf.WriteByte(c)
-			}
-		}
-
-		if end, err := reader.ReadString('\n'); err != nil {
-			return err
-		} else if end != "\r\n" {
-			return errors.New(`Unexpected end of attachment`)
-		} else if buf.Len() != file.dataSize {
-			return errors.New(fmt.Sprintf(`Expected %d bytes, got %d on %s`, file.dataSize, buf.Len(), file.Name))
-		} else {
-			file.data = buf.Bytes()
-		}
-	}
-
-	return nil
+	return buf.Bytes(), nil
 }
 
 // Writes Message to the given Writer in the Winlink Message format.
-func (m *Message) WriteTo(w io.Writer) (n int64, err error) {
+//
+// If the Date header field is not formatted correctly, an error will be returned.
+func (m *Message) Write(w io.Writer) (err error) {
+	// Ensure Date field is in correct format
+	if _, err = ParseDate(m.Header.Get(HEADER_DATE)); err != nil {
+		return
+	}
+
+	// We use a bufio.Writer to defer error handling until Flush
 	writer := bufio.NewWriter(w)
 
-	bodyBytes, err := m.Body.ToBytes(DefaultCharset, true)
-	if err != nil {
-		panic(err)
-	}
-
-	// TODO: Clean up this func
-	wf := func(key, format string, a ...interface{}) {
-		m, err := fmt.Fprintf(
-			writer,
-			"%s: %s\r\n",
-			key,
-			fmt.Sprintf(format, a...),
-		)
-		if err != nil {
-			panic(err)
-		}
-		n += int64(m)
-	}
-
-	wb := func() {
-		if m, err := fmt.Fprint(writer, "\r\n"); err != nil {
-			panic(err)
-		} else {
-			n += int64(m)
-		}
-	}
-
 	// Header
-	wf(HEADER_MID, "%s", m.MID)
-	wf(HEADER_DATE, "%s", m.Date.UTC().Format(DateLayout))
-	wf(HEADER_TYPE, "%s", m.Type)
-	wf(HEADER_FROM, "%s", m.From)
-	for _, a := range m.To {
-		wf(HEADER_TO, "%s", a)
-	}
-	for _, a := range m.Cc {
-		wf(HEADER_CC, "%s", a)
-	}
-	wf(HEADER_SUBJECT, "%s", m.Subject)
-	wf(HEADER_MBO, "%s", m.Mbo)
-
-	contentType := mime.FormatMediaType(
-		"text/plain",
-		map[string]string{"charset": DefaultCharset},
-	)
-	wf(HEADER_CONTENT_TYPE, "%s", contentType)
-	wf(HEADER_CONTENT_TRANSFER_ENCODING, "%s", DefaultTransferEncoding)
-	if m.P2POnly {
-		wf(HEADER_X_P2P_ONLY, "%t", m.P2POnly)
-	}
-
-	wf(HEADER_BODY, "%d", len(bodyBytes))
-	for _, f := range m.Files {
-		wf(HEADER_FILE, "%d %s", f.dataSize, f.name)
-	}
-
-	wb() // end of headers
+	m.Header.Write(writer)
+	writer.WriteString("\r\n") // end of headers
 
 	// Body
-	if i, err := writer.Write(bodyBytes); err != nil {
-		return n + int64(i), err
-	} else if i != len(bodyBytes) {
-		return n + int64(i), errors.New(`Body was not fully written`)
-	} else {
-		n += int64(i)
+	writer.Write(m.body)
+	if len(m.Files()) > 0 {
+		writer.WriteString("\r\n") // end of body
 	}
 
-	if len(m.Files) > 0 {
-		wb() // end of body
+	// Files (the order must be the same as they appear in the header)
+	for _, f := range m.Files() {
+		writer.Write(f.data)
+		writer.WriteString("\r\n") // end of file
 	}
 
-	// Files
-	for _, f := range m.Files {
-		if i, err := writer.Write(f.data); err != nil {
-			return n + int64(i), err
-		} else if i != f.dataSize {
-			return n + int64(i), errors.New(`File was not fully written`)
-		} else {
-			n += int64(i)
-		}
-
-		wb() // end of file
-	}
-
-	writer.Flush()
-	return
-}
-
-func parseHeaderLine(line string) (key, value string) {
-	slice := strings.SplitN(line, `:`, 2)
-	if len(slice) < 2 {
-		return ``, ``
-	}
-
-	return strings.TrimSpace(slice[0]), strings.TrimSpace(slice[1])
-}
-
-func lc(str string) string { return strings.ToLower(str) }
-
-func readHeader(line, key string) (string, error) {
-	line = strings.TrimSpace(line)
-	if strings.HasPrefix(strings.ToLower(line), strings.ToLower(key)) {
-		return line[len(key):], nil
-	} else {
-		return line, errors.New(`Expected ` + key)
-	}
+	return writer.Flush()
 }
 
 // Message stringer.
@@ -387,22 +354,23 @@ func (m *Message) String() string {
 	buf := bytes.NewBufferString(``)
 	w := bufio.NewWriter(buf)
 
-	fmt.Fprintln(w, "MID:", m.MID)
-	fmt.Fprintln(w, `Date:`, m.Date)
-	fmt.Fprintln(w, `From:`, m.From)
-	for _, to := range m.To {
+	fmt.Fprintln(w, "MID: ", m.MID())
+	fmt.Fprintln(w, `Date:`, m.Date())
+	fmt.Fprintln(w, `From:`, m.From())
+	for _, to := range m.To() {
 		fmt.Fprintln(w, `To:`, to)
 	}
-	for _, cc := range m.Cc {
+	for _, cc := range m.Cc() {
 		fmt.Fprintln(w, `Cc:`, cc)
 	}
-	fmt.Fprintln(w, `Subject:`, m.Subject)
+	fmt.Fprintln(w, `Subject:`, m.Subject())
 
-	fmt.Fprintf(w, "\n%s\n", m.Body)
+	body, _ := m.Body()
+	fmt.Fprintf(w, "\n%s\n", body)
 
 	fmt.Fprintln(w, "Attachments:")
-	for _, f := range m.Files {
-		fmt.Fprintf(w, "\t%s [%d bytes]\n", f.Name(), f.dataSize)
+	for _, f := range m.Files() {
+		fmt.Fprintf(w, "\t%s [%d bytes]\n", f.Name(), f.Size())
 	}
 
 	w.Flush()
@@ -422,7 +390,7 @@ func (f *File) MarshalJSON() ([]byte, error) {
 func (f *File) Name() string { return f.name }
 
 // Size returns the attachments's size in bytes.
-func (f *File) Size() int { return f.dataSize }
+func (f *File) Size() int { return len(f.data) }
 
 // Data returns a copy of the attachment content.
 func (f *File) Data() []byte {
@@ -434,9 +402,8 @@ func (f *File) Data() []byte {
 // Create a new file (attachment) with the given name and data.
 func NewFile(name string, data []byte) *File {
 	return &File{
-		data:     data,
-		name:     name,
-		dataSize: len(data),
+		data: data,
+		name: name,
 	}
 }
 
@@ -469,4 +436,17 @@ func AddressFromString(addr string) Address {
 	} else {
 		return Address{Proto: "SMTP", Addr: addr}
 	}
+}
+
+func ParseDate(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Time{}, nil
+	}
+
+	date, err := time.Parse(DateLayout, dateStr)
+	if err != nil {
+		return date, err
+	}
+
+	return date.Local(), nil
 }

@@ -44,5 +44,5 @@ func ExamplePosReport_Message() {
 		Comment: "Hjemme QTH",
 	}
 	msg := posRe.Message("N0CALL")
-	msg.WriteTo(os.Stdout)
+	msg.Write(os.Stdout)
 }

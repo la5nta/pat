@@ -1,18 +1,18 @@
 # wl2k-go
 
-wl2k-go is a collection of Go packages that implement various parts needed to build a Winlink 2000 client.
+wl2k-go is a collection of Go packages implementing various parts needed to build a Winlink 2000 client. It includes a Winlink client running on Linux, OS X and other unix-like platforms.
 
 The project's goal is to encourage and faciliate development of cross-platform Winlink 2000 clients.
 
-wl2k-go is not affiliated with The Winlink Development Team nor the Winlink 2000 project [http://winlink.org].
-
 _This project is under heavy development and breaking API changes are to be expected._
 
-## cmd/wl2k: The sandbox client application
+## cmd/wl2k: The client application
 
 cmd/wl2k is a fully working cross-platform Winlink client with basic messaging capabilities.
 
 It is the primary sandbox/prototype application for the various wl2k-go sub-packages, and provides both a command line interface and a responsive (mobile-friendly) web interface.
+
+It is mainly developed for Linux, but has also been tested on OS X and Android.
 
 See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
 
@@ -118,8 +118,7 @@ For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k
 #### winmor
 A WINMOR TNC driver that provides dialing and listen capabilities for a local or remote TNC.
 
-TIP: The WINMOR TNC can be run under Wine!
-
+The WINMOR TNC can be run under Wine:
 * Tested OK with WINMOR TNC 1.5.7.0 running on wine 1.6.2-17 (debian jessie) with .NET 2.0, 3.0 and 3.5 installed.
 * Tested OK with WINMOR TNC 1.4.7.0 running on wine 1.4.1-4 (debian wheezy) with .NET 2.0, 3.0, 3.5 and 4.0 installed.
 
@@ -159,3 +158,6 @@ The paclink-unix team (Nicholas S. Castellano N2QZ and others) - reference imple
 Amateur Radio Safety Foundation, Inc. - The Winlink 2000 project
 
 F6FBB Jean-Paul ROUBELAT - the FBB forwarding protocol
+
+
+_wl2k-go is not affiliated with The Winlink Development Team nor the Winlink 2000 project [http://winlink.org]._

@@ -8,7 +8,7 @@ _This project is under heavy development and breaking API changes are to be expe
 
 ## cmd/wl2k: The client application
 
-cmd/wl2k is a fully working cross-platform Winlink client with basic messaging capabilities.
+cmd/wl2k is a (experimental) cross-platform Winlink client with basic messaging capabilities.
 
 It is the primary sandbox/prototype application for the various wl2k-go sub-packages, and provides both a command line interface and a responsive (mobile-friendly) web interface.
 

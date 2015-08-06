@@ -120,12 +120,21 @@ func (m *Message) Date() time.Time {
 	return date
 }
 
-// SetBody sets the given string as message body.
+// SetBodyWithCharset translates and sets the body according to given charset.
 //
-// The body is encoded with the character encoding given by m.Charset().
+// Header field Content-Transfer-Encoding is set to DefaultTransferEncoding.
+// Header field Content-Type is set according to charset.
 // All lines are modified to ensure CRLF.
-func (m *Message) SetBody(body string) error {
-	bytes, err := StringToBody(body, m.Charset())
+//
+// Use SetBody to use default character encoding.
+func (m *Message) SetBodyWithCharset(charset, body string) error {
+	m.Header.Set(HEADER_CONTENT_TRANSFER_ENCODING, DefaultTransferEncoding)
+	m.Header.Set(HEADER_CONTENT_TYPE, mime.FormatMediaType(
+		"text/plain",
+		map[string]string{"charset": DefaultCharset},
+	))
+
+	bytes, err := StringToBody(body, DefaultCharset)
 	if err != nil {
 		return err
 	}
@@ -133,6 +142,13 @@ func (m *Message) SetBody(body string) error {
 	m.body = bytes
 	m.Header.Set(HEADER_BODY, fmt.Sprintf("%d", len(bytes)))
 	return nil
+}
+
+// SetBody sets the given string as message body using DefaultCharset.
+//
+// See SetBodyWithCharset for more info.
+func (m *Message) SetBody(body string) error {
+	return m.SetBodyWithCharset(DefaultCharset, body)
 }
 
 // BodySize returns the expected size of the body (in bytes) as defined in the header.

@@ -38,7 +38,13 @@ func StringToBody(str, encoding string) ([]byte, error) {
 		}
 	}
 
-	return out.Bytes(), err
+	translator, err := charset.TranslatorTo(encoding)
+	if err != nil {
+		return out.Bytes(), err
+	}
+
+	_, translated, err := translator.Translate(out.Bytes(), true)
+	return translated, err
 }
 
 func min(a, b int) int {

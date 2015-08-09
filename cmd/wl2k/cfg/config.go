@@ -16,21 +16,25 @@ type Config struct {
 	// Auxiliary callsigns to fetch email on behalf of.
 	AuxAddrs []string `json:"auxiliary_addresses"`
 
-	// Maidenhead grid square (e.g. JP20qe)
+	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
 	// Handshake comment lines sent to remote node on incoming connections.
+	//
+	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
 	MOTD []string `json:"motd"`
 
-	// Default connect METHOD:[URI] (e.g. "telnet", "ax25:LA1B-10").
+	// Default connect METHOD:[URI].
+	//
+	// Example: ["telnet", "ax25:LA1B-10"]
 	ConnectDefaults []string `json:"connect_defaults"`
 
-	// Methods to listen for incoming P2P connections by default
-	// (e.g. "ax25", "winmor", "telnet").
+	// Methods to listen for incoming P2P connections by default.
+	//
+	// Example: ["ax25", "winmor", "telnet"]
 	Listen []string `json:"listen"`
 
-	// Hamlib rigs available (with reference name) for ptt and frequency
-	// control.
+	// Hamlib rigs available (with reference name) for ptt and frequency control.
 	HamlibRigs map[string]HamlibConfig `json:"hamlib_rigs"`
 
 	AX25      AX25Config      `json:"ax25"`       // See AX25Config.
@@ -39,6 +43,7 @@ type Config struct {
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// Command schedule (cron-like syntax).
+	//
 	// Examples:
 	//   # Connect to telnet once every hour
 	//   "@hourly": "connect telnet"
@@ -115,6 +120,7 @@ type BeaconConfig struct {
 
 var DefaultConfig Config = Config{
 	MyCall:          "",
+	MOTD:            []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
 	AuxAddrs:        []string{},
 	ConnectDefaults: []string{"telnet"},
 	AX25: AX25Config{

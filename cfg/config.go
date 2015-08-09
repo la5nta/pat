@@ -19,6 +19,9 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe)
 	Locator string `json:"locator"`
 
+	// Handshake comment lines sent to remote node on incoming connections.
+	MOTD []string `json:"motd"`
+
 	// Default connect METHOD:[URI] (e.g. "telnet", "ax25:LA1B-10").
 	ConnectDefaults []string `json:"connect_defaults"`
 

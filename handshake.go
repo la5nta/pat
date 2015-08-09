@@ -18,6 +18,11 @@ var ErrNoFB2 = errors.New("Remote does not support B2 Forwarding Protocol")
 
 func (s *Session) handshake(rw io.ReadWriter) error {
 	if s.master {
+		// Send MOTD lines
+		for _, line := range s.motd {
+			fmt.Fprintf(rw, "%s\r", line)
+		}
+
 		if err := s.sendHandshake(rw, ""); err != nil {
 			return err
 		}

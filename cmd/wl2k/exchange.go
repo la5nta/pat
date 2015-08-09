@@ -59,6 +59,10 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		mbox,
 	)
 
+	if len(config.MOTD) > 0 {
+		session.SetMOTD(config.MOTD...)
+	}
+
 	// Handle secure login
 	session.SetSecureLoginHandleFunc(func() (string, error) {
 		if config.SecureLoginPassword != "" {

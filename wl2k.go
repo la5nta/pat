@@ -71,6 +71,7 @@ type Session struct {
 	mycall     string
 	targetcall string
 	locator    string
+	motd       []string
 
 	h             MBoxHandler
 	statusUpdater StatusUpdater
@@ -134,6 +135,11 @@ func NewSession(mycall, targetcall, locator string, h MBoxHandler) *Session {
 		locator:    locator,
 	}
 }
+
+// SetMOTD sets one or more lines to be sent before handshake.
+//
+// The MOTD is only sent if the local node is session master.
+func (s *Session) SetMOTD(line ...string) { s.motd = line }
 
 // IsMaster sets whether this end should initiate the handshake.
 func (s *Session) IsMaster(isMaster bool) { s.master = isMaster }

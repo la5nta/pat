@@ -119,6 +119,7 @@ type Status struct {
 }
 
 var StdLogger = log.New(os.Stderr, "", log.LstdFlags)
+var StdUA = UserAgent{Name: "wl2kgo", Version: "0.1a"}
 
 // Constructs a new Session object.
 //
@@ -131,7 +132,7 @@ func NewSession(mycall, targetcall, locator string, h MBoxHandler) *Session {
 		log:        StdLogger,
 		h:          h,
 		pLog:       StdLogger,
-		ua:         UserAgent{Name: `wl2kgo`, Version: `0.1a`},
+		ua:         StdUA,
 		locator:    locator,
 	}
 }

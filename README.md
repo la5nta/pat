@@ -22,14 +22,10 @@ See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-
 * Post position reports (uses browser location/GPS in http mode).
 * Rig control (using hamlib) for winmor PTT and QSY.
 * CRON-like syntax for execution of scheduled commands (e.g. QSY or connect).
-* Built in http-server for web interface.
+* Built in http-server with web interface (mobile friendly).
 * Git style command line interface.
-
-##### Supported connect/listen methods
-* Telnet
-* WINMOR TNC
-* AX.25 (Linux)
-* Kenwood TH-D7x/TM-D7x0 (connect only, no P2P)
+* Listen for P2P connections using multiple modes concurrently.
+* WINMOR, AX.25 and telnet support.
 
 ##### Example
 ```

@@ -24,11 +24,15 @@ func Interactive() {
 		if str == "" {
 			continue
 		}
+		line.AppendHistory(str)
+
+		if str[0] == '#' {
+			continue
+		}
 
 		if quit := execCmd(str); quit {
 			break
 		}
-		line.AppendHistory(str)
 	}
 }
 

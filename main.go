@@ -97,6 +97,16 @@ var commands = []Command{
 		HandleFunc: extractMessageHandle,
 	},
 	{
+		Str:   "rmslist",
+		Desc:  "Print/search in list of RMS nodes.",
+		Usage: "[options] [search term]",
+		Options: map[string]string{
+			"--mode, -m":           "Mode filter.",
+			"--force-download, -d": "Force download of latest list from winlink.org.",
+		},
+		HandleFunc: rmsListHandle,
+	},
+	{
 		Str:        "riglist",
 		Usage:      "[search term]",
 		Desc:       "Print/search a list of rigcontrol supported transceivers.",

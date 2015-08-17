@@ -130,11 +130,12 @@ var fOptions struct {
 	IgnoreBusy bool // Move to connect?
 	SendOnly   bool // Move to connect?
 
-	MyCall      string
-	Listen      string
-	MailboxPath string
-	ConfigPath  string
-	LogPath     string
+	RobustWinmor bool
+	MyCall       string
+	Listen       string
+	MailboxPath  string
+	ConfigPath   string
+	LogPath      string
 }
 
 func optionsSet() *pflag.FlagSet {
@@ -148,6 +149,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
 	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
+	set.BoolVarP(&fOptions.RobustWinmor, `robust-winmor`, "r", false, `Use robust winmor modes only. (Usefull to improve s/n-ratio at remote station.)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 
 	return set
@@ -345,6 +347,8 @@ func initWmTNC() {
 	if err != nil {
 		log.Fatalf("WINMOR TNC initialization failed: %s", err)
 	}
+
+	wmTNC.SetRobust(fOptions.RobustWinmor)
 
 	if v, err := wmTNC.Version(); err != nil {
 		log.Fatalf("WINMOR TNC initialization failed: %s", err)

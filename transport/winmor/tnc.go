@@ -27,7 +27,7 @@ type TNC struct {
 	connAddr string
 
 	ctrl net.Conn
-	data net.Conn
+	data *tncConn
 
 	in  broadcaster
 	out chan<- string
@@ -153,34 +153,32 @@ func (tnc *TNC) runControlLoop() error {
 	var selfDisconnect bool
 	go func() {
 		scanner := bufio.NewScanner(tnc.ctrl)
-		for scanner.Scan() {
+
+		for scanner.Scan() { // Handle async commands (status commands)
 			line := scanner.Text()
 			msg := parseCtrlMsg(line)
 
-			// PTT control
-			if msg.cmd == cmdPTT && tnc.ptt != nil {
-				tnc.ptt.SetPTT(msg.Bool())
-			}
-
-			if msg.cmd == cmdDisconnect {
+			switch msg.cmd {
+			case cmdPTT:
+				if tnc.ptt != nil {
+					tnc.ptt.SetPTT(msg.Bool())
+				}
+			case cmdDisconnect:
 				selfDisconnect = true
-			}
-
-			if msg.cmd == cmdMonitorCall {
-				//TODO: the format is "N0CALL (JP20qe)", so we could keep the locator
-				// and return it in Heard()... but for now, discard it.
+			case cmdMonitorCall:
+				//TODO: the format is "N0CALL (JP20qe)", so we could keep the locator and return it in Heard()
 				callsign := strings.Split(msg.value.(string), " ")[0]
 				tnc.heard[callsign] = time.Now()
-			}
-
-			// Keep track of TNC state
-			if msg.cmd == cmdNewState {
+			case cmdBuffers:
+				buffers := msg.value.([]int)
+				tnc.data.updateBuffers(buffers)
+			case cmdNewState:
 				tnc.state = msg.State()
 
 				// Close ongoing connections if the new state is Disconnected
 				if msg.State() == Disconnected && tnc.data != nil {
 					tnc.connected = false // connect() is responsible for setting it to true
-					if tcpConn := tnc.data.(*net.TCPConn); !selfDisconnect {
+					if tcpConn := tnc.data.Conn.(*net.TCPConn); !selfDisconnect {
 						tcpConn.CloseRead()
 						tcpConn.CloseWrite()
 					} else {
@@ -188,8 +186,7 @@ func (tnc *TNC) runControlLoop() error {
 						selfDisconnect = false
 					}
 				}
-			}
-			if msg.cmd == cmdBusy {
+			case cmdBusy:
 				tnc.busy = msg.value.(bool)
 			}
 
@@ -288,7 +285,10 @@ func (tnc *TNC) SetMaxConnReq(n int) error {
 	return tnc.set(cmdMaxConnReq, n)
 }
 
-// Force the most robust (slowest) mode
+// SetRobust sets the TNC in robust mode.
+//
+// In robust mode the TNC will only use modes FSK4_2CarShort, FSK4_2Car or PSK4_2Car regardless of current data mode bandwidth setting.
+// If in the ISS or ISSModeShift states changes will be delayed until the outbound queue is empty.
 func (tnc *TNC) SetRobust(robust bool) error {
 	return tnc.set(cmdRobust, robust)
 }

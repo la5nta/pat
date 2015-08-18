@@ -112,16 +112,17 @@ func (tnc *TNC) Listen(bandwidth int) (ln net.Listener, err error) {
 					dataConn.(*net.TCPConn).SetReadBuffer(0)
 					dataConn.(*net.TCPConn).SetWriteBuffer(0)
 
-					tnc.data = dataConn
-					tnc.connected = true
-
-					incoming <- &tncConn{
+					tnc.data = &tncConn{
 						Conn:       dataConn,
 						remoteAddr: Addr{remotecall},
 						localAddr:  Addr{targetcall},
 						ctrlOut:    tnc.out,
 						ctrlIn:     tnc.in,
 					}
+					tnc.connected = true
+
+					incoming <- tnc.data
+
 					remotecall, targetcall = "", ""
 				}
 			}

@@ -23,7 +23,7 @@ func TestParse(t *testing.T) {
 		"DISCONNECTED":                      ctrlMsg{cmdDisconnected, nil},
 		"FAULT 5/Error in the application.": ctrlMsg{cmdFault, "5/Error in the application."},
 		"OFFSET -1":                         ctrlMsg{cmdOffset, int(-1)},
-		"BUFFERS 0 723 3 31 453":            ctrlMsg{cmdBuffers, "0 723 3 31 453"},
+		"BUFFERS 0 723 3 31 453":            ctrlMsg{cmdBuffers, []int{0, 723, 3, 31, 453}},
 		"MYC LA5NTA":                        ctrlMsg{cmdMyCall, "LA5NTA"},
 		"GRIDSQUARE JP20QH":                 ctrlMsg{cmdGridSquare, "JP20QH"},
 		"MAXCONREQ 10":                      ctrlMsg{cmdMaxConnReq, 10},

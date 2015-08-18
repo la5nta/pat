@@ -60,6 +60,17 @@ const (
 	cmdSendID         Command = "SENDID"         // >?[int]: delay parameter 0-15 required
 )
 
+// Buffer slice index
+//
+// "BUFFERS <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>"
+const (
+	BufferInQueued = iota
+	BufferInSequenced
+	BufferOutQueued
+	BufferOutConfirmed
+	BufferAvgThroughput
+)
+
 type ctrlMsg struct {
 	cmd   Command
 	value interface{}
@@ -110,9 +121,13 @@ func parseCtrlMsg(str string) ctrlMsg {
 	case cmdMyAux:
 		msg.value = parseCommaList(parts[1])
 
-	// unparsed params (string)
-	case cmdBuffers: // TODO: Should be []int
-		msg.value = parts[1] //TODO have seen "BUFFERS 0 723 0 34 443"
+	// []int (whitespace separated)
+	case cmdBuffers: // <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>
+		v, err := parseIntList(parts[1], " ")
+		if err != nil {
+			log.Printf("Failed to parse %s: %s", cmdBuffers, err)
+		}
+		msg.value = v
 
 	// int
 	case cmdOffset, cmdMaxConnReq, cmdDriveLevel, cmdResponseDelay, cmdBandwidth:
@@ -127,6 +142,22 @@ func parseCtrlMsg(str string) ctrlMsg {
 	}
 
 	return msg
+}
+
+func parseIntList(str, delim string) ([]int, error) {
+	strSlice := strings.Split(str, delim)
+
+	ints := make([]int, len(strSlice))
+	for i, p := range strSlice {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return ints, err
+		}
+
+		ints[i] = n
+	}
+
+	return ints, nil
 }
 
 func parseCommaList(str string) []string {

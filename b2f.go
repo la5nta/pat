@@ -13,6 +13,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/la5nta/wl2k-go/transport"
 )
 
 var ErrOffsetLimitExceeded error = errors.New("Protocol does not support offset larger than 6 digits")
@@ -361,16 +364,48 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 		return errors.New(`Invalid compressed data`)
 	}
 
-	// Data (in chunks of max 250)
 	buffer := bytes.NewBuffer(p.compressedData[p.offset:])
-	for buffer.Len() > 0 {
-		if s.statusUpdater != nil {
-			go s.statusUpdater.UpdateStatus(Status{
-				Sending:          p,
-				BytesTransferred: p.compressedSize - buffer.Len(),
-				BytesTotal:       p.compressedSize,
-			})
+
+	// Update Status of message transfer every 250ms
+	statusTicker := time.NewTicker(250 * time.Millisecond)
+	statusDone := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-statusTicker.C:
+				if s.statusUpdater == nil || buffer == nil {
+					continue
+				}
+
+				// Take into account that the modem has an internal tx buffer (if possible).
+				var txBufLen int
+				if b, ok := rw.(transport.TxBuffer); ok {
+					txBufLen = b.TxBufferLen()
+				}
+
+				transferred := p.compressedSize - buffer.Len() - txBufLen
+				if transferred < 0 {
+					transferred = 0
+				}
+
+				s.statusUpdater.UpdateStatus(Status{
+					Sending:          p,
+					BytesTransferred: transferred,
+					BytesTotal:       p.compressedSize,
+				})
+			case <-statusDone:
+				s.statusUpdater.UpdateStatus(Status{
+					Sending:          p,
+					BytesTransferred: p.compressedSize - buffer.Len(),
+					BytesTotal:       p.compressedSize,
+				})
+				return
+			}
 		}
+	}()
+
+	// Data (in chunks of max 250)
+	for buffer.Len() > 0 {
 		msgLen := MaxMsgLength
 		if buffer.Len() < MaxMsgLength {
 			msgLen = buffer.Len()
@@ -389,19 +424,21 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 			checksum += int64(c)
 		}
 		writer.Flush()
-		if s.statusUpdater != nil {
-			go s.statusUpdater.UpdateStatus(Status{
-				Sending:          p,
-				BytesTransferred: p.compressedSize - buffer.Len(),
-				BytesTotal:       p.compressedSize,
-			})
-		}
 	}
 
 	// Checksum
 	checksum = -checksum & 0xff
 	_, err = writer.Write([]byte{_CHREOT, byte(checksum)})
 	err = writer.Flush()
+
+	// Flush connection buffers.
+	// This enables us to block until the whole message has been transmitted over the air.
+	if f, ok := rw.(transport.Flusher); ok {
+		f.Flush()
+	}
+
+	statusTicker.Stop()
+	close(statusDone)
 
 	return err
 }

@@ -138,10 +138,6 @@ func handleInterrupt() (stop chan struct{}) {
 type StatusUpdate int
 
 func (s *StatusUpdate) UpdateStatus(stat wl2k.Status) {
-	if stat.BytesTotal < 500 { // Don't print progress on small transfers
-		return
-	}
-
 	var prop *wl2k.Proposal
 	if stat.Receiving != nil {
 		prop = stat.Receiving

@@ -13,6 +13,35 @@ import (
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 )
 
+type Frequency int
+
+func (f Frequency) String() string {
+	m := f / 1e6
+	k := (float64(f) - float64(m)*1e6) / 1e3
+
+	return fmt.Sprintf("%d.%06.2f MHz", m, k)
+}
+
+func (f Frequency) Dial(mode string) Frequency {
+	mode = strings.ToLower(mode)
+
+	offsets := map[string]Frequency{
+		"winmor": 1500,
+		"pactor": 1500,
+		"ardop":  1500,
+	}
+
+	var shift Frequency
+	for m, offset := range offsets {
+		if strings.Contains(mode, m) {
+			shift = -offset
+			break
+		}
+	}
+
+	return f + shift
+}
+
 func freq(param string) {
 	parts := strings.SplitN(param, ":", 2)
 

@@ -21,8 +21,7 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
-// bug(martinhpedersen): Should not hardcode sandiego here, what is the proper hostname?
-const GatewayStatusUrl = "http://sandiego.winlink.org:8085/gateway/status.json"
+const GatewayStatusUrl = "http://server.winlink.org:8085/gateway/status.json"
 
 type GatewayStatus struct {
 	ServerName string    `json:"ServerName"`

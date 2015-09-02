@@ -8,8 +8,8 @@ import (
 	"bufio"
 	"bytes"
 
-	"code.google.com/p/go-charset/charset"
-	_ "code.google.com/p/go-charset/data"
+	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
 )
 
 // StringToBytes converts the body into a slice of bytes with the given charset encoding.

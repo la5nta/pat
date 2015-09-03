@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 )
 
 const (
@@ -18,14 +19,28 @@ const (
 	CMSAddress    = "server.winlink.org:8772"
 )
 
+// DialCMS dials a random CMS server through server.winlink.org.
+//
+// The function will retry 4 times before giving up and returning an error.
 func DialCMS(mycall string) (net.Conn, error) {
-	return Dial(CMSAddress, mycall, CMSPassword)
+	var conn net.Conn
+	var err error
+
+	// Dial with retry, in case we hit an unavailable CMS.
+	for i := 0; i < 4; i++ {
+		conn, err = Dial(CMSAddress, mycall, CMSPassword)
+		if err == nil {
+			break
+		}
+	}
+
+	return conn, err
 }
 
 func Dial(addr, mycall, password string) (net.Conn, error) {
-	conn, err := net.Dial(`tcp`, addr)
+	conn, err := net.DialTimeout(`tcp`, addr, 5*time.Second)
 	if err != nil {
-		return conn, err
+		return nil, err
 	}
 
 	// Log in to telnet server
@@ -46,5 +61,5 @@ L:
 		}
 	}
 
-	return conn, nil // We could return a proper telnet.Conn here
+	return &Conn{conn, CMSTargetCall}, nil
 }

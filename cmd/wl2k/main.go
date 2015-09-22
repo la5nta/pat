@@ -126,7 +126,7 @@ var commands = []Command{
 
 var (
 	config    cfg.Config
-	rigs      map[string]*hamlib.Rig
+	rigs      map[string]hamlib.Rig
 	logWriter io.Writer
 
 	exchangeChan chan ex                 // The channel that the exchange loop is listening on
@@ -337,15 +337,27 @@ func loadMBox() {
 	}
 }
 
-func loadHamlibRigs() map[string]*hamlib.Rig {
-	rigs := make(map[string]*hamlib.Rig, len(config.HamlibRigs))
+func loadHamlibRigs() map[string]hamlib.Rig {
+	rigs := make(map[string]hamlib.Rig, len(config.HamlibRigs))
 
 	for name, cfg := range config.HamlibRigs {
-		rig, err := hamlib.Open(hamlib.RigModel(cfg.RigModel), cfg.TTYPath, cfg.Baudrate)
+		if cfg.Address == "" {
+			log.Printf("Missing address-field for rig '%s', skipping.", name)
+		}
+
+		rig, err := hamlib.Open(cfg.Network, cfg.Address)
 		if err != nil {
-			log.Printf("Initialization hamlib rig %s failed: %s", name, err)
+			log.Printf("Initialization hamlib rig %s failed: %s.", name, err)
 			continue
 		}
+
+		f, err := rig.CurrentVFO().GetFreq()
+		if err != nil {
+			log.Printf("Unable to get frequency from rig %s: %s.", name, err)
+		} else {
+			log.Printf("%s ready. Dial frequency is %s.", name, Frequency(f))
+		}
+
 		rigs[name] = rig
 	}
 	return rigs

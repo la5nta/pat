@@ -56,14 +56,16 @@ type Config struct {
 }
 
 type HamlibConfig struct {
-	// The rig model number as reported by --rig-list.
-	RigModel int `json:"rig_model"`
+	// The network type ("serial" or "tcp"). Use 'tcp' for rigctld.
+	//
+	// (For serial support: build with "-tags libhamlib".)
+	Network string `json:"network,omitempty"`
 
-	// Serial port (e.g. /dev/ttyUSB0 or COM1).
-	TTYPath string `json:"tty_path"`
-
-	// Baudrate for the serial port (e.g. 4800).
-	Baudrate int `json:"baudrate"`
+	// The rig address.
+	//
+	// For tcp (rigctld): "address:port" (e.g. localhost:4532).
+	// For serial: "/path/to/tty?model=&baudrate=" (e.g. /dev/ttyS0?model=123&baudrate=4800).
+	Address string `json:"address,omitempty"`
 }
 
 type WinmorConfig struct {

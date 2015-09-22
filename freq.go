@@ -45,7 +45,7 @@ func (f Frequency) Dial(mode string) Frequency {
 func freq(param string) {
 	parts := strings.SplitN(param, ":", 2)
 
-	var rig *hamlib.Rig
+	var rig hamlib.Rig
 	var ok bool
 	switch parts[0] {
 	case MethodWinmor:
@@ -77,7 +77,7 @@ func freq(param string) {
 	}
 }
 
-func setFreq(rig *hamlib.Rig, freq string) (newFreq, oldFreq int, err error) {
+func setFreq(rig hamlib.Rig, freq string) (newFreq, oldFreq int, err error) {
 	oldFreq, err = rig.CurrentVFO().GetFreq()
 	if err != nil {
 		return 0, 0, fmt.Errorf("Unable to get rig frequency: %s", err)

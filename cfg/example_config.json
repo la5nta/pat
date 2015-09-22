@@ -6,9 +6,8 @@
   "connect_defaults": ["ax25:LA1B-10", "telnet"],
   "hamlib_rigs": {
     "ft897": {
-      "rig_model": 123,
-      "tty_path": "/dev/ttyUSB0",
-      "baudrate": 4800
+      "network": "tcp",
+      "address": "localhost:4532"
     }
   },
   "ax25": {

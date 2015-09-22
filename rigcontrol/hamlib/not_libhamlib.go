@@ -8,7 +8,10 @@ package hamlib
 
 import "errors"
 
-var ErrNotAvailable = errors.New("Not available in this build")
+var errNotAvailable = errors.New("Not available in this build")
 
-func OpenSerialURI(uri string) (Rig, error) { return nil, ErrNotAvailable }
-func Rigs() map[RigModel]string             { return map[RigModel]string{} }
+// OpenSerialURI is here for compatibility (use build tag 'libhamlib').
+func OpenSerialURI(uri string) (Rig, error) { return nil, errNotAvailable }
+
+// Rigs is here for compatibility (use build tag 'libhamlib').
+func Rigs() map[RigModel]string { return map[RigModel]string{} }

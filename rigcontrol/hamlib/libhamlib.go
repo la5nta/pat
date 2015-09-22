@@ -5,7 +5,6 @@
 // +build cgo
 // +build libhamlib
 
-// Package hamlib provides go bindings for hamlib.
 package hamlib
 
 /*

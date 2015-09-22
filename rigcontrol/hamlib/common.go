@@ -1,3 +1,11 @@
+// Copyright 2015 Martin Hebnes Pedersen (LA5NTA). All rights reserved.
+// Use of this source code is governed by the MIT-license that can be
+// found in the LICENSE file.
+
+// Package hamlib provides bindings for a _subset_ of hamlib.
+// It provides both native cgo bindings and a rigctld client.
+//
+// Use build tag "libhamlib" to build with native C library support.
 package hamlib
 
 import "fmt"

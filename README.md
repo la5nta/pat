@@ -137,7 +137,11 @@ session := wl2k.NewSession(
 
 ## rigcontrol/hamlib
 
-A Go wrapper for a subset of hamlib. See <http://godoc.org/github.com/LA5NTA/wl2k-go/rigcontrol/hamlib> for details.
+Go bindings for a _subset_ of hamlib. It provides both native cgo bindings and a rigctld client.
+
+Build with `-tags libhamlib` to link against libhamlib (the native library).
+
+See <http://godoc.org/github.com/LA5NTA/wl2k-go/rigcontrol/hamlib> for more details.
 
 ## Copyright/License
 

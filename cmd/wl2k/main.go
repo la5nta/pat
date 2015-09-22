@@ -343,6 +343,7 @@ func loadHamlibRigs() map[string]hamlib.Rig {
 	for name, cfg := range config.HamlibRigs {
 		if cfg.Address == "" {
 			log.Printf("Missing address-field for rig '%s', skipping.", name)
+			continue
 		}
 
 		rig, err := hamlib.Open(cfg.Network, cfg.Address)

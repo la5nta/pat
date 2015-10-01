@@ -60,7 +60,16 @@ func readMail() {
 		}
 		printMsg(w, msgs[msgIdx])
 
-		// Wait for OK
+		// Mark as read?
+		if mailbox.IsUnread(msgs[msgIdx]) {
+			fmt.Fprintf(w, "Mark as read? [Y/n]: ")
+			ans, _ := rd.ReadString('\n')
+			if ans == "\n" || ans[0] == 'Y' || ans[0] == 'y' {
+				mailbox.SetUnread(msgs[msgIdx], false)
+			}
+		}
+
+		// Reply?
 		fmt.Fprintf(w, "Reply (ctrl+c to quit) [y/N]: ")
 		ans, _ := rd.ReadString('\n')
 		if ans[0] == 'y' {
@@ -108,8 +117,14 @@ func printMessages(w io.Writer, msgs []*wl2k.Message) {
 			to = to + ", ..."
 		}
 
+		var flags string
+		if mailbox.IsUnread(msg) {
+			flags += "N" // New
+		}
+
 		rows[i] = []string{
 			fmt.Sprintf("%2d", i),
+			flags,
 			msg.Subject(),
 			msg.From().Addr,
 			msg.Date().String(),
@@ -117,7 +132,7 @@ func printMessages(w io.Writer, msgs []*wl2k.Message) {
 		}
 	}
 	t := gotabulate.Create(rows)
-	t.SetHeaders([]string{"i", "Subject", "From", "Date", "To"})
+	t.SetHeaders([]string{"i", "Flags", "Subject", "From", "Date", "To"})
 	t.SetAlign("left")
 	t.SetWrapStrings(true)
 	t.SetMaxCellSize(60)

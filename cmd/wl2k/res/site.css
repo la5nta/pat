@@ -15,6 +15,10 @@ body > .container {
   width: 300px;
 }
 
+.strong {
+  font-weight: bold;
+}
+
 /*
  * Mailbox folder
  */

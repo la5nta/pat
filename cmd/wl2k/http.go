@@ -21,6 +21,7 @@ import (
 
 	"github.com/la5nta/wl2k-go"
 	"github.com/la5nta/wl2k-go/catalog"
+	"github.com/la5nta/wl2k-go/mailbox"
 )
 
 //go:generate go-bindata-assetfs res/...
@@ -33,6 +34,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", attachmentHandler).Methods("GET")
+	r.HandleFunc("/api/mailbox/{box}/{mid}/read", readHandler).Methods("POST")
 	r.HandleFunc("/api/mailbox/out", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
@@ -48,6 +50,29 @@ func ListenAndServe(addr string) error {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui", http.StatusFound)
+}
+
+func readHandler(w http.ResponseWriter, r *http.Request) {
+	var data struct{ Read bool }
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		return
+	}
+
+	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
+
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
+	if err != nil {
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := mailbox.SetUnread(msg, !data.Read); err != nil {
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func postPositionHandler(w http.ResponseWriter, r *http.Request) {
@@ -338,8 +363,9 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 		Body    string
 		Files   []*wl2k.File
 		P2POnly bool
+		Unread  bool
 	}{
-		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(), m.Header.Get("X-P2POnly") == "true",
+		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(), m.Header.Get("X-P2POnly") == "true", mailbox.IsUnread(m.Message),
 	}
 
 	return json.Marshal(msg)

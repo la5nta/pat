@@ -240,14 +240,15 @@ function displayFolder(dir) {
 			var msg = data[i];
 
 			//TODO: Cleanup (Sorry about this...)
-			var html = '<tr id="' + msg.MID + '" class="active"><td>';
+			var html = '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
 			if(msg.Files.length > 0){
 				html += '<span class="glyphicon glyphicon-paperclip" />';
 			}
+
 			html += '</td><td>' + msg.Subject + "</td>"
 			     + '<td>' + (is_from ? msg.From.Addr : msg.To[0].Addr) + (!is_from && msg.To.length > 1 ? "..." : "") + '</td>'
 				+ (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
-			     + '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
+			    + '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)
 			tbody.append(elem);
@@ -314,7 +315,24 @@ function displayMessage(elem) {
 		}
 		view.show();
 		$('#message_view').modal('show');
+		if(!data.Read) {
+			window.setTimeout(function() { setRead(currentFolder, data.MID); }, 2000);
+		}
 	});
+}
+
+function setRead(box, mid) {
+	var data = {read: true};
+
+    $.ajax("/api/mailbox/" + box + "/" + mid + "/read", {
+		data : JSON.stringify(data),
+		contentType : 'application/json',
+		type : 'POST',
+		success: function(resp) {},
+        error: function(xhr, st, resp) {
+            alert(resp + ": " + xhr.responseText);
+        },
+    });
 }
 
 function isImageSuffix(name) {

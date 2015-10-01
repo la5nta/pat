@@ -10,6 +10,8 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
   exit 1;
 fi
 if [ "$3" -eq "9600" ]; then
+  /usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3 -i 1
+  /usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3
   /usr/sbin/kissattach $1 $2 -m 256
   /usr/sbin/kissparms -p $2 -t 100 -l 10 -s 12 -r 80 -f n
   echo 4      > /proc/sys/net/ax25/ax0/standard_window_size  # 2-7 (max frames)
@@ -21,6 +23,8 @@ if [ "$3" -eq "9600" ]; then
   echo 5      > /proc/sys/net/ax25/ax0/maximum_retry_count   # n
   echo 2      > /proc/sys/net/ax25/ax0/connect_mode          # 0 = None, 1 = Network, 2 = All
 elif [ "$3" -eq "1200" ]; then
+  /usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3 -i 1
+  /usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3
   /usr/sbin/kissattach $1 $2 -m 128
   /usr/sbin/kissparms -p $2 -t 150 -l 10 -s 12 -r 80 -f n
   echo 4      > /proc/sys/net/ax25/ax0/standard_window_size

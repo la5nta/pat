@@ -81,6 +81,8 @@ func (h *DirHandler) ProcessInbound(msgs ...*wl2k.Message) (err error) {
 	for _, m := range msgs {
 		filename := path.Join(dir, m.MID())
 
+		m.Header.Set("X-Unread", "true")
+
 		data, err := m.Bytes()
 		if err != nil {
 			return err
@@ -153,6 +155,11 @@ func (h *DirHandler) GetOutbound(fws ...wl2k.Address) []*wl2k.Message {
 			continue // The message is P2POnly and remote is CMS
 		}
 
+		// Remove private headers
+		m.Header.Del("X-P2POnly")
+		m.Header.Del("X-FilePath")
+		m.Header.Del("X-Unread")
+
 		deliver = append(deliver, m)
 	}
 	return deliver
@@ -214,21 +221,57 @@ func LoadMessageDir(dirPath string) ([]*wl2k.Message, error) {
 			continue
 		}
 
-		filePath := path.Join(dirPath, file.Name())
-
-		f, err := os.Open(filePath)
+		msg, err := OpenMessage(path.Join(dirPath, file.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("Unable to open file (%s): %s", filePath, err)
+			return nil, err
 		}
 
-		message := new(wl2k.Message)
-		if err := message.ReadFrom(f); err != nil {
-			f.Close()
-			return nil, fmt.Errorf("Unable to parse message (%s): %s", filePath, err)
-		}
-
-		msgs = append(msgs, message)
-		f.Close()
+		msgs = append(msgs, msg)
 	}
 	return msgs, nil
+}
+
+// OpenMessage opens a single a wl2k.Message file.
+func OpenMessage(path string) (*wl2k.Message, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to open file (%s): %s", path, err)
+	}
+	defer f.Close()
+
+	message := new(wl2k.Message)
+	if err := message.ReadFrom(f); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("Unable to parse message (%s): %s", path, err)
+	}
+
+	message.Header.Set("X-FilePath", path)
+	return message, nil
+}
+
+// IsUnread returns true if the given message is marked as unread.
+func IsUnread(msg *wl2k.Message) bool { return msg.Header.Get("X-Unread") == "true" }
+
+// SetUnread marks the given message as read/unread and re-writes the file to disk.
+func SetUnread(msg *wl2k.Message, unread bool) error {
+	if !unread && msg.Header.Get("X-Unread") == "" {
+		return nil
+	}
+
+	if unread {
+		msg.Header.Set("X-Unread", "true")
+	} else {
+		msg.Header.Del("X-Unread")
+	}
+
+	data, err := msg.Bytes()
+	if err != nil {
+		return err
+	}
+
+	filePath := msg.Header.Get("X-FilePath")
+	if filePath == "" {
+		return fmt.Errorf("Missing X-FilePath header")
+	}
+	return ioutil.WriteFile(filePath, data, 0644)
 }

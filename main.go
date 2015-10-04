@@ -128,6 +128,7 @@ var (
 	config    cfg.Config
 	rigs      map[string]hamlib.Rig
 	logWriter io.Writer
+	eventLog  *EventLogger
 
 	exchangeChan chan ex                 // The channel that the exchange loop is listening on
 	exchangeConn net.Conn                // Pointer to the active session connection (exchange)
@@ -146,6 +147,7 @@ var fOptions struct {
 	MailboxPath  string
 	ConfigPath   string
 	LogPath      string
+	EventLogPath string
 }
 
 func optionsSet() *pflag.FlagSet {
@@ -158,6 +160,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
 	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
+	set.StringVar(&fOptions.EventLogPath, "event-log", fOptions.EventLogPath, "Path to event log file.")
 	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
 	set.BoolVarP(&fOptions.RobustWinmor, `robust-winmor`, "r", false, `Use robust winmor modes only. (Usefull to improve s/n-ratio at remote station.)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
@@ -173,6 +176,7 @@ func init() {
 	} else {
 		fOptions.ConfigPath = path.Join(appDir, "config.json")
 		fOptions.LogPath = path.Join(appDir, "wl2k.log")
+		fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 	}
 
 	pflag.Usage = func() {
@@ -216,6 +220,10 @@ func main() {
 	}
 	logWriter = io.MultiWriter(f, os.Stdout)
 	log.SetOutput(logWriter)
+	eventLog, err = NewEventLogger(fOptions.EventLogPath)
+	if err != nil {
+		log.Fatal("Unable to open event log file:", err)
+	}
 
 	// Read command line options from config if unset
 	if fOptions.MyCall == "" && config.MyCall == "" {
@@ -326,6 +334,8 @@ func cleanup() {
 			log.Fatalf("Failure to close winmor TNC: %s", err)
 		}
 	}
+
+	eventLog.Close()
 }
 
 func loadMBox() {

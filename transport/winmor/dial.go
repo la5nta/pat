@@ -98,12 +98,9 @@ func (tnc *TNC) Dial(targetcall string) (net.Conn, error) {
 		ctrlIn:     tnc.in,
 	}
 
-	if err := tnc.data.Conn.(*net.TCPConn).SetReadBuffer(0); err != nil {
-		return nil, err
-	}
-	if err := tnc.data.Conn.(*net.TCPConn).SetWriteBuffer(0); err != nil {
-		return nil, err
-	}
+	// Try to minimize read/write buffer on connection.
+	tnc.data.Conn.(*net.TCPConn).SetReadBuffer(0)
+	tnc.data.Conn.(*net.TCPConn).SetWriteBuffer(0)
 
 	return tnc.data, nil
 }

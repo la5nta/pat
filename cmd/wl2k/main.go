@@ -275,6 +275,9 @@ func httpHandle(args []string) {
 }
 
 func connectHandle(args []string) {
+	if args[0] == "" {
+		fmt.Println("Missing argument, try 'connect help'.")
+	}
 	if success := Connect(args[0]); !success {
 		os.Exit(1)
 	}

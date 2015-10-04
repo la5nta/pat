@@ -24,13 +24,6 @@ type Config struct {
 	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
 	MOTD []string `json:"motd"`
 
-	// Default connect METHOD:[URI] (list).
-	//
-	// The program will attempt to connect to each node in the list until a protocol exchange is successfull.
-	//
-	// Example: ["telnet", "ax25:LA1B-10", "offgrid"]
-	ConnectDefaults []string `json:"connect_defaults"`
-
 	// Connect aliases,
 	//
 	// Alias a list of connect commands, which will be attempted in order until a successfull message exchange has been made.
@@ -131,10 +124,10 @@ type BeaconConfig struct {
 }
 
 var DefaultConfig Config = Config{
-	MyCall:          "",
-	MOTD:            []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
-	AuxAddrs:        []string{},
-	ConnectDefaults: []string{"telnet"},
+	MyCall:         "",
+	MOTD:           []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
+	AuxAddrs:       []string{},
+	ConnectAliases: map[string][]string{},
 	AX25: AX25Config{
 		Beacon: BeaconConfig{
 			Every:       3600,

@@ -40,6 +40,11 @@ func execCmd(line string) (quit bool) {
 	cmd, param := parseCommand(line)
 	switch cmd {
 	case "connect":
+		if param == "" {
+			printInteractiveUsage()
+			return
+		}
+
 		Connect(param)
 	case "listen":
 		Listen(param)
@@ -71,11 +76,11 @@ func printInteractiveUsage() {
 	fmt.Println("Methods:", strings.Join(methods, ", "))
 
 	cmds := []string{
-		"connect  [METHOD]:[URI] Connect to a remote station.",
-		"listen   METHOD         Listen for incoming connections.",
-		"unlisten METHOD         Unregister listener for incoming connections.",
-		"freq     METHOD:FREQ    Change rig frequency.",
-		"heard                   Display all stations heard over the air.",
+		"connect  METHOD:[URI] or alias  Connect to a remote station.",
+		"listen   METHOD                 Listen for incoming connections.",
+		"unlisten METHOD                 Unregister listener for incoming connections.",
+		"freq     METHOD:FREQ            Change rig frequency.",
+		"heard                           Display all stations heard over the air.",
 	}
 	fmt.Println("Commands: ")
 	for _, cmd := range cmds {

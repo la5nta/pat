@@ -85,6 +85,8 @@ type Session struct {
 	remoteFW  []Address // Addresses the remote requests messages on behalf of
 	localFW   []Address // Addresses we request messages on behalf of
 
+	trafficStats TrafficStats
+
 	quitReceived bool
 	quitSent     bool
 	remoteNoMsgs bool // True if last remote turn had no more messages
@@ -118,6 +120,12 @@ type Status struct {
 	When             time.Time
 }
 
+// TrafficStats holds exchange message traffic statistics.
+type TrafficStats struct {
+	Received []string // Received message MIDs.
+	Sent     []string // Sent message MIDs.
+}
+
 var StdLogger = log.New(os.Stderr, "", log.LstdFlags)
 var StdUA = UserAgent{Name: "wl2kgo", Version: "0.1a"}
 
@@ -145,6 +153,9 @@ func (s *Session) SetMOTD(line ...string) { s.motd = line }
 // IsMaster sets whether this end should initiate the handshake.
 func (s *Session) IsMaster(isMaster bool) { s.master = isMaster }
 
+// RemoteSID returns the remote's SID (if available).
+func (s *Session) RemoteSID() string { return string(s.remoteSID) }
+
 // Exchange is the main method for exchanging messages with a remote over the B2F protocol.
 //
 // Sends outbound messages and downloads inbound messages prepared for this session.
@@ -159,9 +170,9 @@ func (s *Session) IsMaster(isMaster bool) { s.master = isMaster }
 // the exchange is done, is will return io.EOF.
 //
 // Subsequent Exchange calls on the same session is a noop.
-func (s *Session) Exchange(conn net.Conn) (err error) {
+func (s *Session) Exchange(conn net.Conn) (stats TrafficStats, err error) {
 	if s.Done() {
-		return nil
+		return stats, nil
 	}
 
 	// The given conn should always be closed after returning from this method.
@@ -207,11 +218,11 @@ func (s *Session) Exchange(conn net.Conn) (err error) {
 		}
 
 		if err != nil {
-			return
+			return s.trafficStats, err
 		}
 	}
 
-	return conn.Close()
+	return s.trafficStats, conn.Close()
 }
 
 // Done() returns true if either parties have existed from this session.

@@ -57,6 +57,9 @@ func (s *Session) handleOutbound(rw io.ReadWriter) (quitSent bool, err error) {
 		}
 		for mid, rej := range sent {
 			s.h.SetSent(mid, rej)
+			if !rej {
+				s.trafficStats.Sent = append(s.trafficStats.Sent, mid)
+			}
 		}
 	}()
 
@@ -252,7 +255,11 @@ Loop:
 		} else if msg, err = prop.Message(); err != nil {
 			return
 		}
-		s.h.ProcessInbound(msg)
+
+		if err = s.h.ProcessInbound(msg); err != nil {
+			return
+		}
+		s.trafficStats.Received = append(s.trafficStats.Received, prop.MID())
 	}
 
 	return

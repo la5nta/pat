@@ -19,6 +19,7 @@ type incomingConnect struct {
 	conn       net.Conn
 	remoteCall string
 	kind       string
+	freq       Frequency
 }
 
 func Unlisten(param string) {
@@ -62,6 +63,7 @@ func Listen(listenStr string) {
 	go func() {
 		for {
 			connect := <-cc
+			eventLog.LogConn("accept", connect.freq, connect.conn, nil)
 			log.Printf("Got connect (%s:%s)", connect.kind, connect.remoteCall)
 
 			err := exchange(connect.conn, connect.remoteCall, true)
@@ -95,10 +97,17 @@ func listenWinmor(incoming chan<- incomingConnect) {
 				return
 			}
 
+			var freq Frequency
+			if rig, ok := rigs[config.Winmor.Rig]; ok {
+				f, _ := rig.CurrentVFO().GetFreq()
+				freq = Frequency(f)
+			}
+
 			incoming <- incomingConnect{
 				conn:       conn,
 				remoteCall: conn.RemoteAddr().String(),
 				kind:       MethodWinmor,
+				freq:       freq,
 			}
 		}
 	}()

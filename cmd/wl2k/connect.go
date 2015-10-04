@@ -61,9 +61,16 @@ func Connect(connectStr string) (success bool) {
 
 	log.Printf("Connecting to %s...", connectStr)
 
+	var freq Frequency
+
 	var conn net.Conn
 	switch method {
 	case MethodWinmor:
+		if rig, ok := rigs[config.Winmor.Rig]; ok {
+			f, _ := rig.CurrentVFO().GetFreq()
+			freq = Frequency(f)
+		}
+
 		done := handleInterrupt()
 		conn, err = connectWinmor(targetcall)
 		close(done)
@@ -96,6 +103,8 @@ func Connect(connectStr string) (success bool) {
 		log.Printf("'%s' is not a valid connect method/alias.", method)
 		return
 	}
+
+	eventLog.LogConn("connect "+connectStr, freq, conn, err)
 
 	if err != nil {
 		log.Printf("Unable to establish connection to remote: %s", err)

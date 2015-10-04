@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/howeyc/gopass"
 
@@ -87,7 +88,32 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	stop := handleInterrupt()
 	defer close(stop)
 
-	err := session.Exchange(conn)
+	startTs := time.Now()
+
+	stats, err := session.Exchange(conn)
+
+	event := map[string]interface{}{
+		"mycall":              session.Mycall(),
+		"targetcall":          session.Targetcall(),
+		"remote_fw":           session.RemoteForwarders(),
+		"remote_sid":          session.RemoteSID(),
+		"master":              master,
+		"local_locator":       config.Locator,
+		"auxiliary_addresses": config.AuxAddrs,
+		"network":             conn.RemoteAddr().Network(),
+		"remote_addr":         conn.RemoteAddr().String(),
+		"local_addr":          conn.LocalAddr().String(),
+		"sent":                stats.Sent,
+		"received":            stats.Received,
+		"start":               startTs.Unix(),
+		"end":                 time.Now().Unix(),
+		"success":             err == nil,
+	}
+	if err != nil {
+		event["error"] = err.Error()
+	}
+
+	eventLog.Log("exchange", event)
 
 	return err
 }

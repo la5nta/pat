@@ -26,16 +26,8 @@ func connectAny(connectStr ...string) bool {
 }
 
 func Connect(connectStr string) (success bool) {
-	var err error
-
 	if connectStr == "" {
-		if len(config.ConnectDefaults) == 0 {
-			log.Println("No default connect methods defined in the configuration.")
-			return
-		}
-
-		connectAny(config.ConnectDefaults...)
-		return
+		return false
 	}
 
 	if aliased, ok := config.ConnectAliases[connectStr]; ok {
@@ -43,11 +35,11 @@ func Connect(connectStr string) (success bool) {
 	}
 
 	parts := strings.SplitN(connectStr, ":", 2)
-
 	method := strings.ToLower(strings.TrimSpace(parts[0]))
 
 	var uri string
 	var targetcall, password, address string
+	var err error
 	if len(parts) > 1 {
 		uri = strings.TrimSpace(parts[1])
 		targetcall, password, address, err = parseConnectURI(uri)

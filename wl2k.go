@@ -142,6 +142,10 @@ func NewSession(mycall, targetcall, locator string, h MBoxHandler) *Session {
 		pLog:       StdLogger,
 		ua:         StdUA,
 		locator:    locator,
+		trafficStats: TrafficStats{
+			Received: make([]string, 0),
+			Sent:     make([]string, 0),
+		},
 	}
 }
 

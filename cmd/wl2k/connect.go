@@ -16,25 +16,30 @@ import (
 	"github.com/la5nta/wl2k-go/transport/telnet"
 )
 
-func ConnectDefaults() {
-	if len(config.ConnectDefaults) == 0 {
-		log.Println("No default connect methods defined in the configuration.")
-		return
-	}
-
-	for _, connectStr := range config.ConnectDefaults {
-		if Connect(connectStr) {
-			break
+func connectAny(connectStr ...string) bool {
+	for _, str := range connectStr {
+		if Connect(str) {
+			return true
 		}
 	}
+	return false
 }
 
 func Connect(connectStr string) (success bool) {
 	var err error
 
 	if connectStr == "" {
-		ConnectDefaults()
+		if len(config.ConnectDefaults) == 0 {
+			log.Println("No default connect methods defined in the configuration.")
+			return
+		}
+
+		connectAny(config.ConnectDefaults...)
 		return
+	}
+
+	if aliased, ok := config.ConnectAliases[connectStr]; ok {
+		return connectAny(aliased...)
 	}
 
 	parts := strings.SplitN(connectStr, ":", 2)
@@ -96,7 +101,7 @@ func Connect(connectStr string) (success bool) {
 		)
 
 	default:
-		log.Printf("'%s' is not a valid connect method", method)
+		log.Printf("'%s' is not a valid connect method/alias.", method)
 		return
 	}
 

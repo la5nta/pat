@@ -24,10 +24,20 @@ type Config struct {
 	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
 	MOTD []string `json:"motd"`
 
-	// Default connect METHOD:[URI].
+	// Default connect METHOD:[URI] (list).
 	//
-	// Example: ["telnet", "ax25:LA1B-10"]
+	// The program will attempt to connect to each node in the list until a protocol exchange is successfull.
+	//
+	// Example: ["telnet", "ax25:LA1B-10", "offgrid"]
 	ConnectDefaults []string `json:"connect_defaults"`
+
+	// Connect aliases,
+	//
+	// Alias a list of connect commands, which will be attempted in order until a successfull message exchange has been made.
+	// Recursion is supported.
+	//
+	// Example: {"offgrid": ["winmor:LA3F@5350", "ax25:LA1J-10"], "NorwayHF": ["winmor:LA1B@5320", "winmor":"LA3F@3602", "winmor":"LA1J@5352"]}
+	ConnectAliases map[string][]string `json:"connect_aliases"`
 
 	// Methods to listen for incoming P2P connections by default.
 	//

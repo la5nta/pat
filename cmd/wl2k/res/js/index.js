@@ -150,13 +150,15 @@ function alert(msg)
 
 function updateStatusLoop()
 {
-	window.setTimeout(function() { updateStatusLoop(); }, 200);
 	if(wsError) {
 		$('#status_text').empty().append("<strong>Backend unavailable</strong>");
+		window.setTimeout(function() { updateStatusLoop(); }, 200);
 		return;
 	}
 
 	$.getJSON("/api/status", function(data){
+		window.setTimeout(function() { updateStatusLoop(); }, 200);
+
 		var st = $('#status_text');
 		st.empty();
 
@@ -167,6 +169,7 @@ function updateStatusLoop()
 		}
 	}).error(function(){
 		st.append("<strong>Status error</strong>");
+		window.setTimeout(function() { updateStatusLoop(); }, 200);
 	})
 }
 

@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -54,6 +55,8 @@ func execCmd(line string) (quit bool) {
 		PrintHeard()
 	case "freq":
 		freq(param)
+	case "qtc":
+		PrintQTC()
 	case "q", "quit":
 		return true
 	case "":
@@ -81,6 +84,7 @@ func printInteractiveUsage() {
 		"unlisten METHOD                 Unregister listener for incoming connections.",
 		"freq     METHOD:FREQ            Change rig frequency.",
 		"heard                           Display all stations heard over the air.",
+		"qtc                             Print pending outbound messages.",
 	}
 	fmt.Println("Commands: ")
 	for _, cmd := range cmds {
@@ -130,6 +134,22 @@ func PrintHeard() {
 		for call, t := range heard {
 			pf(call, t)
 		}
+	}
+}
+
+func PrintQTC() {
+	msgs, err := mbox.Outbox()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Printf("QTC: %d.\n", len(msgs))
+	for _, msg := range msgs {
+		fmt.Printf(`%-12.12s (%s): %s`, msg.MID(), msg.Subject(), fmt.Sprint(msg.To()))
+		if msg.Header.Get("X-P2POnly") == "true" {
+			fmt.Printf(" (P2P only)")
+		}
+		fmt.Println("")
 	}
 }
 

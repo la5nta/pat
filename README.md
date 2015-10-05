@@ -26,6 +26,7 @@ See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-
 * Git style command line interface.
 * Listen for P2P connections using multiple modes concurrently.
 * WINMOR, AX.25 and telnet support.
+* Experimental gzip message compression (See "Gzip experiment" below).
 
 ##### Example
 ```
@@ -81,6 +82,16 @@ For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k
 A big thanks to paclink-unix by Nicholas S. Castellano N2QZ (and others). Without their effort and choice to share their knowledge through open source code, this implementation would probably never exist.
 
 Paclink-unix was used as reference implementation for the B2F protocol since the start of this project.
+
+### Gzip experiment
+
+Gzip message compression has been added as an experimental B2F extension, as an alternative to LZHUF. The feature can be enabled by setting the environment variable `GZIP_EXPERIMENT=1` at runtime.
+
+The protocol extension is negotiated by an additional character (G) in the handshake SID as well as a new proposal code (D), thus making it backwards compatible with software not supporting gzip compression.
+
+The G sid flag tells the other party that gzip is supported through a D-proposal. The D-proposal has the same format as C-proposals, but is used to flag the data as gzip compressed.
+
+The gzip feature works transparently, which means that it will not break protocol if it's unsupported by the other winlink node.
 
 ## lzhuf: The compression
 

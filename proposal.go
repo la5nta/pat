@@ -6,8 +6,10 @@ package wl2k
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -20,6 +22,7 @@ const (
 	BasicProposal PropCode = 'B' // Basic ASCII proposal (or compressed binary in v0/1)
 	AsciiProposal          = 'A' // Compressed v0/1 ASCII proposal
 	Wl2kProposal           = 'C' // Compressed v2 proposal (winlink extension)
+	GzipProposal           = 'D' // Gzip compressed v2 proposal
 )
 
 type ProposalAnswer byte
@@ -52,10 +55,10 @@ type Proposal struct {
 // based on what's read and prepares for outbound delivery, returning
 // a Proposal with the given data.
 //
-func NewProposal(MID, title string, data []byte) *Proposal {
+func NewProposal(MID, title string, code PropCode, data []byte) *Proposal {
 	prop := &Proposal{
 		mid:     MID,
-		code:    Wl2kProposal,
+		code:    code,
 		msgType: "EM",
 		title:   title,
 		size:    len(data),
@@ -65,8 +68,21 @@ func NewProposal(MID, title string, data []byte) *Proposal {
 		prop.title = `No title`
 	}
 
-	// Compress data
-	prop.compressedData = lzhuf.Encode(data)
+	if prop.code == GzipProposal {
+		// Gzip compressed
+		var buf bytes.Buffer
+		z, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+		if err != nil {
+			panic(err)
+		}
+
+		z.Write(data)
+		z.Close()
+		prop.compressedData = buf.Bytes()
+	} else {
+		// LZHUF compressed
+		prop.compressedData = lzhuf.Encode(data)
+	}
 	prop.compressedSize = len(prop.compressedData)
 
 	return prop
@@ -101,7 +117,21 @@ func (p *Proposal) Message() (*Message, error) {
 
 // Data returns the decompressed raw message
 func (p *Proposal) Data() []byte {
+	if p.code == GzipProposal {
+		return p.gzipData()
+	}
 	return lzhuf.Decode(p.compressedData) //TODO: Should return error when decompress fails
+}
+
+func (p *Proposal) gzipData() []byte {
+	rd, err := gzip.NewReader(bytes.NewBuffer(p.compressedData))
+	if err != nil {
+		panic(err)
+	}
+
+	var buf bytes.Buffer
+	io.Copy(&buf, rd)
+	return buf.Bytes()
 }
 
 func parseProposal(line string, prop *Proposal) (err error) {
@@ -115,19 +145,22 @@ func parseProposal(line string, prop *Proposal) (err error) {
 
 	switch prop.code {
 	case BasicProposal, AsciiProposal: // TODO: implement
-	case Wl2kProposal:
-		err = parseCProposal(line, prop)
+	case Wl2kProposal, GzipProposal:
+		err = parseB2Proposal(line, prop)
 	default:
 		err = fmt.Errorf("Unsupported proposal code '%c'", prop.code)
 	}
 	return
 }
 
-func parseCProposal(line string, prop *Proposal) (err error) {
-	if !strings.HasPrefix(line, "FC ") {
-		return errors.New("Not a type C proposal")
+func parseB2Proposal(line string, prop *Proposal) (err error) {
+	if len(line) < 4 {
+		return errors.New("Unexpected end of proposal line")
 	}
-	prop.code = Wl2kProposal
+
+	if !(line[1] == Wl2kProposal || line[1] == GzipProposal) {
+		return errors.New("Not a type C or D proposal")
+	}
 
 	// FC EM TJKYEIMMHSRB 527 123 0
 	parts := strings.Split(line[3:], " ")

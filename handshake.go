@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -207,10 +208,20 @@ const (
 	sCompBatchF = "X"  // Compressed batch forwarding supported
 	sI          = "I"  // "Identify"? Palink-unix sends ";target de mycall QTC n" when remote has this
 	sBID        = "$"  // BID supported (must be last character in SID)
+
+	sGzip = "G" // Gzip compressed messages supported (GZIP_EXPERIMENT)
 )
 
+func gzipExperimentEnabled() bool { return os.Getenv("GZIP_EXPERIMENT") == "1" }
+
 func writeSID(w io.Writer, appName, appVersion string) error {
-	_, err := fmt.Fprintf(w, "[%s-%s-%s]\r", appName, appVersion, localSID)
+	sid := localSID
+
+	if gzipExperimentEnabled() {
+		sid = sid[0:len(sid)-1] + sGzip + sid[len(sid)-1:]
+	}
+
+	_, err := fmt.Fprintf(w, "[%s-%s-%s]\r", appName, appVersion, sid)
 	return err
 }
 

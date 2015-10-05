@@ -294,13 +294,13 @@ func (m *Message) IsOnlyReceiver(addr Address) bool {
 }
 
 // Method for generating a proposal of the message.
-func (m *Message) Proposal() (*Proposal, error) {
+func (m *Message) Proposal(code PropCode) (*Proposal, error) {
 	data, err := m.Bytes()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewProposal(m.MID(), m.Subject(), data), nil
+	return NewProposal(m.MID(), m.Subject(), code, data), nil
 }
 
 // Receivers returns a slice of all receivers of this message.

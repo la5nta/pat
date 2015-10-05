@@ -39,7 +39,9 @@ const (
 
 	cmdPropA = 'A'
 	cmdPropB = 'B'
-	cmdPropC = 'C'
+	cmdPropC = 'C' // Wl2k extended B2 message
+
+	cmdPropD = 'D' // Gzip compressed B2 message (GZIP_EXPERIMENT)
 )
 
 const (
@@ -187,7 +189,7 @@ Loop:
 		}
 
 		switch line[1] {
-		case 'A', 'B', 'C': // Proposal
+		case 'A', 'B', 'C', 'D': // Proposal
 			for _, c := range line {
 				ourChecksum += int64(c)
 			}
@@ -276,7 +278,7 @@ func (s *Session) writeProposalsAnswer(rw io.ReadWriter, proposals []*Proposal) 
 	}
 
 	for _, prop := range proposals {
-		if prop.code != Wl2kProposal {
+		if prop.code != Wl2kProposal && prop.code != GzipProposal {
 			s.log.Printf("Defering %s (unsupported format)", prop.MID())
 			prop.answer = Defer
 		} else if s.h == nil {
@@ -359,6 +361,10 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 	title, offset := p.title, fmt.Sprintf("%d", p.offset)
 	length := len(title) + len(offset) + 2
 	s.log.Printf("Transmitting [%s] [offset %s]", title, offset)
+
+	if p.code == GzipProposal {
+		s.log.Println("GZIP_EXPERIMENT:", "Transmitting gzip compressed message.")
+	}
 
 	writer.Write([]byte{_CHRSOH, byte(length)})
 	writer.WriteString(title) // Max 80 bytes, min 1 byte
@@ -498,6 +504,11 @@ func (s *Session) readCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 	}
 
 	s.log.Printf("Receiving [%s] [offset %s]", p.title, offset)
+
+	if p.code == GzipProposal {
+		s.log.Println("GZIP_EXPERIMENT:", "Receiving gzip compressed message.")
+	}
+
 	for {
 		if s.statusUpdater != nil {
 			go s.statusUpdater.UpdateStatus(Status{

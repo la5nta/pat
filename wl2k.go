@@ -214,6 +214,10 @@ func (s *Session) Exchange(conn net.Conn) (stats TrafficStats, err error) {
 		return
 	}
 
+	if gzipExperimentEnabled() && s.remoteSID.Has(sGzip) {
+		s.log.Println("GZIP_EXPERIMENT:", "Gzip compression enabled in this session.")
+	}
+
 	for myTurn := !s.master; !s.Done(); myTurn = !myTurn {
 		if myTurn {
 			s.quitSent, err = s.handleOutbound(conn)
@@ -312,7 +316,7 @@ func (s *Session) outbound() []*Proposal {
 	props := make([]*Proposal, 0, len(msgs))
 
 	for _, m := range msgs {
-		prop, err := m.Proposal()
+		prop, err := m.Proposal(s.highestPropCode())
 		if err != nil {
 			// TODO: This should result in an error somewhere
 			s.log.Printf("Unable to prepare proposal for '%s'. Corrupt message? Skipping...", prop.MID())
@@ -322,4 +326,11 @@ func (s *Session) outbound() []*Proposal {
 		props = append(props, prop)
 	}
 	return props
+}
+
+func (s *Session) highestPropCode() PropCode {
+	if s.remoteSID.Has(sGzip) && gzipExperimentEnabled() {
+		return GzipProposal
+	}
+	return Wl2kProposal
 }

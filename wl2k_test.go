@@ -26,14 +26,16 @@ func TestSessionP2P(t *testing.T) {
 	clientErr := make(chan error)
 	go func() {
 		s := NewSession("LA5NTA", "N0CALL", "JO39EQ", nil)
-		clientErr <- s.Exchange(client)
+		_, err := s.Exchange(client)
+		clientErr <- err
 	}()
 
 	masterErr := make(chan error)
 	go func() {
 		s := NewSession("N0CALL", "LA5NTA", "JO39EQ", nil)
 		s.IsMaster(true)
-		masterErr <- s.Exchange(master)
+		_, err := s.Exchange(master)
+		masterErr <- err
 	}()
 
 	if err := <-masterErr; err != nil {
@@ -50,7 +52,8 @@ func TestSessionCMS(t *testing.T) {
 	cerrs := make(chan error)
 	go func() {
 		s := NewSession("LA5NTA", "LA1B-10", "JO39EQ", nil)
-		cerrs <- s.Exchange(client)
+		_, err := s.Exchange(client)
+		cerrs <- err
 	}()
 
 	fmt.Fprint(srv, "[WL2K-2.8.4.8-B2FWIHJM$]\r")
@@ -87,7 +90,8 @@ func TestSessionCMDWithMessage(t *testing.T) {
 	cerrs := make(chan error)
 	go func() {
 		s := NewSession("LA5NTA", "LA1B-10", "JO39EQ", nil)
-		cerrs <- s.Exchange(client)
+		_, err := s.Exchange(client)
+		cerrs <- err
 	}()
 
 	fmt.Fprint(srv, "[WL2K-2.8.4.8-B2FWIHJM$]\r")

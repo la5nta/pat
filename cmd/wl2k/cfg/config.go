@@ -34,7 +34,7 @@ type Config struct {
 
 	// Methods to listen for incoming P2P connections by default.
 	//
-	// Example: ["ax25", "winmor", "telnet"]
+	// Example: ["ax25", "winmor", "telnet", "ardop"]
 	Listen []string `json:"listen"`
 
 	// Hamlib rigs available (with reference name) for ptt and frequency control.
@@ -43,6 +43,7 @@ type Config struct {
 	AX25      AX25Config      `json:"ax25"`       // See AX25Config.
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Winmor    WinmorConfig    `json:"winmor"`     // See WinmorConfig.
+	Ardop    ArdopConfig    `json:"ardop"`     // See ArdopConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// Command schedule (cron-like syntax).
@@ -73,6 +74,20 @@ type HamlibConfig struct {
 
 type WinmorConfig struct {
 	// Network address of the Winmor TNC (e.g. localhost:8500).
+	Addr string `json:"addr"`
+
+	// Bandwidth to use when getting an inbound connection (500/1600).
+	InboundBandwidth int `json:"inbound_bandwidth"`
+
+	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	Rig string `json:"rig"` //TODO: Maybe custom unmarshal to ensure the rig is registered?
+
+	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	PTTControl bool `json:"ptt_ctrl"`
+}
+
+type ArdopConfig struct {
+	// Network address of the Ardop TNC (e.g. localhost:8515).
 	Addr string `json:"addr"`
 
 	// Bandwidth to use when getting an inbound connection (500/1600).
@@ -144,6 +159,10 @@ var DefaultConfig Config = Config{
 		Addr:             "localhost:8500",
 		InboundBandwidth: 1600,
 	},
+	Ardop: ArdopConfig{
+		Addr:             "localhost:8515",
+		InboundBandwidth: 1600,
+	},	
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",
 		Password:   "",

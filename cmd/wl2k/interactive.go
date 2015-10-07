@@ -72,6 +72,7 @@ func printInteractiveUsage() {
 
 	methods := []string{
 		MethodWinmor,
+		MethodArdop,
 		MethodAX25,
 		MethodTelnet,
 		MethodSerialTNC,
@@ -125,6 +126,17 @@ func PrintHeard() {
 		}
 	}
 
+		fmt.Println("ardop:")
+	if adTNC == nil {
+		fmt.Println("  (not initialized)")
+	} else if heard := adTNC.Heard(); len(heard) == 0 {
+		fmt.Println("  (none)")
+	} else {
+		for call, t := range heard {
+			pf(call, t)
+		}
+	}
+	
 	fmt.Println("ax25:")
 	if heard, err := ax25.Heard(config.AX25.Port); err != nil {
 		fmt.Printf("  (%s)\n", err)

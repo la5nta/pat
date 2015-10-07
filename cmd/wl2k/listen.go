@@ -47,7 +47,12 @@ func Listen(listenStr string) {
 				initWmTNC()
 			}
 			listenWinmor(cc)
-		case MethodTelnet:
+		case MethodArdop:
+			if adTNC == nil {
+				initAdTNC()
+			}
+			listenArdop(cc)
+			case MethodTelnet:
 			listenTelnet(cc)
 		case MethodAX25:
 			listenAX25(cc)
@@ -107,6 +112,43 @@ func listenWinmor(incoming chan<- incomingConnect) {
 				conn:       conn,
 				remoteCall: conn.RemoteAddr().String(),
 				kind:       MethodWinmor,
+				freq:       freq,
+			}
+		}
+	}()
+}
+
+func listenArdop(incoming chan<- incomingConnect) {
+	// RMS Express runs bw at 500Hz except when sending/receiving message. Why?
+	// ... Or is it cmdRobust True?
+	ln, err := adTNC.Listen(config.Ardop.InboundBandwidth)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	listeners[MethodArdop] = ln
+	go func() {
+		defer func() {
+			delete(listeners, MethodArdop)
+			log.Printf("%s listener closed.", MethodArdop)
+		}()
+
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+
+			var freq Frequency
+			if rig, ok := rigs[config.Ardop.Rig]; ok {
+				f, _ := rig.CurrentVFO().GetFreq()
+				freq = Frequency(f)
+			}
+
+			incoming <- incomingConnect{
+				conn:       conn,
+				remoteCall: conn.RemoteAddr().String(),
+				kind:       MethodArdop,
 				freq:       freq,
 			}
 		}

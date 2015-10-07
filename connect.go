@@ -152,6 +152,23 @@ func qsy(method, addr string) (revert func(), err error) {
 			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
 			rig.CurrentVFO().SetFreq(oldFreq)
 		}, nil
+		case MethodArdop:
+		log.Printf("QSY %s: %s", method, addr)
+		var ok bool
+		rig, ok := rigs[config.Ardop.Rig]
+		if !ok {
+			return noop, fmt.Errorf("Hamlib rig %s not loaded.", config.Ardop.Rig)
+		}
+		_, oldFreq, err := setFreq(rig, addr)
+		if err != nil {
+			return noop, err
+		}
+		time.Sleep(2 * time.Second)
+		return func() {
+			time.Sleep(time.Second)
+			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
+			rig.CurrentVFO().SetFreq(oldFreq)
+		}, nil	
 	case MethodTelnet:
 		return noop, nil
 	default:

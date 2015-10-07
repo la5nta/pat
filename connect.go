@@ -74,6 +74,15 @@ func Connect(connectStr string) (success bool) {
 		done := handleInterrupt()
 		conn, err = connectWinmor(targetcall)
 		close(done)
+	case MethodArdop:
+		if rig, ok := rigs[config.Ardop.Rig]; ok {
+			f, _ := rig.CurrentVFO().GetFreq()
+			freq = Frequency(f)
+		}
+
+		done := handleInterrupt()
+		conn, err = connectArdop(targetcall)
+		close(done)		
 	case MethodTelnet:
 		if address == "" {
 			conn, err = telnet.DialCMS(fOptions.MyCall)
@@ -157,6 +166,15 @@ func connectWinmor(target string) (net.Conn, error) {
 
 	waitBusy(wmTNC)
 	return wmTNC.Dial(target)
+}
+
+func connectArdop(target string) (net.Conn, error) {
+	if adTNC == nil {
+		initAdTNC()
+	}
+
+	waitBusy(adTNC)
+	return adTNC.Dial(target)
 }
 
 func parseConnectURI(uri string) (callsign, password, addr string, err error) {

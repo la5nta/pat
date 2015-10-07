@@ -29,6 +29,12 @@
     "rig": "ft897",
     "ptt_ctrl": false
   },
+    "ardop": {
+    "addr": "la5nta.local.mesh:8515",
+    "inbound_bandwidth": 500,
+    "rig": "ft897",
+    "ptt_ctrl": false
+  },
   "telnet": {
     "listen_addr": ":8774",
     "password": ""

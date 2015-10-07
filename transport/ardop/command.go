@@ -113,7 +113,7 @@ const (
 	//cmdResponseDelay   Command = "RESPONSEDLY"     // <>[int]: Sets or returns the minimum response delay in ms. (300-2000, documented as 0-2000).
 	//cmdBandwidth       Command = "BW"              // <[int]: Used to answer a incoming call. Sets inbound bandwidth (500/1600). Only when in "server" mode.
 	//cmdMonitorCall     Command = "MONCALL"         // <[string]: sent when a station id is heard.
-	/cmdTarget          Command = "TARGET"          // <[string]: The newly connected station's call sign (in "server" mode)
+	//cmdTarget          Command = "TARGET"          // <[string]: The newly connected station's call sign (in "server" mode)
 
 	// Not implemented in parser
 	//cmdCaptureDevices Command = "CAPTUREDEVICES" // <>[string,string...]: List of all available capture devices

@@ -154,6 +154,23 @@ func handleInterrupt() (stop chan struct{}) {
 						}()
 					}
 				}
+				if adTNC != nil && !adTNC.Idle() {
+					if adDisc {
+						log.Println("Dirty disconnecting ardop...")
+						adTNC.DirtyDisconnect()
+						adDisc = false
+					} else {
+						log.Println("Disconnecting ardop...")
+						adDisc = true
+						go func() {
+							if err := adTNC.Disconnect(); err != nil {
+								log.Println(err)
+							} else {
+								adDisc = false
+							}
+						}()
+					}
+				}
 			}
 		}
 	}()

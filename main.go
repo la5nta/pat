@@ -29,12 +29,14 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 	"github.com/la5nta/wl2k-go/transport/winmor"
-
+	"github.com/la5nta/wl2k-go/transport/ardop"
+	
 	"github.com/la5nta/wl2k-go/cmd/wl2k/cfg"
 )
 
 const (
 	MethodWinmor    = "winmor"
+	MethodArdop    = "ardop"
 	MethodTelnet    = "telnet"
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
@@ -135,6 +137,7 @@ var (
 	listeners    map[string]net.Listener // Active listeners
 	mbox         *mailbox.DirHandler     // The mailbox
 	wmTNC        *winmor.TNC             // Pointer to the WINMOR TNC used by Listen and Connect
+	adTNC        *ardop.TNC             // Pointer to the ARDOP TNC used by Listen and Connect
 )
 
 var fOptions struct {
@@ -156,7 +159,7 @@ func optionsSet() *pflag.FlagSet {
 	defaultMBox, _ := mailbox.DefaultMailboxPath()
 
 	set.StringVar(&fOptions.MyCall, `mycall`, ``, `Your callsign (winlink user).`)
-	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,telnet,ax25).")
+	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).")
 	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
 	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
@@ -335,6 +338,12 @@ func cleanup() {
 		}
 	}
 
+	if adTNC != nil {
+		if err := adTNC.Close(); err != nil {
+			log.Fatalf("Failure to close ardop TNC: %s", err)
+		}
+	}
+	
 	eventLog.Close()
 }
 
@@ -399,6 +408,33 @@ func initWmTNC() {
 	rig, ok := rigs[config.Winmor.Rig]
 	if !ok {
 		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Winmor.Rig)
+	} else {
+		wmTNC.SetPTT(rig.CurrentVFO())
+	}
+}
+
+func initAdTNC() {
+	var err error
+	adTNC, err = ardop.Open(config.Ardop.Addr, fOptions.MyCall, config.Locator)
+	if err != nil {
+		log.Fatalf("ARDOP TNC initialization failed: %s", err)
+	}
+
+	adTNC.SetRobust(fOptions.RobustArdop)
+
+	if v, err := adTNC.Version(); err != nil {
+		log.Fatalf("ARDOP TNC initialization failed: %s", err)
+	} else {
+		log.Printf("ARDOP TNC v%s initialized", v)
+	}
+
+	if !config.Ardop.PTTControl {
+		return
+	}
+
+	rig, ok := rigs[config.Ardop.Rig]
+	if !ok {
+		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
 	} else {
 		wmTNC.SetPTT(rig.CurrentVFO())
 	}

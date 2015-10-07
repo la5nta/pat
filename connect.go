@@ -127,11 +127,15 @@ func qsy(method, addr string) (revert func(), err error) {
 
 	switch method {
 	case MethodWinmor:
+		if config.Winmor.Rig == "" {
+			return noop, fmt.Errorf("Missing rig reference in config section for %s, don't know which rig to qsy", method)
+		}
+
 		log.Printf("QSY %s: %s", method, addr)
 		var ok bool
 		rig, ok := rigs[config.Winmor.Rig]
 		if !ok {
-			return noop, fmt.Errorf("Hamlib rig %s not loaded.", config.Winmor.Rig)
+			return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", config.Winmor.Rig)
 		}
 		_, oldFreq, err := setFreq(rig, addr)
 		if err != nil {

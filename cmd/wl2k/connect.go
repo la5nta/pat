@@ -152,7 +152,7 @@ func qsy(method, addr string) (revert func(), err error) {
 			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
 			rig.CurrentVFO().SetFreq(oldFreq)
 		}, nil
-		case MethodArdop:
+	case MethodArdop:
 		log.Printf("QSY %s: %s", method, addr)
 		var ok bool
 		rig, ok := rigs[config.Ardop.Rig]

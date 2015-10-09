@@ -6,6 +6,7 @@ package ardop
 
 import (
 	"bufio"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -112,6 +113,8 @@ func (tnc *TNC) SetPTT(ptt PTT) {
 }
 
 func (tnc *TNC) init() (err error) {
+	writeLine(tnc.ctrl, "%s", cmdInitialize)
+
 	if tnc.state = tnc.getState(); tnc.state == Offline {
 		if err = tnc.SetCodec(true); err != nil {
 			return fmt.Errorf("Enable codec failed: %s", err)
@@ -140,18 +143,68 @@ func (tnc *TNC) init() (err error) {
 	return nil
 }
 
+/*func (tnc *TNC) send(format string, params ...interface{}) error {
+	payload := fmt.Sprintf("C:"+format+"\r", params...)
+	sum := crc16.ChecksumCCITT([]byte(payload))
+
+	fmt.Fprintf(tnc.ctrl, "C:"+format+"\r", params...)
+}*/
+
+var ErrChecksumMismatch = fmt.Errorf("Control protocol checksum mismatch")
+
+func readLine(reader *bufio.Reader) (string, error) {
+	line, err := reader.ReadString('\r')
+	if err != nil {
+		return "", err
+	}
+
+	line = line[2:] // Strip "c:"
+
+	sumBytes := make([]byte, 2)
+	reader.Read(sumBytes)
+	crc := binary.BigEndian.Uint16(sumBytes)
+
+	// Verify CRC sums
+	if crc16Sum([]byte(line)) != crc {
+		return line, ErrChecksumMismatch
+	}
+
+	// Remove trailing carriage return
+	line = line[:len(line)-1]
+
+	return line, nil
+}
+
+func writeLine(w io.Writer, format string, params ...interface{}) error {
+	payload := fmt.Sprintf(format+"\r", params...)
+	if _, err := fmt.Fprint(w, "C:"+payload); err != nil {
+		return err
+	}
+
+	sum := crc16Sum([]byte(payload))
+	return binary.Write(w, binary.BigEndian, sum)
+}
+
 func (tnc *TNC) runControlLoop() error {
+	rd := bufio.NewReader(tnc.ctrl)
+
 	// Read prompt so we know the TNC is ready
 	tnc.ctrl.SetReadDeadline(time.Now().Add(3 * time.Second))
-	rd := bufio.NewReader(tnc.ctrl)
-	_, err := rd.ReadString('\n')
-	if err != nil {
+	if line, err := readLine(rd); err != nil {
 		return err
+	} else if line != "RDY" {
+		return fmt.Errorf("Unexpected TNC prompt")
 	}
 	tnc.ctrl.SetReadDeadline(time.Time{})
 
 	var selfDisconnect bool
 	go func() {
+		for {
+			log.Println("waiting for first line...")
+			line, err := readLine(rd)
+			log.Println(line, err)
+		}
+
 		scanner := bufio.NewScanner(tnc.ctrl)
 
 		for scanner.Scan() { // Handle async commands (status commands)
@@ -165,11 +218,13 @@ func (tnc *TNC) runControlLoop() error {
 				}
 			case cmdDisconnect:
 				selfDisconnect = true
-			case cmdMonitorCall:
-				//TODO: the format is "N0CALL (JP20qe)", so we could keep the locator and return it in Heard()
-				callsign := strings.Split(msg.value.(string), " ")[0]
-				tnc.heard[callsign] = time.Now()
-			case cmdBuffers:
+
+			//case cmdMonitorCall:
+			//TODO: the format is "N0CALL (JP20qe)", so we could keep the locator and return it in Heard()
+			//callsign := strings.Split(msg.value.(string), " ")[0]
+			//tnc.heard[callsign] = time.Now()
+
+			case cmdBuffer:
 				buffers := msg.value.([]int)
 				tnc.data.updateBuffers(buffers)
 			case cmdNewState:
@@ -208,7 +263,9 @@ func (tnc *TNC) runControlLoop() error {
 			if debugEnabled() {
 				log.Println("-->", str)
 			}
-			fmt.Fprintf(tnc.ctrl, "%s\r\n", str)
+			if err := writeLine(tnc.ctrl, str); err != nil {
+				panic(err)
+			}
 		}
 	}()
 	return nil
@@ -250,7 +307,8 @@ func (tnc *TNC) State() State {
 }
 
 func (tnc *TNC) SetResponseDelay(ms int) error {
-	return tnc.set(cmdResponseDelay, ms)
+	//return tnc.set(cmdResponseDelay, ms)
+	return nil
 }
 
 // Returns the grid square as reported by the TNC
@@ -282,7 +340,8 @@ func (tnc *TNC) SetAuxiliaryCalls(calls []string) (err error) {
 //
 // Allowed values are 3-15
 func (tnc *TNC) SetMaxConnReq(n int) error {
-	return tnc.set(cmdMaxConnReq, n)
+	//return tnc.set(cmdMaxConnReq, n)
+	return nil
 }
 
 // SetRobust sets the TNC in robust mode.
@@ -290,7 +349,8 @@ func (tnc *TNC) SetMaxConnReq(n int) error {
 // In robust mode the TNC will only use modes FSK4_2CarShort, FSK4_2Car or PSK4_2Car regardless of current data mode bandwidth setting.
 // If in the ISS or ISSModeShift states changes will be delayed until the outbound queue is empty.
 func (tnc *TNC) SetRobust(robust bool) error {
-	return tnc.set(cmdRobust, robust)
+	//return tnc.set(cmdRobust, robust)
+	return nil
 }
 
 // Enable/disable sound card and other resources
@@ -345,10 +405,9 @@ func (tnc *TNC) Idle() bool {
 	return tnc.state == Disconnected || tnc.state == Offline
 }
 
-// DirtyDisconnect will send a dirty disconnect command to
-// the TNC.
-func (tnc *TNC) DirtyDisconnect() error {
-	return tnc.set(cmdDirtyDisconnect, nil)
+// Abort immediately aborts an ARQ Connection or a FEC Send session.
+func (tnc *TNC) Abort() error {
+	return tnc.set(cmdAbort, nil)
 }
 
 func (tnc *TNC) getState() State {
@@ -365,7 +424,7 @@ func (tnc *TNC) connect(targetcall string) error {
 		return ErrConnectInProgress
 	}
 
-	r := tnc.in.Listen()
+	/*r := tnc.in.Listen()
 	defer r.Close()
 
 	// Manual book keeping of state because ardop does not
@@ -380,7 +439,7 @@ func (tnc *TNC) connect(targetcall string) error {
 		} else if msg.cmd == cmdDisconnected {
 			return ErrConnectTimeout
 		}
-	}
+	}*/
 	return nil
 }
 
@@ -394,13 +453,13 @@ func (tnc *TNC) set(cmd Command, param interface{}) (err error) {
 	} else {
 		tnc.out <- string(cmd)
 	}
-	for msg := range r.Msgs() {
+	/*for msg := range r.Msgs() {
 		if msg.cmd == cmdPrompt {
 			return
 		} else if msg.cmd == cmdFault {
 			err = errors.New(msg.String())
 		}
-	}
+	}*/
 	return errors.New("TNC hung up")
 }
 
@@ -424,9 +483,9 @@ func (tnc *TNC) get(cmd Command) (value interface{}, err error) {
 			value = msg.value
 		} else if msg.cmd == cmdFault {
 			err = errors.New(msg.String())
-		} else if msg.cmd == cmdPrompt {
-			return
-		}
+		} // else if msg.cmd == cmdPrompt {
+		//return
+		//}
 	}
 	return nil, errors.New("TNC hung up")
 }

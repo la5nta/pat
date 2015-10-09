@@ -18,7 +18,7 @@ const (
 	cmdArqBW           Command = "ARQBW"           // <200MAX|500MAX|1000MAX|2000MAX|200FORCED|500FORCED|1000FORCED|2000FORCED>
 	cmdArqTimeout      Command = "ARQTIMEOUT"      // ARQTIMEOUT<30-240> Set/get the ARQ Timeout in seconds
 	cmdArqCall         Command = "ARQCALL"         // <Target Callsign Repeat Count>
-	cmdBuffer          Command = "BUFFER"          //
+	cmdBuffer          Command = "BUFFER"          // <[int int int int int]: Buffer statistics
 	cmdCapture         Command = "CAPTURE"         // <device name>
 	cmdCaptureDevices  Command = "CATPUREDEVICES"  // Returns a comma delimited list of all currently installed capture devices
 	cmdClose           Command = "CLOSE"           // Provides an orderly shutdown of all connections, release of all sound card resources and closes the Virtual TNC Program or hardware
@@ -82,18 +82,17 @@ const (
 	//cmdPrompt          Command = "CMD"             // <[]: Seems like a command prompt
 	//cmdPrompt2         Command = "CMDTRACE"        // CMDTRACE<True|False> Get/Set Command Trace flag to log all commands to from the TNC to the ARDOP_Win TNC debug log.
 	//cmdCodec           Command = "CODEC"           // <>[bool]: Activate sound card (can never be turned off?)
-	//cmdNewState        Command = "NEWSTATE"        // <[State]: Sent when the state changes
+	cmdNewState Command = "NEWSTATE" // <[State]: Sent when the state changes
 	//cmdState           Command = "STATE"           // <>[State]: The getter to get current state
 	//cmdConnect         Command = "CONNECT"         // >[string]: Connect to the given callsign. Failure response is "FAULT Connect Failure".
 	//cmdDisconnect      Command = "DISCONNECT"      // >[]: Disconnect the current session
 	//cmdDirtyDisconnect Command = "DIRTYDISCONNECT" // >[]: "abort" connection
 	//cmdAbortDisconnect Command = "ABORT"           // Immediately aborts an ARQ Connection or a FEC Send session
-	//cmdDisconnected    Command = "DISCONNECTED"    // <[]: Signals that a connect failed. Duplicate state notification?
-	//cmdConnected       Command = "CONNECTED"       // <[string]: Signals that a connect was ok. Duplicate state notification?
-	//cmdPTT             Command = "PTT"             // <[bool]: PTT active or not
+	cmdDisconnected Command = "DISCONNECTED" // <[]: Signals that a connect failed. Duplicate state notification?
+	cmdConnected    Command = "CONNECTED"    // <[string string]: Signals that an ARQ connection has been established. e.g. “CONNECTED W1ABC 500”
+	cmdPTT          Command = "PTT"          // <[bool]: PTT active or not
 	//cmdClose           Command = "CLOSE"           // >[]: Closes the TNC
-	//cmdBuffer         Command = "BUFFER"         // <[int int int int int]: Buffer status?
-	//cmdFault           Command = "FAULT"           // <[string]: Error message
+	cmdFault Command = "FAULT" // <[string]: Error message
 	//cmdOffset          Command = "OFFSET"          // <[int]: Offset
 	//cmdTune            Command = "TUNE"          // <[int]: <Tuning offset in integer Hz>
 	//cmdMyCall          Command = "MYC"             // <>[string]: My callsign
@@ -101,11 +100,11 @@ const (
 	//cmdGridSquare      Command = "GRIDSQUARE"      // <>[string]: set/get grid square
 	//cmdMaxConnReq      Command = "MAXCONREQ"       // <>[int 3-15]: Number of connect requests before giving up. RMS Express sets 10 before connect.
 	//cmdDriveLevel      Command = "DRIVELEVEL"      // <>[int]: Set/read the drive level (TX audio drive)
-	//cmdBusy            Command = "BUSY"            // <[bool]: Returns whether the channel is busy
+	cmdBusy Command = "BUSY" // <[bool]: Returns whether the channel is busy
 	//cmdCapture         Command = "CAPTURE"         // <>[string]: capture device
 	//cmdPlayback        Command = "PLAYBACK"        // <>[string]: playback device
 	//cmdTwoToneTest     Command = "TWOTONETEST"     // >[bool]: Enable two tone test
-	//cmdCWID            Command = "CWID"            // <>[bool]: cw id
+	cmdCWID Command = "CWID" // <>[bool]: cw id
 	//cmdMode            Command = "MODE"            // <>[string]: Current data mode
 	//cmdMyAux           Command = "MYAUX"           // <>[string,string...]: Auxiliary call signs that will answer connect requests
 	//cmdVersion         Command = "VERSION"         // <>[string]: Returns the TNC version
@@ -113,7 +112,7 @@ const (
 	//cmdResponseDelay   Command = "RESPONSEDLY"     // <>[int]: Sets or returns the minimum response delay in ms. (300-2000, documented as 0-2000).
 	//cmdBandwidth       Command = "BW"              // <[int]: Used to answer a incoming call. Sets inbound bandwidth (500/1600). Only when in "server" mode.
 	//cmdMonitorCall     Command = "MONCALL"         // <[string]: sent when a station id is heard.
-	//cmdTarget          Command = "TARGET"          // <[string]: The newly connected station's call sign (in "server" mode)
+	cmdTarget Command = "TARGET" // <[string]: Identifies the target call sign of the connect request. The target call will be either MYC or one of the MYAUX call signs.
 
 	// Not implemented in parser
 	//cmdCaptureDevices Command = "CAPTUREDEVICES" // <>[string,string...]: List of all available capture devices
@@ -131,7 +130,7 @@ const (
 
 // Buffer slice index
 //
-// "BUFFERS <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>"
+// "BUFFER <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>"
 const (
 	BufferInQueued = iota
 	BufferInSequenced
@@ -171,19 +170,19 @@ func parseCtrlMsg(str string) ctrlMsg {
 
 	switch msg.cmd {
 	// bool
-	case cmdRobust, cmdCodec, cmdPTT, cmdBusy, cmdTwoToneTest, cmdCWID, cmdListen:
+	case cmdCodec, cmdPTT, cmdBusy, cmdTwoToneTest, cmdCWID, cmdListen:
 		msg.value = strings.ToLower(parts[1]) == "true"
 
 	// (no params)
-	case cmdPrompt, cmdDisconnect, cmdDirtyDisconnect, cmdClose, cmdDisconnected:
+	case cmdAbort, cmdDisconnect, cmdClose, cmdDisconnected:
 
 	// State
 	case cmdNewState, cmdState:
 		msg.value = stateMap[strings.ToUpper(parts[1])]
 
 	// string
-	case cmdConnect, cmdFault, cmdConnected, cmdMyCall, cmdGridSquare, cmdCapture,
-		cmdPlayback, cmdMode, cmdVersion, cmdMonitorCall, cmdTarget:
+	case cmdFault, cmdConnected, cmdMyCall, cmdGridSquare, cmdCapture,
+		cmdPlayback, cmdVersion, cmdTarget:
 		msg.value = parts[1]
 
 	// []string
@@ -191,15 +190,15 @@ func parseCtrlMsg(str string) ctrlMsg {
 		msg.value = parseCommaList(parts[1])
 
 	// []int (whitespace separated)
-	case cmdBuffers: // <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>
+	case cmdBuffer: // <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>
 		v, err := parseIntList(parts[1], " ")
 		if err != nil {
-			log.Printf("Failed to parse %s: %s", cmdBuffers, err)
+			log.Printf("Failed to parse %s: %s", cmdBuffer, err)
 		}
 		msg.value = v
 
 	// int
-	case cmdOffset, cmdMaxConnReq, cmdDriveLevel, cmdResponseDelay, cmdBandwidth:
+	case cmdDriveLevel:
 		i, err := strconv.Atoi(parts[1])
 		if err != nil {
 			log.Printf("Failed to parse offset value: %s", err)

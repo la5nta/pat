@@ -4,12 +4,7 @@
 
 package ardop
 
-import (
-	"reflect"
-	"testing"
-)
-
-func TestParse(t *testing.T) {
+/*func TestParse(t *testing.T) {
 	tests := map[string]ctrlMsg{
 		"NEWSTATE SENDID":                   ctrlMsg{cmdNewState, SendID},
 		"PTT True":                          ctrlMsg{cmdPTT, true},
@@ -42,3 +37,4 @@ func TestParse(t *testing.T) {
 		}
 	}
 }
+*/

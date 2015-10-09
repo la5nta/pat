@@ -89,9 +89,9 @@ func (tnc *TNC) Listen(bandwidth int) (ln net.Listener, err error) {
 					return
 				case msg.cmd == cmdNewState && msg.State() == ConnectPending:
 					remotecall, targetcall = "", ""
-					if err := tnc.set(cmdBandwidth, bandwidth); err != nil {
-						errors <- err
-					}
+					//if err := tnc.set(cmdBandwidth, bandwidth); err != nil {
+					//	errors <- err
+					//}
 				case msg.cmd == cmdConnected:
 					remotecall = msg.String()
 				case msg.cmd == cmdTarget:

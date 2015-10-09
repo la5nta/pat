@@ -420,8 +420,6 @@ func initAdTNC() {
 		log.Fatalf("ARDOP TNC initialization failed: %s", err)
 	}
 
-	adTNC.SetRobust(fOptions.RobustArdop)
-
 	if v, err := adTNC.Version(); err != nil {
 		log.Fatalf("ARDOP TNC initialization failed: %s", err)
 	} else {

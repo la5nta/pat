@@ -28,7 +28,7 @@ func (l listener) Accept() (c net.Conn, err error) {
 		}
 		return c, nil
 	case err = <-l.errors:
-		return
+		return nil, err
 	}
 }
 

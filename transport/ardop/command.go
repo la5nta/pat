@@ -93,17 +93,6 @@ const (
 
 )
 
-// Buffer slice index
-//
-// "BUFFER <in queued> <in sequenced> <out queued> <out confirmed> <1m avg throughput in bytes/minute>"
-const (
-	BufferInQueued = iota
-	BufferInSequenced
-	BufferOutQueued
-	BufferOutConfirmed
-	BufferAvgThroughput
-)
-
 type ctrlMsg struct {
 	cmd   Command
 	value interface{}

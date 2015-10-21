@@ -119,8 +119,6 @@ func listenWinmor(incoming chan<- incomingConnect) {
 }
 
 func listenArdop(incoming chan<- incomingConnect) {
-	// RMS Express runs bw at 500Hz except when sending/receiving message. Why?
-	// ... Or is it cmdRobust True?
 	ln, err := adTNC.Listen()
 	if err != nil {
 		log.Fatal(err)

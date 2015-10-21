@@ -427,7 +427,6 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 		if _, err = writer.Write([]byte{_CHRSTX, byte(msgLen)}); err != nil {
 			return err
 		}
-		writer.Flush()
 
 		for i := 0; i < msgLen; i++ {
 			c, _ := buffer.ReadByte()
@@ -436,7 +435,10 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 			}
 			checksum += int64(c)
 		}
-		writer.Flush()
+
+		if err = writer.Flush(); err != nil {
+			return err
+		}
 	}
 
 	// Checksum
@@ -447,7 +449,7 @@ func (s *Session) writeCompressed(rw io.ReadWriter, p *Proposal) (err error) {
 	// Flush connection buffers.
 	// This enables us to block until the whole message has been transmitted over the air.
 	if f, ok := rw.(transport.Flusher); ok {
-		f.Flush()
+		err = f.Flush()
 	}
 
 	statusTicker.Stop()

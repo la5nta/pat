@@ -82,7 +82,7 @@ func Connect(connectStr string) (success bool) {
 
 		done := handleInterrupt()
 		conn, err = connectArdop(targetcall)
-		close(done)		
+		close(done)
 	case MethodTelnet:
 		if address == "" {
 			conn, err = telnet.DialCMS(fOptions.MyCall)
@@ -172,7 +172,7 @@ func qsy(method, addr string) (revert func(), err error) {
 			time.Sleep(time.Second)
 			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
 			rig.CurrentVFO().SetFreq(oldFreq)
-		}, nil	
+		}, nil
 	case MethodTelnet:
 		return noop, nil
 	default:
@@ -182,7 +182,7 @@ func qsy(method, addr string) (revert func(), err error) {
 
 func connectWinmor(target string) (net.Conn, error) {
 	if wmTNC == nil {
-		initWmTNC()
+		initWinmorTNC()
 	}
 
 	waitBusy(wmTNC)
@@ -191,7 +191,7 @@ func connectWinmor(target string) (net.Conn, error) {
 
 func connectArdop(target string) (net.Conn, error) {
 	if adTNC == nil {
-		initAdTNC()
+		initArdopTNC()
 	}
 
 	waitBusy(adTNC)

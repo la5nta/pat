@@ -44,15 +44,15 @@ func Listen(listenStr string) {
 		switch method {
 		case MethodWinmor:
 			if wmTNC == nil {
-				initWmTNC()
+				initWinmorTNC()
 			}
 			listenWinmor(cc)
 		case MethodArdop:
 			if adTNC == nil {
-				initAdTNC()
+				initArdopTNC()
 			}
 			listenArdop(cc)
-			case MethodTelnet:
+		case MethodTelnet:
 			listenTelnet(cc)
 		case MethodAX25:
 			listenAX25(cc)
@@ -121,7 +121,7 @@ func listenWinmor(incoming chan<- incomingConnect) {
 func listenArdop(incoming chan<- incomingConnect) {
 	// RMS Express runs bw at 500Hz except when sending/receiving message. Why?
 	// ... Or is it cmdRobust True?
-	ln, err := adTNC.Listen(config.Ardop.InboundBandwidth)
+	ln, err := adTNC.Listen()
 	if err != nil {
 		log.Fatal(err)
 	}

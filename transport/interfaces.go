@@ -24,3 +24,7 @@ type BusyChannelChecker interface {
 	// Returns true if the channel is not clear
 	Busy() bool
 }
+
+type PTTController interface {
+	SetPTT(on bool)
+}

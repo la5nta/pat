@@ -7,15 +7,10 @@ package ardop
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 )
-
-type PTT interface {
-	SetPTT(on bool) error
-}
-
-type State uint8
 
 // The default address Ardop TNC listens on
 const DefaultAddr = "localhost:8515"
@@ -25,39 +20,58 @@ var (
 	ErrInvalidAddr    = errors.New("Invalid address format")
 )
 
-//go:generate stringer -type=State
+type Bandwidth struct {
+	Forced bool
+	Max    uint
+}
+
+var (
+	Bandwidth200Max  = Bandwidth{false, 200}
+	Bandwidth500Max  = Bandwidth{false, 500}
+	Bandwidth1000Max = Bandwidth{false, 1000}
+	Bandwidth2000Max = Bandwidth{false, 2000}
+
+	Bandwidth200Forced  = Bandwidth{true, 200}
+	Bandwidth500Forced  = Bandwidth{true, 500}
+	Bandwidth1000Forced = Bandwidth{true, 1000}
+	Bandwidth2000Forced = Bandwidth{true, 2000}
+)
+
+func (bw Bandwidth) String() string {
+	str := fmt.Sprintf("%d", bw.Max)
+	if bw.Forced {
+		str += "FORCED"
+	} else {
+		str += "MAX"
+	}
+	return str
+}
+
+func (bw Bandwidth) IsZero() bool { return bw.Max == 0 }
+
+type State uint8
+
+//go:generate stringer -type=State .
 const (
-	Unknown        State = iota
-	Offline              // Sound card disabled and all sound card resources are released
-	Disconnected         // The session is disconnected, the sound card remains active
-	Connecting           // The station is sending Connect Requests to a target station
-	ConnectPending       // A connect request frame was sensed and a connection is pending and capture/decoding is in process
-	SendID               // Sending ID
-	ISS                  // Information Sending Station (Sending Data)
-	IRS                  // Information Receiving Station (Receiving data)
-	IRSToISS             // Transition state from IRS to ISS to insure proper link turnover
-	IRSModeShift         // Supplying Packets Sequenced information to the ISS for a requested mode shift
-	ISSModeShift         // Requesting Packets Sequenced information from the IRS in preparation for a mode shift
-	FECReceive           // Receiving FEC (unproto) data
-	FEC500               // Sending FEC data 500Hz bandwidth
-	FEC1600              // Sending FEC data 1600Hz bandwidth
+	Unknown      State = iota
+	Offline            // Sound card disabled and all sound card resources are released
+	Disconnected       // The session is disconnected, the sound card remains active
+	ISS                // Information Sending Station (Sending Data)
+	IRS                // Information Receiving Station (Receiving data)
+	Idle               // ??
+	FECSend            // ??
+	FECReceive         // Receiving FEC (unproto) data
 )
 
 var stateMap = map[string]State{
-	"":               Unknown,
-	"OFFLINE":        Offline,
-	"DISCONNECTED":   Disconnected,
-	"CONNECTING":     Connecting,
-	"CONNECTPENDING": ConnectPending,
-	"SENDID":         SendID,
-	"ISS":            ISS,
-	"IRS":            IRS,
-	"IRSTOISS":       IRSToISS,
-	"IRS MODE SHIFT": IRSModeShift,
-	"ISS MODE SHIFT": ISSModeShift,
-	"FECRCV":         FECReceive,
-	"FEC500":         FEC500,
-	"FEC1600":        FEC1600,
+	"":        Unknown,
+	"OFFLINE": Offline,
+	"DISC":    Disconnected,
+	"ISS":     ISS,
+	"IRS":     IRS,
+	"IDLE":    Idle,
+	"FECRcv":  FECReceive,
+	"FECSend": FECSend,
 }
 
 func strToState(str string) (State, bool) {

@@ -13,25 +13,28 @@ import (
 	"log"
 	"net"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport"
 )
+
+const DefaultARQTimeout = 90 * time.Second
 
 var (
 	ErrBusy              = errors.New("TNC control port is busy.")
 	ErrConnectInProgress = errors.New("A connect is in progress.")
+	ErrFlushTimeout      = errors.New("Flush timeout.")
 )
 
 type TNC struct {
-	ctrlAddr string
-	connAddr string
-
-	ctrl net.Conn
+	ctrl io.ReadWriteCloser
 	data *tncConn
 
-	in  broadcaster
-	out chan<- string
+	in      broadcaster
+	out     chan<- string
+	dataOut chan<- []byte
+	dataIn  chan []byte
 
 	busy bool
 
@@ -39,33 +42,30 @@ type TNC struct {
 
 	selfClose bool
 
-	ptt PTT
-
-	heard map[string]time.Time
+	ptt transport.PTTController
 
 	connected      bool
 	listenerActive bool
 }
 
-func Open(addr string, mycall, gridSquare string) (*TNC, error) {
-	ctrlAddr, connAddr, err := parseAddr(addr)
-	if err != nil {
-		return nil, ErrInvalidAddr
-	}
-
-	ctrlConn, err := net.Dial(`tcp`, ctrlAddr)
+// OpenTCP opens and initializes an ardop TNC over TCP.
+func OpenTCP(addr string, mycall, gridSquare string) (*TNC, error) {
+	tcpConn, err := net.Dial(`tcp`, addr)
 	if err != nil {
 		return nil, err
 	}
 
+	return Open(tcpConn, mycall, gridSquare)
+}
+
+// OpenTCP opens and initializes an ardop TNC.
+func Open(conn io.ReadWriteCloser, mycall, gridSquare string) (*TNC, error) {
+	var err error
+
 	tnc := &TNC{
-		ctrlAddr: ctrlAddr,
-		connAddr: connAddr,
-
-		in:   newBroadcaster(),
-		ctrl: ctrlConn,
-
-		heard: make(map[string]time.Time),
+		in:     newBroadcaster(),
+		dataIn: make(chan []byte, 4096),
+		ctrl:   conn,
 	}
 
 	if err := tnc.runControlLoop(); err == io.EOF {
@@ -93,46 +93,36 @@ func Open(addr string, mycall, gridSquare string) (*TNC, error) {
 	return tnc, nil
 }
 
-// Heard returns all stations heard by the TNC since it was opened.
-//
-// It returns a map from callsign to last time it was heard. Each call
-// returns a new copy of the latest map.
-func (tnc *TNC) Heard() map[string]time.Time {
-	slice := make(map[string]time.Time, len(tnc.heard))
-	for k, v := range tnc.heard {
-		slice[k] = v
-	}
-	return slice
-}
-
 // Set the PTT that should be controlled by the TNC.
 //
 // If nil, the PTT request from the TNC is ignored.
-func (tnc *TNC) SetPTT(ptt PTT) {
+func (tnc *TNC) SetPTT(ptt transport.PTTController) {
 	tnc.ptt = ptt
 }
 
 func (tnc *TNC) init() (err error) {
-	writeLine(tnc.ctrl, "%s", cmdInitialize)
+	if err = tnc.set(cmdInitialize, nil); err != nil {
+		return err
+	}
 
 	if tnc.state = tnc.getState(); tnc.state == Offline {
 		if err = tnc.SetCodec(true); err != nil {
 			return fmt.Errorf("Enable codec failed: %s", err)
 		}
-		time.Sleep(100 * time.Millisecond) // Give it some time
 	}
 
-	if err = tnc.SetMaxConnReq(10); err != nil {
-		return fmt.Errorf("Set max connection requests failed: %s", err)
+	if err = tnc.set(cmdProtocolMode, ModeARQ); err != nil {
+		return fmt.Errorf("Set protocol mode ARQ failed: %s", err)
 	}
-	if err = tnc.SetRobust(false); err != nil {
-		return fmt.Errorf("Disable robust mode failed: %s", err)
+
+	if err = tnc.SetARQTimeout(DefaultARQTimeout); err != nil {
+		return fmt.Errorf("Set ARQ timeout failed: %s", err)
 	}
-	if v, err := tnc.get(cmdBusy); err != nil {
-		return fmt.Errorf("Failed to get busy indication: %s", err)
-	} else {
-		tnc.busy = v.(bool)
-	}
+
+	// Not yet implemented by TNC
+	/*if err = tnc.SetAutoBreak(true); err != nil {
+		return fmt.Errorf("Enable autobreak failed: %s", err)
+	}*/
 
 	// The TNC should only answer inbound ARQ connect requests when
 	// requested by the user.
@@ -143,36 +133,60 @@ func (tnc *TNC) init() (err error) {
 	return nil
 }
 
-/*func (tnc *TNC) send(format string, params ...interface{}) error {
-	payload := fmt.Sprintf("C:"+format+"\r", params...)
-	sum := crc16.ChecksumCCITT([]byte(payload))
-
-	fmt.Fprintf(tnc.ctrl, "C:"+format+"\r", params...)
-}*/
-
 var ErrChecksumMismatch = fmt.Errorf("Control protocol checksum mismatch")
 
-func readLine(reader *bufio.Reader) (string, error) {
-	line, err := reader.ReadString('\r')
+func readFrame(reader *bufio.Reader) (frame, error) {
+	fType, err := reader.ReadByte()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	line = line[2:] // Strip "c:"
+	reader.Discard(1) // :
 
+	var data []byte
+	switch fType {
+	case 'c':
+		data, err = reader.ReadBytes('\r')
+	case 'd':
+		// Peek length
+		peeked, err := reader.Peek(2)
+		if err != nil {
+			return nil, err
+		}
+		length := binary.BigEndian.Uint16(peeked) + 2 // +2 to include the length bytes
+
+		// actual data
+		data = make([]byte, length)
+		var n int
+		for read := 0; read < int(length) && err == nil; {
+			n, err = reader.Read(data[read:])
+			read += n
+		}
+	default:
+		return nil, fmt.Errorf("Unexpected frame type %c", fType)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify CRC sums
 	sumBytes := make([]byte, 2)
 	reader.Read(sumBytes)
 	crc := binary.BigEndian.Uint16(sumBytes)
-
-	// Verify CRC sums
-	if crc16Sum([]byte(line)) != crc {
-		return line, ErrChecksumMismatch
+	if crc16Sum(data) != crc {
+		return nil, ErrChecksumMismatch
 	}
 
-	// Remove trailing carriage return
-	line = line[:len(line)-1]
-
-	return line, nil
+	switch fType {
+	case 'c':
+		data = data[:len(data)-1] // Trim \r
+		return cmdFrame(string(data)), nil
+	case 'd':
+		return dFrame{dataType: string(data[2:5]), data: data[5:]}, nil
+	default:
+		panic("not possible")
+	}
 }
 
 func writeLine(w io.Writer, format string, params ...interface{}) error {
@@ -185,61 +199,93 @@ func writeLine(w io.Writer, format string, params ...interface{}) error {
 	return binary.Write(w, binary.BigEndian, sum)
 }
 
+type frame interface{}
+
+type dFrame struct {
+	dataType string
+	data     []byte
+}
+
+func (f dFrame) ARQFrame() bool { return f.dataType == "ARQ" }
+func (f dFrame) FECFrame() bool { return f.dataType == "FEC" }
+func (f dFrame) ErrFrame() bool { return f.dataType == "ERR" }
+func (f dFrame) IDFFrame() bool { return f.dataType == "IDF" }
+
+type cmdFrame string
+
+func (f cmdFrame) Parsed() ctrlMsg { return parseCtrlMsg(string(f)) }
+
 func (tnc *TNC) runControlLoop() error {
 	rd := bufio.NewReader(tnc.ctrl)
 
 	// Read prompt so we know the TNC is ready
-	tnc.ctrl.SetReadDeadline(time.Now().Add(3 * time.Second))
-	if line, err := readLine(rd); err != nil {
+	if tcpConn, ok := tnc.ctrl.(net.Conn); ok {
+		tcpConn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	}
+
+	if f, err := readFrame(rd); err != nil {
 		return err
-	} else if line != "RDY" {
+	} else if cf, _ := f.(cmdFrame); cf != "RDY" {
 		return fmt.Errorf("Unexpected TNC prompt")
 	}
-	tnc.ctrl.SetReadDeadline(time.Time{})
 
-	var selfDisconnect bool
+	if tcpConn, ok := tnc.ctrl.(net.Conn); ok {
+		tcpConn.SetReadDeadline(time.Time{})
+	}
+
 	go func() {
-		for {
-			log.Println("waiting for first line...")
-			line, err := readLine(rd)
-			log.Println(line, err)
-		}
+		for { // Handle incoming TNC data
+			frame, err := readFrame(rd)
+			if err != nil {
+				if debugEnabled() {
+					log.Println("Error reading frame: %s", err)
+				}
 
-		scanner := bufio.NewScanner(tnc.ctrl)
+				tnc.out <- string(cmdCRCFault)
+				continue
+			}
 
-		for scanner.Scan() { // Handle async commands (status commands)
-			line := scanner.Text()
-			msg := parseCtrlMsg(line)
+			if debugEnabled() {
+				log.Println("frame", frame)
+			}
+
+			if d, ok := frame.(dFrame); ok {
+				if d.ARQFrame() {
+					tnc.out <- string(cmdReady) // CRC ok
+
+					select {
+					case tnc.dataIn <- d.data:
+					case <-time.After(time.Minute):
+						go tnc.Disconnect() // Buffer full and timeout
+					}
+				}
+
+				continue
+			}
+
+			line, ok := frame.(cmdFrame)
+			if !ok {
+				continue // TODO: Handle IDF frame
+			}
+
+			msg := line.Parsed()
 
 			switch msg.cmd {
 			case cmdPTT:
 				if tnc.ptt != nil {
 					tnc.ptt.SetPTT(msg.Bool())
 				}
-			case cmdDisconnect:
-				selfDisconnect = true
-
-			//case cmdMonitorCall:
-			//TODO: the format is "N0CALL (JP20qe)", so we could keep the locator and return it in Heard()
-			//callsign := strings.Split(msg.value.(string), " ")[0]
-			//tnc.heard[callsign] = time.Now()
-
+			case cmdDisconnected:
+				tnc.state = Disconnected
+				tnc.eof()
 			case cmdBuffer:
-				buffers := msg.value.([]int)
-				tnc.data.updateBuffers(buffers)
+				tnc.data.updateBuffer(msg.value.(int))
 			case cmdNewState:
 				tnc.state = msg.State()
 
 				// Close ongoing connections if the new state is Disconnected
-				if msg.State() == Disconnected && tnc.data != nil {
-					tnc.connected = false // connect() is responsible for setting it to true
-					if tcpConn := tnc.data.Conn.(*net.TCPConn); !selfDisconnect {
-						tcpConn.CloseRead()
-						tcpConn.CloseWrite()
-					} else {
-						tcpConn.Close()
-						selfDisconnect = false
-					}
+				if msg.State() == Disconnected {
+					tnc.eof()
 				}
 			case cmdBusy:
 				tnc.busy = msg.value.(bool)
@@ -256,19 +302,52 @@ func (tnc *TNC) runControlLoop() error {
 	}()
 
 	out := make(chan string)
+	dataOut := make(chan []byte)
+
 	tnc.out = out
+	tnc.dataOut = dataOut
 
 	go func() {
-		for str := range out {
-			if debugEnabled() {
-				log.Println("-->", str)
-			}
-			if err := writeLine(tnc.ctrl, str); err != nil {
-				panic(err)
+		for {
+			select {
+			case str, ok := <-out:
+				if !ok {
+					return
+				}
+
+				if debugEnabled() {
+					log.Println("-->", str)
+				}
+
+				if err := writeLine(tnc.ctrl, str); err != nil {
+					panic(err)
+				}
+			case data, ok := <-dataOut:
+				if !ok {
+					return
+				}
+
+				for len(data) > 0 {
+					n, err := tnc.ctrl.Write(data)
+					if err != nil {
+						panic(err)
+					}
+					data = data[n:]
+				}
 			}
 		}
 	}()
 	return nil
+}
+
+func (tnc *TNC) eof() {
+	if tnc.data != nil {
+		close(tnc.dataIn)       // Signals EOF to pending reads
+		tnc.data.signalClosed() // Signals EOF to pending writes
+		tnc.connected = false   // connect() is responsible for setting it to true
+		tnc.dataIn = make(chan []byte, 4096)
+		tnc.data = nil
+	}
 }
 
 // Closes the connection to the TNC (and any on-going connections).
@@ -284,6 +363,9 @@ func (tnc *TNC) Close() error {
 	}
 
 	tnc.ctrl.Close()
+
+	close(tnc.out)
+	close(tnc.dataOut)
 
 	// no need for a finalizer anymore
 	runtime.SetFinalizer(tnc, nil)
@@ -306,11 +388,6 @@ func (tnc *TNC) State() State {
 	return tnc.state
 }
 
-func (tnc *TNC) SetResponseDelay(ms int) error {
-	//return tnc.set(cmdResponseDelay, ms)
-	return nil
-}
-
 // Returns the grid square as reported by the TNC
 func (tnc *TNC) GridSquare() (string, error) {
 	return tnc.getString(cmdGridSquare)
@@ -319,6 +396,32 @@ func (tnc *TNC) GridSquare() (string, error) {
 // Returns mycall as reported by the TNC
 func (tnc *TNC) MyCall() (string, error) {
 	return tnc.getString(cmdMyCall)
+}
+
+// Autobreak returns wether or not automatic link turnover is enabled.
+func (tnc *TNC) AutoBreak() (bool, error) {
+	return tnc.getBool(cmdAutoBreak)
+}
+
+// SetAutoBreak Disables/enables automatic link turnover.
+func (tnc *TNC) SetAutoBreak(on bool) error {
+	return tnc.set(cmdAutoBreak, on)
+}
+
+// Sets the ARQ bandwidth
+func (tnc *TNC) SetARQBandwidth(bw Bandwidth) error {
+	return tnc.set(cmdARQBW, bw)
+}
+
+// Sets the ARQ timeout
+func (tnc *TNC) SetARQTimeout(d time.Duration) error {
+	return tnc.set(cmdARQTimeout, int(d/time.Second))
+}
+
+// Gets the ARQ timeout
+func (tnc *TNC) ARQTimeout() (time.Duration, error) {
+	seconds, err := tnc.getInt(cmdARQTimeout)
+	return time.Duration(seconds) * time.Second, err
 }
 
 // Sets the grid square
@@ -336,23 +439,6 @@ func (tnc *TNC) SetAuxiliaryCalls(calls []string) (err error) {
 	return tnc.set(cmdMyAux, strings.Join(calls, ", "))
 }
 
-// Set the number of connect requests before giving up.
-//
-// Allowed values are 3-15
-func (tnc *TNC) SetMaxConnReq(n int) error {
-	//return tnc.set(cmdMaxConnReq, n)
-	return nil
-}
-
-// SetRobust sets the TNC in robust mode.
-//
-// In robust mode the TNC will only use modes FSK4_2CarShort, FSK4_2Car or PSK4_2Car regardless of current data mode bandwidth setting.
-// If in the ISS or ISSModeShift states changes will be delayed until the outbound queue is empty.
-func (tnc *TNC) SetRobust(robust bool) error {
-	//return tnc.set(cmdRobust, robust)
-	return nil
-}
-
 // Enable/disable sound card and other resources
 //
 // This is done automatically on Open(), users should
@@ -361,8 +447,7 @@ func (tnc *TNC) SetCodec(state bool) error {
 	return tnc.set(cmdCodec, fmt.Sprintf("%t", state))
 }
 
-// ListenState() returns a StateReceiver which can be used
-// to get notification when the TNC state changes.
+// ListenState() returns a StateReceiver which can be used to get notification when the TNC state changes.
 func (tnc *TNC) ListenEnabled() StateReceiver {
 	return tnc.in.ListenState()
 }
@@ -375,8 +460,7 @@ func (tnc *TNC) SetListenEnabled(listen bool) error {
 	return tnc.set(cmdListen, fmt.Sprintf("%t", listen))
 }
 
-// Disconnect gracefully disconnects the active connection
-// or cancels an ongoing connect.
+// Disconnect gracefully disconnects the active connection or cancels an ongoing connect.
 //
 // The method will block until the TNC is disconnected.
 //
@@ -386,6 +470,8 @@ func (tnc *TNC) Disconnect() error {
 	if tnc.Idle() {
 		return nil
 	}
+
+	tnc.eof()
 
 	r := tnc.in.Listen()
 	defer r.Close()
@@ -399,8 +485,7 @@ func (tnc *TNC) Disconnect() error {
 	panic("not possible")
 }
 
-// Idle returns true if the TNC is not in a connecting
-// or connected state.
+// Idle returns true if the TNC is not in a connecting or connected state.
 func (tnc *TNC) Idle() bool {
 	return tnc.state == Disconnected || tnc.state == Offline
 }
@@ -419,32 +504,32 @@ func (tnc *TNC) getState() State {
 }
 
 // Sends a connect command to the TNC. Users should call Dial().
-func (tnc *TNC) connect(targetcall string) error {
+func (tnc *TNC) arqCall(targetcall string, repeat int) error {
 	if !tnc.Idle() {
 		return ErrConnectInProgress
 	}
 
-	/*r := tnc.in.Listen()
+	r := tnc.in.Listen()
 	defer r.Close()
 
-	// Manual book keeping of state because ardop does not
-	// send async state update after issuing a connect command.
-	tnc.state = Connecting
-
-	tnc.out <- fmt.Sprintf("%s %s", cmdConnect, targetcall)
+	tnc.out <- fmt.Sprintf("%s %s %d", cmdARQCall, targetcall, repeat)
 	for msg := range r.Msgs() {
-		if msg.cmd == cmdConnected {
+		switch msg.cmd {
+		case cmdFault:
+			return fmt.Errorf(msg.String())
+		case cmdNewState:
+			if tnc.state == Disconnected {
+				return ErrConnectTimeout
+			}
+		case cmdConnected: // TODO: Probably not what we should look for
 			tnc.connected = true
-			break
-		} else if msg.cmd == cmdDisconnected {
-			return ErrConnectTimeout
+			return nil
 		}
-	}*/
+	}
 	return nil
 }
 
 func (tnc *TNC) set(cmd Command, param interface{}) (err error) {
-	time.Sleep(100 * time.Millisecond)
 	r := tnc.in.Listen()
 	defer r.Close()
 
@@ -453,13 +538,14 @@ func (tnc *TNC) set(cmd Command, param interface{}) (err error) {
 	} else {
 		tnc.out <- string(cmd)
 	}
-	/*for msg := range r.Msgs() {
-		if msg.cmd == cmdPrompt {
+
+	for msg := range r.Msgs() {
+		if msg.cmd == cmdReady {
 			return
 		} else if msg.cmd == cmdFault {
-			err = errors.New(msg.String())
+			return errors.New(msg.String())
 		}
-	}*/
+	}
 	return errors.New("TNC hung up")
 }
 
@@ -471,9 +557,23 @@ func (tnc *TNC) getString(cmd Command) (string, error) {
 	return v.(string), nil
 }
 
-func (tnc *TNC) get(cmd Command) (value interface{}, err error) {
-	time.Sleep(100 * time.Millisecond)
+func (tnc *TNC) getBool(cmd Command) (bool, error) {
+	v, err := tnc.get(cmd)
+	if err != nil {
+		return false, nil
+	}
+	return v.(bool), nil
+}
 
+func (tnc *TNC) getInt(cmd Command) (int, error) {
+	v, err := tnc.get(cmd)
+	if err != nil {
+		return 0, err
+	}
+	return v.(int), nil
+}
+
+func (tnc *TNC) get(cmd Command) (value interface{}, err error) {
 	r := tnc.in.Listen()
 	defer r.Close()
 
@@ -483,31 +583,9 @@ func (tnc *TNC) get(cmd Command) (value interface{}, err error) {
 			value = msg.value
 		} else if msg.cmd == cmdFault {
 			err = errors.New(msg.String())
-		} // else if msg.cmd == cmdPrompt {
-		//return
-		//}
+		} else if msg.cmd == cmdReady {
+			return
+		}
 	}
 	return nil, errors.New("TNC hung up")
-}
-
-func parseAddr(addr string) (ctrlAddr, connAddr string, err error) {
-	idxPort := strings.LastIndex(addr, ":")
-	if idxPort < 0 || len(addr) < idxPort+1 {
-		return ctrlAddr, connAddr, errors.New("Missing port")
-	}
-
-	host, strPort := addr[0:idxPort], addr[idxPort+1:]
-	if len(strPort) < 2 {
-		return ctrlAddr, connAddr, errors.New("Invalid port")
-	} else if len(host) == 0 {
-		return ctrlAddr, connAddr, errors.New("Invalid host address")
-	}
-	port, err := strconv.ParseInt(strPort, 0, 0)
-	if err != nil {
-		return ctrlAddr, connAddr, err
-	}
-
-	ctrlAddr = fmt.Sprintf("%s:%d", host, port)
-	connAddr = fmt.Sprintf("%s:%d", host, port+1)
-	return
 }

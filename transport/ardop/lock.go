@@ -43,13 +43,18 @@ func (l *lock) Unlock() {
 
 // Blocks until lock is released. Returns immediately if it's unlocked.
 func (l *lock) Wait() {
+	<-l.WaitChan()
+}
+
+func (l *lock) WaitChan() <-chan struct{} {
 	l.mu.Lock()
 
-	if l.wait == nil {
-		return
-	}
 	wait := l.wait
+	if l.wait == nil {
+		wait = make(chan struct{})
+		close(wait)
+	}
 
 	l.mu.Unlock()
-	<-wait
+	return wait
 }

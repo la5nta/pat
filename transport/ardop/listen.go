@@ -9,13 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"time"
 )
 
-var (
-	ErrInvalidBandwidth     error = errors.New("Invalid bandwidth. Supported values are 500 or 1600.")
-	ErrActiveListenerExists error = errors.New("An active listener is already registered with this TNC.")
-)
+var ErrActiveListenerExists error = errors.New("An active listener is already registered with this TNC.")
 
 type listener struct {
 	incoming <-chan net.Conn
@@ -45,11 +41,9 @@ func (l listener) Close() error {
 	return nil
 }
 
-func (tnc *TNC) Listen(bandwidth int) (ln net.Listener, err error) {
+func (tnc *TNC) Listen() (ln net.Listener, err error) {
 	if tnc.listenerActive {
 		return nil, ErrActiveListenerExists
-	} else if bandwidth != 500 && bandwidth != 1600 {
-		return nil, ErrInvalidBandwidth
 	}
 	tnc.listenerActive = true
 
@@ -87,40 +81,26 @@ func (tnc *TNC) Listen(bandwidth int) (ln net.Listener, err error) {
 				case !ok:
 					errors <- fmt.Errorf("Lost connection to the TNC")
 					return
-				case msg.cmd == cmdNewState && msg.State() == ConnectPending:
+				case msg.cmd == cmdCancelPending:
 					remotecall, targetcall = "", ""
-					//if err := tnc.set(cmdBandwidth, bandwidth); err != nil {
-					//	errors <- err
-					//}
 				case msg.cmd == cmdConnected:
-					remotecall = msg.String()
+					remotecall = msg.value.([]string)[0]
 				case msg.cmd == cmdTarget:
 					targetcall = msg.String()
 				}
 
 				if len(remotecall) > 0 && len(targetcall) > 0 {
-					// Give TNC time to listen on data port
-					time.Sleep(200 * time.Millisecond)
-
-					dataConn, err := net.Dial("tcp", tnc.connAddr)
-					if err != nil {
-						errors <- err
-						remotecall, targetcall = "", ""
-						continue
-					}
-
-					dataConn.(*net.TCPConn).SetReadBuffer(0)
-					dataConn.(*net.TCPConn).SetWriteBuffer(0)
-
 					tnc.data = &tncConn{
-						Conn:       dataConn,
 						remoteAddr: Addr{remotecall},
 						localAddr:  Addr{targetcall},
 						ctrlOut:    tnc.out,
+						dataOut:    tnc.dataOut,
 						ctrlIn:     tnc.in,
+						dataIn:     tnc.dataIn,
+						eofChan:    make(chan struct{}),
 					}
-					tnc.connected = true
 
+					tnc.connected = true
 					incoming <- tnc.data
 
 					remotecall, targetcall = "", ""

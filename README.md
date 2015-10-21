@@ -25,7 +25,7 @@ See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-
 * Built in http-server with web interface (mobile friendly).
 * Git style command line interface.
 * Listen for P2P connections using multiple modes concurrently.
-* WINMOR, AX.25 and telnet support.
+* AX.25, telnet, WINMOR and ARDOP support.
 * Experimental gzip message compression (See "Gzip experiment" below).
 
 ##### Example
@@ -130,6 +130,9 @@ The WINMOR TNC can be run under Wine:
 * Tested OK with WINMOR TNC 1.4.7.0 running on wine 1.4.1-4 (debian wheezy) with .NET 2.0, 3.0, 3.5 and 4.0 installed.
 
 When running WINMOR TNC under wine through pulseaudio, set PULSE_LATENCY_MSEC=60.
+
+#### ardop
+A driver for the ARDOP_Win (alpha) TNC that provides dialing and listen capabilities over ARDOP (Amateur Radio Digital Open Protocol).
 
 ## mailbox: Directory based MBoxHandler implementation
 

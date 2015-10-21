@@ -28,15 +28,15 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
-	"github.com/la5nta/wl2k-go/transport/winmor"
 	"github.com/la5nta/wl2k-go/transport/ardop"
-	
+	"github.com/la5nta/wl2k-go/transport/winmor"
+
 	"github.com/la5nta/wl2k-go/cmd/wl2k/cfg"
 )
 
 const (
 	MethodWinmor    = "winmor"
-	MethodArdop    = "ardop"
+	MethodArdop     = "ardop"
 	MethodTelnet    = "telnet"
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
@@ -137,7 +137,7 @@ var (
 	listeners    map[string]net.Listener // Active listeners
 	mbox         *mailbox.DirHandler     // The mailbox
 	wmTNC        *winmor.TNC             // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC        *ardop.TNC             // Pointer to the ARDOP TNC used by Listen and Connect
+	adTNC        *ardop.TNC              // Pointer to the ARDOP TNC used by Listen and Connect
 )
 
 var fOptions struct {
@@ -338,12 +338,13 @@ func cleanup() {
 		}
 	}
 
+	log.Println("Closing ardop tnc in cleanup...")
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)
 		}
 	}
-	
+
 	eventLog.Close()
 }
 
@@ -386,7 +387,7 @@ func loadHamlibRigs() map[string]hamlib.Rig {
 	return rigs
 }
 
-func initWmTNC() {
+func initWinmorTNC() {
 	var err error
 	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
 	if err != nil {
@@ -413,17 +414,23 @@ func initWmTNC() {
 	}
 }
 
-func initAdTNC() {
+func initArdopTNC() {
 	var err error
-	adTNC, err = ardop.Open(config.Ardop.Addr, fOptions.MyCall, config.Locator)
+	adTNC, err = ardop.OpenTCP(config.Ardop.Addr, fOptions.MyCall, config.Locator)
 	if err != nil {
 		log.Fatalf("ARDOP TNC initialization failed: %s", err)
+	}
+
+	if !config.Ardop.ARQBandwidth.IsZero() {
+		if err := adTNC.SetARQBandwidth(config.Ardop.ARQBandwidth); err != nil {
+			log.Fatalf("Unable to set ARQ bandwidth for ardop TNC: %s", err)
+		}
 	}
 
 	if v, err := adTNC.Version(); err != nil {
 		log.Fatalf("ARDOP TNC initialization failed: %s", err)
 	} else {
-		log.Printf("ARDOP TNC v%s initialized", v)
+		log.Printf("ARDOP TNC (%s) initialized", v)
 	}
 
 	if !config.Ardop.PTTControl {

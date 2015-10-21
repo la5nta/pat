@@ -2,7 +2,7 @@
 
 wl2k-go is a collection of Go packages implementing various parts needed to build a Winlink 2000 client. It includes a Winlink client running on Linux, OS X and other unix-like platforms.
 
-The project's goal is to encourage and faciliate development of cross-platform Winlink 2000 clients.
+The project's goal is to encourage and facilitate development of cross-platform Winlink 2000 clients.
 
 _This project is under heavy development and breaking API changes are to be expected._
 

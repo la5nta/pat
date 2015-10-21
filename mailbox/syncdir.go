@@ -211,7 +211,7 @@ func countFiles(dirPath string) int {
 func LoadMessageDir(dirPath string) ([]*wl2k.Message, error) {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read dir (%s): %s", err)
+		return nil, fmt.Errorf("Unable to read dir (%s): %s", dirPath, err)
 	}
 
 	msgs := make([]*wl2k.Message, 0, len(files))

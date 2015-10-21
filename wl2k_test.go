@@ -80,7 +80,7 @@ func TestSessionCMS(t *testing.T) {
 	srv.Close()
 
 	if err := <-cerrs; err != nil {
-		t.Errorf("Session exchange returned error: %s")
+		t.Errorf("Session exchange returned error: %s", err)
 	}
 }
 
@@ -129,6 +129,6 @@ func TestSessionCMDWithMessage(t *testing.T) {
 	}
 
 	if err := <-cerrs; err != nil {
-		t.Errorf("Session exchange returned error: %s")
+		t.Errorf("Session exchange returned error: %s", err)
 	}
 }

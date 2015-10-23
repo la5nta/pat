@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -57,9 +58,14 @@ func (conn *tncConn) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 
-	for i, b := range data {
-		p[i] = b //TODO: Handle too small buffer. Will panic now.
+	if len(data) > len(p) {
+		panic("too large") //TODO: Handle
 	}
+
+	for i, b := range data {
+		p[i] = b
+	}
+
 	return len(data), nil
 }
 
@@ -67,25 +73,26 @@ func (conn *tncConn) Write(p []byte) (int, error) {
 	conn.dataLock.Lock()
 	defer conn.dataLock.Unlock()
 
-	if len(p) > 65535 { // uint16 max
-		p = p[0 : 65535-1]
+	if len(p) > 65535 { // uint16 (length bytes) max
+		p = p[:65535]
 	}
 
-	//"D:" + 2 byte count big endian + binary data + 2 byte CRC
 	var buf bytes.Buffer
 
+	//"D:" + 2 byte count big endian + binary data + 2 byte CRC
+
+	// D:
 	fmt.Fprint(&buf, "D:")
 
-	if err := binary.Write(&buf, binary.BigEndian, uint16(len(p))); err != nil {
-		return 0, err
-	}
+	// 2 byte length
+	binary.Write(&buf, binary.BigEndian, uint16(len(p)))
 
+	// Binary data
 	n, _ := buf.Write(p)
 
-	sum := crc16Sum(buf.Bytes()[2:])
-	if err := binary.Write(&buf, binary.BigEndian, sum); err != nil {
-		return 0, err
-	}
+	// 2 byte CRC
+	sum := crc16Sum(buf.Bytes()[2:]) // [2:], don't include D: in CRC sum.
+	binary.Write(&buf, binary.BigEndian, sum)
 
 	r := conn.ctrlIn.Listen()
 	defer r.Close()
@@ -108,6 +115,9 @@ L:
 					conn.flushLock.Lock()
 					break L // Wait until we get a buffer update before returning
 				} else if msg.cmd == cmdCRCFault {
+					if debugEnabled() {
+						log.Printf("conn.Write: Got CRCFault. Retry %d", i)
+					}
 					continue L
 				}
 			case <-conn.eofChan:
@@ -147,6 +157,10 @@ func (conn *tncConn) Close() error {
 	//
 	// We also need to timeout the flush, because ardop does not seem to switch from IRS to ISS
 	// if we only write one simple line (*** error line). (autobreak).
+
+	// if tnc.state == IRS {
+	//   tnc.Break() // Break not implemented by ARDOP_Win yet.
+	// }
 	select {
 	case <-conn.flushLock.WaitChan():
 	case <-time.After(flushAndCloseTimeout):
@@ -183,8 +197,6 @@ func (conn *tncConn) Close() error {
 func (conn *tncConn) TxBufferLen() int {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-
-	//TODO: We don't use BufferOutQueued, because it may be outdated (not updated since last Write call).
 
 	return conn.buffer
 }

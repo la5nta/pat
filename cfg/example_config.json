@@ -3,7 +3,9 @@
   "secure_login_password": "my_not_so_secret_password",
   "auxiliary_addresses": ["LE1OF"],
   "locator": "JP20qe",
-  "connect_defaults": ["ax25:LA1B-10", "telnet"],
+  "connect_aliases": {
+    "offgrid": ["ax25:LA1B-10", "winmor:LA1B@5310", "winmor:LA3F@5350", "winmor:LA1J@5352"]
+  },
   "hamlib_rigs": {
     "ft897": {
       "network": "tcp",
@@ -29,9 +31,9 @@
     "rig": "ft897",
     "ptt_ctrl": false
   },
-    "ardop": {
-    "addr": "la5nta.local.mesh:8515",
-    "inbound_bandwidth": 500,
+  "ardop": {
+    "addr": "localhost:8515",
+    "arq_bandwidth": {"Forced":false, "Max":500},
     "rig": "ft897",
     "ptt_ctrl": false
   },
@@ -40,6 +42,6 @@
     "password": ""
   },
   "schedule": {
-    "*/10 * * * *": "connect telnet"
+    "*/30 * * * *": "connect offgrid"
   }
 }

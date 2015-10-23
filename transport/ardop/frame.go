@@ -43,7 +43,7 @@ func readFrame(reader *bufio.Reader) (frame, error) {
 		return nil, err
 	}
 
-	reader.Discard(1) // :
+	reader.ReadByte() // Discard ';'. (TODO: Use reader.Discard(1) when we drop support for Go <= 1.4).
 
 	var data []byte
 	switch fType {

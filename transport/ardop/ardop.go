@@ -15,10 +15,7 @@ import (
 // The default address Ardop TNC listens on
 const DefaultAddr = "localhost:8515"
 
-var (
-	ErrConnectTimeout = errors.New("Connect timeout")
-	ErrInvalidAddr    = errors.New("Invalid address format")
-)
+var ErrConnectTimeout = errors.New("Connect timeout")
 
 type Bandwidth struct {
 	Forced bool

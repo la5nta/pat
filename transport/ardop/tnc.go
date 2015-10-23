@@ -170,7 +170,6 @@ func (tnc *TNC) runControlLoop() error {
 
 			if d, ok := frame.(dFrame); ok {
 				if d.ARQFrame() {
-					tnc.out <- string(cmdReady) // CRC ok
 
 					select {
 					case tnc.dataIn <- d.data:
@@ -178,16 +177,19 @@ func (tnc *TNC) runControlLoop() error {
 						go tnc.Disconnect() // Buffer full and timeout
 					}
 				}
-
-				continue
 			}
 
 			line, ok := frame.(cmdFrame)
 			if !ok {
-				continue // TODO: Handle IDF frame
+				tnc.out <- string(cmdReady) // CRC ok
+				continue                    // TODO: Handle IDF frame
 			}
 
 			msg := line.Parsed()
+
+			if msg.cmd != cmdReady {
+				tnc.out <- string(cmdReady) // CRC ok
+			}
 
 			switch msg.cmd {
 			case cmdPTT:

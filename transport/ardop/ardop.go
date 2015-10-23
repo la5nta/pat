@@ -17,11 +17,13 @@ const DefaultAddr = "localhost:8515"
 
 var ErrConnectTimeout = errors.New("Connect timeout")
 
+// Bandwidth represents the ARQ bandwidth.
 type Bandwidth struct {
-	Forced bool
-	Max    uint
+	Forced bool // Force use of max bandwidth.
+	Max    uint // Max bandwidh to use.
 }
 
+// Bandwidth definitions of all supported ARQ bandwidths.
 var (
 	Bandwidth200Max  = Bandwidth{false, 200}
 	Bandwidth500Max  = Bandwidth{false, 500}
@@ -34,6 +36,7 @@ var (
 	Bandwidth2000Forced = Bandwidth{true, 2000}
 )
 
+// Stringer for Bandwidth returns a valid bandwidth parameter that can be sent to the TNC.
 func (bw Bandwidth) String() string {
 	str := fmt.Sprintf("%d", bw.Max)
 	if bw.Forced {
@@ -44,6 +47,7 @@ func (bw Bandwidth) String() string {
 	return str
 }
 
+// IsZero returns true if bw is it's zero value.
 func (bw Bandwidth) IsZero() bool { return bw.Max == 0 }
 
 type State uint8

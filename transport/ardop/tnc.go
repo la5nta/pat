@@ -18,14 +18,6 @@ import (
 	"github.com/la5nta/wl2k-go/transport"
 )
 
-const DefaultARQTimeout = 90 * time.Second
-
-var (
-	ErrBusy              = errors.New("TNC control port is busy.")
-	ErrConnectInProgress = errors.New("A connect is in progress.")
-	ErrFlushTimeout      = errors.New("Flush timeout.")
-)
-
 type TNC struct {
 	ctrl io.ReadWriteCloser
 	data *tncConn
@@ -132,8 +124,6 @@ func (tnc *TNC) init() (err error) {
 
 	return nil
 }
-
-var ErrChecksumMismatch = fmt.Errorf("Control protocol checksum mismatch")
 
 func (tnc *TNC) runControlLoop() error {
 	rd := bufio.NewReader(tnc.ctrl)
@@ -482,7 +472,7 @@ func (tnc *TNC) arqCall(targetcall string, repeat int) error {
 	return nil
 }
 
-func (tnc *TNC) set(cmd Command, param interface{}) (err error) {
+func (tnc *TNC) set(cmd command, param interface{}) (err error) {
 	r := tnc.in.Listen()
 	defer r.Close()
 
@@ -502,7 +492,7 @@ func (tnc *TNC) set(cmd Command, param interface{}) (err error) {
 	return errors.New("TNC hung up")
 }
 
-func (tnc *TNC) getString(cmd Command) (string, error) {
+func (tnc *TNC) getString(cmd command) (string, error) {
 	v, err := tnc.get(cmd)
 	if err != nil {
 		return "", nil
@@ -510,7 +500,7 @@ func (tnc *TNC) getString(cmd Command) (string, error) {
 	return v.(string), nil
 }
 
-func (tnc *TNC) getBool(cmd Command) (bool, error) {
+func (tnc *TNC) getBool(cmd command) (bool, error) {
 	v, err := tnc.get(cmd)
 	if err != nil {
 		return false, nil
@@ -518,7 +508,7 @@ func (tnc *TNC) getBool(cmd Command) (bool, error) {
 	return v.(bool), nil
 }
 
-func (tnc *TNC) getInt(cmd Command) (int, error) {
+func (tnc *TNC) getInt(cmd command) (int, error) {
 	v, err := tnc.get(cmd)
 	if err != nil {
 		return 0, err
@@ -526,7 +516,7 @@ func (tnc *TNC) getInt(cmd Command) (int, error) {
 	return v.(int), nil
 }
 
-func (tnc *TNC) get(cmd Command) (value interface{}, err error) {
+func (tnc *TNC) get(cmd command) (value interface{}, err error) {
 	r := tnc.in.Listen()
 	defer r.Close()
 

@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-var ErrDisconnectTimeout = fmt.Errorf("Disconnect timeout: aborted connection.")
-
 type tncConn struct {
 	dataLock sync.Mutex
 	ctrlOut  chan<- string

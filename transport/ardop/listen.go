@@ -5,13 +5,10 @@
 package ardop
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
 )
-
-var ErrActiveListenerExists error = errors.New("An active listener is already registered with this TNC.")
 
 type listener struct {
 	incoming <-chan net.Conn

@@ -10,31 +10,61 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
-// The default address Ardop TNC listens on
-const DefaultAddr = "localhost:8515"
+const (
+	DefaultAddr       = "localhost:8515" // The default address Ardop TNC listens on
+	DefaultARQTimeout = 90 * time.Second // The default ARQ session idle timout
+)
 
-var ErrConnectTimeout = errors.New("Connect timeout")
+const (
+	ModeARQ = "ARQ" // ARQ mode
+	ModeFEC = "FEC" // FEC mode
+)
+
+// TNC states
+const (
+	//go:generate stringer -type=State .
+	Unknown      State = iota
+	Offline            // Sound card disabled and all sound card resources are released
+	Disconnected       // The session is disconnected, the sound card remains active
+	ISS                // Information Sending Station (Sending Data)
+	IRS                // Information Receiving Station (Receiving data)
+	Idle               // ??
+	FECSend            // ??
+	FECReceive         // Receiving FEC (unproto) data
+)
+
+var (
+	ErrBusy                 = errors.New("TNC control port is busy.")
+	ErrConnectInProgress    = errors.New("A connect is in progress.")
+	ErrFlushTimeout         = errors.New("Flush timeout.")
+	ErrActiveListenerExists = errors.New("An active listener is already registered with this TNC.")
+	ErrDisconnectTimeout    = errors.New("Disconnect timeout: aborted connection.")
+	ErrConnectTimeout       = errors.New("Connect timeout")
+	ErrChecksumMismatch     = errors.New("Control protocol checksum mismatch")
+)
+
+// Bandwidth definitions of all supported ARQ bandwidths.
+var (
+	Bandwidth200Max     = Bandwidth{false, 200}
+	Bandwidth500Max     = Bandwidth{false, 500}
+	Bandwidth1000Max    = Bandwidth{false, 1000}
+	Bandwidth2000Max    = Bandwidth{false, 2000}
+	Bandwidth200Forced  = Bandwidth{true, 200}
+	Bandwidth500Forced  = Bandwidth{true, 500}
+	Bandwidth1000Forced = Bandwidth{true, 1000}
+	Bandwidth2000Forced = Bandwidth{true, 2000}
+)
+
+type State uint8
 
 // Bandwidth represents the ARQ bandwidth.
 type Bandwidth struct {
 	Forced bool // Force use of max bandwidth.
 	Max    uint // Max bandwidh to use.
 }
-
-// Bandwidth definitions of all supported ARQ bandwidths.
-var (
-	Bandwidth200Max  = Bandwidth{false, 200}
-	Bandwidth500Max  = Bandwidth{false, 500}
-	Bandwidth1000Max = Bandwidth{false, 1000}
-	Bandwidth2000Max = Bandwidth{false, 2000}
-
-	Bandwidth200Forced  = Bandwidth{true, 200}
-	Bandwidth500Forced  = Bandwidth{true, 500}
-	Bandwidth1000Forced = Bandwidth{true, 1000}
-	Bandwidth2000Forced = Bandwidth{true, 2000}
-)
 
 // Stringer for Bandwidth returns a valid bandwidth parameter that can be sent to the TNC.
 func (bw Bandwidth) String() string {
@@ -49,20 +79,6 @@ func (bw Bandwidth) String() string {
 
 // IsZero returns true if bw is it's zero value.
 func (bw Bandwidth) IsZero() bool { return bw.Max == 0 }
-
-type State uint8
-
-//go:generate stringer -type=State .
-const (
-	Unknown      State = iota
-	Offline            // Sound card disabled and all sound card resources are released
-	Disconnected       // The session is disconnected, the sound card remains active
-	ISS                // Information Sending Station (Sending Data)
-	IRS                // Information Receiving Station (Receiving data)
-	Idle               // ??
-	FECSend            // ??
-	FECReceive         // Receiving FEC (unproto) data
-)
 
 var stateMap = map[string]State{
 	"":        Unknown,

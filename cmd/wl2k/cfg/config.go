@@ -100,6 +100,9 @@ type ArdopConfig struct {
 
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
+
+	// (optional) Send ID frame at a regular interval when the listener is active (unit is seconds)
+	BeaconInterval int `json:"beacon_interval"`
 }
 
 type TelnetConfig struct {

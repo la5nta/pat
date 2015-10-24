@@ -124,6 +124,10 @@ func listenArdop(incoming chan<- incomingConnect) {
 		log.Fatal(err)
 	}
 
+	if sec := config.Ardop.BeaconInterval; sec > 0 {
+		adTNC.BeaconEvery(time.Duration(sec) * time.Second)
+	}
+
 	listeners[MethodArdop] = ln
 	go func() {
 		defer func() {

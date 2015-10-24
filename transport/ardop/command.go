@@ -53,6 +53,7 @@ const (
 	cmdCaptureDevices  Command = "CATPUREDEVICES"  // Returns a comma delimited list of all currently installed capture devices
 	cmdPlaybackDevices Command = "PLAYBACKDEVICES" // Returns a comma delimited list of all currently installed playback devices.
 	cmdAutoBreak       Command = "AUTOBREAK"       // <>[bool]: Disables/enables automatic link turnover (BREAK) by IRS when IRS has outbound data pending and receives an IDLE frame from ISS indicating its’ outbound queue is empty. Default is True.
+	cmdSendID          Command = "SENDID"
 
 	// Some of the commands that has not been implemented:
 	cmdBreak         Command = "BREAK"
@@ -75,7 +76,6 @@ const (
 	cmdRadioPTT      Command = "RADIOPTT" // CATPTT|VOX/SIGNALINK|COMn
 	cmdRadioPTTDTR   Command = "RADIOPTTDTR"
 	cmdRadioPTTRTS   Command = "RADIOPTTRTS"
-	cmdSendID        Command = "SENDID"
 	cmdSetupMenu     Command = "SETUPMENU"
 	cmdSquelch       Command = "SQUELCH"
 	cmdState         Command = "STATE"
@@ -128,7 +128,7 @@ func parseCtrlMsg(str string) ctrlMsg {
 		msg.value = strings.ToLower(parts[1]) == "true"
 
 	// (no params)
-	case cmdReady, cmdAbort, cmdDisconnect, cmdClose, cmdDisconnected, cmdCRCFault, cmdPending, cmdCancelPending:
+	case cmdReady, cmdAbort, cmdDisconnect, cmdClose, cmdDisconnected, cmdCRCFault, cmdPending, cmdCancelPending, cmdSendID:
 
 	// State
 	case cmdNewState, cmdState:

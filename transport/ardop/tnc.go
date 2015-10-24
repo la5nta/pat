@@ -45,6 +45,7 @@ type TNC struct {
 
 	connected      bool
 	listenerActive bool
+	closed         bool
 }
 
 // OpenTCP opens and initializes an ardop TNC over TCP.
@@ -275,6 +276,10 @@ func (tnc *TNC) eof() {
 //
 // This will not actually close the TNC software.
 func (tnc *TNC) Close() error {
+	if tnc.closed {
+		return nil
+	}
+
 	if err := tnc.SetListenEnabled(false); err != nil {
 		return err
 	}
@@ -287,6 +292,7 @@ func (tnc *TNC) Close() error {
 
 	close(tnc.out)
 	close(tnc.dataOut)
+	tnc.closed = true
 
 	// no need for a finalizer anymore
 	runtime.SetFinalizer(tnc, nil)
@@ -353,6 +359,32 @@ func (tnc *TNC) SetGridSquare(gs string) error {
 // SetMycall sets the provided callsign as the main callsign for the TNC
 func (tnc *TNC) SetMycall(mycall string) error {
 	return tnc.set(cmdMyCall, mycall)
+}
+
+// SendID will send an ID frame
+//
+// If CWID is enabled the ID frame will be followed by a FSK CW ID.
+func (tnc *TNC) SendID() error {
+	return tnc.set(cmdSendID, nil)
+}
+
+// BeaconEvery starts a goroutine that sends an ID frame (SendID) at the regular interval d
+//
+// The gorutine will be closed on Close().
+func (tnc *TNC) BeaconEvery(d time.Duration) error {
+	if err := tnc.SendID(); err != nil {
+		return err
+	}
+
+	go func() {
+		for _ = range time.Tick(d) {
+			if tnc.closed {
+				return
+			}
+			tnc.SendID()
+		}
+	}()
+	return nil
 }
 
 // Sets the auxiliary call signs that the TNC should answer to on incoming connections.

@@ -12,19 +12,24 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const DefaultTCPAddr = "localhost:4532"
 
 var ErrUnexpectedValue = fmt.Errorf("Unexpected value in response")
 
+// TCPTimeout defines the timeout duration of dial, read and write operations.
+var TCPTimeout = time.Second
+
 // Rig represents a receiver or tranceiver.
 //
 // It holds the tcp connection to the service (rigctld).
 type TCPRig struct {
-	mu   sync.Mutex
-	conn *textproto.Conn
-	addr string
+	mu      sync.Mutex
+	conn    *textproto.Conn
+	tcpConn net.Conn
+	addr    string
 }
 
 // VFO (Variable Frequency Oscillator) represents a tunable channel,
@@ -49,7 +54,13 @@ func (r *TCPRig) dial() (err error) {
 		r.conn.Close()
 	}
 
-	r.conn, err = textproto.Dial("tcp", r.addr)
+	// Dial with 3 second timeout
+	r.tcpConn, err = net.DialTimeout("tcp", r.addr, TCPTimeout)
+	if err != nil {
+		return err
+	}
+
+	r.conn = textproto.NewConn(r.tcpConn)
 
 	return err
 }
@@ -144,7 +155,10 @@ func (v *tcpVFO) cmd(format string, args ...interface{}) (string, error) {
 }
 
 func (r *TCPRig) cmd(format string, args ...interface{}) (string, error) {
+	r.tcpConn.SetDeadline(time.Now().Add(TCPTimeout))
 	id, err := r.conn.Cmd(format, args...)
+	r.tcpConn.SetDeadline(time.Time{})
+
 	if err != nil {
 		return "", err
 	}
@@ -152,7 +166,10 @@ func (r *TCPRig) cmd(format string, args ...interface{}) (string, error) {
 	r.conn.StartResponse(id)
 	defer r.conn.EndResponse(id)
 
+	r.tcpConn.SetDeadline(time.Now().Add(TCPTimeout))
 	resp, err := r.conn.ReadLine()
+	r.tcpConn.SetDeadline(time.Time{})
+
 	if err != nil {
 		return "", err
 	} else if err := toError(resp); err != nil {

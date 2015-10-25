@@ -427,6 +427,10 @@ func initArdopTNC() {
 		}
 	}
 
+	if err := adTNC.SetCWID(config.Ardop.CWID); err != nil {
+		log.Fatalf("Unable to configure CWID for ardop TNC: %s", err)
+	}
+
 	if v, err := adTNC.Version(); err != nil {
 		log.Fatalf("ARDOP TNC initialization failed: %s", err)
 	} else {

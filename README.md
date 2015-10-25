@@ -1,6 +1,6 @@
 # wl2k-go
 
-wl2k-go is a collection of Go packages implementing various parts needed to build a Winlink 2000 client. It includes a Winlink client running on Linux, OS X and other unix-like platforms.
+wl2k-go is a collection of Go packages implementing various parts needed to build a Winlink 2000 client. It includes a Winlink client running on Linux, OS X, other unix-like platforms and Windows.
 
 The project's goal is to encourage and facilitate development of cross-platform Winlink 2000 clients.
 
@@ -12,7 +12,7 @@ cmd/wl2k is a (experimental) cross-platform Winlink client with basic messaging 
 
 It is the primary sandbox/prototype application for the various wl2k-go sub-packages, and provides both a command line interface and a responsive (mobile-friendly) web interface.
 
-It is mainly developed for Linux, but has also been tested on OS X and Android.
+It is mainly developed for Linux, but are also known to work on OS X, Windows and Android.
 
 See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
 

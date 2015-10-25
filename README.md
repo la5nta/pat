@@ -12,7 +12,7 @@ cmd/wl2k is a (experimental) cross-platform Winlink client with basic messaging 
 
 It is the primary sandbox/prototype application for the various wl2k-go sub-packages, and provides both a command line interface and a responsive (mobile-friendly) web interface.
 
-It is mainly developed for Linux, but are also known to work on OS X, Windows and Android.
+It is mainly developed for Linux, but are also known to run on OS X, Windows and Android.
 
 See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
 

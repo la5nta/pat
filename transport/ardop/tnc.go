@@ -146,6 +146,9 @@ func (tnc *TNC) runControlLoop() error {
 	go func() {
 		for { // Handle incoming TNC data
 			frame, err := readFrame(rd)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				if debugEnabled() {
 					log.Println("Error reading frame: %s", err)
@@ -209,8 +212,7 @@ func (tnc *TNC) runControlLoop() error {
 			tnc.in.Send(msg)
 		}
 
-		tnc.in.Close()
-		close(tnc.out)
+		tnc.close()
 	}()
 
 	out := make(chan string)
@@ -278,16 +280,26 @@ func (tnc *TNC) Close() error {
 		return err
 	}
 
+	tnc.close()
+	return nil
+}
+
+func (tnc *TNC) close() {
+	if tnc.closed {
+		return
+	}
+
+	tnc.eof()
+
 	tnc.ctrl.Close()
 
+	tnc.in.Close()
 	close(tnc.out)
 	close(tnc.dataOut)
 	tnc.closed = true
 
 	// no need for a finalizer anymore
 	runtime.SetFinalizer(tnc, nil)
-
-	return nil
 }
 
 // Returns true if channel is clear
@@ -473,6 +485,10 @@ func (tnc *TNC) arqCall(targetcall string, repeat int) error {
 }
 
 func (tnc *TNC) set(cmd command, param interface{}) (err error) {
+	if tnc.closed {
+		return ErrTNCClosed
+	}
+
 	r := tnc.in.Listen()
 	defer r.Close()
 
@@ -517,6 +533,10 @@ func (tnc *TNC) getInt(cmd command) (int, error) {
 }
 
 func (tnc *TNC) get(cmd command) (value interface{}, err error) {
+	if tnc.closed {
+		return nil, ErrTNCClosed
+	}
+
 	r := tnc.in.Listen()
 	defer r.Close()
 

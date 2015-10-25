@@ -10,6 +10,10 @@ import (
 )
 
 func (tnc *TNC) Dial(targetcall string) (net.Conn, error) {
+	if tnc.closed {
+		return nil, ErrTNCClosed
+	}
+
 	if err := tnc.arqCall(targetcall, 10); err != nil {
 		return nil, err
 	}

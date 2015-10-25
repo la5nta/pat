@@ -44,6 +44,7 @@ var (
 	ErrDisconnectTimeout    = errors.New("Disconnect timeout: aborted connection.")
 	ErrConnectTimeout       = errors.New("Connect timeout")
 	ErrChecksumMismatch     = errors.New("Control protocol checksum mismatch")
+	ErrTNCClosed            = errors.New("TNC closed")
 )
 
 // Bandwidth definitions of all supported ARQ bandwidths.

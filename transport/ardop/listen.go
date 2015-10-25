@@ -39,6 +39,10 @@ func (l listener) Close() error {
 }
 
 func (tnc *TNC) Listen() (ln net.Listener, err error) {
+	if tnc.closed {
+		return nil, ErrTNCClosed
+	}
+
 	if tnc.listenerActive {
 		return nil, ErrActiveListenerExists
 	}
@@ -72,11 +76,12 @@ func (tnc *TNC) Listen() (ln net.Listener, err error) {
 			select {
 			case <-quit:
 				tnc.SetListenEnabled(false) // Should return this in listener.Close()
+				errors <- ErrTNCClosed
 				return
 			case msg, ok := <-msgs:
 				switch {
 				case !ok:
-					errors <- fmt.Errorf("Lost connection to the TNC")
+					errors <- ErrTNCClosed
 					return
 				case msg.cmd == cmdCancelPending:
 					remotecall, targetcall = "", ""

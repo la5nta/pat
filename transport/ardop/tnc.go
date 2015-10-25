@@ -372,6 +372,16 @@ func (tnc *TNC) SetMycall(mycall string) error {
 	return tnc.set(cmdMyCall, mycall)
 }
 
+// SetCWID sets wether or not to send FSK CW ID after an ID frame.
+func (tnc *TNC) SetCWID(enabled bool) error {
+	return tnc.set(cmdCWID, enabled)
+}
+
+// CWID reports wether or not the TNC will send FSK CW ID after an ID frame.
+func (tnc *TNC) CWID() (bool, error) {
+	return tnc.getBool(cmdCWID)
+}
+
 // SendID will send an ID frame
 //
 // If CWID is enabled the ID frame will be followed by a FSK CW ID.

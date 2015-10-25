@@ -50,6 +50,8 @@ func freq(param string) {
 	switch parts[0] {
 	case MethodWinmor:
 		rig, ok = rigs[config.Winmor.Rig]
+	case MethodArdop:
+		rig, ok = rigs[config.Ardop.Rig]	
 	case "":
 		fmt.Println("Need freq method.")
 		return

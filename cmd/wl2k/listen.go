@@ -44,9 +44,14 @@ func Listen(listenStr string) {
 		switch method {
 		case MethodWinmor:
 			if wmTNC == nil {
-				initWmTNC()
+				initWinmorTNC()
 			}
 			listenWinmor(cc)
+		case MethodArdop:
+			if adTNC == nil {
+				initArdopTNC()
+			}
+			listenArdop(cc)
 		case MethodTelnet:
 			listenTelnet(cc)
 		case MethodAX25:
@@ -107,6 +112,45 @@ func listenWinmor(incoming chan<- incomingConnect) {
 				conn:       conn,
 				remoteCall: conn.RemoteAddr().String(),
 				kind:       MethodWinmor,
+				freq:       freq,
+			}
+		}
+	}()
+}
+
+func listenArdop(incoming chan<- incomingConnect) {
+	ln, err := adTNC.Listen()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if sec := config.Ardop.BeaconInterval; sec > 0 {
+		adTNC.BeaconEvery(time.Duration(sec) * time.Second)
+	}
+
+	listeners[MethodArdop] = ln
+	go func() {
+		defer func() {
+			delete(listeners, MethodArdop)
+			log.Printf("%s listener closed.", MethodArdop)
+		}()
+
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+
+			var freq Frequency
+			if rig, ok := rigs[config.Ardop.Rig]; ok {
+				f, _ := rig.CurrentVFO().GetFreq()
+				freq = Frequency(f)
+			}
+
+			incoming <- incomingConnect{
+				conn:       conn,
+				remoteCall: conn.RemoteAddr().String(),
+				kind:       MethodArdop,
 				freq:       freq,
 			}
 		}

@@ -25,7 +25,7 @@ See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-
 * Built in http-server with web interface (mobile friendly).
 * Git style command line interface.
 * Listen for P2P connections using multiple modes concurrently.
-* WINMOR, AX.25 and telnet support.
+* AX.25, telnet, WINMOR and ARDOP support.
 * Experimental gzip message compression (See "Gzip experiment" below).
 
 ##### Example
@@ -131,6 +131,9 @@ The WINMOR TNC can be run under Wine:
 
 When running WINMOR TNC under wine through pulseaudio, set PULSE_LATENCY_MSEC=60.
 
+#### ardop
+A driver for the ARDOP_Win (alpha) TNC that provides dialing and listen capabilities over ARDOP (Amateur Radio Digital Open Protocol).
+
 ## mailbox: Directory based MBoxHandler implementation
 
 For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go/mailbox>.
@@ -170,5 +173,9 @@ Amateur Radio Safety Foundation, Inc. - The Winlink 2000 project
 
 F6FBB Jean-Paul ROUBELAT - the FBB forwarding protocol
 
+### Contributors (alphabetical)
+
+* LA3QMA - Kai Günter Brandt
+* LA5NTA - Martin Hebnes Pedersen
 
 _wl2k-go is not affiliated with The Winlink Development Team nor the Winlink 2000 project [http://winlink.org]._

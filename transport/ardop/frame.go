@@ -7,8 +7,10 @@ package ardop
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	"regexp"
 )
 
 type frame interface{}
@@ -21,7 +23,7 @@ type dFrame struct {
 func (f dFrame) ARQFrame() bool { return f.dataType == "ARQ" }
 func (f dFrame) FECFrame() bool { return f.dataType == "FEC" }
 func (f dFrame) ErrFrame() bool { return f.dataType == "ERR" }
-func (f dFrame) IDFFrame() bool { return f.dataType == "IDF" }
+func (f dFrame) IDFrame() bool  { return f.dataType == "IDF" }
 
 type cmdFrame string
 
@@ -89,4 +91,20 @@ func readFrame(reader *bufio.Reader) (frame, error) {
 	default:
 		panic("not possible")
 	}
+}
+
+// Data example: "ID:LA5NTA [JP20qe]: "
+var reID = regexp.MustCompile(`ID:(\w+) \[(\w+)\]`)
+
+func parseIDFrame(df dFrame) (callsign, gridsquare string, err error) {
+	if !df.IDFrame() {
+		return "", "", errors.New("Unexpected frame type")
+	}
+
+	matches := reID.FindSubmatch(df.data)
+	if len(matches) != 3 {
+		return "", "", errors.New("Unexpected ID format")
+	}
+
+	return string(matches[1]), string(matches[2]), nil
 }

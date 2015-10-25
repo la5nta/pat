@@ -30,6 +30,7 @@ type TNC struct {
 	busy bool
 
 	state State
+	heard map[string]time.Time
 
 	selfClose bool
 
@@ -58,6 +59,7 @@ func Open(conn io.ReadWriteCloser, mycall, gridSquare string) (*TNC, error) {
 		in:     newBroadcaster(),
 		dataIn: make(chan []byte, 4096),
 		ctrl:   conn,
+		heard:  make(map[string]time.Time),
 	}
 
 	if err := tnc.runControlLoop(); err == io.EOF {
@@ -163,12 +165,19 @@ func (tnc *TNC) runControlLoop() error {
 			}
 
 			if d, ok := frame.(dFrame); ok {
-				if d.ARQFrame() {
-
+				switch {
+				case d.ARQFrame():
 					select {
 					case tnc.dataIn <- d.data:
 					case <-time.After(time.Minute):
 						go tnc.Disconnect() // Buffer full and timeout
+					}
+				case d.IDFrame():
+					call, _, err := parseIDFrame(d)
+					if err == nil {
+						tnc.heard[call] = time.Now()
+					} else if debugEnabled() {
+						log.Println(err)
 					}
 				}
 			}
@@ -176,7 +185,7 @@ func (tnc *TNC) runControlLoop() error {
 			line, ok := frame.(cmdFrame)
 			if !ok {
 				tnc.out <- string(cmdReady) // CRC ok
-				continue                    // TODO: Handle IDF frame
+				continue
 			}
 
 			msg := line.Parsed()
@@ -406,6 +415,11 @@ func (tnc *TNC) SetCodec(state bool) error {
 func (tnc *TNC) ListenEnabled() StateReceiver {
 	return tnc.in.ListenState()
 }
+
+// Heard returns all stations heard by the TNC since it was opened.
+//
+// The returned map is a map from callsign to last time the station was heard.
+func (tnc *TNC) Heard() map[string]time.Time { return tnc.heard }
 
 // Enable/disable TNC response to an ARQ connect request.
 //

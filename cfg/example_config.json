@@ -34,6 +34,8 @@
   "ardop": {
     "addr": "localhost:8515",
     "arq_bandwidth": {"Forced":false, "Max":500},
+    "beacon_interval": 0,
+    "cwid_enabled": true,
     "rig": "ft897",
     "ptt_ctrl": false
   },

@@ -338,7 +338,6 @@ func cleanup() {
 		}
 	}
 
-	log.Println("Closing ardop tnc in cleanup...")
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)

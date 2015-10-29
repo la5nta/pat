@@ -247,22 +247,24 @@ func (sock fd) connectTimeout(addr ax25Addr, timeout time.Duration) (err error) 
 		tv = syscall.NsecToTimeval(int64(timeout))
 		n, err = syscall.Select(int(sock)+1, nil, fdset, nil, &tv)
 		if n < 0 && err != syscall.EINTR {
+			sock.close()
 			return fmt.Errorf("Unable to connect: %s", err)
 		} else if n > 0 {
-			/* TODO: verify that connection is OK
-			 * lon = sizeof(int);
-			 * if (getsockopt(soc, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) < 0) {
-			 *   fprintf(stderr, "Error in getsockopt() %d - %s\n", errno, strerror(errno));
-			 *   exit(0);
-			 * }
-			 * // Check the value returned...
-			 * if (valopt) {
-			 *   fprintf(stderr, "Error in delayed connection() %d - %s\n", valopt, strerror(valopt));
-			 *   exit(0);
-			 * }
-			 */
-			break
+			// Verify that connection is OK
+			nerr, err := syscall.GetsockoptInt(int(sock), syscall.SOL_SOCKET, syscall.SO_ERROR)
+			if err != nil {
+				sock.close()
+				return err
+			}
+			err = syscall.Errno(nerr)
+			if nerr != 0 && err != syscall.EINPROGRESS && err != syscall.EALREADY && err != syscall.EINTR {
+				sock.close()
+				return err
+			} else {
+				break // Connected
+			}
 		} else {
+			sock.close()
 			return fmt.Errorf("Unable to connect: timeout")
 		}
 	}

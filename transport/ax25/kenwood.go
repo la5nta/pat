@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/la5nta/wl2k-go"
@@ -115,6 +116,10 @@ func DialKenwood(dev, mycall, targetcall string, config Config, logger *log.Logg
 }
 
 func (c *KenwoodConn) Close() error {
+	if !c.ok() {
+		return syscall.EINVAL
+	}
+
 	// Exit TRANS mode
 	time.Sleep(1 * time.Second)
 	for i := 0; i < 3; i++ {

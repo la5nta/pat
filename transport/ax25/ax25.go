@@ -53,12 +53,20 @@ type Conn struct {
 }
 
 func (c *Conn) LocalAddr() net.Addr {
+	if !c.ok() {
+		return nil
+	}
 	return c.localAddr
 }
 
 func (c *Conn) RemoteAddr() net.Addr {
+	if !c.ok() {
+		return nil
+	}
 	return c.remoteAddr
 }
+
+func (c *Conn) ok() bool { return c != nil }
 
 func (c *Conn) SetDeadline(t time.Time) error {
 	return errors.New(`SetDeadline not implemented`)

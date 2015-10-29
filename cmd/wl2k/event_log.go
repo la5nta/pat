@@ -33,18 +33,21 @@ func (l *EventLogger) LogConn(op string, freq Frequency, conn net.Conn, err erro
 
 	if err != nil {
 		e["error"] = err.Error()
+	} else {
+		if remote := conn.RemoteAddr(); remote != nil {
+			e["remote_addr"] = remote.String()
+			e["network"] = conn.RemoteAddr().Network()
+		}
+		if local := conn.LocalAddr(); local != nil {
+			e["local_addr"] = local.String()
+		}
 	}
 
 	if freq > 0 {
 		e["freq"] = freq
 	}
 
-	if conn != nil {
-		e["remote_addr"] = conn.RemoteAddr().String()
-		e["local_addr"] = conn.LocalAddr().String()
-		e["network"] = conn.RemoteAddr().Network()
-		e["operation"] = op
-	}
+	e["operation"] = op
 
 	l.Log("connect", e)
 }

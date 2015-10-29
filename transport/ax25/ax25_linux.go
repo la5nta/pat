@@ -155,7 +155,19 @@ func DialAX25Timeout(axPort, mycall, targetcall string, timeout time.Duration) (
 	}, nil
 }
 
+func (c *Conn) Close() error {
+	if !c.ok() {
+		return syscall.EINVAL
+	}
+
+	return c.ReadWriteCloser.Close()
+}
+
 func (c *Conn) Write(p []byte) (n int, err error) {
+	if !c.ok() {
+		return 0, syscall.EINVAL
+	}
+
 	n, err = c.ReadWriteCloser.Write(p)
 	perr, ok := err.(*os.PathError)
 	if !ok {
@@ -171,6 +183,10 @@ func (c *Conn) Write(p []byte) (n int, err error) {
 }
 
 func (c *Conn) Read(p []byte) (n int, err error) {
+	if !c.ok() {
+		return 0, syscall.EINVAL
+	}
+
 	n, err = c.ReadWriteCloser.Read(p)
 	perr, ok := err.(*os.PathError)
 	if !ok {

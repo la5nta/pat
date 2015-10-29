@@ -153,7 +153,7 @@ func (tnc *TNC) runControlLoop() error {
 			}
 			if err != nil {
 				if debugEnabled() {
-					log.Println("Error reading frame: %s", err)
+					log.Printf("Error reading frame: %s", err)
 				}
 
 				tnc.out <- string(cmdCRCFault)
@@ -250,12 +250,8 @@ func (tnc *TNC) runControlLoop() error {
 					return
 				}
 
-				for len(data) > 0 {
-					n, err := tnc.ctrl.Write(data)
-					if err != nil {
-						panic(err)
-					}
-					data = data[n:]
+				if _, err := tnc.ctrl.Write(data); err != nil {
+					panic(err)
 				}
 			}
 		}

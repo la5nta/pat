@@ -1,0 +1,11 @@
+This file holds information about the origin of lzhuf.c and lzhuf.h.
+
+The files have been copied from b2229b973b4094a1c697f480926bf61c21ef4def@github.com/mlangelaar/jnos2.
+
+Maiko Langelaar, the maintainer of JNOS 2, gave approval to copy and patch these file for the wl2k-go
+project after a request by Martin Hebnes Pedersen 2015/10/30.
+
+Be aware that these files have not been released under any particular license. Although Maiko has
+kindly allowed me to copy this code, he does not hold copyright of all the work in these files.
+
+Martin Hebnes Pedersen 2015/10/30

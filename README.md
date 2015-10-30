@@ -95,14 +95,11 @@ The gzip feature works transparently, which means that it will not break protoco
 
 ## lzhuf: The compression
 
-This project does not currently implement the lzhuf compression algorithm required. It does however provide a Go wrapper (and a minor patch + install script) for using JNOS's code (http://www.langelaar.net/projects/jnos2). To fetch the source code and apply the provided patch:
+This package provides Go bindings to a C implementation of lzhuf, cgo is required.
 
-```bash
-cd lzhuf;make;cd ..
-```
-That's it!
+The actual implementation used has been copied from [JNOS 2](http://www.langelaar.net/projects/jnos2), with kind permissions of Maiko Langelaar. See the COPYRIGHT file under lzhuf/ for more information.
 
-Thanks to the JNOS contributors, Jack Snodgrass and others :-)
+Thanks to Maiko Langelaar, Jack Snodgrass and other JNOS contributors :-)
 
 For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k-go/lzhuf>.
 

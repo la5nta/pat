@@ -18,21 +18,23 @@
 #endif
 
 #include <time.h>
-#include "global.h"
 
 #if defined(LZHUF) || defined(FBBCMP)
+
+#ifdef YAPP
 #include "proc.h"
 #include "socket.h"
 #include "timer.h"
 #include "usock.h"
 #include "netuser.h"
 #include "session.h"
+#endif
 
 #include "lzhuf.h"
 
 #ifdef	B2F
 /* 24Mar2008, Maiko (VE4KLM), for reference to mbx structure */
-#include "mailbox.h"
+//#include "mailbox.h"
 #endif
 
 #ifdef XMS
@@ -51,6 +53,41 @@ extern int hfdd_debug;
 
 static char EarlyDisconnect[] = "lzhuf: unexpected disconnect";
 
+// added by martin
+void no_log(int i, char const* args, ...){};
+int pwait(void* event){};
+
+struct lzhufstruct* AllocStruct() {
+	struct lzhufstruct *lzhuf = (struct lzhufstruct *)calloc(sizeof(struct lzhufstruct),1);
+  lzhuf->data = (struct lzhufdata *)malloc(sizeof(struct lzhufdata));
+  lzhuf->dad       = lzhuf->data->dad;
+  lzhuf->rson      = lzhuf->data->rson;
+  lzhuf->lson      = lzhuf->data->lson;
+  lzhuf->text_buf  = lzhuf->data->text_buf;
+  lzhuf->freq      = lzhuf->data->freq;
+  lzhuf->prnt      = lzhuf->data->prnt;
+  lzhuf->son       = lzhuf->data->son;
+  return lzhuf;
+}
+
+void FreeStruct(struct lzhufstruct* lzhuf) {
+   if(lzhuf->data_type == 1) {
+      // Free lower memory blocks.
+      free(lzhuf->dad);
+      free(lzhuf->lson);
+      free(lzhuf->rson);
+      free(lzhuf->text_buf);
+      free(lzhuf->freq);
+      free(lzhuf->prnt);
+      free(lzhuf->son);
+   } else
+      free(lzhuf->data);
+   free(lzhuf);
+}
+
+//
+
+#ifdef YAPP
 /* return 1 if allocations succeeded, else
    return 0 after freeing partial allocations
 */
@@ -121,6 +158,7 @@ void FreeDataBuffers(struct fwd *f) {
       free(f->lzhuf->data);
    free(f->lzhuf);
 }
+#endif // YAPP
 
 #ifdef B2F
 
@@ -782,7 +820,6 @@ int Encode (int usock, char *iFile, char *oFile, struct lzhufstruct *lzhuf, int 
 	{
 
 		int i, cnt = 0;
-
 		/*
 		 * If B2F, we need a valid CRC value in the first 2 bytes of the msg,
 		 * so before we close the outfile file we need to calculate the CRC,
@@ -907,8 +944,9 @@ int Decode(int usock, char* iFile, char* oFile, struct lzhufstruct *lzhuf, int b
 	/* log (-1, "fbb_filesize %d, filesize %ld", fbb_filesize, filesize); */
 
 #ifdef B2F
-	if (b2f)
-		filesize -= 2;	/* skip the B2F CRC bytes - implement later */
+	// Martin: Removed, the CRC bytes has already been skipped
+	//if (b2f)
+	//	filesize -= 2;	/* skip the B2F CRC bytes - implement later */
 #endif
 
    StartHuff(lzhuf);
@@ -1006,6 +1044,7 @@ static void hfddfixsend (int usock, char *buffer, int len)
 }
 #endif
 
+#ifdef YAPP
 /* Compress an input file, and write it to the output socket.
   Return 0 if error (and write note to the log),
   return 1 if all OK.
@@ -1183,7 +1222,6 @@ int send_yapp(int usock, struct fwd *f, char *subj, int b2f)
 */
 
 /* 24Mar2008, Maiko (VE4KLM), added B2F flag for B2F considerations */
-
 int recv_yapp(int usock, struct fwd *f, char **pzSubject, int32 Timeoutms, int b2f)
 {
    int  recvcnt;
@@ -1401,5 +1439,6 @@ recvbuf(int s, char *buf, int len, int32 timeoutms) {
     j2alarm(0);
     return cnt;
 }
+#endif // yapp
 
 #endif /* defined(LZHUF) || defined(FBBCMP) */

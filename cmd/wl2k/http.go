@@ -22,6 +22,8 @@ import (
 	"github.com/la5nta/wl2k-go"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/mailbox"
+
+	fsnotify "gopkg.in/fsnotify.v1"
 )
 
 //go:generate go-bindata-assetfs res/...
@@ -196,9 +198,55 @@ func consoleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer close(done)
 
-	for line := range lines {
-		err = conn.WriteMessage(websocket.TextMessage, append(line, '\n'))
+	fsWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Println("Unable to start fs watcher: ", err)
+	} else {
+		p := path.Join(mbox.MBoxPath, mailbox.DIR_INBOX)
+		if err := fsWatcher.Add(p); err != nil {
+			log.Printf("Unable to add path '%s' to fs watcher: %s", p, err)
+		}
+
+		// These will probably fail if the first failed, but it's not important to log all.
+		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_OUTBOX))
+		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_SENT))
+		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_ARCHIVE))
+		defer fsWatcher.Close()
+	}
+
+	for {
+		select {
+		// Log events
+		case line := <-lines:
+			err = conn.WriteMessage(websocket.TextMessage, append(line, '\n'))
+			err = conn.WriteJSON(struct {
+				LogLine string
+			}{string(line)})
+
+		// Filsystem events
+		case <-fsWatcher.Events:
+			drainEvents(fsWatcher)
+			err = conn.WriteJSON(struct {
+				UpdateMailbox bool
+			}{true})
+		case err := <-fsWatcher.Errors:
+			log.Println(err)
+		}
+
 		if err != nil {
+			if err != websocket.ErrCloseSent {
+				log.Println(err)
+			}
+			break
+		}
+	}
+}
+
+func drainEvents(w *fsnotify.Watcher) {
+	for {
+		select {
+		case <-w.Events:
+		default:
 			return
 		}
 	}

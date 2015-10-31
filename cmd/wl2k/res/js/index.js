@@ -104,7 +104,6 @@ function postMessage() {
 	$("#postiframe").load(function () {
 		iframeContents = this.contentWindow.document.body.innerHTML;
 		$('#composer').modal('hide');
-		displayFolder(currentFolder);
 		alert(iframeContents);
 	});
 
@@ -188,9 +187,7 @@ function connect(evt)
 	connectStr = encodeURIComponent($('#connect_input').val());
 	$('#connectModal').modal('hide');
 	$.getJSON("/api/connect/" + connectStr, function(data){
-		if( data.NumReceived > 0 ){
-			displayFolder(currentFolder);
-		} else {
+		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}
 	}).error(function() {
@@ -203,7 +200,15 @@ function initConsole()
 	if("WebSocket" in window){
 		var ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) { wsError = false; $('#console').empty(); };
-		ws.onmessage = function(evt) { updateConsole(evt.data); };
+		ws.onmessage = function(evt) {
+			var msg = JSON.parse(event.data);
+			if(msg.LogLine) {
+				updateConsole(msg.LogLine + "\n");
+			}
+			if(msg.UpdateMailbox) {
+				displayFolder(currentFolder);
+			}
+		};
 		ws.onclose   = function(evt) {
 			wsError = true;
 			window.setTimeout(function() { initConsole(); }, 1000);

@@ -243,7 +243,10 @@ func (tnc *TNC) runControlLoop() error {
 				}
 
 				if err := writeCtrlFrame(tnc.ctrl, str); err != nil {
-					panic(err)
+					if debugEnabled() {
+						log.Println(err)
+					}
+					return // The TNC connection was closed (most likely).
 				}
 			case data, ok := <-dataOut:
 				if !ok {

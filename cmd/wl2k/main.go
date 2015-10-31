@@ -120,6 +120,13 @@ var commands = []Command{
 		HandleFunc: configureHandle,
 	},
 	{
+		Str:  "version",
+		Desc: "Print the application version",
+		HandleFunc: func(args []string) {
+			fmt.Printf("wl2k version %s (%s) %s/%s\n", Version, GitRev, runtime.GOOS, runtime.GOARCH)
+		},
+	},
+	{
 		Str:  "help",
 		Desc: "Print detailed help for a given command.",
 		// Avoid initialization loop by invoking helpHandler in main

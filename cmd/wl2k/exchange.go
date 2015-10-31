@@ -60,6 +60,11 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		mbox,
 	)
 
+	session.SetUserAgent(wl2k.UserAgent{
+		Name:    "wl2kgo",
+		Version: Version,
+	})
+
 	if len(config.MOTD) > 0 {
 		session.SetMOTD(config.MOTD...)
 	}

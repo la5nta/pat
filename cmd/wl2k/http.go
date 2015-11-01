@@ -572,19 +572,19 @@ func linkify(str string) string {
 		return str
 	}
 
-	end := len(str)
-	for i, c := range str[start:] {
-		switch c {
-		case ' ', ',', '(', ')', '[', ']':
-			end = start + i
-			break
-		}
+	end := strings.IndexAny(str[start:], " ,()[]")
+	if end < 0 {
+		end = len(str)
+	} else {
+		end += start
 	}
 
 	link := str[start:end]
 	if needScheme {
 		link = "http://" + link
 	}
+
+	log.Println(str, start, end, len(str), link)
 
 	return fmt.Sprintf(`%s<a href='%s' target='_blank'>%s</a>%s`, str[:start], link, str[start:end], linkify(str[end:]))
 }

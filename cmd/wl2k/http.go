@@ -23,6 +23,8 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/mailbox"
 
+	"github.com/microcosm-cc/bluemonday"
+
 	fsnotify "gopkg.in/fsnotify.v1"
 )
 
@@ -66,7 +68,6 @@ func readHandler(w http.ResponseWriter, r *http.Request) {
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
 	if err != nil {
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -390,32 +391,48 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonSlice := make([]JSONMessage, len(messages))
 	for i, msg := range messages {
-		jsonSlice[i] = JSONMessage{msg}
+		jsonSlice[i] = JSONMessage{Message: msg}
 	}
 	json.NewEncoder(w).Encode(jsonSlice)
-
 	return
 }
 
-type JSONMessage struct{ *wl2k.Message }
+type JSONMessage struct {
+	*wl2k.Message
+	inclBody bool
+}
 
 func (m JSONMessage) MarshalJSON() ([]byte, error) {
-	body, _ := m.Body()
+
 	msg := struct {
-		MID     string
-		Date    time.Time
-		From    wl2k.Address
-		To      []wl2k.Address
-		Cc      []wl2k.Address
-		Subject string
-		Body    string
-		Files   []*wl2k.File
-		P2POnly bool
-		Unread  bool
+		MID      string
+		Date     time.Time
+		From     wl2k.Address
+		To       []wl2k.Address
+		Cc       []wl2k.Address
+		Subject  string
+		Body     string
+		BodyHTML string
+		Files    []*wl2k.File
+		P2POnly  bool
+		Unread   bool
 	}{
-		m.MID(), m.Date(), m.From(), m.To(), m.Cc(), m.Subject(), body, m.Files(), m.Header.Get("X-P2POnly") == "true", mailbox.IsUnread(m.Message),
+		MID:     m.MID(),
+		Date:    m.Date(),
+		From:    m.From(),
+		To:      m.To(),
+		Cc:      m.Cc(),
+		Subject: m.Subject(),
+		Files:   m.Files(),
+		P2POnly: m.Header.Get("X-P2POnly") == "true",
+		Unread:  mailbox.IsUnread(m.Message),
 	}
 
+	if m.inclBody {
+		msg.Body, _ = m.Body()
+		unsafe := toHTML([]byte(msg.Body))
+		msg.BodyHTML = string(bluemonday.UGCPolicy().SanitizeBytes(unsafe))
+	}
 	return json.Marshal(msg)
 }
 
@@ -439,7 +456,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(JSONMessage{msg})
+	json.NewEncoder(w).Encode(JSONMessage{msg, true})
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -475,4 +492,99 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		http.NotFound(w, r)
 	}
+}
+
+// toHTML takes the given body and turns it into proper html with
+// paragraphs, blockquote, and <br /> line breaks.
+func toHTML(body []byte) []byte {
+	buf := bytes.NewBuffer(body)
+	var out bytes.Buffer
+
+	fmt.Fprint(&out, "<p>")
+
+	scanner := bufio.NewScanner(buf)
+
+	var blockquote int
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) == 0 {
+			fmt.Fprint(&out, "</p><p>")
+			continue
+		}
+
+		depth := blockquoteDepth(line)
+		for depth != blockquote {
+			if depth > blockquote {
+				fmt.Fprintf(&out, "</p><blockquote><p>")
+				blockquote++
+			} else {
+				fmt.Fprintf(&out, "</p></blockquote><p>")
+				blockquote--
+			}
+		}
+		line = line[depth:]
+
+		line = htmlEncode(line)
+		line = linkify(line)
+
+		fmt.Fprint(&out, line+"\n")
+	}
+
+	for ; blockquote > 0; blockquote-- {
+		fmt.Fprintf(&out, "</p></blockquote>")
+	}
+
+	fmt.Fprint(&out, "</p>")
+	return out.Bytes()
+}
+
+// blcokquoteDepth counts the number of '>' at the beginning of the string.
+func blockquoteDepth(str string) (n int) {
+	for _, c := range str {
+		if c != '>' {
+			break
+		}
+		n++
+	}
+	return
+}
+
+// htmlEncode encodes html characters
+func htmlEncode(str string) string {
+	str = strings.Replace(str, ">", "&gt;", -1)
+	str = strings.Replace(str, "<", "&lt;", -1)
+	return str
+}
+
+// linkify detects url's in the given string and adds <a href tag.
+//
+// It is recursive.
+func linkify(str string) string {
+	start := strings.Index(str, "http")
+
+	var needScheme bool
+	if start < 0 {
+		start = strings.Index(str, "www.")
+		needScheme = true
+	}
+
+	if start < 0 {
+		return str
+	}
+
+	end := len(str)
+	for i, c := range str[start:] {
+		switch c {
+		case ' ', ',', '(', ')', '[', ']':
+			end = start + i
+			break
+		}
+	}
+
+	link := str[start:end]
+	if needScheme {
+		link = "http://" + link
+	}
+
+	return fmt.Sprintf(`%s<a href='%s' target='_blank'>%s</a>%s`, str[:start], link, str[start:end], linkify(str[end:]))
 }

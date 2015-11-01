@@ -131,6 +131,29 @@ body > .container {
   font-size: 0.6em;
 }
 
+.msgbody p {
+}
+
+.msgbody blockquote {
+  font-size: 1em;
+  color: #777777;
+  margin-top: 0px;
+  padding-left: 5px;
+  margin-bottom: 10px;
+}
+
+.msgbody blockquote p {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.msgbody blockquote ul {
+  margin-top: 0px;
+  margin-bottom: -20px;
+  margin-left: 0px;
+  padding-left: 15px;
+}
+
 @media screen and ( min-width: 1024px ) {
   .footer {
     position: absolute;

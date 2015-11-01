@@ -97,13 +97,15 @@ function postMessage() {
 
 	// Use client's date
 	var d = new Date().toJSON();
-	form.append('<input type="hidden" name="date" value="' + d + '" />');
+	$("#msg_form_date").remove();
+	form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '" />');
 
 	form.submit();
 
 	$("#postiframe").load(function () {
 		iframeContents = this.contentWindow.document.body.innerHTML;
 		$('#composer').modal('hide');
+		closeComposer(true);
 		alert(iframeContents);
 	});
 
@@ -178,6 +180,7 @@ function closeComposer(clear)
 		$('#msg_body').val('')
 		$('#msg_subject').val('')
 		$('#msg_to').val('')
+		$('#composer_form')[0].reset();
 	}
 	$('#composer').modal('hide');
 }

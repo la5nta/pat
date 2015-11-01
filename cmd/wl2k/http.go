@@ -584,7 +584,5 @@ func linkify(str string) string {
 		link = "http://" + link
 	}
 
-	log.Println(str, start, end, len(str), link)
-
 	return fmt.Sprintf(`%s<a href='%s' target='_blank'>%s</a>%s`, str[:start], link, str[start:end], linkify(str[end:]))
 }

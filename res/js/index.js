@@ -295,7 +295,7 @@ function displayMessage(elem) {
 			}
 		}
 
-		view.find('#body').html('<p>' + data.Body + '</p>');
+		view.find('#body').html(data.BodyHTML);
 
 		var attachments = view.find('#attachments');
 		attachments.empty();

@@ -43,6 +43,18 @@ body > .container {
   display: none;
   font-size: 80%;
 }
+.modal-header .btn-group {
+  margin-right: 5px;
+  margin-top: -5px;
+}
+
+.modal-header .btn-group button {
+  color: #fff;
+}
+
+.modal-header .btn-group button:hover {
+  color: #fff;
+}
 
 .primary.modal-header {
   background-color: #337ab7;

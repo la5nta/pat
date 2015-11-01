@@ -321,12 +321,42 @@ function displayMessage(elem) {
 				);
 			}
 		}
+
+		$('#reply_btn').click(function(evt){
+			$('#message_view').modal('hide');
+
+			$('#msg_to').val(data.From.Addr);
+			$('#msg_subject').val("Re: " +  data.Subject);
+			$('#msg_body').val(quoteMsg(data));
+
+			$('#composer').modal('show');
+		});
+		$('#forward_btn').click(function(evt){
+			$('#message_view').modal('hide');
+
+			$('#msg_subject').val("Fw: " +  data.Subject);
+			$('#msg_body').val(quoteMsg(data));
+
+			$('#composer').modal('show');
+		});
+
 		view.show();
 		$('#message_view').modal('show');
+		mbox = currentFolder
 		if(!data.Read) {
-			window.setTimeout(function() { setRead(currentFolder, data.MID); }, 2000);
+			window.setTimeout(function() { setRead(mbox, data.MID); }, 2000);
 		}
 	});
+}
+
+function quoteMsg(data) {
+	var output =  "--- " + data.Date + " " + data.From.Addr + " wrote: ---\n";
+
+	var lines = data.Body.split('\n')
+	for(var i = 0;i < lines.length;i++){
+		output += ">" + lines[i] + "\n"
+	}
+	return output
 }
 
 function setRead(box, mid) {

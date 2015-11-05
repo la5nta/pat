@@ -1,25 +1,36 @@
 package main
 
-var UsageConnect = `alias or mode[:address]
+var UsageConnect = `'alias' or 'transport://[addr][/path]/targetcall[?params...]'
 
-Modes:
-  winmor, ardop, ax25, telnet, serial-tnc.
+transport:
+  winmor:     WINMOR TNC
+  ardop:      ARDOP TNC
+  ax25:       AX.25 (Linux only)
+  telnet:     TCP/IP
+  serial-tnc: Serial AX.25 TNC
 
-Address syntax:
-  winmor:       callsign[@frequency]
-  ardop:       callsign[@frequency]
-  telnet:       callsign[:password]@ip[:port] (or blank for CMS session)
-  ax25:         callsign [via callsign]
-  serial-tnc:   callsign [via callsign]
+addr:
+  Used to address the transport device, _not_ to be confused with the connection
+   PATH. Format: [user[:pass]@]host[:port]
+
+  telnet:       [user:pass]@host:port
+  ax25:         (optional) host=axport
+
+path:
+  The last element of the path is the target station's callsign. If the path has
+   multiple hops (e.g. AX.25), they are separated by '/'.
+
+params:
+  ?freq=        Sets QSY frequency (winmor and ardop only)
 `
 var ExampleConnect = `
-  connect telnet                Connect to one of the Winlink Common Message Servers via internet.
-  connect ax25:LA1B-10          Connect to the RMS Gateway LA1B-10 using Linux AX.25.
-  connect ax25:LA5NTA via LA1B  Peer-to-peer connection with LA5NTA via LA1B digipeater.
-  connect winmor:LA3F           Connect to the RMS HF Gateway LA3F using Winmor.
-  connect winmor:LA3F@5350      Same as above, but set dial frequency of the radio using rigcontrol.
-  connect ardop:LA3F            Connect to the RMS HF Gateway LA3F using Ardop.
-  connect ardop:LA3F@5350       Same as above, but set dial frequency of the radio using rigcontrol.  
-  connect serial-tnc:LA1B-10    Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC.
-  connect 60m                   Connect using the method(s) defined by alias '60m'.
+  connect telnet                     (alias) Connect to one of the Winlink Common Message Servers via tcp.
+  connect ax25:///LA1B-10            Connect to the RMS Gateway LA1B-10 using Linux AX.25 on the default axport.
+  connect ax25://tmd710/LA1B-10      Connect to the RMS Gateway LA1B-10 using Linux AX.25 on axport 'tmd710'.
+  connect ax25:///LA1B/LA5NTA        Peer-to-peer connection with LA5NTA via LA1B digipeater.
+  connect winmor:///LA3F             Connect to the RMS HF Gateway LA3F using WINMOR TNC on default tcp address and port.
+  connect winmor:///LA3F?freq=5350   Same as above, but set dial frequency of the radio using rigcontrol.
+  connect ardop:///LA3F              Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
+  connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
+  connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.
 `

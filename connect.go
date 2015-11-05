@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -34,24 +36,24 @@ func Connect(connectStr string) (success bool) {
 		return connectAny(aliased...)
 	}
 
-	parts := strings.SplitN(connectStr, ":", 2)
-	method := strings.ToLower(strings.TrimSpace(parts[0]))
-
-	var uri string
-	var targetcall, password, address string
-	var err error
-	if len(parts) > 1 {
-		uri = strings.TrimSpace(parts[1])
-		targetcall, password, address, err = parseConnectURI(uri)
-	}
+	url, err := url.Parse(connectStr)
 	if err != nil {
 		log.Println(err)
+		return false
+	}
+
+	targetcall := path.Base(url.Path)
+
+	if targetcall == "." {
+		log.Println("Missing targetcall in URL")
+		fmt.Println(UsageConnect)
+		return false
 	}
 
 	// QSY
 	var revertFreq func()
-	if address != "" {
-		revertFreq, err = qsy(method, address)
+	if freq := url.Query().Get("freq"); freq != "" {
+		revertFreq, err = qsy(url.Scheme, freq)
 		if err != nil {
 			log.Printf("Unable to QSY: %s", err)
 			return
@@ -59,16 +61,15 @@ func Connect(connectStr string) (success bool) {
 		defer revertFreq()
 	}
 
-	log.Printf("Connecting to %s...", connectStr)
+	log.Printf("Connecting to %s...", url)
 
-	var freq Frequency
-
+	var currFreq Frequency
 	var conn net.Conn
-	switch method {
+	switch url.Scheme {
 	case MethodWinmor:
 		if rig, ok := rigs[config.Winmor.Rig]; ok {
 			f, _ := rig.CurrentVFO().GetFreq()
-			freq = Frequency(f)
+			currFreq = Frequency(f)
 		}
 
 		done := handleInterrupt()
@@ -77,23 +78,29 @@ func Connect(connectStr string) (success bool) {
 	case MethodArdop:
 		if rig, ok := rigs[config.Ardop.Rig]; ok {
 			f, _ := rig.CurrentVFO().GetFreq()
-			freq = Frequency(f)
+			currFreq = Frequency(f)
 		}
 
 		done := handleInterrupt()
 		conn, err = connectArdop(targetcall)
 		close(done)
 	case MethodTelnet:
-		if address == "" {
-			conn, err = telnet.DialCMS(fOptions.MyCall)
-			targetcall = telnet.CMSTargetCall
-			break
+		var user, pass string
+		if url.User != nil {
+			pass, _ = url.User.Password()
+			user = url.User.Username()
 		}
-		conn, err = telnet.Dial(address, fOptions.MyCall, password)
-
+		if user == "" {
+			user = fOptions.MyCall
+		}
+		conn, err = telnet.Dial(url.Host, user, pass)
 	case MethodAX25:
+		axport := url.Host
+		if axport == "" {
+			axport = config.AX25.Port
+		}
 		conn, err = ax25.DialAX25Timeout(
-			config.AX25.Port,
+			axport,
 			fOptions.MyCall,
 			targetcall,
 			45*time.Second,
@@ -109,11 +116,11 @@ func Connect(connectStr string) (success bool) {
 		)
 
 	default:
-		log.Printf("'%s' is not a valid connect method/alias.", method)
+		log.Printf("'%s' is not a valid transport scheme.", url.Scheme)
 		return
 	}
 
-	eventLog.LogConn("connect "+connectStr, freq, conn, err)
+	eventLog.LogConn("connect "+connectStr, currFreq, conn, err)
 
 	if err != nil {
 		log.Printf("Unable to establish connection to remote: %s", err)

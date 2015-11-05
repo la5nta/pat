@@ -147,10 +147,13 @@ type BeaconConfig struct {
 }
 
 var DefaultConfig Config = Config{
-	MyCall:         "",
-	MOTD:           []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
-	AuxAddrs:       []string{},
-	ConnectAliases: map[string][]string{},
+	MyCall:   "",
+	MOTD:     []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
+	AuxAddrs: []string{},
+	ConnectAliases: map[string][]string{
+		"telnet": []string{"telnet://:CMSTelnet@server.winlink.org:8772"},
+	},
+	Listen: []string{},
 	AX25: AX25Config{
 		Beacon: BeaconConfig{
 			Every:       3600,

@@ -159,10 +159,10 @@ func rmsListHandle(args []string) {
 
 	*mode = strings.ToLower(*mode)
 
-	fmtStr := "%-9.9s [%-6.6s] %-15.15s %14.14s %14.14s\n"
+	fmtStr := "%-9.9s [%-6.6s] %-15.15s %14.14s %14.14s %s\n"
 
 	// Print header
-	fmt.Printf(fmtStr, "callsign", "gridsq", "mode(s)", "dial freq", "center freq") //TODO: "center frequency" of packet is wrong...
+	fmt.Printf(fmtStr, "callsign", "gridsq", "mode(s)", "dial freq", "center freq", "url") //TODO: "center frequency" of packet is wrong...
 
 	// Print gateways (separated by blank line)
 	for _, gw := range status.Gateways {
@@ -181,10 +181,34 @@ func rmsListHandle(args []string) {
 
 			freq := Frequency(channel.Frequency)
 			dial := freq.Dial(channel.SupportedModes)
-			fmt.Printf(fmtStr, gw.Callsign, channel.Gridsquare, channel.SupportedModes, dial, freq)
+
+			url := channel.URL(gw.Callsign)
+
+			fmt.Printf(fmtStr, gw.Callsign, channel.Gridsquare, channel.SupportedModes, dial, freq, url)
 		}
 		if printed {
 			fmt.Println("")
 		}
+	}
+}
+
+func (gc GatewayChannel) URL(targetcall string) *url.URL {
+	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
+
+	url, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", gc.Transport(), targetcall, freq.KHz()))
+	return url
+}
+
+func (gc GatewayChannel) Transport() string {
+	modes := strings.ToLower(gc.SupportedModes)
+	switch {
+	case strings.Contains(modes, "winmor"):
+		return "winmor"
+	case strings.Contains(modes, "packet"):
+		return "ax25"
+	case strings.Contains(modes, "pactor"):
+		return "pactor"
+	default:
+		return ""
 	}
 }

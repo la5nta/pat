@@ -22,6 +22,8 @@ func (f Frequency) String() string {
 	return fmt.Sprintf("%d.%06.2f MHz", m, k)
 }
 
+func (f Frequency) KHz() float64 { return float64(f) / 1e3 }
+
 func (f Frequency) Dial(mode string) Frequency {
 	mode = strings.ToLower(mode)
 
@@ -51,7 +53,7 @@ func freq(param string) {
 	case MethodWinmor:
 		rig, ok = rigs[config.Winmor.Rig]
 	case MethodArdop:
-		rig, ok = rigs[config.Ardop.Rig]	
+		rig, ok = rigs[config.Ardop.Rig]
 	case "":
 		fmt.Println("Need freq method.")
 		return

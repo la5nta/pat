@@ -1,6 +1,7 @@
 var wsURL = "";
 var wsError = false;
 var posId = 0;
+var connectAliases;
 
 var uploadFiles = new Array();
 
@@ -9,6 +10,8 @@ function initFrontend(ws_url)
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
+		//$('select').selectpicker();
+
 		// Setup actions
 		$('#connect_btn').click(connect);
 		$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
@@ -44,11 +47,106 @@ function initFrontend(ws_url)
 			}
 		});
 
+		setupConnectModal();
+
 		initConsole();
 		displayFolder("in");
 	});
 
 	updateStatusLoop();
+}
+
+function setupConnectModal() {
+	$('#freqInput').change(onConnectInputChange);
+	$('#addrInput').change(onConnectInputChange);
+	$('#targetInput').change(onConnectInputChange);
+
+	$('#transportSelect').change(function() {
+		refreshExtraInputGroups();
+		onConnectInputChange();
+	});
+	refreshExtraInputGroups();
+
+	updateConnectAliases();
+}
+
+function updateConnectAliases() {
+	$.getJSON("/api/connect_aliases", function(data){
+		connectAliases = data;
+
+		var select = $('#aliasSelect');
+		Object.keys(data).forEach(function (key) {
+			select.append('<option>' + key + '</option>');
+		});
+
+		select.change(function() {
+			$('#aliasSelect option:selected').each(function() {
+				var alias = $(this).text();
+				var url = connectAliases[$(this).text()];
+				setConnectValues(url);
+			});
+		});
+		select.selectpicker('refresh');
+	});
+}
+
+function setConnectValues(url) {
+	url=URI(url.toString());
+
+	$('#transportSelect').val(url.protocol());
+	$('#transportSelect').selectpicker('refresh');
+	refreshExtraInputGroups();
+
+	$('#targetInput').val(url.path().substr(1));
+
+	var query = url.search(true);
+
+	if(url.hasQuery("freq")) {
+		$('#freqInput').val(query["freq"])
+	} else {
+		$('#freqInput').val('');
+	}
+
+	var usri = ""
+	if(url.username()) {
+		usri += url.username()
+	}
+	if(url.password()) {
+		usri += ":" + url.password()
+	}
+	if(usri != "") {
+		usri += "@"
+	}
+	$('#addrInput').val(usri + url.host());
+
+	onConnectInputChange();
+}
+
+function getConnectURL() {
+	var url = $('#transportSelect').val() + "://" + $('#addrInput').val() + "/" + $('#targetInput').val();
+
+	if($('#freqInput').val()) {
+		url += "?freq=" + $('#freqInput').val();
+	}
+
+	return url;
+}
+
+function onConnectInputChange() {
+	$('#connectURLPreview').empty().append(getConnectURL());
+}
+
+function refreshExtraInputGroups() {
+	var transport = $('#transportSelect').val();
+	if(transport == "telnet") {
+		$('#freqInputDiv').hide();
+		$('#freqInput').val('');
+		$('#addrInputDiv').show();
+	} else {
+		$('#addrInputDiv').hide();
+		$('#addrInput').val('');
+		$('#freqInputDiv').show();
+	}
 }
 
 function updatePosition(pos) {
@@ -187,9 +285,11 @@ function closeComposer(clear)
 
 function connect(evt)
 {
-	connectStr = encodeURIComponent($('#connect_input').val());
+	url = getConnectURL()
+
 	$('#connectModal').modal('hide');
-	$.getJSON("/api/connect/" + connectStr, function(data){
+
+	$.getJSON("/api/connect?url=" + url, function(data){
 		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}

@@ -243,6 +243,11 @@ func main() {
 		fOptions.MyCall = config.MyCall
 	}
 
+	// Replace placeholders in connect aliases
+	for k, v := range config.ConnectAliases {
+		config.ConnectAliases[k] = strings.Replace(v, cfg.PlaceholderMycall, fOptions.MyCall, -1)
+	}
+
 	if fOptions.Listen == "" && len(config.Listen) > 0 {
 		fOptions.Listen = strings.Join(config.Listen, ",")
 	}

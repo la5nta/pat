@@ -6,6 +6,10 @@ package cfg
 
 import "github.com/la5nta/wl2k-go/transport/ardop"
 
+const (
+	PlaceholderMycall = "{mycall}"
+)
+
 type Config struct {
 	// This station's callsign.
 	MyCall string `json:"mycall"`
@@ -26,13 +30,11 @@ type Config struct {
 	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
 	MOTD []string `json:"motd"`
 
-	// Connect aliases,
+	// Connect aliases
 	//
-	// Alias a list of connect commands, which will be attempted in order until a successfull message exchange has been made.
-	// Recursion is supported.
-	//
-	// Example: {"offgrid": ["winmor:LA3F@5350", "ax25:LA1J-10"], "NorwayHF": ["winmor:LA1B@5320", "winmor":"LA3F@3602", "winmor":"LA1J@5352"]}
-	ConnectAliases map[string][]string `json:"connect_aliases"`
+	// Example: {"LA1B-10": "ax25:///LD5GU/LA1B-10", "LA1B": "winmor://LA3F?freq=5350"}
+	// Any occurence of the substring "{mycall}" will be replaced with user's callsign.
+	ConnectAliases map[string]string `json:"connect_aliases"`
 
 	// Methods to listen for incoming P2P connections by default.
 	//
@@ -150,8 +152,8 @@ var DefaultConfig Config = Config{
 	MyCall:   "",
 	MOTD:     []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
 	AuxAddrs: []string{},
-	ConnectAliases: map[string][]string{
-		"telnet": []string{"telnet://:CMSTelnet@server.winlink.org:8772"},
+	ConnectAliases: map[string]string{
+		"telnet": "telnet://{mycall}:CMSTelnet@server.winlink.org:8772/wl2k",
 	},
 	Listen: []string{},
 	AX25: AX25Config{

@@ -33,7 +33,7 @@ func Connect(connectStr string) (success bool) {
 	}
 
 	if aliased, ok := config.ConnectAliases[connectStr]; ok {
-		return connectAny(aliased...)
+		return Connect(aliased)
 	}
 
 	url, err := url.Parse(connectStr)

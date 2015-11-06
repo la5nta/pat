@@ -44,9 +44,8 @@ func Connect(connectStr string) (success bool) {
 
 	targetcall := path.Base(url.Path)
 
-	if targetcall == "." {
-		log.Println("Missing targetcall in URL")
-		fmt.Println(UsageConnect)
+	if len(targetcall) < 3 {
+		log.Println("Missing targetcall in connection URL")
 		return false
 	}
 

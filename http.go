@@ -33,7 +33,8 @@ func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/connect/{method}", ConnectHandler)
+	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
+	r.HandleFunc("/api/connect", ConnectHandler)
 	r.HandleFunc("/api/listen", ListenHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
@@ -54,6 +55,10 @@ func ListenAndServe(addr string) error {
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui", http.StatusFound)
+}
+
+func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(config.ConnectAliases)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -337,7 +342,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
-	connectStr := mux.Vars(req)["method"]
+	connectStr := req.FormValue("url")
 
 	nMsgs := mbox.InboxCount()
 

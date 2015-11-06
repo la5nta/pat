@@ -122,6 +122,10 @@ body > .container {
     margin: 0px 0;
 }
 
+#connectURLPreview {
+	font-size: 80%;
+}
+
 /*
  * Log console
  */

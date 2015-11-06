@@ -14,6 +14,12 @@ function initFrontend(ws_url)
 
 		// Setup actions
 		$('#connect_btn').click(connect);
+		$('#connectForm input').keypress(function (e) {
+			if (e.which == 13) {
+				connect();
+				return false;
+			}
+		});
 		$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
 		$('#pos_btn').click(postPosition);
 		

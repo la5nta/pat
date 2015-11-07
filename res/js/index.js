@@ -20,6 +20,10 @@ function initFrontend(ws_url)
 				return false;
 			}
 		});
+		$('#connectForm input').keyup(function (e) {
+			onConnectInputChange();
+		});
+
 		$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
 		$('#pos_btn').click(postPosition);
 		
@@ -90,6 +94,8 @@ function updateConnectAliases() {
 				var alias = $(this).text();
 				var url = connectAliases[$(this).text()];
 				setConnectValues(url);
+				select.val('');
+				select.selectpicker('refresh');
 			});
 		});
 		select.selectpicker('refresh');

@@ -181,6 +181,13 @@ function closeComposer(clear)
 		$('#msg_subject').val('')
 		$('#msg_to').val('')
 		$('#composer_form')[0].reset();
+
+		// Attachment previews
+		$('#composer_attachments').empty();
+
+		// Attachment input field
+		var attachments = $('#msg_attachments_input');
+		attachments.replaceWith(attachments = attachments.clone(true));
 	}
 	$('#composer').modal('hide');
 }

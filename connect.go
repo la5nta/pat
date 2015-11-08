@@ -60,26 +60,21 @@ func Connect(connectStr string) (success bool) {
 		defer revertFreq()
 	}
 
+	var currFreq Frequency
+	if vfo, ok := VFOForTransport(url.Scheme); ok {
+		f, _ := vfo.GetFreq()
+		currFreq = Frequency(f)
+	}
+
 	log.Printf("Connecting to %s...", url)
 
-	var currFreq Frequency
 	var conn net.Conn
 	switch url.Scheme {
 	case MethodWinmor:
-		if rig, ok := rigs[config.Winmor.Rig]; ok {
-			f, _ := rig.GetFreq()
-			currFreq = Frequency(f)
-		}
-
 		done := handleInterrupt()
 		conn, err = connectWinmor(targetcall)
 		close(done)
 	case MethodArdop:
-		if rig, ok := rigs[config.Ardop.Rig]; ok {
-			f, _ := rig.GetFreq()
-			currFreq = Frequency(f)
-		}
-
 		done := handleInterrupt()
 		conn, err = connectArdop(targetcall)
 		close(done)

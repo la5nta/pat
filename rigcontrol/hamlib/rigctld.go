@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/textproto"
 	"strconv"
@@ -114,7 +113,6 @@ func (r *TCPRig) VFOMode() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Println(resp)
 	return resp == "CHKVFO 1", nil
 }
 

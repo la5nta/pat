@@ -164,7 +164,7 @@ func qsy(method, addr string) (revert func(), err error) {
 		return noop, err
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(time.Second)
 
 	return func() {
 		time.Sleep(time.Second)

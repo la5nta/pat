@@ -135,7 +135,7 @@ var commands = []Command{
 
 var (
 	config    cfg.Config
-	rigs      map[string]hamlib.Rig
+	rigs      map[string]hamlib.VFO
 	logWriter io.Writer
 	eventLog  *EventLogger
 
@@ -340,10 +340,6 @@ func cleanup() {
 		Unlisten(method)
 	}
 
-	for _, rig := range rigs {
-		rig.Close()
-	}
-
 	if wmTNC != nil {
 		if err := wmTNC.Close(); err != nil {
 			log.Fatalf("Failure to close winmor TNC: %s", err)
@@ -371,8 +367,8 @@ func loadMBox() {
 	}
 }
 
-func loadHamlibRigs() map[string]hamlib.Rig {
-	rigs := make(map[string]hamlib.Rig, len(config.HamlibRigs))
+func loadHamlibRigs() map[string]hamlib.VFO {
+	rigs := make(map[string]hamlib.VFO, len(config.HamlibRigs))
 
 	for name, cfg := range config.HamlibRigs {
 		if cfg.Address == "" {
@@ -386,14 +382,32 @@ func loadHamlibRigs() map[string]hamlib.Rig {
 			continue
 		}
 
-		f, err := rig.CurrentVFO().GetFreq()
+		var vfo hamlib.VFO
+		switch strings.ToUpper(cfg.VFO) {
+		case "A", "VFOA":
+			vfo, err = rig.VFOA()
+		case "B", "VFOB":
+			vfo, err = rig.VFOB()
+		case "":
+			vfo = rig.CurrentVFO()
+		default:
+			log.Printf("Cannot load rig '%s': Unrecognized VFO identifier '%s'", name, cfg.VFO)
+			continue
+		}
+
+		if err != nil {
+			log.Printf("Cannot load rig '%s': Unable to select VFO: %s", name, err)
+			continue
+		}
+
+		f, err := vfo.GetFreq()
 		if err != nil {
 			log.Printf("Unable to get frequency from rig %s: %s.", name, err)
 		} else {
 			log.Printf("%s ready. Dial frequency is %s.", name, Frequency(f))
 		}
 
-		rigs[name] = rig
+		rigs[name] = vfo
 	}
 	return rigs
 }
@@ -421,7 +435,7 @@ func initWinmorTNC() {
 	if !ok {
 		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Winmor.Rig)
 	} else {
-		wmTNC.SetPTT(rig.CurrentVFO())
+		wmTNC.SetPTT(rig)
 	}
 }
 
@@ -456,7 +470,7 @@ func initArdopTNC() {
 	if !ok {
 		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
 	} else {
-		wmTNC.SetPTT(rig.CurrentVFO())
+		wmTNC.SetPTT(rig)
 	}
 }
 

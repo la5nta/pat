@@ -74,6 +74,9 @@ type HamlibConfig struct {
 	// For tcp (rigctld): "address:port" (e.g. localhost:4532).
 	// For serial: "/path/to/tty?model=&baudrate=" (e.g. /dev/ttyS0?model=123&baudrate=4800).
 	Address string `json:"address,omitempty"`
+
+	// The rig's VFO to control ("A" or "B"). If empty, the current active VFO is used.
+	VFO string `json:"VFO"`
 }
 
 type WinmorConfig struct {
@@ -84,7 +87,7 @@ type WinmorConfig struct {
 	InboundBandwidth int `json:"inbound_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
-	Rig string `json:"rig"` //TODO: Maybe custom unmarshal to ensure the rig is registered?
+	Rig string `json:"rig"`
 
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
@@ -98,7 +101,7 @@ type ArdopConfig struct {
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
-	Rig string `json:"rig"` //TODO: Maybe custom unmarshal to ensure the rig is registered?
+	Rig string `json:"rig"`
 
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
@@ -135,6 +138,9 @@ type AX25Config struct {
 
 	// Optional beacon when listening for incoming packet-p2p connections.
 	Beacon BeaconConfig `json:"beacon"`
+
+	// (optional) Reference name to the Hamlib rig for frequency control.
+	Rig string `json:"rig"`
 }
 
 type BeaconConfig struct {

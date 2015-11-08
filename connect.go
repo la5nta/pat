@@ -67,7 +67,7 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case MethodWinmor:
 		if rig, ok := rigs[config.Winmor.Rig]; ok {
-			f, _ := rig.CurrentVFO().GetFreq()
+			f, _ := rig.GetFreq()
 			currFreq = Frequency(f)
 		}
 
@@ -76,7 +76,7 @@ func Connect(connectStr string) (success bool) {
 		close(done)
 	case MethodArdop:
 		if rig, ok := rigs[config.Ardop.Rig]; ok {
-			f, _ := rig.CurrentVFO().GetFreq()
+			f, _ := rig.GetFreq()
 			currFreq = Frequency(f)
 		}
 
@@ -140,50 +140,42 @@ func Connect(connectStr string) (success bool) {
 func qsy(method, addr string) (revert func(), err error) {
 	noop := func() {}
 
+	var rigName string
 	switch method {
 	case MethodWinmor:
-		if config.Winmor.Rig == "" {
-			return noop, fmt.Errorf("Missing rig reference in config section for %s, don't know which rig to qsy", method)
-		}
-
-		log.Printf("QSY %s: %s", method, addr)
-		var ok bool
-		rig, ok := rigs[config.Winmor.Rig]
-		if !ok {
-			return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", config.Winmor.Rig)
-		}
-		_, oldFreq, err := setFreq(rig, addr)
-		if err != nil {
-			return noop, err
-		}
-		time.Sleep(2 * time.Second)
-		return func() {
-			time.Sleep(time.Second)
-			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
-			rig.CurrentVFO().SetFreq(oldFreq)
-		}, nil
+		rigName = config.Winmor.Rig
 	case MethodArdop:
-		log.Printf("QSY %s: %s", method, addr)
-		var ok bool
-		rig, ok := rigs[config.Ardop.Rig]
-		if !ok {
-			return noop, fmt.Errorf("Hamlib rig %s not loaded.", config.Ardop.Rig)
-		}
-		_, oldFreq, err := setFreq(rig, addr)
-		if err != nil {
-			return noop, err
-		}
-		time.Sleep(2 * time.Second)
-		return func() {
-			time.Sleep(time.Second)
-			log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
-			rig.CurrentVFO().SetFreq(oldFreq)
-		}, nil
-	case MethodTelnet:
-		return noop, nil
+		rigName = config.Ardop.Rig
+	case MethodAX25:
+		rigName = config.AX25.Rig
 	default:
-		return noop, fmt.Errorf("Not supported with method %s", method)
+		return noop, fmt.Errorf("Not supported with transport '%s'", method)
 	}
+
+	if rigName == "" {
+		return noop, fmt.Errorf("Missing rig reference in config section for %s, don't know which rig to qsy", method)
+	}
+
+	var ok bool
+	rig, ok := rigs[rigName]
+	if !ok {
+		return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", rigName)
+	}
+
+	log.Printf("QSY %s: %s", method, addr)
+
+	_, oldFreq, err := setFreq(rig, addr)
+	if err != nil {
+		return noop, err
+	}
+
+	time.Sleep(2 * time.Second)
+
+	return func() {
+		time.Sleep(time.Second)
+		log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
+		rig.SetFreq(oldFreq)
+	}, nil
 }
 
 func connectWinmor(target string) (net.Conn, error) {

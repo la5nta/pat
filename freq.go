@@ -47,13 +47,15 @@ func (f Frequency) Dial(mode string) Frequency {
 func freq(param string) {
 	parts := strings.SplitN(param, ":", 2)
 
-	var rig hamlib.Rig
+	var rig hamlib.VFO
 	var ok bool
 	switch parts[0] {
 	case MethodWinmor:
 		rig, ok = rigs[config.Winmor.Rig]
 	case MethodArdop:
 		rig, ok = rigs[config.Ardop.Rig]
+	case MethodAX25:
+		rig, ok = rigs[config.AX25.Rig]
 	case "":
 		fmt.Println("Need freq method.")
 		return
@@ -68,7 +70,7 @@ func freq(param string) {
 	}
 
 	if len(parts) < 2 {
-		freq, err := rig.CurrentVFO().GetFreq()
+		freq, err := rig.GetFreq()
 		if err != nil {
 			log.Printf("Unable to get frequency: %s", err)
 		}
@@ -81,8 +83,8 @@ func freq(param string) {
 	}
 }
 
-func setFreq(rig hamlib.Rig, freq string) (newFreq, oldFreq int, err error) {
-	oldFreq, err = rig.CurrentVFO().GetFreq()
+func setFreq(rig hamlib.VFO, freq string) (newFreq, oldFreq int, err error) {
+	oldFreq, err = rig.GetFreq()
 	if err != nil {
 		return 0, 0, fmt.Errorf("Unable to get rig frequency: %s", err)
 	}
@@ -93,6 +95,6 @@ func setFreq(rig hamlib.Rig, freq string) (newFreq, oldFreq int, err error) {
 	}
 
 	newFreq = int(f * 1e3)
-	err = rig.CurrentVFO().SetFreq(newFreq)
+	err = rig.SetFreq(newFreq)
 	return
 }

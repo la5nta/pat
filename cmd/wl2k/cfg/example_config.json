@@ -4,7 +4,8 @@
   "auxiliary_addresses": ["LE1OF"],
   "locator": "JP20qe",
   "connect_aliases": {
-    "offgrid": ["ax25:LA1B-10", "winmor:LA1B@5310", "winmor:LA3F@5350", "winmor:LA1J@5352"]
+    "LA1B@60m": "winmor:///LA1B?freq=5310.00",
+    "LA1B-10": "ax25:///LA1B-10"
   },
   "hamlib_rigs": {
     "ft897": {

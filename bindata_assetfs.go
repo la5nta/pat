@@ -22490,27 +22490,15 @@ type _bintree_t struct {
 }
 var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
 	"res": &_bintree_t{nil, map[string]*_bintree_t{
+		"site.css": &_bintree_t{res_site_css, map[string]*_bintree_t{
+		}},
+		"bootstrap-select.min.css": &_bintree_t{res_bootstrap_select_min_css, map[string]*_bintree_t{
+		}},
+		"tmpl": &_bintree_t{nil, map[string]*_bintree_t{
+			"index.html": &_bintree_t{res_tmpl_index_html, map[string]*_bintree_t{
+			}},
+		}},
 		"bootstrap-3.2.0-dist": &_bintree_t{nil, map[string]*_bintree_t{
-			"css": &_bintree_t{nil, map[string]*_bintree_t{
-				"bootstrap-theme.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_css, map[string]*_bintree_t{
-				}},
-				"bootstrap.css.map": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_css_map, map[string]*_bintree_t{
-				}},
-				"bootstrap.min.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_min_css, map[string]*_bintree_t{
-				}},
-				"bootstrap.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_css, map[string]*_bintree_t{
-				}},
-				"bootstrap-theme.min.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_min_css, map[string]*_bintree_t{
-				}},
-				"bootstrap-theme.css.map": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_css_map, map[string]*_bintree_t{
-				}},
-			}},
-			"js": &_bintree_t{nil, map[string]*_bintree_t{
-				"bootstrap.js": &_bintree_t{res_bootstrap_3_2_0_dist_js_bootstrap_js, map[string]*_bintree_t{
-				}},
-				"bootstrap.min.js": &_bintree_t{res_bootstrap_3_2_0_dist_js_bootstrap_min_js, map[string]*_bintree_t{
-				}},
-			}},
 			"fonts": &_bintree_t{nil, map[string]*_bintree_t{
 				"glyphicons-halflings-regular.ttf": &_bintree_t{res_bootstrap_3_2_0_dist_fonts_glyphicons_halflings_regular_ttf, map[string]*_bintree_t{
 				}},
@@ -22521,23 +22509,35 @@ var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
 				"glyphicons-halflings-regular.svg": &_bintree_t{res_bootstrap_3_2_0_dist_fonts_glyphicons_halflings_regular_svg, map[string]*_bintree_t{
 				}},
 			}},
+			"css": &_bintree_t{nil, map[string]*_bintree_t{
+				"bootstrap.min.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_min_css, map[string]*_bintree_t{
+				}},
+				"bootstrap.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_css, map[string]*_bintree_t{
+				}},
+				"bootstrap-theme.min.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_min_css, map[string]*_bintree_t{
+				}},
+				"bootstrap-theme.css.map": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_css_map, map[string]*_bintree_t{
+				}},
+				"bootstrap-theme.css": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_theme_css, map[string]*_bintree_t{
+				}},
+				"bootstrap.css.map": &_bintree_t{res_bootstrap_3_2_0_dist_css_bootstrap_css_map, map[string]*_bintree_t{
+				}},
+			}},
+			"js": &_bintree_t{nil, map[string]*_bintree_t{
+				"bootstrap.js": &_bintree_t{res_bootstrap_3_2_0_dist_js_bootstrap_js, map[string]*_bintree_t{
+				}},
+				"bootstrap.min.js": &_bintree_t{res_bootstrap_3_2_0_dist_js_bootstrap_min_js, map[string]*_bintree_t{
+				}},
+			}},
 		}},
 		"js": &_bintree_t{nil, map[string]*_bintree_t{
-			"bootstrap-select.min.js": &_bintree_t{res_js_bootstrap_select_min_js, map[string]*_bintree_t{
-			}},
 			"index.js": &_bintree_t{res_js_index_js, map[string]*_bintree_t{
 			}},
 			"jquery.min.js": &_bintree_t{res_js_jquery_min_js, map[string]*_bintree_t{
 			}},
 			"URI.min.js": &_bintree_t{res_js_uri_min_js, map[string]*_bintree_t{
 			}},
-		}},
-		"site.css": &_bintree_t{res_site_css, map[string]*_bintree_t{
-		}},
-		"bootstrap-select.min.css": &_bintree_t{res_bootstrap_select_min_css, map[string]*_bintree_t{
-		}},
-		"tmpl": &_bintree_t{nil, map[string]*_bintree_t{
-			"index.html": &_bintree_t{res_tmpl_index_html, map[string]*_bintree_t{
+			"bootstrap-select.min.js": &_bintree_t{res_js_bootstrap_select_min_js, map[string]*_bintree_t{
 			}},
 		}},
 	}},

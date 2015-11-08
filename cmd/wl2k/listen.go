@@ -104,7 +104,7 @@ func listenWinmor(incoming chan<- incomingConnect) {
 
 			var freq Frequency
 			if rig, ok := rigs[config.Winmor.Rig]; ok {
-				f, _ := rig.CurrentVFO().GetFreq()
+				f, _ := rig.GetFreq()
 				freq = Frequency(f)
 			}
 
@@ -143,7 +143,7 @@ func listenArdop(incoming chan<- incomingConnect) {
 
 			var freq Frequency
 			if rig, ok := rigs[config.Ardop.Rig]; ok {
-				f, _ := rig.CurrentVFO().GetFreq()
+				f, _ := rig.GetFreq()
 				freq = Frequency(f)
 			}
 

@@ -5,8 +5,10 @@
 package hamlib
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/textproto"
 	"strconv"
@@ -16,6 +18,8 @@ import (
 )
 
 const DefaultTCPAddr = "localhost:4532"
+
+var ErrNotVFOMode = errors.New("rigctl is not running in VFO mode")
 
 var ErrUnexpectedValue = fmt.Errorf("Unexpected value in response")
 
@@ -36,7 +40,10 @@ type TCPRig struct {
 // from the radio operator's view.
 //
 // Also referred to as "BAND" (A-band/B-band) by some radio manufacturers.
-type tcpVFO struct{ r *TCPRig }
+type tcpVFO struct {
+	r      *TCPRig
+	prefix string
+}
 
 // OpenTCP connects to the rigctld service and returns a ready to use Rig.
 //
@@ -74,11 +81,46 @@ func (r *TCPRig) Close() error {
 }
 
 // Returns the Rig's active VFO (for control).
-func (r *TCPRig) CurrentVFO() VFO { return &tcpVFO{r} }
+func (r *TCPRig) CurrentVFO() VFO { return &tcpVFO{r, ""} }
+
+// Returns the Rig's VFO A (for control).
+//
+// ErrNotVFOMode is returned if rigctld is not in VFO mode.
+func (r *TCPRig) VFOA() (VFO, error) {
+	if ok, err := r.VFOMode(); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, ErrNotVFOMode
+	}
+
+	return &tcpVFO{r, "VFOA"}, nil
+}
+
+// Returns the Rig's VFO B (for control).
+//
+// ErrNotVFOMode is returned if rigctld is not in VFO mode.
+func (r *TCPRig) VFOB() (VFO, error) {
+	if ok, err := r.VFOMode(); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, ErrNotVFOMode
+	}
+
+	return &tcpVFO{r, "VFOB"}, nil
+}
+
+func (r *TCPRig) VFOMode() (bool, error) {
+	resp, err := r.cmd(`\chk_vfo`)
+	if err != nil {
+		return false, err
+	}
+	log.Println(resp)
+	return resp == "CHKVFO 1", nil
+}
 
 // Gets the dial frequency for this VFO.
 func (v *tcpVFO) GetFreq() (int, error) {
-	resp, err := v.cmd("f")
+	resp, err := v.cmd(`\get_freq`)
 	if err != nil {
 		return -1, err
 	}
@@ -93,7 +135,7 @@ func (v *tcpVFO) GetFreq() (int, error) {
 
 // Sets the dial frequency for this VFO.
 func (v *tcpVFO) SetFreq(freq int) error {
-	_, err := v.cmd("F %d", freq)
+	_, err := v.cmd(`\set_freq %d`, freq)
 	return err
 }
 
@@ -121,7 +163,7 @@ func (v *tcpVFO) SetPTT(on bool) error {
 		bInt = 1
 	}
 
-	_, err := v.cmd("t %d", bInt)
+	_, err := v.cmd(`\set_ptt %d`, bInt)
 	return err
 }
 
@@ -129,6 +171,13 @@ func (v *tcpVFO) SetPTT(on bool) error {
 func (v *tcpVFO) cmd(format string, args ...interface{}) (string, error) {
 	var err error
 	var resp string
+
+	// Add VFO argument (if set)
+	if v.prefix != "" {
+		parts := strings.Split(format, " ")
+		parts = append([]string{parts[0], v.prefix}, parts[1:]...)
+		format = strings.Join(parts, " ")
+	}
 
 	// Retry
 	for i := 0; i < 3; i++ {

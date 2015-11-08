@@ -22,6 +22,12 @@ type Rig interface {
 
 	// Returns the Rig's active VFO (for control).
 	CurrentVFO() VFO
+
+	// Returns the Rig's A-VFO (for control).
+	VFOA() (VFO, error)
+
+	// Returns the Rig's B-VFO (for control).
+	VFOB() (VFO, error)
 }
 
 // VFO (Variable Frequency Oscillator) represents a tunable channel, from the radio operator's view.

@@ -138,13 +138,13 @@ func (r *SerialRig) CurrentVFO() VFO {
 }
 
 // Returns the Rig's A vfo.
-func (r *SerialRig) VFOA() VFO {
-	return cVFO{C.RIG_VFO_A, r}
+func (r *SerialRig) VFOA() (VFO, error) {
+	return cVFO{C.RIG_VFO_A, r}, nil
 }
 
 // Returns the Rig's B vfo.
-func (r *SerialRig) VFOB() VFO {
-	return cVFO{C.RIG_VFO_B, r}
+func (r *SerialRig) VFOB() (VFO, error) {
+	return cVFO{C.RIG_VFO_B, r}, nil
 }
 
 func (r *SerialRig) SetPowerState(pwr PowerState) error {

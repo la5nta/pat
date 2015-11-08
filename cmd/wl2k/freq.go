@@ -44,26 +44,25 @@ func (f Frequency) Dial(mode string) Frequency {
 	return f + shift
 }
 
+func VFOForTransport(transport string) (vfo hamlib.VFO, ok bool) {
+	switch transport {
+	case MethodWinmor:
+		vfo, ok = rigs[config.Winmor.Rig]
+	case MethodArdop:
+		vfo, ok = rigs[config.Ardop.Rig]
+	case MethodAX25:
+		vfo, ok = rigs[config.AX25.Rig]
+	}
+	return
+}
+
 func freq(param string) {
 	parts := strings.SplitN(param, ":", 2)
-
-	var rig hamlib.VFO
-	var ok bool
-	switch parts[0] {
-	case MethodWinmor:
-		rig, ok = rigs[config.Winmor.Rig]
-	case MethodArdop:
-		rig, ok = rigs[config.Ardop.Rig]
-	case MethodAX25:
-		rig, ok = rigs[config.AX25.Rig]
-	case "":
+	if parts[0] == "" {
 		fmt.Println("Need freq method.")
-		return
-	default:
-		fmt.Printf("'%s' not a supported freq method.\n", parts[0])
-		return
 	}
 
+	rig, ok := VFOForTransport(parts[0])
 	if !ok {
 		log.Printf("Hamlib rig not loaded.")
 		return

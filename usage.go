@@ -21,7 +21,7 @@ path:
    multiple hops (e.g. AX.25), they are separated by '/'.
 
 params:
-  ?freq=        Sets QSY frequency (winmor and ardop only)
+  ?freq=        Sets QSY frequency (winmor, ardop and ax25 only)
 `
 var ExampleConnect = `
   connect telnet                     (alias) Connect to one of the Winlink Common Message Servers via tcp.

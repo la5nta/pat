@@ -32,6 +32,14 @@ function initFrontend(ws_url)
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
 		$('#sent_tab').click(function(evt){ displayFolder("sent") });
 		$('#archive_tab').click(function(evt){ displayFolder("archive") });
+		$('.navbar li').click(function(e) {
+			$('.navbar li.active').removeClass('active');
+			var $this = $(this);
+			if (!$this.hasClass('active')) {
+				$this.addClass('active');
+			}
+			e.preventDefault();
+		});
 
 		$('.nav :not(.dropdown) a').on('click', function(){
     		if($('.navbar-toggle').css('display') !='none'){

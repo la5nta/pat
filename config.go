@@ -22,6 +22,9 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 	}
 
 	// Ensure the alias "telnet" exists
+	if config.ConnectAliases == nil {
+		config.ConnectAliases = make(map[string]string)
+	}
 	if _, exists := config.ConnectAliases["telnet"]; !exists {
 		config.ConnectAliases["telnet"] = cfg.DefaultConfig.ConnectAliases["telnet"]
 	}

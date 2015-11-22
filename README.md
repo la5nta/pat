@@ -1,5 +1,7 @@
 # wl2k-go
 
+[![Build Status](https://travis-ci.org/LA5NTA/wl2k-go.png?branch=master)](https://travis-ci.org/LA5NTA/wl2k-go)
+
 wl2k-go is a collection of Go packages implementing various parts needed to build a Winlink 2000 client. It includes a Winlink client running on Linux, OS X, other unix-like platforms and Windows.
 
 The project's goal is to encourage and facilitate development of cross-platform Winlink 2000 clients.

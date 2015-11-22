@@ -8,3 +8,8 @@ go:
  - 1.3
  - 1.4
  - tip
+
+matrix:
+  exclude:
+    - os: osx
+      go: 1.3

@@ -10,6 +10,5 @@ go:
   - tip
 
 matrix:
-  exclude:
+  allow_failures:
     - os: osx
-      go: 1.3

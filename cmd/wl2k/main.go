@@ -24,7 +24,7 @@ import (
 
 	"github.com/ogier/pflag"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
@@ -482,7 +482,7 @@ func extractMessageHandle(args []string) {
 	file, _ := os.Open(args[0])
 	defer file.Close()
 
-	msg := new(wl2k.Message)
+	msg := new(fbb.Message)
 	if err := msg.ReadFrom(file); err != nil {
 		log.Fatal(err)
 	} else {
@@ -514,8 +514,8 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeMessage(replyMsg *wl2k.Message) {
-	msg := wl2k.NewMessage(wl2k.Private, fOptions.MyCall)
+func composeMessage(replyMsg *fbb.Message) {
+	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 	in := bufio.NewReader(os.Stdin)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -543,7 +543,7 @@ func composeMessage(replyMsg *wl2k.Message) {
 		}
 	}
 
-	ccCand := make([]wl2k.Address, 0)
+	ccCand := make([]fbb.Address, 0)
 	if replyMsg != nil {
 		for _, addr := range append(replyMsg.To(), replyMsg.Cc()...) {
 			if !addr.EqualString(fOptions.MyCall) {
@@ -642,7 +642,7 @@ func composeMessage(replyMsg *wl2k.Message) {
 			log.Println(err)
 		} else {
 			_, name := filepath.Split(path)
-			msg.AddFile(wl2k.NewFile(name, data))
+			msg.AddFile(fbb.NewFile(name, data))
 		}
 	}
 	fmt.Println(msg)
@@ -684,7 +684,7 @@ func posReportHandle(args []string) {
 	postMessage(msg)
 }
 
-func postMessage(msg *wl2k.Message) {
+func postMessage(msg *fbb.Message) {
 	if err := mbox.AddOut(msg); err != nil {
 		log.Fatal(err)
 	}

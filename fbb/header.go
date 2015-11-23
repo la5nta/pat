@@ -1,4 +1,4 @@
-package wl2k
+package fbb
 
 import (
 	"errors"

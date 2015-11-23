@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/tarm/goserial"
 )
 
@@ -63,7 +63,7 @@ func DialKenwood(dev, mycall, targetcall string, config Config, logger *log.Logg
 	conn.Write([]byte{3, 3, 3}) // ETX
 	fmt.Fprint(conn, "\r\nrestart\r\n")
 	for {
-		line, _ := wl2k.ReadLine(conn)
+		line, _ := fbb.ReadLine(conn)
 
 		if strings.HasPrefix(line, "cmd:") {
 			fmt.Fprint(conn, "ECHO OFF\r") // Don't echo commands
@@ -100,7 +100,7 @@ func DialKenwood(dev, mycall, targetcall string, config Config, logger *log.Logg
 
 	fmt.Fprintf(conn, "\rc %s\r", targetcall)
 	for {
-		line, _ := wl2k.ReadLine(conn)
+		line, _ := fbb.ReadLine(conn)
 		logger.Println(line)
 		line = strings.TrimSpace(line)
 
@@ -133,7 +133,7 @@ func (c *KenwoodConn) Close() error {
 	// Disconnect
 	fmt.Fprint(c, "\r\nD\r\n")
 	for {
-		line, _ := wl2k.ReadLine(c)
+		line, _ := fbb.ReadLine(c)
 		if strings.Contains(line, `DISCONN`) {
 			log.Println(`Disconnected`)
 			break

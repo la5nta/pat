@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT-license that can be
 // found in the LICENSE file.
 
-// Package mailbox provides mailbox handlers for a wl2k.Session.
+// Package mailbox provides mailbox handlers for a fbb.Session.
 package mailbox
 
 import (
@@ -13,7 +13,7 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 )
 
 const (
@@ -45,19 +45,19 @@ func (h *DirHandler) Prepare() (err error) {
 	return ensureDirStructure(h.MBoxPath)
 }
 
-func (h *DirHandler) Inbox() ([]*wl2k.Message, error) {
+func (h *DirHandler) Inbox() ([]*fbb.Message, error) {
 	return LoadMessageDir(path.Join(h.MBoxPath, DIR_INBOX))
 }
 
-func (h *DirHandler) Outbox() ([]*wl2k.Message, error) {
+func (h *DirHandler) Outbox() ([]*fbb.Message, error) {
 	return LoadMessageDir(path.Join(h.MBoxPath, DIR_OUTBOX))
 }
 
-func (h *DirHandler) Sent() ([]*wl2k.Message, error) {
+func (h *DirHandler) Sent() ([]*fbb.Message, error) {
 	return LoadMessageDir(path.Join(h.MBoxPath, DIR_SENT))
 }
 
-func (h *DirHandler) Archive() ([]*wl2k.Message, error) {
+func (h *DirHandler) Archive() ([]*fbb.Message, error) {
 	return LoadMessageDir(path.Join(h.MBoxPath, DIR_ARCHIVE))
 }
 
@@ -67,7 +67,7 @@ func (h *DirHandler) OutboxCount() int  { return countFiles(path.Join(h.MBoxPath
 func (h *DirHandler) SentCount() int    { return countFiles(path.Join(h.MBoxPath, DIR_SENT)) }
 func (h *DirHandler) ArchiveCount() int { return countFiles(path.Join(h.MBoxPath, DIR_ARCHIVE)) }
 
-func (h *DirHandler) AddOut(msg *wl2k.Message) error {
+func (h *DirHandler) AddOut(msg *fbb.Message) error {
 	data, err := msg.Bytes()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (h *DirHandler) AddOut(msg *wl2k.Message) error {
 	return ioutil.WriteFile(path.Join(h.MBoxPath, DIR_OUTBOX, msg.MID()), data, 0644)
 }
 
-func (h *DirHandler) ProcessInbound(msgs ...*wl2k.Message) (err error) {
+func (h *DirHandler) ProcessInbound(msgs ...*fbb.Message) (err error) {
 	dir := path.Join(h.MBoxPath, DIR_INBOX)
 	for _, m := range msgs {
 		filename := path.Join(dir, m.MID())
@@ -95,23 +95,23 @@ func (h *DirHandler) ProcessInbound(msgs ...*wl2k.Message) (err error) {
 	return
 }
 
-func (h *DirHandler) GetInboundAnswer(p wl2k.Proposal) wl2k.ProposalAnswer {
+func (h *DirHandler) GetInboundAnswer(p fbb.Proposal) fbb.ProposalAnswer {
 	if h.sendOnly {
-		return wl2k.Defer
+		return fbb.Defer
 	}
 
 	// Check if file exists
 	f, err := os.Open(path.Join(h.MBoxPath, DIR_INBOX, p.MID()))
 	if err == nil {
 		f.Close()
-		return wl2k.Reject
+		return fbb.Reject
 	} else if os.IsNotExist(err) {
-		return wl2k.Accept
+		return fbb.Accept
 	} else if err != nil {
 		log.Printf("Unable to determin if %s has been received: %s", p.MID(), err)
 	}
 
-	return wl2k.Accept
+	return fbb.Accept
 }
 
 func (h *DirHandler) SetSent(MID string, rejected bool) {
@@ -127,13 +127,13 @@ func (h *DirHandler) SetDeferred(MID string) {
 	h.deferred[MID] = true
 }
 
-func (h *DirHandler) GetOutbound(fws ...wl2k.Address) []*wl2k.Message {
+func (h *DirHandler) GetOutbound(fws ...fbb.Address) []*fbb.Message {
 	all, err := LoadMessageDir(path.Join(h.MBoxPath, DIR_OUTBOX))
 	if err != nil {
 		log.Println(err)
 	}
 
-	deliver := make([]*wl2k.Message, 0, len(all))
+	deliver := make([]*fbb.Message, 0, len(all))
 	for _, m := range all {
 		if h.deferred[m.MID()] {
 			continue
@@ -208,13 +208,13 @@ func countFiles(dirPath string) int {
 	return len(files)
 }
 
-func LoadMessageDir(dirPath string) ([]*wl2k.Message, error) {
+func LoadMessageDir(dirPath string) ([]*fbb.Message, error) {
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read dir (%s): %s", dirPath, err)
 	}
 
-	msgs := make([]*wl2k.Message, 0, len(files))
+	msgs := make([]*fbb.Message, 0, len(files))
 
 	for _, file := range files {
 		if file.IsDir() || file.Name()[0] == '.' {
@@ -231,15 +231,15 @@ func LoadMessageDir(dirPath string) ([]*wl2k.Message, error) {
 	return msgs, nil
 }
 
-// OpenMessage opens a single a wl2k.Message file.
-func OpenMessage(path string) (*wl2k.Message, error) {
+// OpenMessage opens a single a fbb.Message file.
+func OpenMessage(path string) (*fbb.Message, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to open file (%s): %s", path, err)
 	}
 	defer f.Close()
 
-	message := new(wl2k.Message)
+	message := new(fbb.Message)
 	if err := message.ReadFrom(f); err != nil {
 		f.Close()
 		return nil, fmt.Errorf("Unable to parse message (%s): %s", path, err)
@@ -250,10 +250,10 @@ func OpenMessage(path string) (*wl2k.Message, error) {
 }
 
 // IsUnread returns true if the given message is marked as unread.
-func IsUnread(msg *wl2k.Message) bool { return msg.Header.Get("X-Unread") == "true" }
+func IsUnread(msg *fbb.Message) bool { return msg.Header.Get("X-Unread") == "true" }
 
 // SetUnread marks the given message as read/unread and re-writes the file to disk.
-func SetUnread(msg *wl2k.Message, unread bool) error {
+func SetUnread(msg *fbb.Message, unread bool) error {
 	if !unread && msg.Header.Get("X-Unread") == "" {
 		return nil
 	}

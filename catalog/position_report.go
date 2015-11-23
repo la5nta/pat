@@ -11,7 +11,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 )
 
 type PosReport struct {
@@ -35,9 +35,9 @@ func (c Course) String() string {
 	}
 }
 
-func (p PosReport) Message(mycall string) *wl2k.Message {
+func (p PosReport) Message(mycall string) *fbb.Message {
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "DATE: %s\r\n", p.Date.UTC().Format(wl2k.DateLayout))
+	fmt.Fprintf(&buf, "DATE: %s\r\n", p.Date.UTC().Format(fbb.DateLayout))
 
 	if p.Lat != nil && p.Lon != nil {
 		fmt.Fprintf(&buf, "LATITUDE: %s\r\n", decToMinDec(*p.Lat, true))
@@ -53,7 +53,7 @@ func (p PosReport) Message(mycall string) *wl2k.Message {
 		fmt.Fprintf(&buf, "COMMENT: %s\r\n", p.Comment)
 	}
 
-	msg := wl2k.NewMessage(wl2k.PositionReport, mycall)
+	msg := fbb.NewMessage(fbb.PositionReport, mycall)
 
 	err := msg.SetBody(buf.String())
 	if err != nil {

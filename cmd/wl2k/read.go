@@ -18,7 +18,7 @@ import (
 
 	"github.com/bndr/gotabulate"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
@@ -48,7 +48,7 @@ func readMail() {
 		}
 
 		// Print messages (sorted by date)
-		sort.Sort(wl2k.ByDate(msgs))
+		sort.Sort(fbb.ByDate(msgs))
 		printMessages(w, msgs)
 
 		// Query user for message to print
@@ -84,7 +84,7 @@ func readInt(rd *bufio.Reader) int {
 	return i
 }
 
-type PrettyAddrSlice []wl2k.Address
+type PrettyAddrSlice []fbb.Address
 
 func (addrs PrettyAddrSlice) String() string {
 	var buf bytes.Buffer
@@ -97,7 +97,7 @@ func (addrs PrettyAddrSlice) String() string {
 	return buf.String()
 }
 
-func printMsg(w io.Writer, msg *wl2k.Message) {
+func printMsg(w io.Writer, msg *fbb.Message) {
 	fmt.Fprintf(w, "========================================\n")
 	fmt.Fprintln(w, msg)
 	fmt.Fprintf(w, "========================================\n\n")
@@ -109,7 +109,7 @@ func printMailboxes(w io.Writer) {
 	}
 }
 
-func printMessages(w io.Writer, msgs []*wl2k.Message) {
+func printMessages(w io.Writer, msgs []*fbb.Message) {
 	rows := make([][]string, len(msgs))
 	for i, msg := range msgs {
 		to := msg.To()[0].Addr

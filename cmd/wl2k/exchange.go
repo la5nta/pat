@@ -15,7 +15,7 @@ import (
 
 	"github.com/howeyc/gopass"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 )
 
 type ex struct {
@@ -53,14 +53,14 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 
 	// New wl2k Session
 	targetCall = strings.Split(targetCall, ` `)[0]
-	session := wl2k.NewSession(
+	session := fbb.NewSession(
 		fOptions.MyCall,
 		targetCall,
 		config.Locator,
 		mbox,
 	)
 
-	session.SetUserAgent(wl2k.UserAgent{
+	session.SetUserAgent(fbb.UserAgent{
 		Name:    "wl2kgo",
 		Version: Version,
 	})
@@ -80,7 +80,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	})
 
 	for _, addr := range config.AuxAddrs {
-		session.AddAuxiliaryAddress(wl2k.AddressFromString(addr))
+		session.AddAuxiliaryAddress(fbb.AddressFromString(addr))
 	}
 
 	session.IsMaster(master)
@@ -186,8 +186,8 @@ func handleInterrupt() (stop chan struct{}) {
 
 type StatusUpdate int
 
-func (s *StatusUpdate) UpdateStatus(stat wl2k.Status) {
-	var prop *wl2k.Proposal
+func (s *StatusUpdate) UpdateStatus(stat fbb.Status) {
+	var prop *fbb.Proposal
 	if stat.Receiving != nil {
 		prop = stat.Receiving
 	} else {

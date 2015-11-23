@@ -2,10 +2,10 @@
 // Use of this source code is governed by the MIT-license that can be
 // found in the LICENSE file.
 
-// wl2k provides a client-side implementation of the B2 Forwarding Protocol
+// fbb provides a client-side implementation of the B2 Forwarding Protocol
 // and Winlink 2000 Message Structure for transfer of messages to and from
 // a Winlink 2000 Radio Email Server (RMS) gateway.
-package wl2k
+package fbb
 
 import (
 	"bufio"

@@ -19,7 +19,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
-	"github.com/la5nta/wl2k-go"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/mailbox"
 
@@ -110,7 +110,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	m := r.MultipartForm
 
-	msg := wl2k.NewMessage(wl2k.Private, fOptions.MyCall)
+	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	// files
 	files := m.File["files"]
@@ -142,7 +142,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		msg.AddFile(wl2k.NewFile(f.Filename, p))
+		msg.AddFile(fbb.NewFile(f.Filename, p))
 	}
 
 	// Other fields
@@ -370,7 +370,7 @@ func ListenHandler(w http.ResponseWriter, req *http.Request) {
 func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 	box := mux.Vars(r)["box"]
 
-	var messages []*wl2k.Message
+	var messages []*fbb.Message
 	var err error
 
 	switch box {
@@ -392,7 +392,7 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	sort.Sort(sort.Reverse(wl2k.ByDate(messages)))
+	sort.Sort(sort.Reverse(fbb.ByDate(messages)))
 
 	jsonSlice := make([]JSONMessage, len(messages))
 	for i, msg := range messages {
@@ -403,7 +403,7 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type JSONMessage struct {
-	*wl2k.Message
+	*fbb.Message
 	inclBody bool
 }
 
@@ -412,13 +412,13 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 	msg := struct {
 		MID      string
 		Date     time.Time
-		From     wl2k.Address
-		To       []wl2k.Address
-		Cc       []wl2k.Address
+		From     fbb.Address
+		To       []fbb.Address
+		Cc       []fbb.Address
 		Subject  string
 		Body     string
 		BodyHTML string
-		Files    []*wl2k.File
+		Files    []*fbb.File
 		P2POnly  bool
 		Unread   bool
 	}{
@@ -454,7 +454,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := new(wl2k.Message)
+	msg := new(fbb.Message)
 	if err := msg.ReadFrom(file); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -477,7 +477,7 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	msg := new(wl2k.Message)
+	msg := new(fbb.Message)
 	if err := msg.ReadFrom(file); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

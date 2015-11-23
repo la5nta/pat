@@ -154,7 +154,7 @@ Go bindings for a _subset_ of hamlib. It provides both native cgo bindings and a
 
 Build with `-tags libhamlib` to link against libhamlib (the native library).
 
-See <http://godoc.org/github.com/LA5NTA/wl2k-go/rigcontrol/hamlib> for more details.
+See <http://godoc.org/github.com/la5nta/wl2k-go/rigcontrol/hamlib> for more details.
 
 ## Copyright/License
 

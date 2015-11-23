@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+PKGDIR=debian/wl2k-go
+
+%:
+	dh $@
+
+clean:
+	dh_clean
+	rm -rf $(PKGDIR)
+
+build:
+	TAGS="libax25" ./make.bash
+
+binary-arch: clean build
+	dh_prep
+	dh_installdirs
+	mkdir -p $(PKGDIR)/usr/bin
+	mv ./wl2k $(PKGDIR)/usr/bin/
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-arch
+

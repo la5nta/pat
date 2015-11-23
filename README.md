@@ -54,14 +54,14 @@ Waiting for remote node to close the connection...
 > _
 ```
 
-## wl2k: Winlink 2000/B2F protocol implementation
+## fbb: The FBB (Winlink 2000 - B2F) protocol implementation
 
 An implementation of the B2 Forwarding Protocol and Winlink 2000 Message Structure (the WL2K-protocol).
 
 ```go
 mycall := "LA5NTA"
 mbox := mailbox.NewDirHandler("/tmp/mailbox", false)
-session := wl2k.NewSession(
+session := fbb.NewSession(
 	mycall,
 	telnet.TargetCall,
 	"JP20qh",
@@ -140,7 +140,7 @@ For detailed package documentation, see <http://godoc.org/github.com/la5nta/wl2k
 ```go
 mbox := mailbox.NewDirHandler("/tmp/mailbox", false)
 
-session := wl2k.NewSession(
+session := fbb.NewSession(
     "N0CALL",
     telnet.TargetCall,
     "JP20qh",

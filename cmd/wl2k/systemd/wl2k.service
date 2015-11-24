@@ -1,0 +1,11 @@
+[Unit]
+Description=A portable Winlink 2000 client written in Go
+Documentation=https://github.com/la5nta/wl2k-go
+After=ax25.service
+
+[Service]
+ExecStart=/usr/bin/wl2k http
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

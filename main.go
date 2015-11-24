@@ -283,16 +283,21 @@ func configureHandle(args []string) {
 }
 
 func httpHandle(args []string) {
+	addr := config.HTTPAddr
+	if addr == "" {
+		addr = ":8080" // For backwards compatibility (remove in future)
+	}
+
 	set := pflag.NewFlagSet("http", pflag.ExitOnError)
-	addr := set.StringP("addr", "a", ":8080", "Listen address.")
+	set.StringVarP(&addr, "addr", "a", addr, "Listen address.")
 	set.Parse(args)
 
-	if addr == nil {
+	if addr == "" {
 		set.Usage()
 		os.Exit(1)
 	}
 
-	if err := ListenAndServe(*addr); err != nil {
+	if err := ListenAndServe(addr); err != nil {
 		log.Fatal(err)
 	}
 }

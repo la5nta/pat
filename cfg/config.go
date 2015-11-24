@@ -25,6 +25,11 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
+	// Default HTTP listen address (for web UI).
+	//
+	// Use ":8080" to listen on any device, port 8080.
+	HTTPAddr string `json:"http_addr"`
+
 	// Handshake comment lines sent to remote node on incoming connections.
 	//
 	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
@@ -161,7 +166,8 @@ var DefaultConfig Config = Config{
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@server.winlink.org:8772/wl2k",
 	},
-	Listen: []string{},
+	Listen:   []string{},
+	HTTPAddr: "localhost:8080",
 	AX25: AX25Config{
 		Beacon: BeaconConfig{
 			Every:       3600,

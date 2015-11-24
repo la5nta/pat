@@ -16,8 +16,13 @@ build:
 binary-arch: clean build
 	dh_prep
 	dh_installdirs
+
 	mkdir -p $(PKGDIR)/usr/bin
+	mkdir -p $(PKGDIR)/usr/share/wl2k-go
+
 	mv ./wl2k $(PKGDIR)/usr/bin/
+	cp -r systemd $(PKGDIR)/usr/share/wl2k-go/
+
 	dh_strip
 	dh_compress
 	dh_fixperms

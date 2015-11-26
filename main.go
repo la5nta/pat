@@ -218,7 +218,7 @@ func main() {
 	case "help":
 		helpHandle(args)
 		return
-	case "configure":
+	case "configure", "version":
 		cmd.HandleFunc(args)
 		return
 	}

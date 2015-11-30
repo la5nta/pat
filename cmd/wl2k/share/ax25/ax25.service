@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
-ExecStart=/usr/local/bin/axup.sh /dev/ttyS0 tmd710 9600
+ExecStart=/usr/share/wl2k-go/bin/axup /dev/ttyS0 tmd710 9600
 
 [Install]
 WantedBy=default.target

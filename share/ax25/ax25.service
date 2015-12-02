@@ -3,8 +3,9 @@ Description=AX.25 KISS interface
 After=network.target
 
 [Service]
+EnvironmentFile=/etc/default/ax25
 Type=forking
-ExecStart=/usr/share/wl2k-go/bin/axup /dev/ttyS0 tmd710 9600
+ExecStart=/usr/share/wl2k-go/bin/axup ${DEV} ${AXPORT} ${HBAUD}
 
 [Install]
 WantedBy=default.target

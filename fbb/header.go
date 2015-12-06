@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime"
 	"net/textproto"
 	"strings"
+
+	"github.com/la5nta/wl2k-go/compat/mime"
 
 	"github.com/paulrosania/go-charset/charset"
 	_ "github.com/paulrosania/go-charset/data"

@@ -11,11 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/fbb/compat/mime"
 )
 
 // Representation of a receiver/sender address.

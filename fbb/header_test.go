@@ -39,10 +39,10 @@ func TestSubjectEncode(t *testing.T) {
 func TestSubjectRoundtrip(t *testing.T) {
 	msg := &Message{Header: make(Header, 1)}
 
-	str := "Hello, 世界"
+	str := "Hello, æøå"
 	msg.SetSubject(str)
 
 	if msg.Subject() != str {
-		t.Errorf("Subject encode/decode roundtrip failed.")
+		t.Errorf("Subject encode/decode roundtrip failed. (%s)", msg.Subject())
 	}
 }

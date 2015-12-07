@@ -26,7 +26,7 @@ elif [ "$3" -eq "1200" ]; then
   #/usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3 -i 1
   #/usr/local/bin/tmd710_tncsetup -B 1 -S $1 -b $3
   /usr/sbin/kissattach $1 $2 -m 128
-  /usr/sbin/kissparms -p $2 -t 150 -l 10 -s 12 -r 80 -f n
+  /usr/sbin/kissparms -p $2 -t 300 -l 10 -s 12 -r 80 -f n
   echo 4      > /proc/sys/net/ax25/ax0/standard_window_size
   echo 128    > /proc/sys/net/ax25/ax0/maximum_packet_length
   echo 2000   > /proc/sys/net/ax25/ax0/t1_timeout

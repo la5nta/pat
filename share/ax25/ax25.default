@@ -1,0 +1,10 @@
+# Configuration for AX.25 systemd unit file from wl2k-go.
+
+# The axport from /etc/ax25/axports to bring up
+AXPORT=wl2k
+
+# The AX.25 baudrate the TNC is configured for. (Make sure this matches the HBAUD setting of your TNC).
+HBAUD=1200
+
+# The TNC serial path
+DEV=/dev/ttyUSB0

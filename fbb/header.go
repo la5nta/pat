@@ -1,11 +1,18 @@
 package fbb
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/textproto"
 	"strings"
+
+	"github.com/la5nta/wl2k-go/fbb/compat/mime"
+
+	"github.com/paulrosania/go-charset/charset"
+	_ "github.com/paulrosania/go-charset/data"
 )
 
 // This file contains code from from net/http/header.go
@@ -113,4 +120,40 @@ func (h Header) Write(w io.Writer) error {
 		}
 	}
 	return nil
+}
+
+// WordDecoder decodes MIME headers containing RFC 2047 encoded-words.
+//
+// (See DecodeHeader for mime.WordDecoder differences).
+type WordDecoder struct{ mime.WordDecoder }
+
+// Decode decodes an encoded-word.
+//
+// If word is not a valid RFC 2047 encoded-word, word is decoded as raw ISO-8859-1 as a work-around for RMS Express' non-conforming encoding of the Subject header.
+func (d *WordDecoder) DecodeHeader(header string) (string, error) {
+	i := strings.Index(header, "=?")
+	if i > -1 {
+		return d.WordDecoder.DecodeHeader(header)
+	}
+
+	// If there is no encoded-word, decode as ISO-8859-1 (RMS Express compatibility hack)
+	r, err := charset.NewReader(DefaultCharset, bytes.NewReader([]byte(header)))
+	if err != nil {
+		return header, err
+	}
+
+	utf8, err := ioutil.ReadAll(r)
+	return string(utf8), err
+}
+
+func toCharset(set, s string) (string, error) {
+	buf := new(bytes.Buffer)
+	w, err := charset.NewWriter(set, buf)
+	if err != nil {
+		return s, err
+	}
+
+	fmt.Fprint(w, s)
+	w.Close()
+	return buf.String(), nil
 }

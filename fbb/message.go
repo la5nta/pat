@@ -11,11 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime"
 	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/fbb/compat/mime"
 )
 
 // Representation of a receiver/sender address.
@@ -80,10 +81,20 @@ func NewMessage(t MsgType, mycall string) *Message {
 func (m *Message) MID() string { return m.Header.Get(HEADER_MID) }
 
 // SetSubject sets this message's subject field.
-func (m *Message) SetSubject(str string) { m.Header.Set(HEADER_SUBJECT, str) }
+//
+// The Winlink Message Format only allow ASCII characters. Words containing non-ASCII characters are Q-encoded with DefaultCharset (as defined by RFC 2047).
+func (m *Message) SetSubject(str string) {
+	encoded, _ := toCharset(DefaultCharset, str)
+	encoded = mime.QEncoding.Encode(DefaultCharset, encoded)
 
-// Subject returns this message's subject field.
-func (m *Message) Subject() string { return m.Header.Get(HEADER_SUBJECT) }
+	m.Header.Set(HEADER_SUBJECT, encoded)
+}
+
+// Subject returns this message's subject header decoded using WordDecoder.
+func (m *Message) Subject() string {
+	str, _ := new(WordDecoder).DecodeHeader(m.Header.Get(HEADER_SUBJECT))
+	return str
+}
 
 // Type returns the message type.
 //

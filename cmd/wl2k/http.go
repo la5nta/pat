@@ -19,8 +19,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
-	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/catalog"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 
 	"github.com/microcosm-cc/bluemonday"

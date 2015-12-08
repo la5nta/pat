@@ -196,6 +196,8 @@ func (s *Session) Exchange(conn net.Conn) (stats TrafficStats, err error) {
 			conn.SetDeadline(time.Now().Add(time.Minute))
 			fmt.Fprintf(conn, "*** %s\r\n", err)
 			conn.Close()
+		} else {
+			err = io.ErrUnexpectedEOF
 		}
 	}()
 

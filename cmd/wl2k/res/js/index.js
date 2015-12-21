@@ -331,7 +331,7 @@ function initConsole()
 		var ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) { wsError = false; $('#console').empty(); };
 		ws.onmessage = function(evt) {
-			var msg = JSON.parse(event.data);
+			var msg = JSON.parse(evt.data);
 			if(msg.LogLine) {
 				updateConsole(msg.LogLine + "\n");
 			}

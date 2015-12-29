@@ -1,0 +1,103 @@
+{
+	"ImportPath": "github.com/la5nta/wl2k-go/cmd/wl2k",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "github.com/bndr/gotabulate",
+			"Comment": "v1.1.2-9-g7cce978",
+			"Rev": "7cce978cf3ab92f1b54acb77c0be1e59d0b52c70"
+		},
+		{
+			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
+			"Rev": "d5cac425555ca5cf00694df246e04f05e6a55150"
+		},
+		{
+			"ImportPath": "github.com/gorhill/cronexpr",
+			"Comment": "1.0.0",
+			"Rev": "a557574d6c024ed6e36acc8b610f5f211c91568a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "9c068cf16d982f8bd444b8c352acbeec34c4fe5b"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Rev": "3986be78bf859e01f01af631ad76da5b269d270c"
+		},
+		{
+			"ImportPath": "github.com/howeyc/gopass",
+			"Rev": "ae71a9cc54fddb61d946abe9191d05a24ac0e21b"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/catalog",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/fbb",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/lzhuf",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/mailbox",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/rigcontrol/hamlib",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/la5nta/wl2k-go/transport",
+			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-runewidth",
+			"Comment": "travisish-38-gd96d1bd",
+			"Rev": "d96d1bd051f2bd9e7e43d602782b37b93b1b5666"
+		},
+		{
+			"ImportPath": "github.com/microcosm-cc/bluemonday",
+			"Rev": "4ac6f27528d0a3f2a59e0b0a6f6b3ff0bb89fe20"
+		},
+		{
+			"ImportPath": "github.com/ogier/pflag",
+			"Comment": "v0.0.1-4-g6f7159c",
+			"Rev": "6f7159c3154e7cd4ab30f6cc9c58fa3fd0f22325"
+		},
+		{
+			"ImportPath": "github.com/paulrosania/go-charset/charset",
+			"Rev": "621bb39fcc835dce592e682f5073025d0169587b"
+		},
+		{
+			"ImportPath": "github.com/paulrosania/go-charset/data",
+			"Rev": "621bb39fcc835dce592e682f5073025d0169587b"
+		},
+		{
+			"ImportPath": "github.com/peterh/liner",
+			"Rev": "3f1c20449d1836aa4cbe38731b96f95cdf89634d"
+		},
+		{
+			"ImportPath": "github.com/tarm/goserial",
+			"Rev": "b3440c3c63556c3fd67e915be3b92195bc70294a"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "f18420efc3b4f8e9f3d51f6bd2476e92c46260e9"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "28273ec927bee3bea305f112fc28ceee575ea893"
+		},
+		{
+			"ImportPath": "gopkg.in/fsnotify.v1",
+			"Comment": "v1.2.8",
+			"Rev": "508915b7500b6e42a87132e4afeb4729cebc7cbb"
+		}
+	]
+}

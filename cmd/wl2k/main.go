@@ -24,8 +24,8 @@ import (
 
 	"github.com/ogier/pflag"
 
-	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/catalog"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 	"github.com/la5nta/wl2k-go/transport/ardop"
@@ -151,7 +151,7 @@ var fOptions struct {
 	IgnoreBusy bool // Move to connect?
 	SendOnly   bool // Move to connect?
 
-	RobustWinmor bool
+	Robust       bool
 	MyCall       string
 	Listen       string
 	MailboxPath  string
@@ -172,7 +172,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
 	set.StringVar(&fOptions.EventLogPath, "event-log", fOptions.EventLogPath, "Path to event log file.")
 	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
-	set.BoolVarP(&fOptions.RobustWinmor, `robust-winmor`, "r", false, `Use robust winmor modes only. (Usefull to improve s/n-ratio at remote station.)`)
+	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Usefull to improve s/n-ratio at remote winmor station)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 
 	return set
@@ -423,8 +423,6 @@ func initWinmorTNC() {
 	if err != nil {
 		log.Fatalf("WINMOR TNC initialization failed: %s", err)
 	}
-
-	wmTNC.SetRobust(fOptions.RobustWinmor)
 
 	if v, err := wmTNC.Version(); err != nil {
 		log.Fatalf("WINMOR TNC initialization failed: %s", err)

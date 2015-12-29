@@ -16,6 +16,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport"
 )
 
 // Objects implementing the MBoxHandler interface can be used to handle inbound and outbound messages for a Session.
@@ -79,7 +81,8 @@ type Session struct {
 	// Callback when secure login password is needed
 	secureLoginHandleFunc func() (password string, err error)
 
-	master bool
+	master     bool
+	robustMode robustMode
 
 	remoteSID sid
 	remoteFW  []Address // Addresses the remote requests messages on behalf of
@@ -149,6 +152,25 @@ func NewSession(mycall, targetcall, locator string, h MBoxHandler) *Session {
 	}
 }
 
+type robustMode int
+
+// The different robust-mode settings.
+const (
+	RobustAuto     robustMode = iota // Run the connection in robust-mode when not transferring outbound messages.
+	RobustForced                     // Always run the connection in robust-mode.
+	RobustDisabled                   // Never run the connection in robust-mode.
+)
+
+// SetRobustMode sets the RobustMode for this exchange.
+//
+// The mode is ignored if the exchange connection does not implement the transport.Robust interface.
+//
+// Default is RobustAuto.
+func (s *Session) SetRobustMode(mode robustMode) {
+	s.robustMode = mode
+	//TODO: If NewSession took the net.Conn (not Exchange), we could return an error here to indicate that the operation was unsupported.
+}
+
 // SetMOTD sets one or more lines to be sent before handshake.
 //
 // The MOTD is only sent if the local node is session master.
@@ -165,6 +187,9 @@ func (s *Session) RemoteSID() string { return string(s.remoteSID) }
 // Sends outbound messages and downloads inbound messages prepared for this session.
 //
 // Outbound messages should be added as proposals before calling the Exchange() method.
+//
+// If conn implements the transport.Robust interface, the connection is run in robust-mode
+// except when an outbound message is transferred.
 //
 // After Exchange(), messages that was accepted and delivered successfully to the RMS is
 // available through a call to Sent(). Messages downloaded successfully from the RMS is
@@ -207,6 +232,12 @@ func (s *Session) Exchange(conn net.Conn) (stats TrafficStats, err error) {
 		if err != nil {
 			return
 		}
+	}
+
+	// Set connection's robust-mode according to setting
+	if r, ok := conn.(transport.Robust); ok {
+		r.SetRobust(s.robustMode != RobustDisabled)
+		defer r.SetRobust(false)
 	}
 
 	s.rd = bufio.NewReader(conn)

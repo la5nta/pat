@@ -87,6 +87,10 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	session.SetStatusUpdater(new(StatusUpdate))
 	session.SetLogger(log.New(logWriter, "", 0))
 
+	if fOptions.Robust {
+		session.SetRobustMode(fbb.RobustForced)
+	}
+
 	log.Printf("Connected to %s (%s)", conn.RemoteAddr(), conn.RemoteAddr().Network())
 
 	// Close connection on os.Interrupt

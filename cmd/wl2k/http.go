@@ -35,7 +35,6 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
-	r.HandleFunc("/api/listen", ListenHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", attachmentHandler).Methods("GET")
@@ -355,16 +354,6 @@ func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 	}{
 		mbox.InboxCount() - nMsgs,
 	})
-}
-
-func ListenHandler(w http.ResponseWriter, req *http.Request) {
-	listenStr := path.Base(req.RequestURI)
-	Listen(listenStr)
-	/*if err := Listen(listenStr); err != nil {
-		http.Error(w, "Listen failure", http.StatusInternalServerError)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Println(err)
-	}*/
 }
 
 func mailboxHandler(w http.ResponseWriter, r *http.Request) {

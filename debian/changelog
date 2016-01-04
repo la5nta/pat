@@ -1,5 +1,5 @@
-wl2k-go (0.0.1) UNRELEASED; urgency=medium
+wl2k-go (0.0.1) stable; urgency=medium
 
   * Initial release.
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 23 Nov 2015 22:10:24 +0100
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 04 Nov 2016 16:24:24 +0100

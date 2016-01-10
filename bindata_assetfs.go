@@ -22535,13 +22535,13 @@ var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
 			}},
 		}},
 		"js": &_bintree_t{nil, map[string]*_bintree_t{
-			"URI.min.js": &_bintree_t{res_js_uri_min_js, map[string]*_bintree_t{
-			}},
-			"bootstrap-select.min.js": &_bintree_t{res_js_bootstrap_select_min_js, map[string]*_bintree_t{
-			}},
 			"index.js": &_bintree_t{res_js_index_js, map[string]*_bintree_t{
 			}},
 			"jquery.min.js": &_bintree_t{res_js_jquery_min_js, map[string]*_bintree_t{
+			}},
+			"URI.min.js": &_bintree_t{res_js_uri_min_js, map[string]*_bintree_t{
+			}},
+			"bootstrap-select.min.js": &_bintree_t{res_js_bootstrap_select_min_js, map[string]*_bintree_t{
 			}},
 		}},
 	}},

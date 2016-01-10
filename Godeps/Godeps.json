@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
-			"Rev": "d5cac425555ca5cf00694df246e04f05e6a55150"
+			"Rev": "57eb5e1fc594ad4b0b1dbea7b286d299e0cb43c2"
 		},
 		{
 			"ImportPath": "github.com/gorhill/cronexpr",

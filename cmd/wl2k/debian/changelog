@@ -1,3 +1,9 @@
+wl2k-go (0.0.2) stable; urgency=medium
+
+  * Fixed ARDOPc issues.
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 10 Jan 2016 15:56:00 +0100
+
 wl2k-go (0.0.1) stable; urgency=medium
 
   * Initial release.

@@ -1,6 +1,9 @@
 {
-	"ImportPath": "github.com/la5nta/wl2k-go/cmd/wl2k",
+	"ImportPath": "github.com/la5nta/wl2k-go",
 	"GoVersion": "go1.5",
+	"Packages": [
+		"./cmd/wl2k"
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/bndr/gotabulate",

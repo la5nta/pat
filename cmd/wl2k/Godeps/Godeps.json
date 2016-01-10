@@ -22,7 +22,7 @@
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
-			"Rev": "9c068cf16d982f8bd444b8c352acbeec34c4fe5b"
+			"Rev": "26a6070f849969ba72b72256e9f14cf519751690"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",
@@ -34,8 +34,8 @@
 		},
 		{
 			"ImportPath": "github.com/mattn/go-runewidth",
-			"Comment": "travisish-38-gd96d1bd",
-			"Rev": "d96d1bd051f2bd9e7e43d602782b37b93b1b5666"
+			"Comment": "travisish-44-ge882a96",
+			"Rev": "e882a96ec18dd43fa283187b66af74497c9101c0"
 		},
 		{
 			"ImportPath": "github.com/microcosm-cc/bluemonday",
@@ -64,11 +64,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "f18420efc3b4f8e9f3d51f6bd2476e92c46260e9"
+			"Rev": "f23ba3a5ee43012fcb4b92e1a2a405a92554f4f2"
 		},
 		{
 			"ImportPath": "golang.org/x/net/html",
-			"Rev": "28273ec927bee3bea305f112fc28ceee575ea893"
+			"Rev": "0e6d34ef942cfc38ae0cf6a660e349c3a3d08b93"
 		},
 		{
 			"ImportPath": "gopkg.in/fsnotify.v1",

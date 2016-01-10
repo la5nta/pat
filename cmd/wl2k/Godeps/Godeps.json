@@ -33,30 +33,6 @@
 			"Rev": "ae71a9cc54fddb61d946abe9191d05a24ac0e21b"
 		},
 		{
-			"ImportPath": "github.com/la5nta/wl2k-go/catalog",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
-			"ImportPath": "github.com/la5nta/wl2k-go/fbb",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
-			"ImportPath": "github.com/la5nta/wl2k-go/lzhuf",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
-			"ImportPath": "github.com/la5nta/wl2k-go/mailbox",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
-			"ImportPath": "github.com/la5nta/wl2k-go/rigcontrol/hamlib",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
-			"ImportPath": "github.com/la5nta/wl2k-go/transport",
-			"Rev": "8f054ec5f4ce39ea84279a2e81ff967b6a1c629f"
-		},
-		{
 			"ImportPath": "github.com/mattn/go-runewidth",
 			"Comment": "travisish-38-gd96d1bd",
 			"Rev": "d96d1bd051f2bd9e7e43d602782b37b93b1b5666"

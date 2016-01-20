@@ -243,6 +243,11 @@ func main() {
 		fOptions.MyCall = config.MyCall
 	}
 
+	// Don't use config password if we don't use config mycall
+	if fOptions.MyCall != config.MyCall {
+		config.SecureLoginPassword = ""
+	}
+
 	// Replace placeholders in connect aliases
 	for k, v := range config.ConnectAliases {
 		config.ConnectAliases[k] = strings.Replace(v, cfg.PlaceholderMycall, fOptions.MyCall, -1)

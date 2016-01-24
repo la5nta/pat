@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/url"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -42,11 +43,18 @@ func Connect(connectStr string) (success bool) {
 		return false
 	}
 
-	targetcall := path.Base(url.Path)
+	via, targetcall := path.Split(url.Path)
 
 	if len(targetcall) < 3 {
 		log.Println("Missing targetcall in connection URL")
 		return false
+	}
+
+	// Prepare a slice of digipeaters for use with AX.25
+	digis := strings.Split(strings.Trim(via, "/"), "/")
+	sort.Reverse(sort.StringSlice(digis))
+	if len(digis) > 0 {
+		targetcall = fmt.Sprintf("%s via %s", targetcall, strings.Join(digis, " "))
 	}
 
 	// QSY

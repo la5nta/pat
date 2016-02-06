@@ -1,3 +1,14 @@
+wl2k-go (0.0.4) stable; urgency=medium
+
+  * Fixed parse error of Date field from RMS Relay'ed messages (https://github.com/la5nta/wl2k-go/issues/29).
+  * Fixed parse of ax25 URLs with digipeaters (https://github.com/la5nta/wl2k-go/issues/28).
+  * Fixed panic on misconfigured (empty) axport (https://github.com/la5nta/wl2k-go/issues/27).
+  * Prompt user for login password if mycall is overridden by --mycall even though a password is defined in config.
+  * Run winmor in robust mode during handshake and proposal chatter.
+  * GPSd support (for position reporting using a local serial/usb GPS).
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 14 Feb 2016 18:19:02 +0100
+
 wl2k-go (0.0.3) stable; urgency=medium
 
   * Fixed web ui assets bug (https://github.com/la5nta/wl2k-go/issues/26).

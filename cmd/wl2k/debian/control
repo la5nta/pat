@@ -9,5 +9,5 @@ Standards-Version: 3.9.1
 Package: wl2k-go
 Architecture: amd64 i386 armhf
 Depends: libax25
-Recommends: libhamlib-utils (>= 1.2), ax25-tools
+Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90)
 Description: A portable Winlink 2000 client written in Go

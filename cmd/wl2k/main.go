@@ -24,14 +24,15 @@ import (
 
 	"github.com/ogier/pflag"
 
-	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/catalog"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
 
 	"github.com/la5nta/wl2k-go/cmd/wl2k/cfg"
+	"github.com/la5nta/wl2k-go/cmd/wl2k/internal/gpsd"
 )
 
 const (
@@ -86,10 +87,14 @@ var commands = []Command{
 		},
 	},
 	{
-		Str:        "position",
-		Aliases:    []string{"pos"},
-		Desc:       "Post a position report.",
-		Usage:      "lat:lon[:comment]",
+		Str:     "position",
+		Aliases: []string{"pos"},
+		Desc:    "Post a position report (GPSd or manual entry).",
+		Usage:   "[options]",
+		Options: map[string]string{
+			"--latlon":      "latitude,longitude for manual entry. Will use GPSd if this is empty.",
+			"--comment, -c": "Comment to be included in the position report.",
+		},
 		HandleFunc: posReportHandle,
 	},
 	{
@@ -665,33 +670,78 @@ func readLine(r *bufio.Reader) string {
 }
 
 func posReportHandle(args []string) {
-	if len(args) == 0 {
-		panic("TODO: Usage")
+	var latlon, comment string
+
+	set := pflag.NewFlagSet("position", pflag.ExitOnError)
+	set.StringVar(&latlon, "latlon", "", "latitude,longitude for manual entry")
+	set.StringVarP(&comment, "comment", "c", "", "Comment")
+	set.Parse(args)
+
+	report := catalog.PosReport{Comment: comment}
+
+	if latlon != "" {
+		parts := strings.Split(latlon, ",")
+		if len(parts) != 2 {
+			log.Fatal(`Invalid position format. Expected "latitude,longitude".`)
+		}
+
+		lat, err := strconv.ParseFloat(parts[0], 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		report.Lat = &lat
+
+		lon, err := strconv.ParseFloat(parts[1], 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		report.Lon = &lon
+	} else if config.GPSdAddr != "" {
+		conn, err := gpsd.Dial(config.GPSdAddr)
+		if err != nil {
+			log.Fatalf("GPSd daemon: %s", err)
+		}
+		defer conn.Close()
+
+		conn.Watch(true)
+
+		log.Println("Waiting for position from GPSd...") //TODO: Spinning bar?
+		pos, err := conn.NextPos()
+		if err != nil {
+			log.Fatalf("GPSd: %s", err)
+		}
+
+		report.Lat = &pos.Lat
+		report.Lon = &pos.Lon
+		report.Date = pos.Time
+
+		// Course and speed is part of the spec, but does not seem to be
+		// supported by winlink.org anymore. Ignore it for now.
+		if false && pos.Track != 0 {
+			course := CourseFromFloat64(pos.Track, false)
+			report.Course = &course
+		}
+	} else {
+		fmt.Println("No position available. See --help")
+		os.Exit(1)
 	}
 
-	parts := strings.Split(args[0], ":")
-	if len(parts) != 3 {
-		log.Fatal(`Invalid position format. Expected "lat:lon:comment".`)
+	if report.Date.IsZero() {
+		report.Date = time.Now()
 	}
 
-	lat, err := strconv.ParseFloat(parts[0], 64)
-	if err != nil {
-		log.Fatal(err)
+	postMessage(report.Message(fOptions.MyCall))
+}
+
+func CourseFromFloat64(f float64, magnetic bool) catalog.Course {
+	c := catalog.Course{Magnetic: magnetic}
+
+	str := fmt.Sprintf("%03.0f", f)
+	for i := 0; i < 3; i++ {
+		c.Digits[i] = str[i]
 	}
 
-	lon, err := strconv.ParseFloat(parts[1], 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	msg := catalog.PosReport{
-		Lat:     &lat,
-		Lon:     &lon,
-		Date:    time.Now(),
-		Comment: parts[2],
-	}.Message(fOptions.MyCall)
-
-	postMessage(msg)
+	return c
 }
 
 func postMessage(msg *fbb.Message) {

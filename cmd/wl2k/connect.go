@@ -53,7 +53,7 @@ func Connect(connectStr string) (success bool) {
 	// Prepare a slice of digipeaters for use with AX.25
 	digis := strings.Split(strings.Trim(via, "/"), "/")
 	sort.Reverse(sort.StringSlice(digis))
-	if len(digis) > 0 {
+	if len(digis) > 0 && digis[0] != "" {
 		targetcall = fmt.Sprintf("%s via %s", targetcall, strings.Join(digis, " "))
 	}
 

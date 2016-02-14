@@ -55,6 +55,9 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
+	// Address and port to a GPSd daemon for postion reporting.
+	GPSdAddr string `json:"gpsd_addr"`
+
 	// Command schedule (cron-like syntax).
 	//
 	// Examples:
@@ -193,4 +196,5 @@ var DefaultConfig Config = Config{
 		ListenAddr: ":8774",
 		Password:   "",
 	},
+	GPSdAddr: "localhost:2947", // Default listen address for GPSd
 }

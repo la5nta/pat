@@ -55,7 +55,7 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
-	// Address and port to a GPSd daemon for postion reporting.
+	// Address and port to a GPSd daemon for position reporting.
 	GPSdAddr string `json:"gpsd_addr"`
 
 	// Command schedule (cron-like syntax).

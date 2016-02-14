@@ -31,6 +31,11 @@ type tncConn struct {
 	nWritten int
 }
 
+func (conn *tncConn) SetRobust(r bool) error {
+	conn.ctrlOut <- fmt.Sprintf("%s %v", cmdRobust, r)
+	return nil // TODO: Should handle error
+}
+
 func (conn *tncConn) Write(p []byte) (int, error) {
 	n, err := conn.Conn.Write(p)
 

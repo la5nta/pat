@@ -4,7 +4,21 @@
 
 package winmor
 
-import "testing"
+import (
+	"net"
+	"testing"
+
+	"github.com/la5nta/wl2k-go/transport"
+)
+
+func TestImplementsRobust(t *testing.T) {
+	var conn net.Conn
+	conn = &tncConn{}
+
+	if _, ok := conn.(transport.Robust); !ok {
+		t.Errorf("winmor conn does not implement transport.Robust")
+	}
+}
 
 func TestParseAddr(t *testing.T) {
 	// Default address

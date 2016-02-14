@@ -14,6 +14,8 @@ It is the primary sandbox/prototype application for the various wl2k-go sub-pack
 
 It is mainly developed for Linux, but are also known to run on OS X, Windows and Android.
 
+[Binary releases](https://github.com/la5nta/wl2k-go/releases) are available for Debian and Ubuntu.
+
 See [Building from source](https://github.com/LA5NTA/wl2k-go/wiki/Building-from-source) for build instructions.
 
 #### Features

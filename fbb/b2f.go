@@ -273,11 +273,9 @@ Loop:
 // If we ever want to support requests of message with offset, we must guard against asking for
 // offsets > 999999. RMS Express does not do this (in Winmor P2P anyway), we must avoid that pitfall.
 func (s *Session) writeProposalsAnswer(rw io.ReadWriter, proposals []*Proposal) (nAccepted int, err error) {
-	if _, err = fmt.Fprint(rw, `FS `); err != nil {
-		return
-	}
+	answers := make([]byte, len(proposals))
 
-	for _, prop := range proposals {
+	for i, prop := range proposals {
 		if prop.code != Wl2kProposal && prop.code != GzipProposal {
 			s.log.Printf("Defering %s (unsupported format)", prop.MID())
 			prop.answer = Defer
@@ -288,12 +286,11 @@ func (s *Session) writeProposalsAnswer(rw io.ReadWriter, proposals []*Proposal) 
 			s.log.Printf("Accepting %s", prop.MID()) //TODO: Remove?
 			nAccepted++
 		}
-		if _, err = fmt.Fprintf(rw, "%c", prop.answer); err != nil {
-			return
-		}
+
+		answers[i] = byte(prop.answer)
 	}
 
-	_, err = fmt.Fprint(rw, "\r")
+	_, err = fmt.Fprintf(rw, "FS %s\r", answers)
 	return
 }
 

@@ -83,7 +83,13 @@ func (ln ax25Listener) Accept() (net.Conn, error) {
 }
 
 // ListenAX25 announces on the local port axPort using mycall as the local address.
+//
+// An error will be returned if axPort is empty.
 func ListenAX25(axPort, mycall string) (net.Listener, error) {
+	if axPort == "" {
+		return nil, errors.New("Invalid empty axport")
+	}
+
 	if _, err := loadPorts(); err != nil {
 		return nil, err
 	}
@@ -117,6 +123,10 @@ func ListenAX25(axPort, mycall string) (net.Listener, error) {
 
 // DialAX25Timeout acts like DialAX25 but takes a timeout.
 func DialAX25Timeout(axPort, mycall, targetcall string, timeout time.Duration) (*Conn, error) {
+	if axPort == "" {
+		return nil, errors.New("Invalid empty axport")
+	}
+
 	if _, err := loadPorts(); err != nil {
 		return nil, err
 	}
@@ -205,6 +215,8 @@ func (c *Conn) Read(p []byte) (n int, err error) {
 }
 
 // DialAX25 connects to the remote station targetcall using the named axport and mycall.
+//
+// An error will be returned if axPort is empty.
 func DialAX25(axPort, mycall, targetcall string) (*Conn, error) {
 	return DialAX25Timeout(axPort, mycall, targetcall, 0)
 }

@@ -1,0 +1,82 @@
+{
+	"ImportPath": "github.com/la5nta/wl2k-go",
+	"GoVersion": "go1.5",
+	"Packages": [
+		"./cmd/wl2k"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/bndr/gotabulate",
+			"Comment": "v1.1.2-9-g7cce978",
+			"Rev": "7cce978cf3ab92f1b54acb77c0be1e59d0b52c70"
+		},
+		{
+			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
+			"Rev": "57eb5e1fc594ad4b0b1dbea7b286d299e0cb43c2"
+		},
+		{
+			"ImportPath": "github.com/gorhill/cronexpr",
+			"Comment": "1.0.0",
+			"Rev": "a557574d6c024ed6e36acc8b610f5f211c91568a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "26a6070f849969ba72b72256e9f14cf519751690"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Rev": "3986be78bf859e01f01af631ad76da5b269d270c"
+		},
+		{
+			"ImportPath": "github.com/howeyc/gopass",
+			"Rev": "ae71a9cc54fddb61d946abe9191d05a24ac0e21b"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-runewidth",
+			"Comment": "travisish-44-ge882a96",
+			"Rev": "e882a96ec18dd43fa283187b66af74497c9101c0"
+		},
+		{
+			"ImportPath": "github.com/microcosm-cc/bluemonday",
+			"Rev": "4ac6f27528d0a3f2a59e0b0a6f6b3ff0bb89fe20"
+		},
+		{
+			"ImportPath": "github.com/ogier/pflag",
+			"Comment": "v0.0.1-4-g6f7159c",
+			"Rev": "6f7159c3154e7cd4ab30f6cc9c58fa3fd0f22325"
+		},
+		{
+			"ImportPath": "github.com/paulrosania/go-charset/charset",
+			"Rev": "621bb39fcc835dce592e682f5073025d0169587b"
+		},
+		{
+			"ImportPath": "github.com/paulrosania/go-charset/data",
+			"Rev": "621bb39fcc835dce592e682f5073025d0169587b"
+		},
+		{
+			"ImportPath": "github.com/peterh/liner",
+			"Rev": "3f1c20449d1836aa4cbe38731b96f95cdf89634d"
+		},
+		{
+			"ImportPath": "github.com/tarm/goserial",
+			"Rev": "b3440c3c63556c3fd67e915be3b92195bc70294a"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "f23ba3a5ee43012fcb4b92e1a2a405a92554f4f2"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "0e6d34ef942cfc38ae0cf6a660e349c3a3d08b93"
+		},
+		{
+			"ImportPath": "gopkg.in/fsnotify.v1",
+			"Comment": "v1.2.8",
+			"Rev": "508915b7500b6e42a87132e4afeb4729cebc7cbb"
+		}
+	]
+}

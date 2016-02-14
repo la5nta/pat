@@ -110,6 +110,9 @@ func (msg ctrlMsg) Int() int {
 }
 
 func parseCtrlMsg(str string) ctrlMsg {
+	// Work around for ARDOPc trailing space in NEWSTATE
+	str = strings.TrimSpace(str)
+
 	parts := strings.SplitN(str, " ", 2)
 	parts[0] = strings.ToUpper(parts[0])
 

@@ -1,4 +1,4 @@
-// Copyright 2015 Martin Hebnes Pedersen (LA5NTA). All rights reserved.
+// Copyright 2016 Martin Hebnes Pedersen (LA5NTA). All rights reserved.
 // Use of this source code is governed by the MIT-license that can be
 // found in the LICENSE file.
 
@@ -54,6 +54,37 @@ const (
 	Option                 = "Option"
 	System                 = "System"
 )
+
+// Slice of date layouts that should be tried when parsing the Date header.
+var dateLayouts = []string{
+	DateLayout,         // The correct layout according to Winlink (2006/01/02 15:04).
+	`2006.01.02 15:04`, // Undocumented layout seen when RMS Relay-3.0.27.1 was operating in store-and-forward mode.
+}
+
+// From golang.org/src/net/mail/message.go
+func init() {
+	// Generate layouts based on RFC 5322, section 3.3.
+
+	dows := [...]string{"", "Mon, "}   // day-of-week
+	days := [...]string{"2", "02"}     // day = 1*2DIGIT
+	years := [...]string{"2006", "06"} // year = 4*DIGIT / 2*DIGIT
+	seconds := [...]string{":05", ""}  // second
+	// "-0700 (MST)" is not in RFC 5322, but is common.
+	zones := [...]string{"-0700", "MST", "-0700 (MST)"} // zone = (("+" / "-") 4DIGIT) / "GMT" / ...
+
+	for _, dow := range dows {
+		for _, day := range days {
+			for _, year := range years {
+				for _, second := range seconds {
+					for _, zone := range zones {
+						s := dow + day + " Jan " + year + " 15:04" + second + " " + zone
+						dateLayouts = append(dateLayouts, s)
+					}
+				}
+			}
+		}
+	}
+}
 
 // NewMessage initializes and returns a new message with Type, Mbo, From and Date set.
 //
@@ -470,10 +501,14 @@ func ParseDate(dateStr string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 
-	date, err := time.Parse(DateLayout, dateStr)
-	if err != nil {
-		return date, err
+	var date time.Time
+	var err error
+	for _, layout := range dateLayouts {
+		date, err = time.Parse(layout, dateStr)
+		if err == nil {
+			break
+		}
 	}
 
-	return date.Local(), nil
+	return date.Local(), err
 }

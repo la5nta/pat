@@ -1,5 +1,18 @@
-wl2k-go (0.0.1) UNRELEASED; urgency=medium
+wl2k-go (0.0.3) stable; urgency=medium
+
+  * Fixed web ui assets bug (https://github.com/la5nta/wl2k-go/issues/26).
+  * Fixed systemd user install script.
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Thu, 14 Jan 2016 19:26:49 +0100
+
+wl2k-go (0.0.2) stable; urgency=medium
+
+  * Fixed ARDOPc issues.
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 10 Jan 2016 15:56:00 +0100
+
+wl2k-go (0.0.1) stable; urgency=medium
 
   * Initial release.
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 23 Nov 2015 22:10:24 +0100
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 04 Nov 2016 16:24:24 +0100

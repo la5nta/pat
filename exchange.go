@@ -76,7 +76,12 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		}
 
 		fmt.Print("Enter secure login password: ")
-		return string(gopass.GetPasswdMasked()), nil
+
+		passwd, err := gopass.GetPasswdMasked()
+		if err != nil {
+			return "", err
+		}
+		return string(passwd), nil
 	})
 
 	for _, addr := range config.AuxAddrs {

@@ -10,7 +10,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/la5nta/wl2k-go/cmd/wl2k/cfg"
+	"github.com/la5nta/pat/cfg"
 )
 
 func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error) {

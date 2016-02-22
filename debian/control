@@ -1,13 +1,14 @@
-Source: wl2k-go
+Source: pat
 Section: ham
 Priority: extra
 Maintainer: Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>
-Homepage: https://github.com/la5nta/wl2k-go
+Homepage: https://github.com/la5nta/pat
 Build-Depends: debhelper (>= 7.0.50~), golang (>= 2:1.3), libax25, libax25-dev
 Standards-Version: 3.9.1
 
-Package: wl2k-go
+Package: pat
 Architecture: amd64 i386 armhf
 Depends: libax25
+Conflicts: wl2k-go
 Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90)
 Description: A portable Winlink 2000 client written in Go

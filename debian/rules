@@ -18,12 +18,12 @@ binary-arch: clean build
 	dh_installdirs
 
 	mkdir -p $(PKGDIR)/usr/bin
-	mkdir -p $(PKGDIR)/usr/share/wl2k-go
+	mkdir -p $(PKGDIR)/usr/share/pat
 	mkdir -p $(PKGDIR)/lib/systemd/system
 
 	mv ./wl2k $(PKGDIR)/usr/bin/
-	cp -r share/* $(PKGDIR)/usr/share/wl2k-go/
-	cp debian/wl2k@.service $(PKGDIR)/lib/systemd/system/
+	cp -r share/* $(PKGDIR)/usr/share/pat/
+	cp debian/pat@.service $(PKGDIR)/lib/systemd/system/
 
 	dh_strip
 	dh_compress

@@ -308,7 +308,7 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	tmplData := struct{ AppName, Mycall, Addr string }{"wl2k-go", fOptions.MyCall, r.Host}
+	tmplData := struct{ AppName, Version, Mycall, Addr string }{AppName, Version, fOptions.MyCall, r.Host}
 
 	err = t.Execute(w, tmplData)
 	if err != nil {

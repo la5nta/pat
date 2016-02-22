@@ -31,8 +31,8 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
 
-	"github.com/la5nta/wl2k-go/cmd/wl2k/cfg"
-	"github.com/la5nta/wl2k-go/cmd/wl2k/internal/gpsd"
+	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/gpsd"
 )
 
 const (
@@ -128,7 +128,7 @@ var commands = []Command{
 		Str:  "version",
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
-			fmt.Printf("wl2k v%s (%s) %s/%s\n", Version, GitRev, runtime.GOOS, runtime.GOARCH)
+			fmt.Printf("%s v%s (%s) %s/%s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH)
 		},
 	},
 	{
@@ -190,12 +190,12 @@ func init() {
 		log.Fatal(err)
 	} else {
 		fOptions.ConfigPath = path.Join(appDir, "config.json")
-		fOptions.LogPath = path.Join(appDir, "wl2k.log")
+		fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName + ".log"))
 		fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 	}
 
 	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", AppName)
 		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] command [arguments]\n", os.Args[0])
 
 		fmt.Fprintln(os.Stderr, "\nCommands:")
@@ -607,7 +607,7 @@ func composeMessage(replyMsg *fbb.Message) {
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	in.ReadString('\n')
 
-	f, err := ioutil.TempFile("", fmt.Sprintf("wl2k_new_%d.txt", time.Now().Unix()))
+	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
 	if err != nil {
 		log.Fatalf("Unable to prepare temporary file for body: %s", err)
 	}

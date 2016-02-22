@@ -102,7 +102,7 @@ func resBootstrap320DistCssBootstrapThemeCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.css", size: 21368, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.css", size: 21368, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -122,7 +122,7 @@ func resBootstrap320DistCssBootstrapThemeCssMap() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.css.map", size: 23071, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.css.map", size: 23071, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -142,7 +142,7 @@ func resBootstrap320DistCssBootstrapThemeMinCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.min.css", size: 18860, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap-theme.min.css", size: 18860, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +162,7 @@ func resBootstrap320DistCssBootstrapCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.css", size: 132546, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.css", size: 132546, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -182,7 +182,7 @@ func resBootstrap320DistCssBootstrapCssMap() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.css.map", size: 220790, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.css.map", size: 220790, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -202,7 +202,7 @@ func resBootstrap320DistCssBootstrapMinCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.min.css", size: 109518, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/css/bootstrap.min.css", size: 109518, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -222,7 +222,7 @@ func resBootstrap320DistFontsGlyphiconsHalflingsRegularEot() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.eot", size: 20335, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.eot", size: 20335, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -242,7 +242,7 @@ func resBootstrap320DistFontsGlyphiconsHalflingsRegularSvg() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.svg", size: 62927, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.svg", size: 62927, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -262,7 +262,7 @@ func resBootstrap320DistFontsGlyphiconsHalflingsRegularTtf() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.ttf", size: 41280, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.ttf", size: 41280, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -282,7 +282,7 @@ func resBootstrap320DistFontsGlyphiconsHalflingsRegularWoff() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.woff", size: 23320, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/fonts/glyphicons-halflings-regular.woff", size: 23320, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -302,7 +302,7 @@ func resBootstrap320DistJsBootstrapJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/js/bootstrap.js", size: 60681, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/js/bootstrap.js", size: 60681, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -322,7 +322,7 @@ func resBootstrap320DistJsBootstrapMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/js/bootstrap.min.js", size: 31819, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-3.2.0-dist/js/bootstrap.min.js", size: 31819, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -342,7 +342,7 @@ func resBootstrapSelectMinCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/bootstrap-select.min.css", size: 5887, mode: os.FileMode(420), modTime: time.Unix(1446980627, 0)}
+	info := bindataFileInfo{name: "res/bootstrap-select.min.css", size: 5887, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -362,7 +362,7 @@ func resJsUriMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/js/URI.min.js", size: 43936, mode: os.FileMode(420), modTime: time.Unix(1446980627, 0)}
+	info := bindataFileInfo{name: "res/js/URI.min.js", size: 43936, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -382,7 +382,7 @@ func resJsBootstrapSelectMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/js/bootstrap-select.min.js", size: 30507, mode: os.FileMode(420), modTime: time.Unix(1446980627, 0)}
+	info := bindataFileInfo{name: "res/js/bootstrap-select.min.js", size: 30507, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -402,7 +402,7 @@ func resJsIndexJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/js/index.js", size: 14197, mode: os.FileMode(420), modTime: time.Unix(1450686722, 0)}
+	info := bindataFileInfo{name: "res/js/index.js", size: 14197, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -422,7 +422,7 @@ func resJsJqueryMinJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/js/jquery.min.js", size: 95786, mode: os.FileMode(420), modTime: time.Unix(1432317529, 0)}
+	info := bindataFileInfo{name: "res/js/jquery.min.js", size: 95786, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -442,7 +442,7 @@ func resSiteCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/site.css", size: 3112, mode: os.FileMode(420), modTime: time.Unix(1446980627, 0)}
+	info := bindataFileInfo{name: "res/site.css", size: 3112, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -462,7 +462,7 @@ func resTmplIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/tmpl/index.html", size: 12055, mode: os.FileMode(420), modTime: time.Unix(1446980627, 0)}
+	info := bindataFileInfo{name: "res/tmpl/index.html", size: 12055, mode: os.FileMode(420), modTime: time.Unix(1456139712, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -61,7 +61,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	)
 
 	session.SetUserAgent(fbb.UserAgent{
-		Name:    "wl2kgo",
+		Name:    AppName,
 		Version: Version,
 	})
 

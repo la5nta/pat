@@ -34,7 +34,7 @@ func convertImage(rd io.Reader) ([]byte, error) {
 	}
 
 	//convert [filename] -quality 75 -colors 254 -resize 600x400 [filename].jpg
-	oldF, err := ioutil.TempFile("", "wl2k_convert_")
+	oldF, err := ioutil.TempFile("", "pat_convert_")
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func convertImage(rd io.Reader) ([]byte, error) {
 	}
 	oldF.Sync()
 
-	newF, err := ioutil.TempFile("", "wl2k_convert_")
+	newF, err := ioutil.TempFile("", "pat_convert_")
 	if err != nil {
 		return nil, err
 	}

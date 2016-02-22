@@ -28,6 +28,7 @@ import (
 	fsnotify "gopkg.in/fsnotify.v1"
 )
 
+//go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go-bindata-assetfs res/...
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)

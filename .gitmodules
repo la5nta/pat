@@ -1,0 +1,64 @@
+[submodule "vendor/github.com/mattn/go-runewidth"]
+	path = vendor/github.com/mattn/go-runewidth
+	url = https://github.com/mattn/go-runewidth.git
+	branch = master
+[submodule "vendor/github.com/gorhill/cronexpr"]
+	path = vendor/github.com/gorhill/cronexpr
+	url = https://github.com/gorhill/cronexpr.git
+	branch = master
+[submodule "vendor/github.com/elazarl/go-bindata-assetfs"]
+	path = vendor/github.com/elazarl/go-bindata-assetfs
+	url = https://github.com/elazarl/go-bindata-assetfs.git
+	branch = master
+[submodule "vendor/github.com/gorilla/context"]
+	path = vendor/github.com/gorilla/context
+	url = https://github.com/gorilla/context.git
+	branch = master
+[submodule "vendor/github.com/gorilla/websocket"]
+	path = vendor/github.com/gorilla/websocket
+	url = https://github.com/gorilla/websocket.git
+	branch = master
+[submodule "vendor/github.com/bndr/gotabulate"]
+	path = vendor/github.com/bndr/gotabulate
+	url = https://github.com/bndr/gotabulate.git
+	branch = master
+[submodule "vendor/github.com/gorilla/mux"]
+	path = vendor/github.com/gorilla/mux
+	url = https://github.com/gorilla/mux.git
+	branch = master
+[submodule "vendor/github.com/howeyc/gopass"]
+	path = vendor/github.com/howeyc/gopass
+	url = https://github.com/howeyc/gopass.git
+	branch = master
+[submodule "vendor/github.com/peterh/liner"]
+	path = vendor/github.com/peterh/liner
+	url = https://github.com/peterh/liner.git
+	branch = master
+[submodule "vendor/github.com/spf13/pflag"]
+	path = vendor/github.com/spf13/pflag
+	url = https://github.com/spf13/pflag.git
+	branch = master
+[submodule "vendor/github.com/microcosm-cc/bluemonday"]
+	path = vendor/github.com/microcosm-cc/bluemonday
+	url = https://github.com/microcosm-cc/bluemonday.git
+	branch = master
+[submodule "vendor/gopkg.in/fsnotify.v1"]
+	path = vendor/gopkg.in/fsnotify.v1
+	url = https://gopkg.in/fsnotify.v1.git
+	branch = master
+[submodule "vendor/github.com/la5nta/wl2k-go"]
+	path = vendor/github.com/la5nta/wl2k-go
+	url = https://github.com/la5nta/wl2k-go
+	branch = master
+[submodule "vendor/golang.org/x/net"]
+	path = vendor/golang.org/x/net
+	url = https://go.googlesource.com/net
+	branch = master
+[submodule "vendor/golang.org/x/crypto"]
+	path = vendor/golang.org/x/crypto
+	url = https://go.googlesource.com/crypto
+	branch = master
+[submodule "vendor/github.com/jteeuwen/go-bindata"]
+	path = vendor/github.com/jteeuwen/go-bindata
+	url = https://github.com/jteeuwen/go-bindata.git
+	branch = master

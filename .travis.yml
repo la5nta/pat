@@ -9,8 +9,11 @@ go:
   - 1.6
   - tip
 
-env:
-  - GO15VENDOREXPERIMENT=1
+install:
+  - git submodule update --init --recursive
+
+script:
+  - ./make.bash
 
 matrix:
   allow_failures:

@@ -1,4 +1,4 @@
-// Copyright 2015 Martin Hebnes Pedersen (LA5NTA). All rights reserved.
+// Copyright 2016 Martin Hebnes Pedersen (LA5NTA). All rights reserved.
 // Use of this source code is governed by the MIT-license that can be
 // found in the LICENSE file.
 
@@ -164,7 +164,7 @@ type BeaconConfig struct {
 
 var DefaultConfig Config = Config{
 	MyCall:   "",
-	MOTD:     []string{"Open source WL2K client - github.com/LA5NTA/wl2k-go"},
+	MOTD:     []string{"Open source Winlink client - github.com/la5nta/pat"},
 	AuxAddrs: []string{},
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@server.winlink.org:8772/wl2k",

@@ -1,4 +1,4 @@
-# Configuration for AX.25 systemd unit file from wl2k-go.
+# Configuration for AX.25 systemd unit file from Pat.
 
 # The axport from /etc/ax25/axports to bring up
 AXPORT=wl2k

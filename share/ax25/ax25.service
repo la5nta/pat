@@ -5,7 +5,7 @@ After=network.target
 [Service]
 EnvironmentFile=/etc/default/ax25
 Type=forking
-ExecStart=/usr/share/wl2k-go/bin/axup ${DEV} ${AXPORT} ${HBAUD}
+ExecStart=/usr/share/pat/bin/axup ${DEV} ${AXPORT} ${HBAUD}
 
 [Install]
 WantedBy=default.target

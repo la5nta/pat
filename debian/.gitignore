@@ -1,4 +1,4 @@
-wl2k-go/
+pat/
 files
-wl2k-go.debhelper.log
-wl2k-go.substvars
+pat.debhelper.log
+pat.substvars

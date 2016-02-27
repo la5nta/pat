@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-PKGDIR=debian/wl2k-go
+PKGDIR=debian/pat
 
 %:
 	dh $@
@@ -21,7 +21,7 @@ binary-arch: clean build
 	mkdir -p $(PKGDIR)/usr/share/pat
 	mkdir -p $(PKGDIR)/lib/systemd/system
 
-	mv ./wl2k $(PKGDIR)/usr/bin/
+	mv ./pat $(PKGDIR)/usr/bin/
 	cp -r share/* $(PKGDIR)/usr/share/pat/
 	cp debian/pat@.service $(PKGDIR)/lib/systemd/system/
 

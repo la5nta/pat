@@ -172,6 +172,7 @@ var DefaultConfig Config = Config{
 	Listen:   []string{},
 	HTTPAddr: "localhost:8080",
 	AX25: AX25Config{
+		Port:   "wl2k",
 		Beacon: BeaconConfig{
 			Every:       3600,
 			Message:     "Winlink P2P",

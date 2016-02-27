@@ -3,7 +3,7 @@ Section: ham
 Priority: extra
 Maintainer: Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>
 Homepage: https://github.com/la5nta/pat
-Build-Depends: debhelper (>= 7.0.50~), golang (>= 2:1.3), libax25, libax25-dev
+Build-Depends: debhelper (>= 7.0.50~), golang (>= 2:1.5), libax25, libax25-dev
 Standards-Version: 3.9.1
 
 Package: pat

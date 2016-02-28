@@ -28,8 +28,7 @@ func scheduleLoop() {
 	}
 
 	go func() {
-		for {
-			<-time.Tick(time.Second)
+		for range time.Tick(time.Second) {
 			for _, j := range jobs {
 				if time.Now().Before(j.next) {
 					continue

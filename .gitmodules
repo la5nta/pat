@@ -62,3 +62,7 @@
 	path = vendor/github.com/jteeuwen/go-bindata
 	url = https://github.com/jteeuwen/go-bindata.git
 	branch = master
+[submodule "vendor/golang.org/x/text"]
+	path = vendor/golang.org/x/text
+	url = https://go.googlesource.com/text
+	branch = master

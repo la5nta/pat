@@ -164,7 +164,7 @@ type BeaconConfig struct {
 
 var DefaultConfig Config = Config{
 	MyCall:   "",
-	MOTD:     []string{"Open source Winlink client - github.com/la5nta/pat"},
+	MOTD:     []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs: []string{},
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@server.winlink.org:8772/wl2k",
@@ -172,7 +172,7 @@ var DefaultConfig Config = Config{
 	Listen:   []string{},
 	HTTPAddr: "localhost:8080",
 	AX25: AX25Config{
-		Port:   "wl2k",
+		Port: "wl2k",
 		Beacon: BeaconConfig{
 			Every:       3600,
 			Message:     "Winlink P2P",

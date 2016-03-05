@@ -1,6 +1,6 @@
 [Unit]
 Description=pat - Winlink client for %I
-Documentation=https://github.com/la5nta/pat
+Documentation=https://github.com/la5nta/pat/wiki
 After=ax25.service network.target
 
 [Service]

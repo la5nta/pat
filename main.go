@@ -190,7 +190,7 @@ func init() {
 		log.Fatal(err)
 	} else {
 		fOptions.ConfigPath = path.Join(appDir, "config.json")
-		fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName + ".log"))
+		fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
 		fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 	}
 

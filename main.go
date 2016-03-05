@@ -109,6 +109,7 @@ var commands = []Command{
 		Usage: "[options] [search term]",
 		Options: map[string]string{
 			"--mode, -m":           "Mode filter.",
+			"--band, -b":           "Band filter (e.g. '80m').",
 			"--force-download, -d": "Force download of latest list from winlink.org.",
 		},
 		HandleFunc: rmsListHandle,

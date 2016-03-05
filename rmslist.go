@@ -130,6 +130,7 @@ func (t *RFC1123Time) UnmarshalJSON(b []byte) (err error) {
 func rmsListHandle(args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
 	mode := set.StringP("mode", "m", "", "")
+	band := set.StringP("band", "b", "", "")
 	forceDownload := set.BoolP("force-download", "d", false, "")
 	set.Parse(args)
 
@@ -174,16 +175,19 @@ func rmsListHandle(args []string) {
 
 		var printed bool
 		for _, channel := range gw.Channels {
-			if mode != nil && !strings.Contains(strings.ToLower(channel.SupportedModes), *mode) {
-				continue
-			}
-			printed = true
-
 			freq := Frequency(channel.Frequency)
 			dial := freq.Dial(channel.SupportedModes)
 
-			url := channel.URL(gw.Callsign)
+			switch {
+			case mode != nil && !strings.Contains(strings.ToLower(channel.SupportedModes), *mode):
+				continue
+			case !bands[*band].Contains(freq):
+				continue
+			default:
+				printed = true
+			}
 
+			url := channel.URL(gw.Callsign)
 			fmt.Printf(fmtStr, gw.Callsign, channel.Gridsquare, channel.SupportedModes, dial, freq, url)
 		}
 		if printed {

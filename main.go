@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT-license that can be
 // found in the LICENSE file.
 
-// A fully working Winlink 2000 command line client with support for various connection methods.
+// A portable Winlink client for amateur radio email.
 package main
 
 import (

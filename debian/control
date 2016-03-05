@@ -12,4 +12,4 @@ Depends: libax25
 Conflicts: wl2k-go
 Replaces: wl2k-go
 Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90)
-Description: A portable Winlink 2000 client written in Go
+Description: A portable Winlink client for amateur radio email.

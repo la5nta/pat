@@ -1,11 +1,11 @@
-pat (0.1.0) UNRELEASED; urgency=medium
+pat (0.1.0) stable; urgency=medium
 
   * Initial release under new name.
   * Fix leak that caused increasing CPU load.
   * Add band filtering for rmslist command.
   * Fix winmor robust issues.
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 05 Mar 2016 15:26:50 +0100
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 06 Mar 2016 14:09:11 +0100
 
 wl2k-go (0.0.4) stable; urgency=medium
 

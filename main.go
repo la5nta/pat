@@ -115,12 +115,6 @@ var commands = []Command{
 		HandleFunc: rmsListHandle,
 	},
 	{
-		Str:        "riglist",
-		Usage:      "[search term]",
-		Desc:       "Print/search a list of rigcontrol supported transceivers.",
-		HandleFunc: riglistHandle,
-	},
-	{
 		Str:        "configure",
 		Desc:       "Open configuration file for editing.",
 		HandleFunc: configureHandle,
@@ -337,18 +331,6 @@ func helpHandle(args []string) {
 		return
 	}
 	cmd.PrintUsage()
-}
-
-func riglistHandle(args []string) {
-	term := strings.ToLower(args[0])
-
-	fmt.Print("id\ttransceiver\n")
-	for m, str := range hamlib.Rigs() {
-		if !strings.Contains(strings.ToLower(str), term) {
-			continue
-		}
-		fmt.Printf("%d\t%s\n", m, str)
-	}
 }
 
 func cleanup() {

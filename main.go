@@ -608,13 +608,20 @@ func composeMessage(replyMsg *fbb.Message) {
 		f.Sync()
 	}
 
+	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
+	// Close the file before opening the editor.
+	f.Close()
+
 	cmd := exec.Command(EditorName(), f.Name())
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("Unable to start body editor: %s", err)
 	}
 
-	f.Seek(0, 0)
+	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatalf("Unable to read temporary file from editor: %s", err)
+	}
 
 	var buf bytes.Buffer
 	io.Copy(&buf, f)

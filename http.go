@@ -438,18 +438,11 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
-	file, err := os.Open(path.Join(mbox.MBoxPath, box, mid))
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return
 	} else if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	msg := new(fbb.Message)
-	if err := msg.ReadFrom(file); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -461,18 +454,11 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
 
-	file, err := os.Open(path.Join(mbox.MBoxPath, box, mid))
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return
 	} else if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	msg := new(fbb.Message)
-	if err := msg.ReadFrom(file); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

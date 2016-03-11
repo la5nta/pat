@@ -48,7 +48,7 @@ Waiting for remote node to close the connection...
 
 Gzip message compression has been added as an experimental B2F extension, as an alternative to LZHUF. The feature can be enabled by setting the environment variable `GZIP_EXPERIMENT=1` at runtime.
 
-For more information, see <http://github.com/la5nta/wl2k-go>.
+For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 
 ## Copyright/License
 

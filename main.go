@@ -28,8 +28,6 @@ import (
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
-	"github.com/la5nta/wl2k-go/transport/ardop"
-	"github.com/la5nta/wl2k-go/transport/winmor"
 
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/gpsd"
@@ -143,8 +141,6 @@ var (
 	exchangeConn net.Conn                // Pointer to the active session connection (exchange)
 	listeners    map[string]net.Listener // Active listeners
 	mbox         *mailbox.DirHandler     // The mailbox
-	wmTNC        *winmor.TNC             // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC        *ardop.TNC              // Pointer to the ARDOP TNC used by Listen and Connect
 )
 
 var fOptions struct {
@@ -408,66 +404,6 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 		rigs[name] = vfo
 	}
 	return rigs
-}
-
-func initWinmorTNC() {
-	var err error
-	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
-	if err != nil {
-		log.Fatalf("WINMOR TNC initialization failed: %s", err)
-	}
-
-	if v, err := wmTNC.Version(); err != nil {
-		log.Fatalf("WINMOR TNC initialization failed: %s", err)
-	} else {
-		log.Printf("WINMOR TNC v%s initialized", v)
-	}
-
-	if !config.Winmor.PTTControl {
-		return
-	}
-
-	rig, ok := rigs[config.Winmor.Rig]
-	if !ok {
-		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Winmor.Rig)
-	} else {
-		wmTNC.SetPTT(rig)
-	}
-}
-
-func initArdopTNC() {
-	var err error
-	adTNC, err = ardop.OpenTCP(config.Ardop.Addr, fOptions.MyCall, config.Locator)
-	if err != nil {
-		log.Fatalf("ARDOP TNC initialization failed: %s", err)
-	}
-
-	if !config.Ardop.ARQBandwidth.IsZero() {
-		if err := adTNC.SetARQBandwidth(config.Ardop.ARQBandwidth); err != nil {
-			log.Fatalf("Unable to set ARQ bandwidth for ardop TNC: %s", err)
-		}
-	}
-
-	if err := adTNC.SetCWID(config.Ardop.CWID); err != nil {
-		log.Fatalf("Unable to configure CWID for ardop TNC: %s", err)
-	}
-
-	if v, err := adTNC.Version(); err != nil {
-		log.Fatalf("ARDOP TNC initialization failed: %s", err)
-	} else {
-		log.Printf("ARDOP TNC (%s) initialized", v)
-	}
-
-	if !config.Ardop.PTTControl {
-		return
-	}
-
-	rig, ok := rigs[config.Ardop.Rig]
-	if !ok {
-		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
-	} else {
-		wmTNC.SetPTT(rig)
-	}
 }
 
 func extractMessageHandle(args []string) {

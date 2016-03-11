@@ -4,7 +4,7 @@
 
 package main
 
-var UsageConnect = `'alias' or 'transport://[addr][/path]/targetcall[?params...]'
+var UsageConnect = `'alias' or 'transport://[host][/digi]/targetcall[?params...]'
 
 transport:
   winmor:     WINMOR TNC
@@ -13,9 +13,9 @@ transport:
   telnet:     TCP/IP
   serial-tnc: Serial AX.25 TNC
 
-addr:
-  Used to address the transport device, _not_ to be confused with the connection
-   PATH. Format: [user[:pass]@]host[:port]
+host:
+  Used to address the host interface (TNC/modem), _not_ to be confused with the connection PATH.
+    Format: [user[:pass]@]host[:port]
 
   telnet:       [user:pass]@host:port
   ax25:         (optional) host=axport
@@ -26,6 +26,7 @@ path:
 
 params:
   ?freq=        Sets QSY frequency (winmor, ardop and ax25 only)
+  ?host=        Overrides the host part of the path. Useful for serial-tnc to specify e.g. /dev/ttyS0.
 `
 var ExampleConnect = `
   connect telnet                     (alias) Connect to one of the Winlink Common Message Servers via tcp.

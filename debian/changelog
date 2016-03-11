@@ -1,3 +1,10 @@
+pat (0.1.1) stable; urgency=medium
+
+  * Fix various file locking errors on Windows (https://github.com/la5nta/pat/issues/9).
+  * Automatic version reporting to Winlink CMS Web Services.
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Fri, 11 Mar 2016 21:06:16 +0100
+
 pat (0.1.0) stable; urgency=medium
 
   * Initial release under new name.

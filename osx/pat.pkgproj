@@ -481,7 +481,7 @@
 				<key>OVERWRITE_PERMISSIONS</key>
 				<false/>
 				<key>VERSION</key>
-				<string>0.1</string>
+				<string>0.1.1</string>
 			</dict>
 			<key>UUID</key>
 			<string>A106FF34-04D8-4BE2-9B33-04AF0AC791FA</string>

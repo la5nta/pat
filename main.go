@@ -141,6 +141,7 @@ var (
 	exchangeConn net.Conn                // Pointer to the active session connection (exchange)
 	listeners    map[string]net.Listener // Active listeners
 	mbox         *mailbox.DirHandler     // The mailbox
+	appDir       string
 )
 
 var fOptions struct {
@@ -177,13 +178,15 @@ func optionsSet() *pflag.FlagSet {
 func init() {
 	listeners = make(map[string]net.Listener)
 
-	if appDir, err := mailbox.DefaultAppDir(); err != nil {
+	var err error
+	appDir, err = mailbox.DefaultAppDir()
+	if err != nil {
 		log.Fatal(err)
-	} else {
-		fOptions.ConfigPath = path.Join(appDir, "config.json")
-		fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
-		fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 	}
+
+	fOptions.ConfigPath = path.Join(appDir, "config.json")
+	fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
+	fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", AppName)
@@ -262,6 +265,16 @@ func main() {
 	if cmd.MayConnect {
 		rigs = loadHamlibRigs()
 		exchangeChan = exchangeLoop()
+
+		go func() {
+			if config.VersionReportingDisabled {
+				return
+			}
+
+			for range time.Tick(6 * time.Hour) { // Check every 6 hours, but it won't post more frequent than 24h.
+				postVersionUpdate() // Ignore errors
+			}
+		}()
 	}
 
 	if cmd.LongLived {

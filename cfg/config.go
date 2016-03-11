@@ -69,6 +69,11 @@ type Config struct {
 	//   "00 18 * * *": "freq winmor:5347.000", # 60m from 18:00
 	//   "00 22 * * *": "freq winmor:3602.000"  # 80m from 22:00
 	Schedule map[string]string `json:"schedule"`
+
+	// By default, Pat posts your callsign and running version to the Winlink CMS Web Services
+	//
+	// Set to true if you don't want your information sent.
+	VersionReportingDisabled bool `json:"version_reporting_disabled"`
 }
 
 type HamlibConfig struct {

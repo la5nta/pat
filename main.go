@@ -281,8 +281,9 @@ func main() {
 				return
 			}
 
-			for range time.Tick(6 * time.Hour) { // Check every 6 hours, but it won't post more frequent than 24h.
+			for { // Check every 6 hours, but it won't post more frequent than 24h.
 				postVersionUpdate() // Ignore errors
+				time.Sleep(6 * time.Hour)
 			}
 		}()
 	}

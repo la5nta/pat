@@ -94,8 +94,13 @@ func Connect(connectStr string) (success bool) {
 		currFreq = Frequency(f)
 	}
 
+	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.
+	doneHandleInterrupt := handleInterrupt()
+
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
 	conn, err := transport.DialURL(url)
+
+	close(doneHandleInterrupt)
 
 	eventLog.LogConn("connect "+connectStr, currFreq, conn, err)
 

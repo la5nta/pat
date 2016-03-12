@@ -242,6 +242,9 @@ func main() {
 		fOptions.MyCall = config.MyCall
 	}
 
+	// Ensure mycall is all upper case.
+	fOptions.MyCall = strings.ToUpper(fOptions.MyCall)
+
 	// Don't use config password if we don't use config mycall
 	if fOptions.MyCall != config.MyCall {
 		config.SecureLoginPassword = ""

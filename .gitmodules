@@ -49,7 +49,7 @@
 [submodule "vendor/github.com/la5nta/wl2k-go"]
 	path = vendor/github.com/la5nta/wl2k-go
 	url = https://github.com/la5nta/wl2k-go
-	branch = refactor/pat
+	branch = master
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net

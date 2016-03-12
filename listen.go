@@ -43,14 +43,16 @@ func Listen(listenStr string) {
 
 		switch method {
 		case MethodWinmor:
-			if wmTNC == nil {
-				initWinmorTNC()
+			if err := initWinmorTNC(); err != nil {
+				log.Fatal(err)
 			}
+
 			listenWinmor(cc)
 		case MethodArdop:
-			if adTNC == nil {
-				initArdopTNC()
+			if err := initArdopTNC(); err != nil {
+				log.Fatal(err)
 			}
+
 			listenArdop(cc)
 		case MethodTelnet:
 			listenTelnet(cc)

@@ -28,8 +28,6 @@ import (
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
-	"github.com/la5nta/wl2k-go/transport/ardop"
-	"github.com/la5nta/wl2k-go/transport/winmor"
 
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/gpsd"
@@ -115,12 +113,6 @@ var commands = []Command{
 		HandleFunc: rmsListHandle,
 	},
 	{
-		Str:        "riglist",
-		Usage:      "[search term]",
-		Desc:       "Print/search a list of rigcontrol supported transceivers.",
-		HandleFunc: riglistHandle,
-	},
-	{
 		Str:        "configure",
 		Desc:       "Open configuration file for editing.",
 		HandleFunc: configureHandle,
@@ -149,8 +141,7 @@ var (
 	exchangeConn net.Conn                // Pointer to the active session connection (exchange)
 	listeners    map[string]net.Listener // Active listeners
 	mbox         *mailbox.DirHandler     // The mailbox
-	wmTNC        *winmor.TNC             // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC        *ardop.TNC              // Pointer to the ARDOP TNC used by Listen and Connect
+	appDir       string
 )
 
 var fOptions struct {
@@ -178,7 +169,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
 	set.StringVar(&fOptions.EventLogPath, "event-log", fOptions.EventLogPath, "Path to event log file.")
 	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
-	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Usefull to improve s/n-ratio at remote winmor station)`)
+	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Useful to improve s/n-ratio at remote winmor station)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 
 	return set
@@ -187,13 +178,15 @@ func optionsSet() *pflag.FlagSet {
 func init() {
 	listeners = make(map[string]net.Listener)
 
-	if appDir, err := mailbox.DefaultAppDir(); err != nil {
+	var err error
+	appDir, err = mailbox.DefaultAppDir()
+	if err != nil {
 		log.Fatal(err)
-	} else {
-		fOptions.ConfigPath = path.Join(appDir, "config.json")
-		fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
-		fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 	}
+
+	fOptions.ConfigPath = path.Join(appDir, "config.json")
+	fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
+	fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", AppName)
@@ -272,6 +265,17 @@ func main() {
 	if cmd.MayConnect {
 		rigs = loadHamlibRigs()
 		exchangeChan = exchangeLoop()
+
+		go func() {
+			if config.VersionReportingDisabled {
+				return
+			}
+
+			for { // Check every 6 hours, but it won't post more frequent than 24h.
+				postVersionUpdate() // Ignore errors
+				time.Sleep(6 * time.Hour)
+			}
+		}()
 	}
 
 	if cmd.LongLived {
@@ -337,18 +341,6 @@ func helpHandle(args []string) {
 		return
 	}
 	cmd.PrintUsage()
-}
-
-func riglistHandle(args []string) {
-	term := strings.ToLower(args[0])
-
-	fmt.Print("id\ttransceiver\n")
-	for m, str := range hamlib.Rigs() {
-		if !strings.Contains(strings.ToLower(str), term) {
-			continue
-		}
-		fmt.Printf("%d\t%s\n", m, str)
-	}
 }
 
 func cleanup() {
@@ -426,66 +418,6 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 		rigs[name] = vfo
 	}
 	return rigs
-}
-
-func initWinmorTNC() {
-	var err error
-	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
-	if err != nil {
-		log.Fatalf("WINMOR TNC initialization failed: %s", err)
-	}
-
-	if v, err := wmTNC.Version(); err != nil {
-		log.Fatalf("WINMOR TNC initialization failed: %s", err)
-	} else {
-		log.Printf("WINMOR TNC v%s initialized", v)
-	}
-
-	if !config.Winmor.PTTControl {
-		return
-	}
-
-	rig, ok := rigs[config.Winmor.Rig]
-	if !ok {
-		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Winmor.Rig)
-	} else {
-		wmTNC.SetPTT(rig)
-	}
-}
-
-func initArdopTNC() {
-	var err error
-	adTNC, err = ardop.OpenTCP(config.Ardop.Addr, fOptions.MyCall, config.Locator)
-	if err != nil {
-		log.Fatalf("ARDOP TNC initialization failed: %s", err)
-	}
-
-	if !config.Ardop.ARQBandwidth.IsZero() {
-		if err := adTNC.SetARQBandwidth(config.Ardop.ARQBandwidth); err != nil {
-			log.Fatalf("Unable to set ARQ bandwidth for ardop TNC: %s", err)
-		}
-	}
-
-	if err := adTNC.SetCWID(config.Ardop.CWID); err != nil {
-		log.Fatalf("Unable to configure CWID for ardop TNC: %s", err)
-	}
-
-	if v, err := adTNC.Version(); err != nil {
-		log.Fatalf("ARDOP TNC initialization failed: %s", err)
-	} else {
-		log.Printf("ARDOP TNC (%s) initialized", v)
-	}
-
-	if !config.Ardop.PTTControl {
-		return
-	}
-
-	rig, ok := rigs[config.Ardop.Rig]
-	if !ok {
-		log.Printf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
-	} else {
-		wmTNC.SetPTT(rig)
-	}
 }
 
 func extractMessageHandle(args []string) {
@@ -626,13 +558,20 @@ func composeMessage(replyMsg *fbb.Message) {
 		f.Sync()
 	}
 
+	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
+	// Close the file before opening the editor.
+	f.Close()
+
 	cmd := exec.Command(EditorName(), f.Name())
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("Unable to start body editor: %s", err)
 	}
 
-	f.Seek(0, 0)
+	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatalf("Unable to read temporary file from editor: %s", err)
+	}
 
 	var buf bytes.Buffer
 	io.Copy(&buf, f)

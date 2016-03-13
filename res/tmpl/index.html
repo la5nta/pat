@@ -181,13 +181,9 @@
               <textarea name="body" class="form-control" id="msg_body"></textarea> 
             </div>
             <div class="modal-footer primary">
-              <button id="post_btn" type="submit" class="btn btn-primary pull-right">Post <span class="glyphicon glyphicon-send"></span></button>
-              <div class="row" id="composer_actions">
-                <div class="col-md-5">
-                  <div class="input-group">
-                    <span class="btn btn-default btn-file">Add attachment&hellip; <input id="msg_attachments_input" name="files" type="file" multiple></span>
-                  </div>
-                </div>
+              <div id="composer_actions">
+                <div class="input-group pull-right"><button id="post_btn" type="submit" class="btn btn-primary">Post <span class="glyphicon glyphicon-send"></span></button></div>
+                <div class="input-group"><span class="btn btn-default btn-file">Add attachment&hellip; <input id="msg_attachments_input" name="files" type="file" multiple></span></div>
               </div>
               <div id="composer_attachments" class="row"></div>
             </div>

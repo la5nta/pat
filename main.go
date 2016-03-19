@@ -51,11 +51,13 @@ var commands = []Command{
 		MayConnect: true,
 	},
 	{
-		Str:  "interactive",
-		Desc: "Run interactive mode.",
-		HandleFunc: func(args []string) {
-			Interactive()
+		Str:   "interactive",
+		Desc:  "Run interactive mode.",
+		Usage: "[options]",
+		Options: map[string]string{
+			"--http, -h": "Start http server for web UI in the background.",
 		},
+		HandleFunc: InteractiveHandle,
 		MayConnect: true,
 		LongLived:  true,
 	},
@@ -298,6 +300,27 @@ func configureHandle(args []string) {
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("Unable to start editor: %s", err)
 	}
+}
+
+func InteractiveHandle(args []string) {
+	var http string
+	set := pflag.NewFlagSet("interactive", pflag.ExitOnError)
+	set.StringVar(&http, "http", "", "HTTP listen address")
+	set.Lookup("http").NoOptDefVal = config.HTTPAddr
+	set.Parse(args)
+
+	if http == "" {
+		Interactive()
+		return
+	}
+
+	go func() {
+		if err := ListenAndServe(http); err != nil {
+			log.Println(err)
+		}
+	}()
+	time.Sleep(time.Second)
+	Interactive()
 }
 
 func httpHandle(args []string) {

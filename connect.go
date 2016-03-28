@@ -45,19 +45,18 @@ func Connect(connectStr string) (success bool) {
 		return false
 	}
 
+	// Init TNCs
 	switch url.Scheme {
 	case "ardop":
 		if err := initArdopTNC(); err != nil {
 			log.Println(err)
 			return
 		}
-		waitBusy(adTNC)
 	case "winmor":
 		if err := initWinmorTNC(); err != nil {
 			log.Println(err)
 			return
 		}
-		waitBusy(wmTNC)
 	}
 
 	// Set default userinfo (mycall)
@@ -92,6 +91,14 @@ func Connect(connectStr string) (success bool) {
 	if vfo, ok := VFOForTransport(url.Scheme); ok {
 		f, _ := vfo.GetFreq()
 		currFreq = Frequency(f)
+	}
+
+	// Wait for a clear channel
+	switch url.Scheme {
+	case "ardop":
+		waitBusy(adTNC)
+	case "winmor":
+		waitBusy(wmTNC)
 	}
 
 	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.

@@ -456,7 +456,11 @@ function displayMessage(elem) {
 			$('#message_view').modal('hide');
 
 			$('#msg_to').val(data.From.Addr);
-			$('#msg_subject').val("Re: " +  data.Subject);
+			if(data.Subject.lastIndexOf("Re:", 0) != 0) {
+				$('#msg_subject').val("Re: " +  data.Subject);
+			} else {
+				$('#msg_subject').val(data.Subject);
+			}
 			$('#msg_body').val(quoteMsg(data));
 
 			$('#composer').modal('show');

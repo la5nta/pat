@@ -42,10 +42,6 @@
 	path = vendor/github.com/microcosm-cc/bluemonday
 	url = https://github.com/microcosm-cc/bluemonday.git
 	branch = master
-[submodule "vendor/gopkg.in/fsnotify.v1"]
-	path = vendor/gopkg.in/fsnotify.v1
-	url = https://gopkg.in/fsnotify.v1.git
-	branch = master
 [submodule "vendor/github.com/la5nta/wl2k-go"]
 	path = vendor/github.com/la5nta/wl2k-go
 	url = https://github.com/la5nta/wl2k-go
@@ -66,3 +62,6 @@
 	path = vendor/golang.org/x/text
 	url = https://go.googlesource.com/text
 	branch = master
+[submodule "vendor/github.com/fsnotify/fsnotify"]
+	path = vendor/github.com/fsnotify/fsnotify
+	url = https://github.com/fsnotify/fsnotify.git

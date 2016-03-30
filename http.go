@@ -29,7 +29,7 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 
-	fsnotify "gopkg.in/fsnotify.v1"
+	"github.com/fsnotify/fsnotify"
 )
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs

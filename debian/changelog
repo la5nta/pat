@@ -1,8 +1,19 @@
-pat (0.1.2) UNRELEASED; urgency=medium
+pat (0.1.2) stable; urgency=medium
 
   * Fix callsign casing bug (https://github.com/la5nta/pat/issues/19)
+  * Fix web composer Re: prefix issues in replies (https://github.com/la5nta/pat/issues/30)
+  * Support running http server while in interactive mode (https://github.com/la5nta/pat/issues/26)
+  * Send smallest messages first (suggested in the Winlink FAQ) (https://github.com/la5nta/pat/issues/25)
+  * Fix handling of proposal code H (https://github.com/la5nta/pat/issues/25)
+  * Fix handling of blocks with all messages deferred/rejected (https://github.com/la5nta/pat/issues/25)
+  * Fix unstable serialization of messages that could result in corrupt partial message transfer (https://github.com/la5nta/pat/issues/25)
+  * Support both utf8 and iso-8859-1 encoded subject header (https://github.com/la5nta/pat/issues/23)
+  * Re-implement ctrl+c for aborting connect/session (https://github.com/la5nta/pat/issues/22)
+  * Fix GUI post button issues on some browsers (https://github.com/la5nta/pat/issues/21)
+  * Fix WINMOR unexpected EOF issue on session termination (https://github.com/la5nta/pat/issues/20)
+  * Fix improper handling of callsign casing (https://github.com/la5nta/pat/issues/19)
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 12 Mar 2016 20:56:51 +0100
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 02 Apr 2016 10:41:16 +0200
 
 pat (0.1.1) stable; urgency=medium
 

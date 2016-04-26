@@ -65,3 +65,6 @@
 [submodule "vendor/github.com/fsnotify/fsnotify"]
 	path = vendor/github.com/fsnotify/fsnotify
 	url = https://github.com/fsnotify/fsnotify.git
+[submodule "vendor/golang.org/x/sys"]
+	path = vendor/golang.org/x/sys
+	url = https://go.googlesource.com/sys

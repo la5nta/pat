@@ -75,7 +75,7 @@ func readHandler(w http.ResponseWriter, r *http.Request) {
 
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
-	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

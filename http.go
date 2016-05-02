@@ -438,7 +438,7 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
-	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return
@@ -454,7 +454,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
 
-	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid))
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return

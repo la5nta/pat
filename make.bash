@@ -11,5 +11,8 @@ GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d)/; print $1;')
 
 set -x
 
+# Update submodules (dependencies)
+git submodule update --init --recursive
+
 go test -tags "$TAGS" `go list ./...|grep -v vendor` `go list ./...|grep wl2k-go|egrep -v '/vendor/.*/vendor/'`
 go build -v -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\""

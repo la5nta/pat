@@ -1,8 +1,10 @@
-pat (0.1.3) UNRELEASED; urgency=medium
+pat (0.1.3) stable; urgency=medium
 
-  * 
+  * Add filename extension for mailbox messages (https://github.com/la5nta/pat/issues/34)
+  * Fix broken ax25:// digipeater syntax (https://github.com/la5nta/pat/issues/33)
+  * Enable gzip experiment by default (https://github.com/la5nta/pat/issues/29)
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 26 Apr 2016 19:04:00 +0200
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 07 May 2016 22:18:12 +0200
 
 pat (0.1.2) stable; urgency=medium
 

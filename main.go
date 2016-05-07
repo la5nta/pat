@@ -123,7 +123,7 @@ var commands = []Command{
 		Str:  "version",
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
-			fmt.Printf("%s v%s (%s) %s/%s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH)
+			fmt.Printf("%s v%s (%s) %s/%s - %s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
 		},
 	},
 	{

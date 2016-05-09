@@ -123,7 +123,7 @@ var commands = []Command{
 		Str:  "version",
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
-			fmt.Printf("%s v%s (%s) %s/%s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH)
+			fmt.Printf("%s v%s (%s) %s/%s - %s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
 		},
 	},
 	{
@@ -206,6 +206,11 @@ func init() {
 }
 
 func main() {
+	// Enable the GZIP extension experiment by default
+	if _, ok := os.LookupEnv("GZIP_EXPERIMENT"); !ok {
+		os.Setenv("GZIP_EXPERIMENT", "1")
+	}
+
 	var err error
 	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
 	if err != nil {

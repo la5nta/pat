@@ -1,6 +1,9 @@
-[![Build Status](https://travis-ci.org/la5nta/pat.svg?branch=master)](https://travis-ci.org/la5nta/pat)
+<a href="http://getpat.io"><img src="https://raw.githubusercontent.com/la5nta/pat-website/gh-pages/img/logo.png" width="128" ></a>
 
-## Pat
+[![Build Status](https://travis-ci.org/la5nta/pat.svg?branch=master)](https://travis-ci.org/la5nta/pat)
+[![Go Report Card](https://goreportcard.com/badge/github.com/la5nta/pat)](https://goreportcard.com/report/github.com/la5nta/pat)
+
+## Overview
 
 Pat is a cross platform Winlink client with basic messaging capabilities.
 

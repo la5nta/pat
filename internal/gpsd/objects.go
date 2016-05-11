@@ -53,7 +53,7 @@ type Satellite struct {
 	Elevation json.Number `json:"el"`
 
 	// Signal strength in dB.
-	SignalStrength json.Number `json"ss"` //TODO: Not working?
+	SignalStrength json.Number `json:"ss"`
 
 	// Used in current solution?
 	//

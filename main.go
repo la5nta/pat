@@ -375,7 +375,7 @@ func helpHandle(args []string) {
 }
 
 func cleanup() {
-	for method, _ := range listeners {
+	for method := range listeners {
 		Unlisten(method)
 	}
 

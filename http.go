@@ -331,7 +331,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 		Connected:       exchangeConn != nil,
 	}
 
-	for method, _ := range listeners {
+	for method := range listeners {
 		status.ActiveListeners = append(status.ActiveListeners, method)
 	}
 	sort.Strings(status.ActiveListeners)

@@ -97,7 +97,7 @@ func getPrompt() string {
 	var buf bytes.Buffer
 
 	methods := make([]string, 0, len(listeners))
-	for method, _ := range listeners {
+	for method := range listeners {
 		methods = append(methods, method)
 	}
 

@@ -24,7 +24,7 @@ var ErrUnsupportedProtocolVersion = errors.New("Unsupported protocol version")
 
 // Objects implementing the Positioner interface provides geographic positioning data.
 //
-// This is particulary useful for testing if an object returned by Next can be used to determine the device position.
+// This is particularly useful for testing if an object returned by Next can be used to determine the device position.
 type Positioner interface {
 	Position() Position
 	HasFix() bool

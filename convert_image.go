@@ -5,19 +5,19 @@
 package main
 
 import (
-	"errors"
+	"bytes"
+	"image"
+	"image/jpeg"
 	"io"
-	"io/ioutil"
 	"mime"
-	"os"
-	"os/exec"
 	"path"
 	"strings"
+
+	_ "image/gif"
+	_ "image/png"
+
+	"github.com/nfnt/resize"
 )
-
-var ErrMissingImageMagick = errors.New("Unable to find ImageMagick's convert binary.")
-
-const convertBin = "convert"
 
 func isImageMediaType(filename, contentType string) bool {
 	var mediaType string
@@ -31,41 +31,19 @@ func isImageMediaType(filename, contentType string) bool {
 	return strings.HasPrefix(mediaType, "image/")
 }
 
-// The output is a jpg file
-func convertImage(rd io.Reader) ([]byte, error) {
-	if _, err := exec.LookPath(convertBin); err != nil {
-		return nil, ErrMissingImageMagick
-	}
-
-	//convert [filename] -quality 75 -colors 254 -resize 600x400 [filename].jpg
-	oldF, err := ioutil.TempFile("", "pat_convert_")
+func convertImage(r io.Reader) ([]byte, error) {
+	img, _, err := image.Decode(r)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		oldF.Close()
-		os.Remove(oldF.Name())
-	}()
 
-	if _, err := io.Copy(oldF, rd); err != nil {
-		return nil, err
+	// Scale down
+	if img.Bounds().Dx() > 600 {
+		img = resize.Resize(600, 0, img, resize.NearestNeighbor)
 	}
-	oldF.Sync()
 
-	newF, err := ioutil.TempFile("", "pat_convert_")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		newF.Close()
-		os.Remove(newF.Name())
-	}()
-
-	out, err := exec.Command(convertBin, oldF.Name(), "-quality", "75", "-colors", "254", "-resize", "600x400", "jpg:"+newF.Name()).CombinedOutput()
-	if err != nil {
-		return nil, errors.New(string(out))
-	}
-	newF.Seek(0, 0)
-
-	return ioutil.ReadAll(newF)
+	// Re-encode as low quality jpeg
+	var buf bytes.Buffer
+	err = jpeg.Encode(&buf, img, &jpeg.Options{40})
+	return buf.Bytes(), err
 }

@@ -252,7 +252,7 @@ func main() {
 	fOptions.MyCall = strings.ToUpper(fOptions.MyCall)
 
 	// Don't use config password if we don't use config mycall
-	if fOptions.MyCall != config.MyCall {
+	if !strings.EqualFold(fOptions.MyCall, config.MyCall) {
 		config.SecureLoginPassword = ""
 	}
 

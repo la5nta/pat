@@ -38,7 +38,7 @@ type Config struct {
 	// Connect aliases
 	//
 	// Example: {"LA1B-10": "ax25:///LD5GU/LA1B-10", "LA1B": "winmor://LA3F?freq=5350"}
-	// Any occurence of the substring "{mycall}" will be replaced with user's callsign.
+	// Any occurrence of the substring "{mycall}" will be replaced with user's callsign.
 	ConnectAliases map[string]string `json:"connect_aliases"`
 
 	// Methods to listen for incoming P2P connections by default.

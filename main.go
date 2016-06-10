@@ -6,7 +6,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -253,7 +252,7 @@ func main() {
 	fOptions.MyCall = strings.ToUpper(fOptions.MyCall)
 
 	// Don't use config password if we don't use config mycall
-	if fOptions.MyCall != config.MyCall {
+	if !strings.EqualFold(fOptions.MyCall, config.MyCall) {
 		config.SecureLoginPassword = ""
 	}
 
@@ -375,7 +374,7 @@ func helpHandle(args []string) {
 }
 
 func cleanup() {
-	for method, _ := range listeners {
+	for method := range listeners {
 		Unlisten(method)
 	}
 
@@ -493,10 +492,9 @@ func EditorName() string {
 
 func composeMessage(replyMsg *fbb.Message) {
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
-	in := bufio.NewReader(os.Stdin)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
-	from := readLine(in)
+	from := readLine()
 	if from == "" {
 		from = fOptions.MyCall
 	}
@@ -508,7 +506,7 @@ func composeMessage(replyMsg *fbb.Message) {
 
 	}
 	fmt.Printf(": ")
-	to := readLine(in)
+	to := readLine()
 	if to == "" && replyMsg != nil {
 		msg.AddTo(replyMsg.From().String())
 	} else {
@@ -534,7 +532,7 @@ func composeMessage(replyMsg *fbb.Message) {
 		fmt.Printf(" %s", ccCand)
 	}
 	fmt.Print(`: `)
-	cc := readLine(in)
+	cc := readLine()
 	if cc == "" && replyMsg != nil {
 		for _, addr := range ccCand {
 			msg.AddCc(addr.String())
@@ -550,7 +548,7 @@ func composeMessage(replyMsg *fbb.Message) {
 
 	if len(msg.Receivers()) == 1 {
 		fmt.Print("P2P only [y/N]: ")
-		ans := readLine(in)
+		ans := readLine()
 		if strings.EqualFold("y", ans) {
 			msg.Header.Set("X-P2POnly", "true")
 		}
@@ -563,13 +561,13 @@ func composeMessage(replyMsg *fbb.Message) {
 		fmt.Println(subject)
 		msg.SetSubject(subject)
 	} else {
-		msg.SetSubject(readLine(in))
+		msg.SetSubject(readLine())
 	}
 
 	// Read body
 
 	fmt.Printf(`Press ENTER to start composing the message body. `)
-	in.ReadString('\n')
+	readLine()
 
 	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
 	if err != nil {
@@ -616,25 +614,55 @@ func composeMessage(replyMsg *fbb.Message) {
 
 	for {
 		fmt.Print(`Attachment [empty when done]: `)
-		path := readLine(in)
+		path := readLine()
 		if path == "" {
 			break
 		}
 
-		data, err := ioutil.ReadFile(path)
+		file, err := readAttachment(path)
 		if err != nil {
 			log.Println(err)
-		} else {
-			_, name := filepath.Split(path)
-			msg.AddFile(fbb.NewFile(name, data))
+			continue
 		}
+
+		msg.AddFile(file)
 	}
 	fmt.Println(msg)
 	postMessage(msg)
 }
 
-func readLine(r *bufio.Reader) string {
-	str, _ := r.ReadString('\n')
+func readAttachment(path string) (*fbb.File, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	name := filepath.Base(path)
+
+	var resizeImage bool
+	if isImageMediaType(name, "") {
+		fmt.Print("This seems to be an image. Auto resize? [Y/n]: ")
+		ans := readLine()
+		resizeImage = ans == "" || strings.EqualFold("y", ans)
+	}
+
+	var data []byte
+
+	if resizeImage {
+		data, err = convertImage(f)
+		ext := filepath.Ext(name)
+		name = name[:len(name)-len(ext)] + ".jpg"
+	} else {
+		data, err = ioutil.ReadAll(f)
+	}
+
+	return fbb.NewFile(name, data), err
+}
+
+func readLine() string {
+	var str string
+	fmt.Scanln(&str)
 	return strings.TrimSpace(str)
 }
 

@@ -68,3 +68,6 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
+[submodule "vendor/github.com/nfnt/resize"]
+	path = vendor/github.com/nfnt/resize
+	url = https://github.com/nfnt/resize.git

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -26,62 +25,71 @@ var mailboxes = []string{"in", "out", "sent", "archive"}
 
 func readMail() {
 	w := os.Stdout
-	rd := bufio.NewReader(os.Stdin)
-
-	// Query user for mailbox to list
-	printMailboxes(w)
-	fmt.Fprintf(w, "\nChoose mailbox [0]: ")
-	mailboxIdx := readInt(rd)
-	if mailboxIdx+1 > len(mailboxes) {
-		fmt.Fprintln(w, "Invalid mailbox number")
-		return
-	}
 
 	for {
-		// Fetch messages
-		msgs, err := mailbox.LoadMessageDir(path.Join(mailbox.UserPath(fOptions.MailboxPath, fOptions.MyCall), mailboxes[mailboxIdx]))
-		if err != nil {
-			log.Fatal(err)
-		} else if len(msgs) == 0 {
-			fmt.Fprintf(w, "(empty)\n")
+		// Query user for mailbox to list
+		printMailboxes(w)
+		fmt.Fprintf(w, "\nChoose mailbox [n]: ")
+		mailboxIdx, ok := readInt()
+		if !ok {
 			break
-		}
-
-		// Print messages (sorted by date)
-		sort.Sort(fbb.ByDate(msgs))
-		printMessages(w, msgs)
-
-		// Query user for message to print
-		fmt.Fprintf(w, "Choose message [n]: ")
-		msgIdx := readInt(rd)
-		if msgIdx+1 > len(msgs) {
-			fmt.Fprintf(w, "invalid message number\n")
+		} else if mailboxIdx+1 > len(mailboxes) {
+			fmt.Fprintln(w, "Invalid mailbox number")
 			continue
 		}
-		printMsg(w, msgs[msgIdx])
 
-		// Mark as read?
-		if mailbox.IsUnread(msgs[msgIdx]) {
-			fmt.Fprintf(w, "Mark as read? [Y/n]: ")
-			ans, _ := rd.ReadString('\n')
-			if ans == "\n" || ans[0] == 'Y' || ans[0] == 'y' {
-				mailbox.SetUnread(msgs[msgIdx], false)
+		for {
+			// Fetch messages
+			msgs, err := mailbox.LoadMessageDir(path.Join(mailbox.UserPath(fOptions.MailboxPath, fOptions.MyCall), mailboxes[mailboxIdx]))
+			if err != nil {
+				log.Fatal(err)
+			} else if len(msgs) == 0 {
+				fmt.Fprintf(w, "(empty)\n")
+				break
 			}
-		}
 
-		// Reply?
-		fmt.Fprintf(w, "Reply (ctrl+c to quit) [y/N]: ")
-		ans, _ := rd.ReadString('\n')
-		if ans[0] == 'y' {
-			composeMessage(msgs[msgIdx])
+			// Print messages (sorted by date)
+			sort.Sort(fbb.ByDate(msgs))
+			printMessages(w, msgs)
+
+			// Query user for message to print
+			fmt.Fprintf(w, "Choose message [n]: ")
+			msgIdx, ok := readInt()
+			if !ok {
+				break
+			} else if msgIdx+1 > len(msgs) {
+				fmt.Fprintf(w, "invalid message number\n")
+				continue
+			}
+			printMsg(w, msgs[msgIdx])
+
+			// Mark as read?
+			if mailbox.IsUnread(msgs[msgIdx]) {
+				fmt.Fprintf(w, "Mark as read? [Y/n]: ")
+				ans := readLine()
+				if ans == "" || strings.EqualFold(ans, "y") {
+					mailbox.SetUnread(msgs[msgIdx], false)
+				}
+			}
+
+			// Reply?
+			fmt.Fprintf(w, "Reply (ctrl+c to quit) [y/N]: ")
+			ans := readLine()
+			if strings.EqualFold(ans, "y") {
+				composeMessage(msgs[msgIdx])
+			}
 		}
 	}
 }
 
-func readInt(rd *bufio.Reader) int {
-	ans, _ := rd.ReadString('\n')
-	i, _ := strconv.Atoi(strings.TrimSpace(ans))
-	return i
+func readInt() (int, bool) {
+	str := readLine()
+	if str == "" {
+		return 0, false
+	}
+
+	i, _ := strconv.Atoi(str)
+	return i, true
 }
 
 type PrettyAddrSlice []fbb.Address

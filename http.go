@@ -125,23 +125,27 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var p []byte
+		p, err := ioutil.ReadAll(file)
+		file.Close()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
 			log.Printf("Auto converting '%s' [%s]...", f.Filename, f.Header.Get("Content-Type"))
-			p, err = convertImage(file)
-			if err != nil {
+
+			if converted, err := convertImage(bytes.NewReader(p)); err != nil {
 				log.Printf("Error converting image: %s", err)
 			} else {
-				f.Filename += ".JPG"
 				log.Printf("Done converting '%s'.", f.Filename)
+
+				ext := path.Ext(f.Filename)
+				f.Filename = f.Filename[:len(f.Filename)-len(ext)] + ".jpg"
+				p = converted
 			}
 		}
 
-		if p == nil || err != nil {
-			p, err = ioutil.ReadAll(file)
-		}
-
-		file.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -331,7 +335,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 		Connected:       exchangeConn != nil,
 	}
 
-	for method, _ := range listeners {
+	for method := range listeners {
 		status.ActiveListeners = append(status.ActiveListeners, method)
 	}
 	sort.Strings(status.ActiveListeners)

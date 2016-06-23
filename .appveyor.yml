@@ -1,0 +1,18 @@
+platform:
+  - x64
+
+clone_folder: c:\gopath\src\github.com\la5nta\pat
+
+environment:
+  global:
+    GOPATH: C:\gopath
+    GOROOT: C:\go16-x86
+    MSYS_PATH: C:\MinGW\msys\1.0
+
+build_script:
+  - set PATH=%GOROOT%\bin;%MSYS_PATH%\bin;C:\MinGW\bin;%PATH%
+  - '%MSYS_PATH%\bin\bash -lc "cd /c/gopath/src/github.com/la5nta/pat && ./make.bash"'
+
+artifacts:
+  - path: pat.exe
+    name: Pat

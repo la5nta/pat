@@ -7,6 +7,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/la5nta/wl2k-go/transport"
@@ -22,6 +24,8 @@ var (
 	wmTNC *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
 	adTNC *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
 )
+
+func hasSSID(str string) bool { return strings.Contains(str, "-") }
 
 func connectAny(connectStr ...string) bool {
 	for _, str := range connectStr {
@@ -74,6 +78,26 @@ func Connect(connectStr string) (success bool) {
 			if config.SerialTNC.Baudrate > 0 {
 				url.Params.Set("baud", fmt.Sprint(config.SerialTNC.Baudrate))
 			}
+		}
+	}
+
+	// Radio Only?
+	radioOnly := fOptions.RadioOnly
+	if v := url.Params.Get("radio_only"); v != "" {
+		radioOnly, _ = strconv.ParseBool(v)
+	}
+	if radioOnly {
+		if hasSSID(fOptions.MyCall) {
+			log.Println("Radio Only does not support callsign with SSID")
+			return
+		}
+
+		switch url.Scheme {
+		case "ax25", "serial-tnc":
+			log.Printf("Radio-Only is not available for %s", url.Scheme)
+			return
+		default:
+			url.SetUser(url.User.Username() + "-T")
 		}
 	}
 

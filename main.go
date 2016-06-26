@@ -149,6 +149,7 @@ var (
 var fOptions struct {
 	IgnoreBusy bool // Move to connect?
 	SendOnly   bool // Move to connect?
+	RadioOnly  bool
 
 	Robust       bool
 	MyCall       string
@@ -171,6 +172,7 @@ func optionsSet() *pflag.FlagSet {
 	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
 	set.StringVar(&fOptions.EventLogPath, "event-log", fOptions.EventLogPath, "Path to event log file.")
 	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
+	set.BoolVarP(&fOptions.RadioOnly, `radio-only`, "", false, `Radio Only mode (Winlink Hybrid RMS only).`)
 	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Useful to improve s/n-ratio at remote winmor station)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 

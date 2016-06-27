@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -660,9 +661,14 @@ func readAttachment(path string) (*fbb.File, error) {
 	return fbb.NewFile(name, data), err
 }
 
+var stdin *bufio.Reader
+
 func readLine() string {
-	var str string
-	fmt.Scanln(&str)
+	if stdin == nil {
+		stdin = bufio.NewReader(os.Stdin)
+	}
+
+	str, _ := stdin.ReadString('\n')
 	return strings.TrimSpace(str)
 }
 

@@ -1,3 +1,9 @@
+pat (0.1.5) stable; urgency=medium
+
+  * Fix bug that caused command-line interface composer's prompt scan to see whitespace as end of line (https://github.com/la5nta/pat/issues/45)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 27 Jun 2016 22:43:36 +0200
+
 pat (0.1.4) stable; urgency=medium
 
   * Fix case where secure_login_password was ignored if mycall was not all upper case (https://github.com/la5nta/pat/issues/42)

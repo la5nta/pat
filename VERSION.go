@@ -6,6 +6,6 @@ package main
 
 var (
 	AppName = "Pat"
-	Version = "0.1.4"
+	Version = "0.1.5"
 	GitRev  = "unknown origin" // Set by make.bash
 )

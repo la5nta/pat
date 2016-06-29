@@ -399,25 +399,42 @@
 							<key>UID</key>
 							<integer>0</integer>
 						</dict>
-						<dict>
+						<dict> <!-- usr/ -->
 							<key>CHILDREN</key>
 							<array>
-								<dict>
+								<dict> <!-- local/ -->
 									<key>CHILDREN</key>
 									<array>
-										<dict>
+										<dict> <!-- bin/ -->
 											<key>CHILDREN</key>
-											<array/>
+											<array>
+												<dict> <!-- executable (pat) -->
+													<key>CHILDREN</key>
+													<array/>
+													<key>GID</key>
+													<integer>0</integer>
+													<key>PATH</key>
+													<string>../pat</string>
+													<key>PATH_TYPE</key>
+													<integer>1</integer>
+													<key>PERMISSIONS</key>
+													<integer>493</integer>
+													<key>TYPE</key>
+													<integer>3</integer>
+													<key>UID</key>
+													<integer>0</integer>
+												</dict>
+											</array>
 											<key>GID</key>
 											<integer>0</integer>
 											<key>PATH</key>
-											<string>../pat</string>
+											<string>bin</string>
 											<key>PATH_TYPE</key>
-											<integer>1</integer>
+											<integer>0</integer>
 											<key>PERMISSIONS</key>
 											<integer>493</integer>
 											<key>TYPE</key>
-											<integer>3</integer>
+											<integer>2</integer>
 											<key>UID</key>
 											<integer>0</integer>
 										</dict>
@@ -425,7 +442,7 @@
 									<key>GID</key>
 									<integer>0</integer>
 									<key>PATH</key>
-									<string>bin</string>
+									<string>local</string>
 									<key>PATH_TYPE</key>
 									<integer>0</integer>
 									<key>PERMISSIONS</key>
@@ -627,7 +644,7 @@
 					<key>COPYRIGHT HOLDERS</key>
 					<string>Martin Hebnes Pedersen (LA5NTA)</string>
 					<key>YEAR</key>
-					<string>2014-216</string>
+					<string>2014-2016</string>
 				</dict>
 				<key>LOCALIZATIONS</key>
 				<array/>

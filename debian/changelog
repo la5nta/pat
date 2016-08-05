@@ -1,3 +1,11 @@
+pat (0.2.0) stable; urgency=medium
+
+  * Support Radio only - Winlink Hybrid Network (https://github.com/la5nta/pat/issues/44)
+  * Swich to Go port of lzhuf (https://github.com/la5nta/pat/issues/50)
+  * Linux ax25 scripts: Add method for custom TNC initialization (https://github.com/la5nta/pat/issues/53)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Fri, 05 Aug 2016 15:16:51 +0200
+
 pat (0.1.5) stable; urgency=medium
 
   * Fix bug that caused command-line interface composer's prompt scan to see whitespace as end of line (https://github.com/la5nta/pat/issues/45)

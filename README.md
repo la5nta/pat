@@ -14,7 +14,7 @@ It is mainly developed for Linux, but are also known to run on OS X, Windows and
 
 #### Features
 * Message composer/reader (basic mailbox functionality).
-* Auto-shrink image attachments (EXPERIMENTAL).
+* Auto-shrink image attachments.
 * Post position reports with location from local GPS, browser location or manual entry.
 * Rig control (using hamlib) for winmor PTT and QSY.
 * CRON-like syntax for execution of scheduled commands (e.g. QSY or connect).
@@ -50,7 +50,9 @@ Waiting for remote node to close the connection...
 
 ### Gzip experiment
 
-Gzip message compression has been added as an experimental B2F extension, as an alternative to LZHUF. The feature can be enabled by setting the environment variable `GZIP_EXPERIMENT=1` at runtime.
+Gzip message compression has been added as an experimental B2F extension. The extension is implemented as a backwards compatible alternative to the ancient LZHUF compression.
+
+This experiment is enabled by default and sessions between two Pat nodes (or other software supporting this B2F extenstion) will use gzip compression when transferring messages.
 
 For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 

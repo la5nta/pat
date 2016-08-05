@@ -7,6 +7,10 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]
   then echo "Usage: $0 [tty] [axport] [1200/9600]"
   exit 1;
 fi
+
+# Init TNC (optional)
+[ -z "$TNC_INIT_CMD" ] || eval "$TNC_INIT_CMD";
+
 if [ "$3" -eq "9600" ]; then
   /usr/sbin/kissattach $1 $2 -m 256
   /usr/sbin/kissparms -p $2 -t 100 -l 10 -s 12 -r 80 -f n

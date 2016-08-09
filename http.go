@@ -20,16 +20,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/microcosm-cc/bluemonday"
 
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
-
-	"github.com/microcosm-cc/bluemonday"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
@@ -47,7 +45,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/out", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
-	r.HandleFunc("/ws", consoleHandler)
+	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
@@ -192,7 +190,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func consoleHandler(w http.ResponseWriter, r *http.Request) {
+func wsHandler(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -228,8 +226,16 @@ func consoleHandler(w http.ResponseWriter, r *http.Request) {
 		defer fsWatcher.Close()
 	}
 
+	statusUpdateTick := time.Tick(200 * time.Millisecond)
+
 	for {
 		select {
+		// Periodic status update
+		case <-statusUpdateTick:
+			err = conn.WriteJSON(struct {
+				Status statusUpdate
+			}{getStatus()})
+
 		// Log events
 		case line := <-lines:
 			err = conn.WriteMessage(websocket.TextMessage, append(line, '\n'))
@@ -325,12 +331,14 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func statusHandler(w http.ResponseWriter, req *http.Request) {
-	status := struct {
-		ActiveListeners []string `json:"active_listeners"`
-		Connected       bool     `json:"connected"`
-		RemoteAddr      string   `json:"remote_addr"`
-	}{
+type statusUpdate struct {
+	ActiveListeners []string `json:"active_listeners"`
+	Connected       bool     `json:"connected"`
+	RemoteAddr      string   `json:"remote_addr"`
+}
+
+func getStatus() statusUpdate {
+	status := statusUpdate{
 		ActiveListeners: make([]string, 0, len(listeners)),
 		Connected:       exchangeConn != nil,
 	}
@@ -345,9 +353,10 @@ func statusHandler(w http.ResponseWriter, req *http.Request) {
 		status.RemoteAddr = fmt.Sprintf("%s:%s", addr.Network(), addr)
 	}
 
-	json.NewEncoder(w).Encode(status)
-	return
+	return status
 }
+
+func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 	connectStr := req.FormValue("url")

@@ -70,8 +70,6 @@ function initFrontend(ws_url)
 		initConsole();
 		displayFolder("in");
 	});
-
-	updateStatusLoop();
 }
 
 function setupConnectModal() {
@@ -267,29 +265,16 @@ function alert(msg)
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
 }
 
-function updateStatusLoop()
+function updateStatus(data)
 {
-	if(wsError) {
-		$('#status_text').empty().append("<strong>Backend unavailable</strong>");
-		window.setTimeout(function() { updateStatusLoop(); }, 200);
-		return;
+	var st = $('#status_text');
+	st.empty();
+
+	if(data.connected){
+		st.append("Connected " + data.remote_addr + "");
+	} else if(data.active_listeners.length > 0){
+		st.append("<i>Listening " + data.active_listeners + "</i>");
 	}
-
-	$.getJSON("/api/status", function(data){
-		window.setTimeout(function() { updateStatusLoop(); }, 200);
-
-		var st = $('#status_text');
-		st.empty();
-
-		if(data.connected){
-			st.append("Connected " + data.remote_addr + "");
-		} else if(data.active_listeners.length > 0){
-			st.append("<i>Listening " + data.active_listeners + "</i>");
-		}
-	}).error(function(){
-		st.append("<strong>Status error</strong>");
-		window.setTimeout(function() { updateStatusLoop(); }, 200);
-	})
 }
 
 function closeComposer(clear)
@@ -338,6 +323,9 @@ function initConsole()
 			if(msg.UpdateMailbox) {
 				displayFolder(currentFolder);
 			}
+			if(msg.Status) {
+				updateStatus(msg.Status)
+			}
 		};
 		ws.onclose   = function(evt) {
 			wsError = true;
@@ -346,7 +334,7 @@ function initConsole()
 	} else {
 		// The browser doesn't support WebSocket
 		wsError = true;
-		alert("Websocket not supported by your browser. Console output will be unavailable.");
+		alert("Websocket not supported by your browser, please upgrade your browser.");
 	}
 }
 

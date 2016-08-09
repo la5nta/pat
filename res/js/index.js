@@ -379,7 +379,6 @@ function displayFolder(dir) {
 			var elem = $(html)
 			tbody.append(elem);
 			elem.click(function(evt){
-				tbody.children().attr('class', 'active');
 				displayMessage($(this));
 			});
 		}
@@ -468,6 +467,7 @@ function displayMessage(elem) {
 		if(!data.Read) {
 			window.setTimeout(function() { setRead(mbox, data.MID); }, 2000);
 		}
+		elem.attr('class', 'active');
 	});
 }
 

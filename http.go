@@ -238,7 +238,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Log events
 		case line := <-lines:
-			err = conn.WriteMessage(websocket.TextMessage, append(line, '\n'))
 			err = conn.WriteJSON(struct {
 				LogLine string
 			}{string(line)})

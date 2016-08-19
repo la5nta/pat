@@ -74,6 +74,7 @@ function initFrontend(ws_url)
 
 function setupConnectModal() {
 	$('#freqInput').change(onConnectInputChange);
+	$('#radioOnlyInput').change(onConnectInputChange);
 	$('#addrInput').change(onConnectInputChange);
 	$('#targetInput').change(onConnectInputChange);
 
@@ -125,6 +126,12 @@ function setConnectValues(url) {
 		$('#freqInput').val('');
 	}
 
+	if(url.hasQuery("radio_only")) {
+		$('#radioOnlyInput')[0].checked = query["radio_only"];
+	} else {
+		$('#radioOnlyInput')[0].checked = false
+	}
+
 	var usri = ""
 	if(url.username()) {
 		usri += url.username()
@@ -143,8 +150,17 @@ function setConnectValues(url) {
 function getConnectURL() {
 	var url = $('#transportSelect').val() + "://" + $('#addrInput').val() + "/" + $('#targetInput').val();
 
+	params = "";
+
 	if($('#freqInput').val()) {
-		url += "?freq=" + $('#freqInput').val();
+		params += "&freq=" + $('#freqInput').val();
+	}
+	if($('#radioOnlyInput').is(':checked')) {
+		params += "&radio_only=true";
+	}
+
+	if(params) {
+		url += params.replace("&", "?");
 	}
 
 	return url;
@@ -164,6 +180,13 @@ function refreshExtraInputGroups() {
 		$('#addrInputDiv').hide();
 		$('#addrInput').val('');
 		$('#freqInputDiv').show();
+	}
+
+	if(transport == "ax25" || transport == "serial-tnc") {
+		$('#radioOnlyInput')[0].checked = false;
+		$('#radioOnlyInputDiv').hide();
+	} else {
+		$('#radioOnlyInputDiv').show();
 	}
 }
 

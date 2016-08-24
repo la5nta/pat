@@ -5,16 +5,11 @@ os:
   - osx
 
 go:
-  - 1.5
   - 1.6
-  - tip
+  - 1.7
 
 install:
   - git submodule update --init --recursive
 
 script:
   - ./make.bash
-
-matrix:
-  allow_failures:
-    - go: tip

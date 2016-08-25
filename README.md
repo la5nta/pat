@@ -52,7 +52,7 @@ Waiting for remote node to close the connection...
 
 Gzip message compression has been added as an experimental B2F extension. The extension is implemented as a backwards compatible alternative to the ancient LZHUF compression.
 
-This experiment is enabled by default and sessions between two Pat nodes (or other software supporting this B2F extenstion) will use gzip compression when transferring messages.
+This experiment is enabled by default and sessions between two Pat nodes (or other software supporting this B2F extension) will use gzip compression when transferring messages.
 
 For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 

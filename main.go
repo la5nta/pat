@@ -123,7 +123,7 @@ var commands = []Command{
 		Str:  "version",
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
-			fmt.Printf("%s v%s (%s) %s/%s - %s\n", AppName, Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+			fmt.Printf("%s %s\n", AppName, versionString())
 		},
 	},
 	{
@@ -754,4 +754,8 @@ func postMessage(msg *fbb.Message) {
 		log.Fatal(err)
 	}
 	fmt.Println("Message posted")
+}
+
+func versionString() string {
+	return fmt.Sprintf("v%s (%s) %s/%s - %s\n", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
 }

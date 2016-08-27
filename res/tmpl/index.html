@@ -43,8 +43,8 @@
                 <li><a href="#" data-toggle="modal" data-target="#posModal"><span class="glyphicon glyphicon-map-marker" /> Position...</a></li>
                 <li class="divider"></li>
                 <li class="dropdown-header">Other stuff</li>
-                <li><a href="#">Settings</a></li>
-                <li><a href="#">About</a></li>
+                <!--<li><a href="#">Settings</a></li>-->
+                <li><a href="#" data-toggle="modal" data-target="#aboutModal">About {{.AppName}}</a></li>
               </ul>
             </li>
           </ul>
@@ -159,6 +159,25 @@
             <div class="modal-footer">
               <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" autocomplete="off" id="pos_btn">Post</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Begin about modal -->
+      <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="myModalLabel">About</h4>
+            </div>
+            <div class="modal-body" id="posView">
+              <p id="version">{{.AppName}} {{.Version}}</p>
+              <img src="res/images/pat_logo.png" width="35%" class="center-block" />
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
             </div>
           </div>
         </div>

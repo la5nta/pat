@@ -3,7 +3,8 @@ pat (0.2.0) stable; urgency=medium
   * Support Radio only - Winlink Hybrid Network (https://github.com/la5nta/pat/issues/44)
   * Swich to Go port of lzhuf (https://github.com/la5nta/pat/issues/50)
   * Linux ax25 scripts: Add method for custom TNC initialization (https://github.com/la5nta/pat/issues/53)
-  * Minor bug fixes and stability improvements in the web GUI.
+  * Fix ardop PTT rigcontrol (https://github.com/la5nta/pat/issues/58)
+  * Minor bug fixes and improvements in the web GUI
 
  -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Fri, 05 Aug 2016 15:16:51 +0200
 

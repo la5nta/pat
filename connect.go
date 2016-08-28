@@ -277,6 +277,6 @@ func initArdopTNC() error {
 		return fmt.Errorf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
 	}
 
-	wmTNC.SetPTT(rig)
+	adTNC.SetPTT(rig)
 	return nil
 }

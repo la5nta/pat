@@ -399,24 +399,24 @@
 							<key>UID</key>
 							<integer>0</integer>
 						</dict>
-						<dict> <!-- usr/ -->
+						<dict>
 							<key>CHILDREN</key>
 							<array>
-								<dict> <!-- local/ -->
+								<dict>
 									<key>CHILDREN</key>
 									<array>
-										<dict> <!-- bin/ -->
+										<dict>
 											<key>CHILDREN</key>
 											<array>
-												<dict> <!-- executable (pat) -->
+												<dict>
 													<key>CHILDREN</key>
 													<array/>
 													<key>GID</key>
 													<integer>0</integer>
 													<key>PATH</key>
-													<string>../pat</string>
+													<string>/usr/local/bin/pat</string>
 													<key>PATH_TYPE</key>
-													<integer>1</integer>
+													<integer>0</integer>
 													<key>PERMISSIONS</key>
 													<integer>493</integer>
 													<key>TYPE</key>
@@ -485,6 +485,11 @@
 				<key>VERSION</key>
 				<integer>4</integer>
 			</dict>
+			<key>PACKAGE_SCRIPTS</key>
+			<dict>
+				<key>RESOURCES</key>
+				<array/>
+			</dict>
 			<key>PACKAGE_SETTINGS</key>
 			<dict>
 				<key>AUTHENTICATION</key>
@@ -492,16 +497,18 @@
 				<key>CONCLUSION_ACTION</key>
 				<integer>0</integer>
 				<key>IDENTIFIER</key>
-				<string>com.github.la5nta.pat</string>
+				<string>io.getpat.pat</string>
 				<key>NAME</key>
 				<string>pat</string>
 				<key>OVERWRITE_PERMISSIONS</key>
 				<false/>
+				<key>USE_HFS+_COMPRESSION</key>
+				<true/>
 				<key>VERSION</key>
-				<string>0.1.5</string>
+				<string>0.2.0</string>
 			</dict>
 			<key>UUID</key>
-			<string>A106FF34-04D8-4BE2-9B33-04AF0AC791FA</string>
+			<string>5562F199-B4C6-48BC-98FA-5BBA494CB61F</string>
 		</dict>
 	</array>
 	<key>PROJECT</key>
@@ -518,7 +525,7 @@
 			ZW50LVN0eWxlLVR5cGUiIGNvbnRlbnQ9InRleHQvY3NzIj4KPHRp
 			dGxlPjwvdGl0bGU+CjxtZXRhIG5hbWU9IkdlbmVyYXRvciIgY29u
 			dGVudD0iQ29jb2EgSFRNTCBXcml0ZXIiPgo8bWV0YSBuYW1lPSJD
-			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjEzNDguMTciPgo8c3R5bGUg
+			b2NvYVZlcnNpb24iIGNvbnRlbnQ9IjE0MDQuNDciPgo8c3R5bGUg
 			dHlwZT0idGV4dC9jc3MiPgo8L3N0eWxlPgo8L2hlYWQ+Cjxib2R5
 			Pgo8L2JvZHk+CjwvaHRtbD4K
 			</data>
@@ -532,7 +539,7 @@
 				<key>BACKGROUND_PATH</key>
 				<dict/>
 				<key>CUSTOM</key>
-				<integer>0</integer>
+				<false/>
 				<key>SCALING</key>
 				<integer>0</integer>
 			</dict>
@@ -550,12 +557,14 @@
 								<key>OPTIONS</key>
 								<dict>
 									<key>HIDDEN</key>
-									<false/>
+									<true/>
 									<key>STATE</key>
-									<integer>1</integer>
+									<integer>0</integer>
 								</dict>
 								<key>PACKAGE_UUID</key>
-								<string>A106FF34-04D8-4BE2-9B33-04AF0AC791FA</string>
+								<string>5562F199-B4C6-48BC-98FA-5BBA494CB61F</string>
+								<key>REQUIREMENTS</key>
+								<array/>
 								<key>TITLE</key>
 								<array/>
 								<key>TOOLTIP</key>
@@ -563,7 +572,7 @@
 								<key>TYPE</key>
 								<integer>0</integer>
 								<key>UUID</key>
-								<string>43AF4E1F-8800-4D76-A25E-803480047E67</string>
+								<string>D361C8B7-AA56-4C1A-B30D-0D443ABB3DAD</string>
 							</dict>
 						</array>
 						<key>REMOVED</key>
@@ -572,6 +581,8 @@
 				</dict>
 				<key>INSTALLATION TYPE</key>
 				<integer>0</integer>
+				<key>MODE</key>
+				<integer>1</integer>
 			</dict>
 			<key>INSTALLATION_STEPS</key>
 			<array>
@@ -635,23 +646,57 @@
 			<key>INTRODUCTION</key>
 			<dict>
 				<key>LOCALIZATIONS</key>
-				<array/>
+				<array>
+					<dict>
+						<key>LANGUAGE</key>
+						<string>English</string>
+						<key>VALUE</key>
+						<dict>
+							<key>PATH</key>
+							<string>Pat-Welcome.rtfd</string>
+							<key>PATH_TYPE</key>
+							<integer>1</integer>
+						</dict>
+					</dict>
+				</array>
 			</dict>
 			<key>LICENSE</key>
 			<dict>
 				<key>KEYWORDS</key>
-				<dict>
-					<key>COPYRIGHT HOLDERS</key>
-					<string>Martin Hebnes Pedersen (LA5NTA)</string>
-					<key>YEAR</key>
-					<string>2014-2016</string>
-				</dict>
+				<dict/>
 				<key>LOCALIZATIONS</key>
-				<array/>
+				<array>
+					<dict>
+						<key>LANGUAGE</key>
+						<string>English</string>
+						<key>VALUE</key>
+						<dict>
+							<key>PATH</key>
+							<string>Pat-License.txt</string>
+							<key>PATH_TYPE</key>
+							<integer>1</integer>
+						</dict>
+					</dict>
+				</array>
 				<key>MODE</key>
-				<integer>1</integer>
-				<key>TEMPLATE</key>
-				<string>MIT License</string>
+				<integer>0</integer>
+			</dict>
+			<key>README</key>
+			<dict>
+				<key>LOCALIZATIONS</key>
+				<array>
+					<dict>
+						<key>LANGUAGE</key>
+						<string>English</string>
+						<key>VALUE</key>
+						<dict>
+							<key>PATH</key>
+							<string>Pat-Info.rtfd</string>
+							<key>PATH_TYPE</key>
+							<integer>1</integer>
+						</dict>
+					</dict>
+				</array>
 			</dict>
 			<key>SUMMARY</key>
 			<dict>
@@ -682,20 +727,36 @@
 			<key>RESOURCES</key>
 			<array/>
 			<key>ROOT_VOLUME_ONLY</key>
-			<true/>
+			<false/>
 		</dict>
 		<key>PROJECT_SETTINGS</key>
 		<dict>
 			<key>ADVANCED_OPTIONS</key>
-			<dict/>
+			<dict>
+				<key>installer-script.options.platforms.client:arch</key>
+				<array>
+					<string></string>
+				</array>
+				<key>installer-script.options:hostArchitectures</key>
+				<array>
+					<string></string>
+				</array>
+			</dict>
 			<key>BUILD_FORMAT</key>
 			<integer>0</integer>
 			<key>BUILD_PATH</key>
 			<dict>
 				<key>PATH</key>
-				<string>..</string>
+				<string>build</string>
 				<key>PATH_TYPE</key>
 				<integer>1</integer>
+			</dict>
+			<key>CERTIFICATE</key>
+			<dict>
+				<key>NAME</key>
+				<string>Mac Developer: Bill Green (E4C596YC97)</string>
+				<key>PATH</key>
+				<string>/Users/wgreen/Library/Keychains/login.keychain</string>
 			</dict>
 			<key>EXCLUDED_FILES</key>
 			<array>
@@ -866,7 +927,7 @@
 				</dict>
 			</array>
 			<key>NAME</key>
-			<string>Pat</string>
+			<string>Pat :: A Modern Winlink Client</string>
 		</dict>
 	</dict>
 	<key>TYPE</key>

@@ -4,7 +4,7 @@ set -e
 export GO15VENDOREXPERIMENT=1
 
 GITREV=$(git rev-parse --short HEAD)
-VERSION=$(grep Version version.go|cut -d '"' -f2)
+VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 
 # Go 1.5 or later is required
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d)/; print $1;')

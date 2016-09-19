@@ -10,10 +10,10 @@ VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d)/; print $1;')
 [ "$GO_POINT_VERSION" -lt "5" ] && echo "Go 1.5 or later required" && exit 1;
 
-# Link against libax25 on Linux
+# Link against libax25 (statically) on Linux
 if [[ "$OSTYPE" == "linux"* ]]; then
 	if [[ -f "/usr/lib/libax25.a" ]]; then
-		TAGS="libax25"
+		TAGS="libax25 static"
 	else
 		echo "WARNING: Not linking with libax25 - /usr/lib/libax25.a not found."
 	fi

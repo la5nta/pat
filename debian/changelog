@@ -1,3 +1,9 @@
+pat (0.2.1) stable; urgency=medium
+
+  * Support ARDOP >= v0.6 (https://github.com/la5nta/pat/issues/60)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 19 Sep 2016 17:25:26 +0200
+
 pat (0.2.0) stable; urgency=medium
 
   * Support Radio only - Winlink Hybrid Network (https://github.com/la5nta/pat/issues/44)

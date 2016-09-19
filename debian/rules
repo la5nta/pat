@@ -11,7 +11,7 @@ clean:
 	rm -rf $(PKGDIR)
 
 build:
-	TAGS="libax25" ./make.bash
+	./make.bash
 
 binary-arch: clean build
 	dh_prep

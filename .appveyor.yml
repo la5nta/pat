@@ -6,26 +6,12 @@ clone_folder: c:\gopath\src\github.com\la5nta\pat
 environment:
   global:
     GOPATH: C:\gopath
-    GOROOT: C:\go
+    GOROOT: C:\go17-x86
     MSYS_PATH: C:\MinGW\msys\1.0
-
-init:
-  - ps: >-
-      $app = Get-WmiObject -Class Win32_Product -Filter "Vendor = 'http://golang.org'"
-
-      if ($app) {
-        $app.Uninstall()
-      }
-
-install:
-  - rmdir c:\go /s /q
-  - appveyor DownloadFile https://storage.googleapis.com/golang/go1.7.windows-386.msi
-  - msiexec /i go1.7.windows-386.msi /q
-  - go version
-  - go env
 
 build_script:
   - set PATH=%GOROOT%\bin;%MSYS_PATH%\bin;C:\MinGW\bin;%PATH%
+  - go version
   - '%MSYS_PATH%\bin\bash -lc "cd /c/gopath/src/github.com/la5nta/pat && ./make.bash"'
 
 artifacts:

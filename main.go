@@ -208,17 +208,6 @@ func init() {
 }
 
 func main() {
-	// Enable the GZIP extension experiment by default
-	if _, ok := os.LookupEnv("GZIP_EXPERIMENT"); !ok {
-		os.Setenv("GZIP_EXPERIMENT", "1")
-	}
-
-	var err error
-	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
-	if err != nil {
-		log.Fatalf("Unable to load/write config: %s", err)
-	}
-
 	cmd, args := parseFlags(os.Args)
 
 	// Skip initialization for some commands
@@ -229,6 +218,18 @@ func main() {
 	case "configure", "version":
 		cmd.HandleFunc(args)
 		return
+	}
+
+	// Enable the GZIP extension experiment by default
+	if _, ok := os.LookupEnv("GZIP_EXPERIMENT"); !ok {
+		os.Setenv("GZIP_EXPERIMENT", "1")
+	}
+
+	// Parse configuration file
+	var err error
+	config, err = LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
+	if err != nil {
+		log.Fatalf("Unable to load/write config: %s", err)
 	}
 
 	// Initialize logger

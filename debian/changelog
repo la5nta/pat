@@ -1,8 +1,11 @@
 pat (0.2.1) stable; urgency=medium
 
   * Support ARDOP >= v0.6 (https://github.com/la5nta/pat/issues/60)
+  * Fix bug that caused 'configure' to fail if config format was invalid (https://github.com/la5nta/pat/issues/62)
+  * Add position format examples for --latlon (https://github.com/la5nta/pat/issues/65)
+  * Statically link libax25 (linux) to avoid crash on incompatible shared library (https://github.com/la5nta/pat/issues/59)
 
- -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 19 Sep 2016 17:25:26 +0200
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Wed, 12 Oct 2016 20:24:18 +0200
 
 pat (0.2.0) stable; urgency=medium
 

@@ -363,7 +363,7 @@ func resImagesPat_logoPng() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/images/pat_logo.png", size: 19654, mode: os.FileMode(420), modTime: time.Unix(1472288469, 0)}
+	info := bindataFileInfo{name: "res/images/pat_logo.png", size: 19654, mode: os.FileMode(420), modTime: time.Unix(1474130998, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -423,7 +423,7 @@ func resJsIndexJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/js/index.js", size: 14432, mode: os.FileMode(420), modTime: time.Unix(1472288469, 0)}
+	info := bindataFileInfo{name: "res/js/index.js", size: 14432, mode: os.FileMode(420), modTime: time.Unix(1474130998, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -483,7 +483,7 @@ func resTmplIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "res/tmpl/index.html", size: 13567, mode: os.FileMode(420), modTime: time.Unix(1472288469, 0)}
+	info := bindataFileInfo{name: "res/tmpl/index.html", size: 13567, mode: os.FileMode(420), modTime: time.Unix(1474130998, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

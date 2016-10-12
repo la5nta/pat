@@ -44,6 +44,6 @@ func convertImage(r io.Reader) ([]byte, error) {
 
 	// Re-encode as low quality jpeg
 	var buf bytes.Buffer
-	err = jpeg.Encode(&buf, img, &jpeg.Options{40})
+	err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 40})
 	return buf.Bytes(), err
 }

@@ -4,7 +4,8 @@
 
 package main
 
-var UsageConnect = `'alias' or 'transport://[host][/digi]/targetcall[?params...]'
+var (
+	UsageConnect = `'alias' or 'transport://[host][/digi]/targetcall[?params...]'
 
 transport:
   winmor:     WINMOR TNC
@@ -28,7 +29,7 @@ params:
   ?freq=        Sets QSY frequency (winmor, ardop and ax25 only)
   ?host=        Overrides the host part of the path. Useful for serial-tnc to specify e.g. /dev/ttyS0.
 `
-var ExampleConnect = `
+	ExampleConnect = `
   connect telnet                     (alias) Connect to one of the Winlink Common Message Servers via tcp.
   connect ax25:///LA1B-10            Connect to the RMS Gateway LA1B-10 using Linux AX.25 on the default axport.
   connect ax25://tmd710/LA1B-10      Connect to the RMS Gateway LA1B-10 using Linux AX.25 on axport 'tmd710'.
@@ -39,3 +40,13 @@ var ExampleConnect = `
   connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
   connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.
 `
+)
+
+var (
+	ExamplePosition = `
+  position -c "QRV 145.500MHz"       Send position and comment with coordinates retrieved from GPSd.
+  position --latlon 59.123,005.123   Send position 59.123N 005.123E.
+  position --latlon 40.704,-73.945   Send position 40.704N 073.945W.
+  position --latlon -10.123,-60.123  Send position 10.123S 060.123W.
+`
+)

@@ -92,9 +92,10 @@ var commands = []Command{
 		Desc:    "Post a position report (GPSd or manual entry).",
 		Usage:   "[options]",
 		Options: map[string]string{
-			"--latlon":      "latitude,longitude for manual entry. Will use GPSd if this is empty.",
+			"--latlon":      "latitude,longitude in decimal degrees for manual entry. Will use GPSd if this is empty.",
 			"--comment, -c": "Comment to be included in the position report.",
 		},
+		Example:    ExamplePosition,
 		HandleFunc: posReportHandle,
 	},
 	{
@@ -679,8 +680,8 @@ func posReportHandle(args []string) {
 	var latlon, comment string
 
 	set := pflag.NewFlagSet("position", pflag.ExitOnError)
-	set.StringVar(&latlon, "latlon", "", "latitude,longitude for manual entry")
-	set.StringVarP(&comment, "comment", "c", "", "Comment")
+	set.StringVar(&latlon, "latlon", "", "")
+	set.StringVarP(&comment, "comment", "c", "", "")
 	set.Parse(args)
 
 	report := catalog.PosReport{Comment: comment}

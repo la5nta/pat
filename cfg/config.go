@@ -168,7 +168,6 @@ type BeaconConfig struct {
 }
 
 var DefaultConfig Config = Config{
-	MyCall:   "",
 	MOTD:     []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs: []string{},
 	ConnectAliases: map[string]string{
@@ -202,5 +201,7 @@ var DefaultConfig Config = Config{
 		ListenAddr: ":8774",
 		Password:   "",
 	},
-	GPSdAddr: "localhost:2947", // Default listen address for GPSd
+	GPSdAddr:   "localhost:2947", // Default listen address for GPSd
+	Schedule:   map[string]string{},
+	HamlibRigs: map[string]HamlibConfig{},
 }

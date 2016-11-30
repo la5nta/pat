@@ -304,6 +304,15 @@ func main() {
 }
 
 func configureHandle(args []string) {
+	// Ensure config file has been written
+	_, err := ReadConfig(fOptions.ConfigPath)
+	if os.IsNotExist(err) {
+		err = WriteConfig(cfg.DefaultConfig, fOptions.ConfigPath)
+		if err != nil {
+			log.Fatalf("Unable to write default config: %s", err)
+		}
+	}
+
 	cmd := exec.Command(EditorName(), fOptions.ConfigPath)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {

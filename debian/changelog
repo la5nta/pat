@@ -1,3 +1,10 @@
+pat (0.2.2) stable; urgency=medium
+
+  * Ensure default config is written before opening the configuration editor (https://github.com/la5nta/pat/issues/70)
+  * Add some missing config defaults
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Thu, 01 Dec 2016 18:14:09 +0100
+
 pat (0.2.1) stable; urgency=medium
 
   * Support ARDOP >= v0.6 (https://github.com/la5nta/pat/issues/60)

@@ -505,7 +505,7 @@
 				<key>USE_HFS+_COMPRESSION</key>
 				<true/>
 				<key>VERSION</key>
-				<string>0.2.1</string>
+				<string>0.2.2</string>
 			</dict>
 			<key>UUID</key>
 			<string>5562F199-B4C6-48BC-98FA-5BBA494CB61F</string>

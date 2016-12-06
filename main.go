@@ -524,11 +524,8 @@ func composeMessage(replyMsg *fbb.Message) {
 	if to == "" && replyMsg != nil {
 		msg.AddTo(replyMsg.From().String())
 	} else {
-		for _, addr := range strings.Split(to, `,`) {
-			addr = strings.TrimSpace(addr)
-			if addr != "" {
-				msg.AddTo(addr)
-			}
+		for _, addr := range strings.FieldsFunc(to, SplitFunc) {
+			msg.AddTo(addr)
 		}
 	}
 
@@ -552,11 +549,8 @@ func composeMessage(replyMsg *fbb.Message) {
 			msg.AddCc(addr.String())
 		}
 	} else {
-		for _, addr := range strings.Split(cc, `,`) {
-			addr = strings.TrimSpace(addr)
-			if addr != "" {
-				msg.AddCc(addr)
-			}
+		for _, addr := range strings.FieldsFunc(cc, SplitFunc) {
+			msg.AddCc(addr)
 		}
 	}
 

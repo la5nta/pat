@@ -153,7 +153,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Other fields
 	if v := m.Value["to"]; len(v) == 1 {
-		addrs := strings.Split(v[0], ",")
+		addrs := strings.FieldsFunc(v[0], SplitFunc)
 		msg.AddTo(addrs...)
 	}
 	if v := m.Value["subject"]; len(v) == 1 {

@@ -23,7 +23,7 @@ type incomingConnect struct {
 }
 
 func Unlisten(param string) {
-	methods := strings.Split(param, ",")
+	methods := strings.FieldsFunc(param, SplitFunc)
 	for _, method := range methods {
 		ln, ok := listeners[method]
 		if !ok {
@@ -37,11 +37,9 @@ func Unlisten(param string) {
 func Listen(listenStr string) {
 	cc := make(chan incomingConnect, 2)
 
-	methods := strings.Split(listenStr, ",")
+	methods := strings.FieldsFunc(listenStr, SplitFunc)
 	for _, method := range methods {
-		method = strings.TrimSpace(strings.ToLower(method))
-
-		switch method {
+		switch strings.ToLower(method) {
 		case MethodWinmor:
 			if err := initWinmorTNC(); err != nil {
 				log.Fatal(err)

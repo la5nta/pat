@@ -1,3 +1,11 @@
+pat (0.2.3) stable; urgency=medium
+
+  * Support ARDOP >= v0.9 (https://github.com/la5nta/pat/issues/69)
+  * Improve list parsing in various UI fields
+  * Handle non-ascii attachment names
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Fri, 27 Jan 2016 18:17:30 +0100
+
 pat (0.2.2) stable; urgency=medium
 
   * Ensure default config is written before opening the configuration editor (https://github.com/la5nta/pat/issues/70)

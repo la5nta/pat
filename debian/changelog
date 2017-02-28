@@ -1,3 +1,10 @@
+pat (0.2.4) stable; urgency=medium
+
+  * Properly parse offset in B2 compressed message header for BPQ compatibility (https://github.com/la5nta/pat/issues/74)
+  * Fix libax25 segfault on invalid axport (https://github.com/la5nta/pat/issues/73)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 28 Feb 2017 19:07:00 +0100
+
 pat (0.2.3) stable; urgency=medium
 
   * Support ARDOP >= v0.9 (https://github.com/la5nta/pat/issues/69)

@@ -19,6 +19,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"encoding/xml"
+	"regexp"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
@@ -483,12 +486,123 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		found = true
-		http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+		if (strings.HasPrefix(f.Name(), "RMS_Express_Form_") && strings.HasSuffix(f.Name(),".xml")) {
+			winlinkviewHandler(w, r, msg.Date(),f.Data() )
+		} else { 
+			http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+		}
 	}
 
 	if !found {
 		http.NotFound(w, r)
 	}
+}
+
+func findOneFile(rootpath string, find string) string {
+	//Walk() down a given path until a specific file is found
+	found := ""
+	err := filepath.Walk(rootpath, func(pathName string, info os.FileInfo, err error) error {
+		//fmt.Printf("Walkies: %s\n", pathName)
+		if path.Base(pathName) == find {
+			found = pathName
+			return fmt.Errorf("found")
+		}
+		return nil
+	})
+	_ = err
+	return found
+}
+
+func winlinkviewHandler(w http.ResponseWriter, r *http.Request,modtime time.Time,formData []uint8) {
+	// this is called from attachmentHandler above, not direct from routing. 
+	//log.Println("winlinkHandler")
+
+	var templateData map[string]string
+	templateData = make(map[string]string)
+	decoder := xml.NewDecoder(bytes.NewReader(formData))
+	templateName := ""
+	for {
+		token, _ := decoder.Token()
+		if token == nil {
+			break
+		}
+		//fmt.Printf("%T ==  %+v\n",token,token)
+		switch startElement := token.(type) {
+			case xml.StartElement:
+			if (startElement.Name.Local == "form_parameters" || startElement.Name.Local == "variables") {
+
+				group :=startElement.Name.Local
+				_ = group
+				vName := ""
+				vData := ""
+				for {
+					token,_ =decoder.Token()
+					if token == nil {
+						break
+					}
+					if group == vName {
+						break
+					}
+					switch loopElement := token.(type) {
+						case xml.StartElement:
+							vName = loopElement.Name.Local
+							vData = ""
+							break
+						case xml.CharData:
+							//setting but not using, because this section fires every time there is whitespace in the xml
+							vData = fmt.Sprintf("%s",token)
+						break
+						case xml.EndElement:
+							if vName == loopElement.Name.Local {
+								if (group == "form_parameters" && vName == "display_form") {
+									templateName = vData
+								}
+								templateData[vName]=vData
+							}
+							vName = loopElement.Name.Local
+						break
+					}
+				}
+			}
+			break
+			case xml.CharData:
+
+			break
+			}
+	}
+	// We've loaded the XML
+	//log.Println("templateData: %#v",templateData)
+	templateName = findOneFile("/root/Forms",templateName)
+	//log.Println("templateName: ",templateName)
+
+	// need to check if we have a template.
+	// we could also just return the XML
+	if templateName == "" {
+		http.Error(w, "did not find template file", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	htmlTemplateF , err := ioutil.ReadFile(templateName)
+	rArr := regexp.MustCompile(`\{var ([a-zA-Z_]+)\}`)
+	htmlTemplate :=  string( rArr.ReplaceAllFunc(htmlTemplateF, func(s []byte) []byte{
+		buff := []byte("{{ index . \"")
+		// ReplaceAllFunc gives us the entire match, so we have to cut our variable out
+		wakka := []byte(strings.ToLower(string(s[5 : len(s)-1])))
+		buff = append(buff, wakka...)
+		buff = append(buff, []byte("\" }}")...)
+		return buff
+	}  )  )
+
+	t := template.New("t")
+	t, err = t.Parse(htmlTemplate)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = t.Execute(w, templateData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//http.ServeContent(w,r,"lol.html", modtime, bytes.NewReader(formData))
 }
 
 // toHTML takes the given body and turns it into proper html with

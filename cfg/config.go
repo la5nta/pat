@@ -74,6 +74,9 @@ type Config struct {
 	//
 	// Set to true if you don't want your information sent.
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
+
+	// Directory for winlink forms
+	WinlinkFormsDir string `json:"winlink_forms_dir"`
 }
 
 type HamlibConfig struct {

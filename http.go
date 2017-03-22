@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"html/template"
 	"io"
@@ -16,12 +17,11 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
-	"encoding/xml"
-	"regexp"
-	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
@@ -44,6 +44,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", attachmentHandler).Methods("GET")
+	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}/view", attachmentViewHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/read", readHandler).Methods("POST")
 	r.HandleFunc("/api/mailbox/out", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
@@ -486,9 +487,37 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		found = true
-		if (strings.HasPrefix(f.Name(), "RMS_Express_Form_") && strings.HasSuffix(f.Name(),".xml")) {
-			winlinkviewHandler(w, r, msg.Date(),f.Data() )
-		} else { 
+		http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+	}
+
+	if !found {
+		http.NotFound(w, r)
+	}
+}
+
+func attachmentViewHandler(w http.ResponseWriter, r *http.Request) {
+	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
+
+	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
+	if os.IsNotExist(err) {
+		http.NotFound(w, r)
+		return
+	} else if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Find and write attachment
+	var found bool
+	for _, f := range msg.Files() {
+		if f.Name() != attachment {
+			continue
+		}
+		found = true
+		if strings.HasPrefix(f.Name(), "RMS_Express_Form_") && strings.HasSuffix(f.Name(), ".xml") {
+			winlinkviewHandler(w, r, msg.Date(), f.Data())
+		} else {
 			http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
 		}
 	}
@@ -500,6 +529,9 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 
 func findOneFile(rootpath string, find string) string {
 	//Walk() down a given path until a specific file is found
+	if rootpath == "" {
+		return ""
+	}
 	found := ""
 	err := filepath.Walk(rootpath, func(pathName string, info os.FileInfo, err error) error {
 		//fmt.Printf("Walkies: %s\n", pathName)
@@ -513,8 +545,8 @@ func findOneFile(rootpath string, find string) string {
 	return found
 }
 
-func winlinkviewHandler(w http.ResponseWriter, r *http.Request,modtime time.Time,formData []uint8) {
-	// this is called from attachmentHandler above, not direct from routing. 
+func winlinkviewHandler(w http.ResponseWriter, r *http.Request, modtime time.Time, formData []uint8) {
+	// this is called from attachmentHandler above, not direct from routing.
 	//log.Println("winlinkHandler")
 
 	var templateData map[string]string
@@ -528,15 +560,15 @@ func winlinkviewHandler(w http.ResponseWriter, r *http.Request,modtime time.Time
 		}
 		//fmt.Printf("%T ==  %+v\n",token,token)
 		switch startElement := token.(type) {
-			case xml.StartElement:
-			if (startElement.Name.Local == "form_parameters" || startElement.Name.Local == "variables") {
+		case xml.StartElement:
+			if startElement.Name.Local == "form_parameters" || startElement.Name.Local == "variables" {
 
-				group :=startElement.Name.Local
+				group := startElement.Name.Local
 				_ = group
 				vName := ""
 				vData := ""
 				for {
-					token,_ =decoder.Token()
+					token, _ = decoder.Token()
 					if token == nil {
 						break
 					}
@@ -544,54 +576,54 @@ func winlinkviewHandler(w http.ResponseWriter, r *http.Request,modtime time.Time
 						break
 					}
 					switch loopElement := token.(type) {
-						case xml.StartElement:
-							vName = loopElement.Name.Local
-							vData = ""
-							break
-						case xml.CharData:
-							//setting but not using, because this section fires every time there is whitespace in the xml
-							vData = fmt.Sprintf("%s",token)
+					case xml.StartElement:
+						vName = loopElement.Name.Local
+						vData = ""
 						break
-						case xml.EndElement:
-							if vName == loopElement.Name.Local {
-								if (group == "form_parameters" && vName == "display_form") {
-									templateName = vData
-								}
-								templateData[vName]=vData
+					case xml.CharData:
+						//setting but not using, because this section fires every time there is whitespace in the xml
+						vData = fmt.Sprintf("%s", token)
+						break
+					case xml.EndElement:
+						if vName == loopElement.Name.Local {
+							if group == "form_parameters" && vName == "display_form" {
+								templateName = vData
 							}
-							vName = loopElement.Name.Local
+							templateData[vName] = vData
+						}
+						vName = loopElement.Name.Local
 						break
 					}
 				}
 			}
 			break
-			case xml.CharData:
+		case xml.CharData:
 
 			break
-			}
+		}
 	}
-	// We've loaded the XML
-	//log.Println("templateData: %#v",templateData)
-	templateName = findOneFile("/root/Forms",templateName)
-	//log.Println("templateName: ",templateName)
+	templateNameFile := ""
+	if config.WinlinkFormsDir != "" {
+		templateNameFile = findOneFile(config.WinlinkFormsDir, templateName)
+	}
 
 	// need to check if we have a template.
 	// we could also just return the XML
-	if templateName == "" {
+	if templateNameFile == "" {
 		http.Error(w, "did not find template file", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html")
-	htmlTemplateF , err := ioutil.ReadFile(templateName)
+	htmlTemplateF, err := ioutil.ReadFile(templateNameFile)
 	rArr := regexp.MustCompile(`\{var ([a-zA-Z_]+)\}`)
-	htmlTemplate :=  string( rArr.ReplaceAllFunc(htmlTemplateF, func(s []byte) []byte{
+	htmlTemplate := string(rArr.ReplaceAllFunc(htmlTemplateF, func(s []byte) []byte {
 		buff := []byte("{{ index . \"")
 		// ReplaceAllFunc gives us the entire match, so we have to cut our variable out
 		wakka := []byte(strings.ToLower(string(s[5 : len(s)-1])))
 		buff = append(buff, wakka...)
 		buff = append(buff, []byte("\" }}")...)
 		return buff
-	}  )  )
+	}))
 
 	t := template.New("t")
 	t, err = t.Parse(htmlTemplate)

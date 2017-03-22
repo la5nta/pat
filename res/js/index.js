@@ -454,8 +454,12 @@ function displayMessage(elem) {
 					'</a></div>'
 				);
 			} else {
+				attachments.append('<div class="col-xs-6 col-md-3">');
+				if (file.Name.startsWith("RMS_Express_Form_") && file.Name.endsWith(".xml")) {
+					attachments.append('<a target="_blank" href="' + msg_url + '/' + file.Name + '/view" class="btn btn-default navbar-btn">View ' + file.Name + '</a>');
+				}
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+					'<a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
 					file.Name + '<br />(' + file.Size + ' bytes)' +
 					'</a></div>'
 				);

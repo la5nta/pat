@@ -7,5 +7,5 @@ package main
 import "unicode"
 
 func SplitFunc(c rune) bool {
-	return unicode.IsSpace(c) || c == ','
+	return unicode.IsSpace(c) || c == ',' || c == ';'
 }

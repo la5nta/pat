@@ -624,15 +624,14 @@ func winlinkviewHandler(w http.ResponseWriter, r *http.Request, modtime time.Tim
 		buff = append(buff, []byte("\" }}")...)
 		return buff
 	}))
-
 	t := template.New("t")
 	t, err = t.Parse(htmlTemplate)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Template.Parse Error: %s",err)
 	}
 	err = t.Execute(w, templateData)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Template.Execute Error: %s",template.HTMLEscapeString(err.Error()))
 	}
 	//http.ServeContent(w,r,"lol.html", modtime, bytes.NewReader(formData))
 }

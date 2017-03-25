@@ -534,7 +534,7 @@ func findOneFile(rootpath string, find string) string {
 	}
 	found := ""
 	err := filepath.Walk(rootpath, func(pathName string, info os.FileInfo, err error) error {
-		//fmt.Printf("Walkies: %s\n", pathName)
+		//log.Printf("Walkies: %s\n", pathName)
 		if path.Base(pathName) == find {
 			found = pathName
 			return fmt.Errorf("found")
@@ -615,7 +615,7 @@ func winlinkviewHandler(w http.ResponseWriter, r *http.Request, modtime time.Tim
 	}
 	w.Header().Set("Content-Type", "text/html")
 	htmlTemplateF, err := ioutil.ReadFile(templateNameFile)
-	rArr := regexp.MustCompile(`\{var ([a-zA-Z_]+)\}`)
+	rArr := regexp.MustCompile(`\{var ([a-zA-Z_0-9]+)\}`)
 	htmlTemplate := string(rArr.ReplaceAllFunc(htmlTemplateF, func(s []byte) []byte {
 		buff := []byte("{{ index . \"")
 		// ReplaceAllFunc gives us the entire match, so we have to cut our variable out
@@ -624,6 +624,11 @@ func winlinkviewHandler(w http.ResponseWriter, r *http.Request, modtime time.Tim
 		buff = append(buff, []byte("\" }}")...)
 		return buff
 	}))
+
+	// Work around some common glitches in the winlink forms, hopefully this is temporary.
+	htmlTemplate = strings.Replace(htmlTemplate, " =\"\">", " >", -1)
+	htmlTemplate = strings.Replace(htmlTemplate, "<pbzloc =\"1\"", "<pbzloc", -1)
+
 	t := template.New("t")
 	t, err = t.Parse(htmlTemplate)
 	if err != nil {

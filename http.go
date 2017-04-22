@@ -37,6 +37,7 @@ type Progress struct {
 	Subject          string `json:"subject"`
 	Receiving        bool   `json:"receiving"`
 	Sending          bool   `json:"sending"`
+	Done             bool   `json:"done"`
 }
 
 var webProgress Progress

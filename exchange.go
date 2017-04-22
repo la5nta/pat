@@ -92,7 +92,6 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	session.SetLogger(log.New(logWriter, "", 0))
 
 	session.SetStatusUpdater(new(StatusUpdate))
-	defer func() { webProgress = Progress{} }()
 
 	if fOptions.Robust {
 		session.SetRobustMode(fbb.RobustForced)
@@ -199,9 +198,10 @@ type StatusUpdate int
 
 func (s *StatusUpdate) UpdateStatus(stat fbb.Status) {
 	var prop fbb.Proposal
-	if stat.Receiving != nil {
+	switch {
+	case stat.Receiving != nil:
 		prop = *stat.Receiving
-	} else if stat.Sending != nil {
+	case stat.Sending != nil:
 		prop = *stat.Sending
 	}
 
@@ -212,11 +212,13 @@ func (s *StatusUpdate) UpdateStatus(stat fbb.Status) {
 		Subject:          prop.Title(),
 		Receiving:        stat.Receiving != nil,
 		Sending:          stat.Sending != nil,
+		Done:             stat.Done,
 	}
 
 	percent := float64(stat.BytesTransferred) / float64(stat.BytesTotal) * 100
 	fmt.Printf("\r%s: %3.0f%%", prop.Title(), percent)
-	if int(percent) == 100 {
+
+	if stat.Done {
 		fmt.Println("")
 	}
 	os.Stdout.Sync()

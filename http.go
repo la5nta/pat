@@ -30,6 +30,17 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
+type Progress struct {
+	BytesTransferred int    `json:"bytes_transferred"`
+	BytesTotal       int    `json:"bytes_total"`
+	MID              string `json:"mid"`
+	Subject          string `json:"subject"`
+	Receiving        bool   `json:"receiving"`
+	Sending          bool   `json:"sending"`
+}
+
+var webProgress Progress
+
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go-bindata-assetfs res/...
 func ListenAndServe(addr string) error {
@@ -230,11 +241,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		select {
-		// Periodic status update
+		// Periodic status and progress update
 		case <-statusUpdateTick:
-			err = conn.WriteJSON(struct {
-				Status statusUpdate
-			}{getStatus()})
+			conn.WriteJSON(struct{ Progress Progress }{webProgress})
+			err = conn.WriteJSON(struct{ Status statusUpdate }{getStatus()})
 
 		// Log events
 		case line := <-lines:

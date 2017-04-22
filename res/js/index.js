@@ -72,6 +72,31 @@ function initFrontend(ws_url)
 	});
 }
 
+var isInTransfer = false
+function updateProgress(p) {
+	isInTransfer=p.receiving || p.sending
+
+	if(isInTransfer) {
+		$('#navbar_progress').show();
+	} else if( $('#navbar_progress').is(':visible') ){
+		window.setTimeout(function() {
+			if (!isInTransfer) {
+				$('#navbar_progress').fadeOut(500);
+			}
+		}, 3000);
+		return
+	}
+
+	percent=Math.ceil(p.bytes_transferred*100 / p.bytes_total);
+	op = p.receiving ? "Receiving" : "Sending";
+	text = op + " " + p.mid + " (" + p.bytes_total + " bytes)"
+	if( p.subject ){
+		text += " - " + p.subject
+	}
+	$('#navbar_progress .progress-text').text(text);
+	$('#navbar_progress .progress-bar').css("width", percent + "%").text(percent + "%");
+}
+
 function setupConnectModal() {
 	$('#freqInput').change(onConnectInputChange);
 	$('#radioOnlyInput').change(onConnectInputChange);
@@ -348,6 +373,9 @@ function initConsole()
 			}
 			if(msg.Status) {
 				updateStatus(msg.Status)
+			}
+			if(msg.Progress) {
+				updateProgress(msg.Progress)
 			}
 		};
 		ws.onclose   = function(evt) {

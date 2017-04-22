@@ -8,7 +8,21 @@ body {
 }
 
 body > .container {
-  padding: 60px 15px 0;
+  padding: 75px 15px 0;
+}
+
+.progress-text {
+  padding-top: 3px;
+  font-size: 11px !important;
+  color: #555555;
+  white-space: nowrap;
+  overflow: hidden;
+  display: block;
+  text-overflow: ellipsis;
+}
+
+.navbar > .container {
+  margin-bottom: -10px;
 }
 
 .alert-small {

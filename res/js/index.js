@@ -308,7 +308,7 @@ function alert(msg)
 {
     var div = $('#navbar_status');
     div.empty();    
-    div.append('<p class="navbar-text">' + msg + '</p>');
+    div.append('<span class="navbar-text status-text">' + msg + '</p>');
     div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
 }

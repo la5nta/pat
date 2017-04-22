@@ -11,6 +11,12 @@ body > .container {
   padding: 75px 15px 0;
 }
 
+.status-text {
+  font-weight: bold;
+  font-size: 11px !important;
+  margin: 0px 0px 0;
+}
+
 .progress-text {
   padding-top: 3px;
   font-size: 11px !important;

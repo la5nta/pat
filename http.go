@@ -212,7 +212,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	go wsReadLoop(conn)
+	quit := wsReadLoop(conn)
 	defer conn.Close()
 
 	lines, done, err := tailFile(fOptions.LogPath)
@@ -261,13 +261,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			}{true})
 		case err := <-fsWatcher.Errors:
 			log.Println(err)
+
+		case <-quit:
+			conn.Close()
+			return
 		}
 
 		if err != nil {
-			if err != websocket.ErrCloseSent {
-				log.Println(err)
-			}
-			break
+			log.Println("Websocket error:", err)
 		}
 	}
 }
@@ -312,13 +313,17 @@ func tailFile(path string) (<-chan []byte, chan<- struct{}, error) {
 	return (<-chan []byte)(lines), (chan<- struct{})(done), nil
 }
 
-func wsReadLoop(c *websocket.Conn) {
-	for {
-		if _, _, err := c.NextReader(); err != nil {
-			c.Close()
-			break
+func wsReadLoop(c *websocket.Conn) <-chan struct{} {
+	quit := make(chan struct{})
+	go func() {
+		for {
+			if _, _, err := c.NextReader(); err != nil {
+				close(quit)
+				return
+			}
 		}
-	}
+	}()
+	return quit
 }
 
 func uiHandler(w http.ResponseWriter, r *http.Request) {

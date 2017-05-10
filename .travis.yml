@@ -6,7 +6,7 @@ os:
 
 go:
   - 1.6
-  - 1.7
+  - 1.8
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y libax25-dev; fi

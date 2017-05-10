@@ -43,7 +43,7 @@ body > .container {
  * Mailbox folder
  */
 #folder {
-  max-height: 350px;
+  max-height: 345px;
   overflow-y: auto;
 }
 

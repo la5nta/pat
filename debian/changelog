@@ -1,7 +1,9 @@
 pat (0.2.4) stable; urgency=medium
 
+  * Add progress bar for message transfer in web GUI (https://github.com/la5nta/pat/pull/78)
   * Properly parse offset in B2 compressed message header for BPQ compatibility (https://github.com/la5nta/pat/issues/74)
   * Fix libax25 segfault on invalid axport (https://github.com/la5nta/pat/issues/73)
+  * Silence FREQUENCY parse errors for ardop (https://github.com/la5nta/pat/issues/75)
 
  -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 28 Feb 2017 19:07:00 +0100
 

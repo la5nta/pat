@@ -409,7 +409,7 @@ function displayFolder(dir) {
 		  "<thead><tr><th></th><th>Subject</th>"
 		+ "<th>" + (is_from ? "From" : "To") + "</th>"
 		+ (is_from ? "" : "<th>P2P</th>")
-		+ "<th>Date</th><th>MID</th></tr></thead><tbody></tbody>");
+		+ "<th>Date</th><th>Message ID</th></tr></thead><tbody></tbody>");
 
 	var tbody = $('#folder table tbody');
 

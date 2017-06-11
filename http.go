@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -52,9 +53,10 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/connect", ConnectHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
+	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", attachmentHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/read", readHandler).Methods("POST")
-	r.HandleFunc("/api/mailbox/out", postMessageHandler).Methods("POST")
+	r.HandleFunc("/api/mailbox/{box}", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
@@ -116,7 +118,46 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isInPath(base string, path string) error {
+	_, err := filepath.Rel(base, path)
+	return err
+}
+
 func postMessageHandler(w http.ResponseWriter, r *http.Request) {
+	box := mux.Vars(r)["box"]
+	if box == "out" {
+		postOutboundMessageHandler(w, r)
+		return
+	}
+
+	srcPath := r.Header.Get("X-Pat-SourcePath")
+	if srcPath == "" {
+		http.Error(w, "Not implemented", http.StatusNotImplemented)
+		return
+	}
+
+	srcPath = strings.TrimPrefix(srcPath, "/api/mailbox/")
+	srcPath = filepath.Join(mbox.MBoxPath, srcPath+mailbox.Ext)
+
+	// Check that we don't escape our mailbox path
+	srcPath = filepath.Clean(srcPath)
+	if err := isInPath(mbox.MBoxPath, srcPath); err != nil {
+		log.Println("Malicious source path in move:", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	targetPath := filepath.Join(mbox.MBoxPath, box, filepath.Base(srcPath))
+
+	if err := os.Rename(srcPath, targetPath); err != nil {
+		log.Println("Could not move message:", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	} else {
+		json.NewEncoder(w).Encode("OK")
+	}
+}
+
+func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 * (1024 ^ 2)) // 10Mb
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -461,6 +502,27 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 		msg.BodyHTML = string(bluemonday.UGCPolicy().SanitizeBytes(unsafe))
 	}
 	return json.Marshal(msg)
+}
+
+func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
+
+	path := filepath.Clean(filepath.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
+	if err := isInPath(mbox.MBoxPath, path); err != nil {
+		log.Println("Malicious source path in move:", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		http.NotFound(w, r)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	json.NewEncoder(w).Encode("OK")
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {

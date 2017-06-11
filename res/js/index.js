@@ -512,6 +512,19 @@ function displayMessage(elem) {
 
 			$('#composer').modal('show');
 		});
+		$('#delete_btn').click(function(evt){
+			deleteMessage(currentFolder, mid);
+		});
+		$('#archive_btn').click(function(evt){
+			archiveMessage(currentFolder, mid);
+		});
+
+		// Archive button should be hidden for already archived messages
+		if( currentFolder == "archive" ){
+			$('#archive_btn').parent().hide();
+		} else {
+			$('#archive_btn').parent().show();
+		}
 
 		view.show();
 		$('#message_view').modal('show');
@@ -531,6 +544,42 @@ function quoteMsg(data) {
 		output += ">" + lines[i] + "\n"
 	}
 	return output
+}
+
+function archiveMessage(box, mid) {
+	$.ajax("/api/mailbox/archive", {
+		headers: {
+			"X-Pat-SourcePath": "/api/mailbox/"+box+"/"+mid,
+		},
+		contentType : 'application/json',
+		type : 'POST',
+		success: function(resp) {
+			$('#message_view').modal('hide');
+			alert("Message archived");
+		},
+		error: function(xhr, st, resp) {
+			alert(resp + ": " + xhr.responseText);
+		},
+	});
+}
+
+function deleteMessage(box, mid) {
+	$('#confirm_delete').on('click', '.btn-ok', function(e) {
+		$('#message_view').modal('hide');
+		var $modalDiv = $(e.delegateTarget);
+		$.ajax("/api/mailbox/"+box+"/"+mid, {
+			type : 'DELETE',
+			success: function(resp) {
+				$modalDiv.modal('hide');
+				alert("Message deleted");
+			},
+			error: function(xhr, st, resp) {
+				$modalDiv.modal('hide');
+				alert(resp + ": " + xhr.responseText);
+			},
+		});
+	});
+	$('#confirm_delete').modal('show');
 }
 
 function setRead(box, mid) {

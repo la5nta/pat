@@ -241,7 +241,9 @@
                 <ul class="dropdown-menu" role="menu">
                   <li><a href="#" id="reply_btn"><span class="glyphicon glyphicon-pencil" /> Reply...</a></li>
                   <li><a href="#" id="forward_btn"><span class="glyphicon glyphicon-share-alt" /> Forward...</a></li>
-                  <!--<li class="divider"></li>-->
+                  <li class="divider"></li>
+		  <li><a href="#" id="archive_btn"><span class="glyphicon glyphicon-briefcase" /> Archive</a></li>
+                  <li><a href="#" id="delete_btn"><span class="glyphicon glyphicon-trash" /> Delete</a></li>
                 </ul>
               </div>
               <h4 class="modal-title" id="subject"></h4>
@@ -255,6 +257,20 @@
         </div>
       </div>
       <!-- End message view -->
+      <!-- Begin delete confirm modal -->
+      <div class="modal fade" id="confirm_delete" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">Delete message</div>
+            <div class="modal-body">Are you sure you want to delete this message? This action can not be reverted.</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <a class="btn btn-danger btn-ok">Delete</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- End delete confirm modal -->
     </div>
     <!-- End page content -->
 

@@ -490,7 +490,7 @@ function displayMessage(elem) {
 				);
 			}
 		}
-
+		$('#reply_btn').off('click');
 		$('#reply_btn').click(function(evt){
 			$('#message_view').modal('hide');
 
@@ -504,6 +504,7 @@ function displayMessage(elem) {
 
 			$('#composer').modal('show');
 		});
+		$('#forward_btn').off('click');
 		$('#forward_btn').click(function(evt){
 			$('#message_view').modal('hide');
 
@@ -512,9 +513,11 @@ function displayMessage(elem) {
 
 			$('#composer').modal('show');
 		});
+		$('#delete_btn').off('click');
 		$('#delete_btn').click(function(evt){
 			deleteMessage(currentFolder, mid);
 		});
+		$('#archive_btn').off('click');
 		$('#archive_btn').click(function(evt){
 			archiveMessage(currentFolder, mid);
 		});

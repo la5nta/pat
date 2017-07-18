@@ -1,3 +1,11 @@
+pat (0.3.0) stable; urgency=high (Fixes compatibility with an upcoming Winlink CMS release)
+
+  * Fix critical compatibility issues with WL2K-4.0 aka "AWS-CMS" (https://github.com/la5nta/pat/issues/81)
+  * Fix close of AX.25 listener on Linux (https://github.com/la5nta/pat/issues/68)
+  * Add "Delete" and "Move to archive" actions in web GUI (https://github.com/la5nta/pat/issues/63)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 18 Jul 2017 21:13:08 +0200
+
 pat (0.2.4) stable; urgency=medium
 
   * Add progress bar for message transfer in web GUI (https://github.com/la5nta/pat/pull/78)

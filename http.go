@@ -108,6 +108,10 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
+	if pos.Date.IsZero() {
+		pos.Date = time.Now()
+	}
+
 	// Post to outbox
 	msg := pos.Message(fOptions.MyCall)
 	if err := mbox.AddOut(msg); err != nil {

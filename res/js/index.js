@@ -24,9 +24,10 @@ function initFrontend(ws_url)
 		$('#connectForm input').keyup(function (e) {
 			onConnectInputChange();
 		});
-
-		$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
 		$('#pos_btn').click(postPosition);
+
+		// Setup composer
+		initComposeModal();
 		
 		// Setup folder navigation
 		$('#inbox_tab').click(function(evt){ displayFolder("in") });
@@ -48,10 +49,6 @@ function initFrontend(ws_url)
 			}
 		});
 
-		$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
-
-		$('#post_btn').click(postMessage);
-
 		$('#posModal').on('shown.bs.modal', function (e) {
 			if (navigator.geolocation) {
 				$('#pos_status').empty().append("<strong>Waiting for position...</strong>");
@@ -66,7 +63,7 @@ function initFrontend(ws_url)
 			}
 		});
 
-		setupConnectModal();
+		initConnectModal();
 
 		initConsole();
 		displayFolder("in");
@@ -99,7 +96,20 @@ function updateProgress(p) {
 	}
 }
 
-function setupConnectModal() {
+function initComposeModal() {
+	$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
+	var tokenfieldConfig = {
+		delimiter: [',',';',' '], // Must be in sync with SplitFunc (utils.go)
+		inputType: 'email',
+		createTokensOnBlur: true,
+	};
+	$('#msg_to').tokenfield(tokenfieldConfig);
+	$('#msg_cc').tokenfield(tokenfieldConfig);
+	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
+	$('#post_btn').click(postMessage);
+}
+
+function initConnectModal() {
 	$('#freqInput').change(onConnectInputChange);
 	$('#radioOnlyInput').change(onConnectInputChange);
 	$('#addrInput').change(onConnectInputChange);
@@ -332,8 +342,8 @@ function closeComposer(clear)
 	if(clear){
 		$('#msg_body').val('')
 		$('#msg_subject').val('')
-		$('#msg_to').val('')
-		$('#msg_cc').val('')
+		$('#msg_to').tokenfield('setTokens', '')
+		$('#msg_cc').tokenfield('setTokens', '')
 		$('#composer_form')[0].reset();
 
 		// Attachment previews
@@ -499,8 +509,8 @@ function displayMessage(elem) {
 		$('#reply_btn').click(function(evt){
 			$('#message_view').modal('hide');
 
-			$('#msg_to').val(data.From.Addr);
-			$('#msg_cc').val(replyCarbonCopyList(data));
+			$('#msg_to').tokenfield('setTokens', [data.From.Addr]);
+			$('#msg_cc').tokenfield('setTokens', replyCarbonCopyList(data));
 			if(data.Subject.lastIndexOf("Re:", 0) != 0) {
 				$('#msg_subject').val("Re: " +  data.Subject);
 			} else {

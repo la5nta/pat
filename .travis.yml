@@ -8,6 +8,11 @@ go:
   - 1.6
   - 1.8
 
+matrix:
+  exclude:
+  - os: osx
+    go: 1.6
+
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y libax25-dev; fi
   - git submodule update --init --recursive

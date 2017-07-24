@@ -213,6 +213,10 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		addrs := strings.FieldsFunc(v[0], SplitFunc)
 		msg.AddTo(addrs...)
 	}
+	if v := m.Value["cc"]; len(v) == 1 {
+		addrs := strings.FieldsFunc(v[0], SplitFunc)
+		msg.AddCc(addrs...)
+	}
 	if v := m.Value["subject"]; len(v) == 1 {
 		msg.SetSubject(v[0])
 	}
@@ -283,8 +287,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		defer fsWatcher.Close()
 	}
 
-	statusUpdateTick := time.Tick(200 * time.Millisecond)
+	conn.WriteJSON(struct{ MyCall string }{fOptions.MyCall})
 
+	statusUpdateTick := time.Tick(200 * time.Millisecond)
 	for {
 		select {
 		// Periodic status and progress update

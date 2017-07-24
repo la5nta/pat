@@ -2,6 +2,7 @@ var wsURL = "";
 var wsError = false;
 var posId = 0;
 var connectAliases;
+var mycall = "";
 
 var uploadFiles = new Array();
 
@@ -332,6 +333,7 @@ function closeComposer(clear)
 		$('#msg_body').val('')
 		$('#msg_subject').val('')
 		$('#msg_to').val('')
+		$('#msg_cc').val('')
 		$('#composer_form')[0].reset();
 
 		// Attachment previews
@@ -366,6 +368,9 @@ function initConsole()
 		ws.onopen    = function(evt) { wsError = false; $('#console').empty(); };
 		ws.onmessage = function(evt) {
 			var msg = JSON.parse(evt.data);
+			if(msg.MyCall) {
+				mycall = msg.MyCall
+			}
 			if(msg.LogLine) {
 				updateConsole(msg.LogLine + "\n");
 			}
@@ -495,6 +500,7 @@ function displayMessage(elem) {
 			$('#message_view').modal('hide');
 
 			$('#msg_to').val(data.From.Addr);
+			$('#msg_cc').val(replyCarbonCopyList(data));
 			if(data.Subject.lastIndexOf("Re:", 0) != 0) {
 				$('#msg_subject').val("Re: " +  data.Subject);
 			} else {
@@ -537,6 +543,23 @@ function displayMessage(elem) {
 		}
 		elem.attr('class', 'active');
 	});
+}
+
+function replyCarbonCopyList(msg) {
+	var addrs = msg.To
+	if(msg.Cc != null && msg.Cc.length > 0){
+		addrs = addrs.concat(msg.Cc)
+	}
+	var seen = {}; seen[mycall] = true; seen[msg.From.Addr] = true;
+	var strings = [];
+	for(var i = 0; i < addrs.length; i++){
+		if(seen[addrs[i].Addr]){
+			continue
+		}
+		seen[addrs[i].Addr] = true
+		strings.push(addrs[i].Addr);
+	}
+	return strings;
 }
 
 function quoteMsg(data) {

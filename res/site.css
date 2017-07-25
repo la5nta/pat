@@ -68,6 +68,11 @@ body > .container {
   margin-top: -5px;
 }
 
+/* Work-around for issue with tokenfield and input-group-sm on bootstrap 3.1 or newer */
+.input-group-sm .tokenfield {
+  height: auto;
+}
+
 .modal-header .btn-group button {
   color: #fff;
 }

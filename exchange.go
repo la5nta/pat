@@ -49,7 +49,8 @@ func exchange(conn net.Conn, targetCall string, master bool) error {
 
 func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	exchangeConn = conn
-	defer func() { exchangeConn = nil }()
+	websocketHub.UpdateStatus()
+	defer func() { exchangeConn = nil; websocketHub.UpdateStatus() }()
 
 	// New wl2k Session
 	targetCall = strings.Split(targetCall, ` `)[0]
@@ -205,7 +206,7 @@ func (s *StatusUpdate) UpdateStatus(stat fbb.Status) {
 		prop = *stat.Sending
 	}
 
-	webProgress = Progress{
+	websocketHub.WriteProgress(Progress{
 		MID:              prop.MID(),
 		BytesTotal:       stat.BytesTotal,
 		BytesTransferred: stat.BytesTransferred,
@@ -213,7 +214,7 @@ func (s *StatusUpdate) UpdateStatus(stat fbb.Status) {
 		Receiving:        stat.Receiving != nil,
 		Sending:          stat.Sending != nil,
 		Done:             stat.Done,
-	}
+	})
 
 	percent := float64(stat.BytesTransferred) / float64(stat.BytesTotal) * 100
 	fmt.Printf("\r%s: %3.0f%%", prop.Title(), percent)

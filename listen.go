@@ -32,6 +32,9 @@ func Unlisten(param string) {
 			log.Printf("Unable to close %s listener: %s", method, err)
 		}
 	}
+
+	// Make sure the Web clients are updated with the list of active listeners
+	websocketHub.UpdateStatus()
 }
 
 func Listen(listenStr string) {
@@ -64,7 +67,6 @@ func Listen(listenStr string) {
 		}
 	}
 
-	log.Printf("Listening for incoming traffic (%s)...", listenStr)
 	go func() {
 		for {
 			connect := <-cc
@@ -79,6 +81,9 @@ func Listen(listenStr string) {
 			}
 		}
 	}()
+
+	log.Printf("Listening for incoming traffic (%s)...", listenStr)
+	websocketHub.UpdateStatus()
 }
 
 func listenWinmor(incoming chan<- incomingConnect) {

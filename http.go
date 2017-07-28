@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
@@ -31,6 +29,15 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
+// Status represents a status report as sent to the Web GUI
+type Status struct {
+	ActiveListeners []string `json:"active_listeners"`
+	Connected       bool     `json:"connected"`
+	RemoteAddr      string   `json:"remote_addr"`
+	HTTPClients     []string `json:"http_clients"`
+}
+
+// Progress represents a progress report as sent to the Web GUI
 type Progress struct {
 	BytesTransferred int    `json:"bytes_transferred"`
 	BytesTotal       int    `json:"bytes_total"`
@@ -41,7 +48,7 @@ type Progress struct {
 	Done             bool   `json:"done"`
 }
 
-var webProgress Progress
+var websocketHub *WSHub
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go-bindata-assetfs res/...
@@ -65,6 +72,8 @@ func ListenAndServe(addr string) error {
 
 	http.Handle("/", r)
 	http.Handle("/res/", http.StripPrefix("/res/", http.FileServer(assetFS())))
+
+	websocketHub = NewWSHub()
 
 	return http.ListenAndServe(addr, nil)
 }
@@ -261,119 +270,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	quit := wsReadLoop(conn)
-	defer conn.Close()
-
-	lines, done, err := tailFile(fOptions.LogPath)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer close(done)
-
-	fsWatcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Println("Unable to start fs watcher: ", err)
-	} else {
-		p := path.Join(mbox.MBoxPath, mailbox.DIR_INBOX)
-		if err := fsWatcher.Add(p); err != nil {
-			log.Printf("Unable to add path '%s' to fs watcher: %s", p, err)
-		}
-
-		// These will probably fail if the first failed, but it's not important to log all.
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_OUTBOX))
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_SENT))
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_ARCHIVE))
-		defer fsWatcher.Close()
-	}
-
 	conn.WriteJSON(struct{ MyCall string }{fOptions.MyCall})
-
-	statusUpdateTick := time.Tick(200 * time.Millisecond)
-	for {
-		select {
-		// Periodic status and progress update
-		case <-statusUpdateTick:
-			conn.WriteJSON(struct{ Progress Progress }{webProgress})
-			err = conn.WriteJSON(struct{ Status statusUpdate }{getStatus()})
-
-		// Log events
-		case line := <-lines:
-			err = conn.WriteJSON(struct {
-				LogLine string
-			}{string(line)})
-
-		// Filsystem events
-		case <-fsWatcher.Events:
-			drainEvents(fsWatcher)
-			err = conn.WriteJSON(struct {
-				UpdateMailbox bool
-			}{true})
-		case err := <-fsWatcher.Errors:
-			log.Println(err)
-
-		case <-quit:
-			conn.Close()
-			return
-		}
-
-		if err != nil {
-			log.Println("Websocket error:", err)
-		}
-	}
-}
-
-func drainEvents(w *fsnotify.Watcher) {
-	for {
-		select {
-		case <-w.Events:
-		default:
-			return
-		}
-	}
-}
-
-// Expects the file to never get renamed/truncated or deleted
-func tailFile(path string) (<-chan []byte, chan<- struct{}, error) {
-	lines := make(chan []byte)
-	done := make(chan struct{})
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	go func() {
-		rd := bufio.NewReader(file)
-		for {
-			data, _, err := rd.ReadLine()
-			if err == io.EOF {
-				time.Sleep(time.Millisecond * 100)
-				continue
-			}
-
-			select {
-			case <-done:
-				file.Close()
-				return
-			case lines <- data:
-			}
-		}
-	}()
-
-	return (<-chan []byte)(lines), (chan<- struct{})(done), nil
-}
-
-func wsReadLoop(c *websocket.Conn) <-chan struct{} {
-	quit := make(chan struct{})
-	go func() {
-		for {
-			if _, _, err := c.NextReader(); err != nil {
-				close(quit)
-				return
-			}
-		}
-	}()
-	return quit
+	websocketHub.Handle(conn)
 }
 
 func uiHandler(w http.ResponseWriter, r *http.Request) {
@@ -396,16 +294,11 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type statusUpdate struct {
-	ActiveListeners []string `json:"active_listeners"`
-	Connected       bool     `json:"connected"`
-	RemoteAddr      string   `json:"remote_addr"`
-}
-
-func getStatus() statusUpdate {
-	status := statusUpdate{
+func getStatus() Status {
+	status := Status{
 		ActiveListeners: make([]string, 0, len(listeners)),
 		Connected:       exchangeConn != nil,
+		HTTPClients:     websocketHub.ClientAddrs(),
 	}
 
 	for method := range listeners {

@@ -48,6 +48,12 @@ type Progress struct {
 	Done             bool   `json:"done"`
 }
 
+// Notification represents a desktop notification as sent to the Web GUI
+type Notification struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+}
+
 var websocketHub *WSHub
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs

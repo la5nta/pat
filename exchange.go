@@ -47,6 +47,23 @@ func exchange(conn net.Conn, targetCall string, master bool) error {
 	return <-e.errors
 }
 
+type NotifyMBox struct{ fbb.MBoxHandler }
+
+func (m NotifyMBox) ProcessInbound(msgs ...*fbb.Message) error {
+	if err := m.MBoxHandler.ProcessInbound(msgs...); err != nil {
+		return err
+	}
+	for _, msg := range msgs {
+		websocketHub.WriteJSON(struct{ Notification Notification }{
+			Notification{
+				Title: fmt.Sprintf("New message from %s", msg.From().Addr),
+				Body:  msg.Subject(),
+			},
+		})
+	}
+	return nil
+}
+
 func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	exchangeConn = conn
 	websocketHub.UpdateStatus()
@@ -58,7 +75,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		fOptions.MyCall,
 		targetCall,
 		config.Locator,
-		mbox,
+		NotifyMBox{mbox},
 	)
 
 	session.SetUserAgent(fbb.UserAgent{

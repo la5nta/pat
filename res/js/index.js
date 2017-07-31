@@ -6,12 +6,16 @@ var mycall = "";
 
 var uploadFiles = new Array();
 
+
 function initFrontend(ws_url)
 {
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
-		//$('select').selectpicker();
+		// Request notification permission
+		Notification.requestPermission(function(permission) {
+			console.log(permission);
+		});
 
 		// Setup actions
 		$('#connect_btn').click(connect);
@@ -316,6 +320,15 @@ function previewAttachmentFiles() {
 	};
 }
 
+function notify(data)
+{
+	var options = {
+		body: data.body,
+		icon: '/res/images/pat_logo.png',
+	}
+	var n = new Notification(data.title, options);
+}
+
 function alert(msg)
 {
     var div = $('#navbar_status');
@@ -380,6 +393,9 @@ function initConsole()
 			var msg = JSON.parse(evt.data);
 			if(msg.MyCall) {
 				mycall = msg.MyCall
+			}
+			if(msg.Notification) {
+				notify(msg.Notification)
 			}
 			if(msg.LogLine) {
 				updateConsole(msg.LogLine + "\n");

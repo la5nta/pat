@@ -26,7 +26,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">{{.Mycall}}</a>
+          <a class="navbar-brand" href="#"><span id="gui_status_light" class="btn status-light btn-danger"></span> {{.Mycall}}</a>
           <p class="navbar-text" id="status_text" data-toggle="modal" data-target="#connectModal"></p>
         </div>
         <div class="collapse navbar-collapse">
@@ -60,8 +60,35 @@
       </div>
     </div>
 
+    <!-- Begin gui status content -->
+    <div id="status_popover_content" class="_content" style="display: none;">
+      <div id="no_error" class="panel panel-sm panel-success">
+        <div class="panel-heading">No issues</div>
+        <div class="panel-body">No GUI issues detected.</div>
+      </div>
+      <div id="websocket_error" class="panel panel-sm panel-danger">
+        <div class="panel-heading">Websocket</div>
+        <div class="panel-body"><p>A websocket connection to the backend could not be established.</p><p>Make sure {{.AppName}} is running and available on the network.</p></div>
+      </div>
+      <div id="notifications_error" class="panel panel-sm panel-info">
+        <div class="panel-heading panel-heading-sm">Desktop notifications</div>
+	<div class="panel-body"><p>Desktop notifications are unavailable due to insufficient permissions.</p></div>
+      </div>
+      <div id="geolocation_error" class="panel panel-sm panel-info hidden">
+        <div class="panel-heading">Geolocation</div>
+	<div class="panel-body"><p>Geolocation for position reporting are unavailable due to insufficient permissions.</p></div>
+      </div>
+      <div id="webserver_info" class="panel panel-sm panel-info ignore-status hidden">
+        <div class="panel-heading">Web service</div>
+        <div class="panel-body"></div>
+      </div>
+
+    </div>
+    <!-- End gui status content -->
+
     <!-- Begin page content -->
     <div class="container">
+
       <!-- Begin connect modal -->
       <div class="modal fade" id="connectModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog">

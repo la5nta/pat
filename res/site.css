@@ -40,6 +40,40 @@ body > .container {
 }
 
 /*
+ * GUI Status Popover
+ */
+.popover-content {
+  padding: 9px 12px;
+  padding-bottom: 3px;
+}
+
+.panel-sm {
+  margin-bottom: 6px;
+}
+
+.panel-sm > .panel-heading {
+  font-weight: bold;
+  font-size: 14px;
+  padding: 5px 10px;
+}
+
+.panel-sm > .panel-body {
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px;
+}
+
+.status-light {
+  width: 10px;
+  height: 10px;
+  text-align: center;
+  padding: 1px 0;
+  border-radius: 15px;
+  margin-bottom: 3px;
+  margin-right: -3px;
+}
+
+/*
  * Mailbox folder
  */
 #folder {

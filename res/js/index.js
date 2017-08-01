@@ -1,10 +1,10 @@
 var wsURL = "";
-var wsError = false;
 var posId = 0;
 var connectAliases;
 var mycall = "";
 
 var uploadFiles = new Array();
+var statusPopoverDiv;
 
 
 function initFrontend(ws_url)
@@ -12,10 +12,7 @@ function initFrontend(ws_url)
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
-		// Request notification permission
-		Notification.requestPermission(function(permission) {
-			console.log(permission);
-		});
+		initStatusPopover()
 
 		// Setup actions
 		$('#connect_btn').click(connect);
@@ -56,7 +53,7 @@ function initFrontend(ws_url)
 		$('#posModal').on('shown.bs.modal', function (e) {
 			if (navigator.geolocation) {
 				$('#pos_status').empty().append("<strong>Waiting for position...</strong>");
-				posId = navigator.geolocation.watchPosition(updatePosition);
+				posId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError);
 			} else { 
 				$('#pos_status').empty().append("Geolocation is not supported by this browser.");
 			}
@@ -71,8 +68,19 @@ function initFrontend(ws_url)
 
 		initConsole();
 		displayFolder("in");
+		
+		// Request notification permission
+		Notification.requestPermission(function(permission) {
+			console.log("Notification permission", permission)
+			if( permission === "granted" ){
+				showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
+			} else if (isInsecureOrigin()) {
+				appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
+			}
+		});
 	});
 }
+
 
 var cancelCloseTimer = false
 function updateProgress(p) {
@@ -98,6 +106,26 @@ function updateProgress(p) {
 	} else if( (p.receiving || p.sending) && !p.done ){
 		$('#navbar_progress').show();
 	}
+}
+
+function initStatusPopover() {
+	statusPopoverDiv = $('#status_popover_content');
+	showGUIStatus($('#websocket_error'), true);
+	showGUIStatus($('#notifications_error'), true);
+	$('#gui_status_light').popover({
+		placement: 'bottom',
+		content: statusPopoverDiv,
+		html: true,
+	});
+
+	// Hack to force popover to grab it's content div
+	$('#gui_status_light').popover('show');
+	$('#gui_status_light').popover('hide');
+	statusPopoverDiv.show();
+
+	// Bind click on navbar-brand
+	$('#gui_status_light').unbind()
+	$('.navbar-brand').click(function(e){ $('#gui_status_light').popover('toggle'); })
 }
 
 function initComposeModal() {
@@ -231,6 +259,14 @@ function refreshExtraInputGroups() {
 	}
 }
 
+function handleGeolocationError(error) {
+	if(error.message.search("insecure origin") > 0 || isInsecureOrigin()) {
+		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
+	}
+	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
+	$('#pos_status').empty().append("Geolocation unavailable.");
+}
+
 function updatePosition(pos) {
 	var d = new Date(pos.timestamp);
 	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
@@ -348,6 +384,9 @@ function updateStatus(data)
 	} else if(data.active_listeners.length > 0){
 		st.append("<i>Listening " + data.active_listeners + "</i>");
 	}
+
+	var n = data.http_clients.length;
+	statusPopoverDiv.find('#webserver_info').find('.panel-body').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
 function closeComposer(clear)
@@ -384,11 +423,59 @@ function connect(evt)
 	});
 }
 
+function updateGUIStatus()
+{
+	var color = "success";
+	statusPopoverDiv.find('.panel-info').not('.hidden').not('.ignore-status').each(function(i) {
+		color = "info";
+	});
+	statusPopoverDiv.find('.panel-warning').not('.hidden').not('.ignore-status').each(function(i) {
+		color = "warning";
+	});
+	statusPopoverDiv.find('.panel-danger').not('.hidden').not('.ignore-status').each(function(i) {
+		color = "danger";
+	});
+	$('#gui_status_light').removeClass (function (index, className) {
+		return (className.match (/(^|\s)btn-\S+/g) || []).join(' ');
+	}).addClass('btn-' + color);
+	if(color == "success") {
+		statusPopoverDiv.find('#no_error').show();
+	} else {
+		statusPopoverDiv.find('#no_error').hide();
+	}	
+}
+
+function isInsecureOrigin()
+{
+	if(hasOwnProperty.call(window, 'isSecureContext')){ return !window.isSecureContext }
+	if(window.location.protocol == 'https:'){ return false }
+	if(window.location.protocol == 'file:'){ return false }
+	if(location.hostname === "localhost" || location.hostname.startsWith("127.0")){ return false }
+	return true
+}
+
+function appendInsecureOriginWarning(e)
+{
+	e.removeClass('panel-info').addClass('panel-warning')
+	e.find('.panel-body').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
+	updateGUIStatus()
+}
+
+function showGUIStatus(e, show)
+{
+	show ? e.removeClass('hidden') : e.addClass('hidden');
+	updateGUIStatus();
+}
+
 function initConsole()
 {
 	if("WebSocket" in window){
 		var ws = new WebSocket(wsURL);
-		ws.onopen    = function(evt) { wsError = false; $('#console').empty(); };
+		ws.onopen    = function(evt) {
+			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
+			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
+			$('#console').empty();
+		};
 		ws.onmessage = function(evt) {
 			var msg = JSON.parse(evt.data);
 			if(msg.MyCall) {
@@ -411,7 +498,8 @@ function initConsole()
 			}
 		};
 		ws.onclose   = function(evt) {
-			wsError = true;
+			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
+			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
 	} else {

@@ -145,11 +145,13 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 			c.conn.Close()
 			w.mu.Lock()
 			delete(w.pool, c)
+			defer w.UpdateStatus()
 			w.mu.Unlock()
 			return
 		}
 	}
 }
+
 func drainEvents(w *fsnotify.Watcher) {
 	for {
 		select {

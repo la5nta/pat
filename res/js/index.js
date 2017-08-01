@@ -69,18 +69,44 @@ function initFrontend(ws_url)
 		initConsole();
 		displayFolder("in");
 		
-		// Request notification permission
-		Notification.requestPermission(function(permission) {
-			console.log("Notification permission", permission)
-			if( permission === "granted" ){
-				showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
-			} else if (isInsecureOrigin()) {
-				appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
-			}
-		});
+		initNotifications();
 	});
 }
 
+function initNotifications()
+{
+	if( !isNotificationsSupported() ){
+		statusPopoverDiv.find('#notifications_error').find('.panel-body').html('Not supported by this browser.');
+		return
+	}
+	Notification.requestPermission(function(permission) {
+		if( permission === "granted" ){
+			showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
+		} else if (isInsecureOrigin()) {
+			// There is no way of knowing for sure if the permission was denied by the user
+			// or prohibited because of insecure origin (Chrome). This is just a lucky guess.
+			appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
+		}
+	});
+}
+
+function isNotificationsSupported() {
+    if( !window.Notification || !Notification.requestPermission )
+        return false;
+
+    if( Notification.permission === 'granted' )
+	return true;
+
+    // Chrome on Android support notifications only in the context of a Service worker.
+    // This is a hack to detect this case, so we can avoid asking for a pointless permission.
+    try {
+        new Notification('');
+    } catch (e) {
+        if (e.name == 'TypeError')
+            return false;
+    }
+    return true;
+}
 
 var cancelCloseTimer = false
 function updateProgress(p) {

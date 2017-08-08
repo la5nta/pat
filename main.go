@@ -554,12 +554,16 @@ func composeMessage(replyMsg *fbb.Message) {
 		}
 	}
 
-	if len(msg.Receivers()) == 1 {
+	switch len(msg.Receivers()) {
+	case 1:
 		fmt.Print("P2P only [y/N]: ")
 		ans := readLine()
 		if strings.EqualFold("y", ans) {
 			msg.Header.Set("X-P2POnly", "true")
 		}
+	case 0:
+		fmt.Println("Message must have at least one recipient")
+		os.Exit(1)
 	}
 
 	fmt.Print(`Subject: `)
@@ -571,9 +575,12 @@ func composeMessage(replyMsg *fbb.Message) {
 	} else {
 		msg.SetSubject(readLine())
 	}
+	// A message without subject is not valid, so let's use a sane default
+	if msg.Subject() == "" {
+		msg.SetSubject("<No subject>")
+	}
 
 	// Read body
-
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	readLine()
 
@@ -615,6 +622,11 @@ func composeMessage(replyMsg *fbb.Message) {
 	msg.SetBody(buf.String())
 	f.Close()
 	os.Remove(f.Name())
+
+	// An empty message body is illegal. Let's set a sane default.
+	if msg.BodySize() == 0 {
+		msg.SetBody("<No message body>\n")
+	}
 
 	// END Read body
 

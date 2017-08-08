@@ -120,7 +120,10 @@ func printMailboxes(w io.Writer) {
 func printMessages(w io.Writer, msgs []*fbb.Message) {
 	rows := make([][]string, len(msgs))
 	for i, msg := range msgs {
-		to := msg.To()[0].Addr
+		var to string
+		if len(msg.To()) > 0 {
+			to = msg.To()[0].Addr
+		}
 		if len(msg.To()) > 1 {
 			to = to + ", ..."
 		}

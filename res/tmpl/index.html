@@ -218,7 +218,7 @@
 
       <!-- Begin composer -->
       <div class="modal" id="composer" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-      <form id="composer_form">
+      <form id="composer_form" enctype="multipart/form-data">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header primary">
@@ -236,6 +236,7 @@
                 <span class="input-group-addon">Subject</span>
                 <input type="text" id="msg_subject" name="subject" class="form-control" placeholder="Look ma!">
               </div>
+              <span id="composer_error" class="label label-danger pull-right">This is an error</span>
                 <div class="input-group input-group-sm compose-options">
                   <label><input type="checkbox" id="msg_p2p_only" name="p2ponly"> P2P Only</label>
                 </div>

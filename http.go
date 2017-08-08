@@ -259,11 +259,13 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		var buf bytes.Buffer
-		msg.Write(&buf)
-		fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
+		return
 	}
+
+	w.WriteHeader(http.StatusCreated)
+	var buf bytes.Buffer
+	msg.Write(&buf)
+	fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {

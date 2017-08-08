@@ -117,7 +117,7 @@ function updateProgress(p) {
 		op = p.receiving ? "Receiving" : "Sending";
 		text = op + " " + p.mid + " (" + p.bytes_total + " bytes)"
 		if( p.subject ){
-			text += " - " + p.subject
+			text += " - " + htmlEscape(p.subject)
 		}
 		$('#navbar_progress .progress-text').text(text);
 		$('#navbar_progress .progress-bar').css("width", percent + "%").text(percent + "%");
@@ -164,7 +164,41 @@ function initComposeModal() {
 	$('#msg_to').tokenfield(tokenfieldConfig);
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
-	$('#post_btn').click(postMessage);
+	$('#composer_error').hide();
+
+
+	$('#composer_form').submit(function(e) {
+		var form = $('#composer_form');
+		var d = new Date().toJSON();
+		$("#msg_form_date").remove();
+		form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '" />');
+
+		// Set some defaults that makes the message pass validation (as Winlink Express does)
+		if( $('#msg_body').val().length == 0 ){
+			$('#msg_body').val('<No message body>');
+		}
+		if( $('#msg_subject').val().length == 0 ){
+			$('#msg_subject').val('<No subject>');
+		}
+
+		$.ajax({
+			url: "/api/mailbox/out",
+			method: "POST",
+			data: new FormData(form[0]),
+			processData: false,
+			contentType: false,
+			success: function(result) {
+				$('#composer').modal('hide');
+				closeComposer(true);
+				alert(result);
+			},
+			error: function(error) {
+				$('#composer_error').html(error.responseText);
+				$('#composer_error').show();
+			},
+		});
+		e.preventDefault();
+	});
 }
 
 function initConnectModal() {
@@ -323,37 +357,6 @@ function postPosition() {
 	});
 }
 
-function postMessage() {
-	var iframe = $('<iframe name="postiframe" id="postiframe" style="display: none"></iframe>');
-
-	$("body").append(iframe);
-
-	var form = $('#composer_form');
-	form.attr("action", "/api/mailbox/out");
-	form.attr("method", "POST");
-
-	form.attr("encoding", "multipart/form-data");
-	form.attr("enctype", "multipart/form-data");
-
-	form.attr("target", "postiframe");
-
-	// Use client's date
-	var d = new Date().toJSON();
-	$("#msg_form_date").remove();
-	form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '" />');
-
-	form.submit();
-
-	$("#postiframe").load(function () {
-		iframeContents = this.contentWindow.document.body.innerHTML;
-		$('#composer').modal('hide');
-		closeComposer(true);
-		alert(iframeContents);
-	});
-
-	return false;
-}
-
 function previewAttachmentFiles() {
 	var files = $(this).get(0).files;
 	attachments = $('#composer_attachments');
@@ -418,6 +421,7 @@ function updateStatus(data)
 function closeComposer(clear)
 {
 	if(clear){
+		$('#composer_error').val('').hide();
 		$('#msg_body').val('')
 		$('#msg_subject').val('')
 		$('#msg_to').tokenfield('setTokens', '')
@@ -567,11 +571,19 @@ function displayFolder(dir) {
 			if(msg.Files.length > 0){
 				html += '<span class="glyphicon glyphicon-paperclip" />';
 			}
-
-			html += '</td><td>' + msg.Subject + "</td>"
-			     + '<td>' + (is_from ? msg.From.Addr : msg.To[0].Addr) + (!is_from && msg.To.length > 1 ? "..." : "") + '</td>'
-				+ (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
-			    + '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
+			html += '</td><td>' + htmlEscape(msg.Subject) + "</td><td>";
+			if( !is_from && !msg.To ){
+				html += '';
+			} else if( is_from ) {
+				html += msg.From.Addr;
+			} else if( msg.To.length == 1 ){
+				html += msg.To[0].Addr;
+			} else if( msg.To.length > 1 ){
+				html += msg.To[0].Addr + "...";
+			}
+			html += '</td>'
+			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
+			html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)
 			tbody.append(elem);
@@ -595,7 +607,7 @@ function displayMessage(elem) {
 		view.find('#headers').append('Date: ' + data.Date + '<br />');
 		view.find('#headers').append('From: ' + data.From.Addr + '<br />');
 		view.find('#headers').append('To: ');
-		for(var i = 0; i < data.To.length; i++){
+		for(var i = 0; data.To && i < data.To.length; i++){
 			view.find('#headers').append('<el>' + data.To[i].Addr + '</el>' + (data.To.length-1 > i ? ', ' : ''));
 		}
 		if(data.P2POnly){
@@ -710,6 +722,10 @@ function quoteMsg(data) {
 		output += ">" + lines[i] + "\n"
 	}
 	return output
+}
+
+function htmlEscape(str) {
+	return $('<div/>').text(str).html();
 }
 
 function archiveMessage(box, mid) {

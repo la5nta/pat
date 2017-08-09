@@ -255,6 +255,11 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := msg.Validate(); err != nil {
+		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Post to outbox
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)

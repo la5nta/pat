@@ -602,7 +602,7 @@ function displayMessage(elem) {
 		elem.attr('class', 'info');
 
 		var view = $('#message_view');
-		view.find('#subject').html(data.Subject);
+		view.find('#subject').text(data.Subject);
 		view.find('#headers').empty();
 		view.find('#headers').append('Date: ' + data.Date + '<br />');
 		view.find('#headers').append('From: ' + data.From.Addr + '<br />');

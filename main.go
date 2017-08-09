@@ -768,7 +768,7 @@ func CourseFromFloat64(f float64, magnetic bool) catalog.Course {
 
 func postMessage(msg *fbb.Message) {
 	if err := msg.Validate(); err != nil {
-		fmt.Println("WARNING - Message does not validate: %s", err)
+		fmt.Printf("WARNING - Message does not validate: %s\n", err)
 	}
 	if err := mbox.AddOut(msg); err != nil {
 		log.Fatal(err)

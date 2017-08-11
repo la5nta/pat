@@ -14,8 +14,8 @@ matrix:
     go: 1.6
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y libax25-dev; fi
   - git submodule update --init --recursive
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./make.bash libax25; fi
 
 script:
   - ./make.bash

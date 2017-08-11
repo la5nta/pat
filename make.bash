@@ -10,12 +10,32 @@ VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d)/; print $1;')
 [ "$GO_POINT_VERSION" -lt "5" ] && echo "Go 1.5 or later required" && exit 1;
 
+AX25DIST="libax25-0.0.12-rc4"
+function install_libax25 {
+	mkdir -p .build && cd .build
+	[[ -f "${AX25DIST}.tar.gz" ]] || curl -Ssf "http://www.linux-ax25.org/pub/libax25/${AX25DIST}.tar.gz" | tar zx
+	cd "${AX25DIST}" && ./configure --prefix=/ && make && cd ../../
+}
+
+[[ "$1" == "libax25" ]] && install_libax25 && exit 0;
+
 # Link against libax25 (statically) on Linux
 if [[ "$OSTYPE" == "linux"* ]]; then
-	if [[ -f "/usr/lib/libax25.a" ]]; then
-		TAGS="libax25 static"
+	TAGS="libax25 $TAGS"
+	LIB=".build/${AX25DIST}/.libs/libax25.a"
+	if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
+		export CGO_CFLAGS="-I$(pwd)/.build/${AX25DIST}"
+		export CGO_LDFLAGS="$(pwd)/${LIB}"
+	fi
+	if [[ -z "$CGO_LDFLAGS" ]]; then
+		echo "WARNING: No static libax25 library available."
+		echo "  Linking against shared library instead. To fix"
+		echo "  this issue, set CGO_LDFLAGS to the full path of"
+		echo "  libax25.a, or run 'make.bash libax25' to download"
+		echo "  and compile ${AX25DIST} in .build/"
+		sleep 3;
 	else
-		echo "WARNING: Not linking with libax25 - /usr/lib/libax25.a not found."
+		TAGS="static $TAGS"
 	fi
 fi
 

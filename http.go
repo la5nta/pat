@@ -309,13 +309,13 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 
 func getStatus() Status {
 	status := Status{
-		ActiveListeners: make([]string, 0, len(listeners)),
+		ActiveListeners: []string{},
 		Connected:       exchangeConn != nil,
 		HTTPClients:     websocketHub.ClientAddrs(),
 	}
 
-	for method := range listeners {
-		status.ActiveListeners = append(status.ActiveListeners, method)
+	for _, tl := range listenHub.Active() {
+		status.ActiveListeners = append(status.ActiveListeners, tl.Name())
 	}
 	sort.Strings(status.ActiveListeners)
 

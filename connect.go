@@ -208,8 +208,12 @@ func waitBusy(b transport.BusyChannelChecker) {
 }
 
 func initWinmorTNC() error {
-	if wmTNC != nil {
+	if wmTNC != nil && wmTNC.Ping() == nil {
 		return nil
+	}
+
+	if wmTNC != nil {
+		wmTNC.Close()
 	}
 
 	var err error
@@ -240,8 +244,12 @@ func initWinmorTNC() error {
 }
 
 func initArdopTNC() error {
-	if adTNC != nil {
+	if adTNC != nil && adTNC.Ping() == nil {
 		return nil
+	}
+
+	if adTNC != nil {
+		adTNC.Close()
 	}
 
 	var err error

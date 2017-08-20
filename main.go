@@ -140,10 +140,10 @@ var (
 	logWriter io.Writer
 	eventLog  *EventLogger
 
-	exchangeChan chan ex                 // The channel that the exchange loop is listening on
-	exchangeConn net.Conn                // Pointer to the active session connection (exchange)
-	listeners    map[string]net.Listener // Active listeners
-	mbox         *mailbox.DirHandler     // The mailbox
+	exchangeChan chan ex             // The channel that the exchange loop is listening on
+	exchangeConn net.Conn            // Pointer to the active session connection (exchange)
+	mbox         *mailbox.DirHandler // The mailbox
+	listenHub    *ListenerHub
 	appDir       string
 )
 
@@ -181,7 +181,7 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
-	listeners = make(map[string]net.Listener)
+	listenHub = NewListenerHub()
 
 	var err error
 	appDir, err = mailbox.DefaultAppDir()
@@ -388,9 +388,7 @@ func helpHandle(args []string) {
 }
 
 func cleanup() {
-	for method := range listeners {
-		Unlisten(method)
-	}
+	listenHub.Close()
 
 	if wmTNC != nil {
 		if err := wmTNC.Close(); err != nil {

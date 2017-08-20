@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -96,14 +95,10 @@ func printInteractiveUsage() {
 func getPrompt() string {
 	var buf bytes.Buffer
 
-	methods := make([]string, 0, len(listeners))
-	for method := range listeners {
-		methods = append(methods, method)
-	}
+	status := getStatus()
 
-	if len(listeners) > 0 {
-		sort.Strings(methods)
-		fmt.Fprintf(&buf, "L%v", methods)
+	if len(status.ActiveListeners) > 0 {
+		fmt.Fprintf(&buf, "L%v", status.ActiveListeners)
 	}
 
 	fmt.Fprint(&buf, "> ")

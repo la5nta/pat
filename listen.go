@@ -15,50 +15,30 @@ import (
 	"github.com/la5nta/wl2k-go/transport/telnet"
 )
 
-type incomingConnect struct {
-	conn       net.Conn
-	remoteCall string
-	kind       string
-	freq       Frequency
-}
-
 func Unlisten(param string) {
 	methods := strings.FieldsFunc(param, SplitFunc)
 	for _, method := range methods {
-		ln, ok := listeners[method]
-		if !ok {
-			fmt.Printf("No active %s listener, ignoring.\n", method)
-		} else if err := ln.Close(); err != nil {
-			log.Printf("Unable to close %s listener: %s", method, err)
+		ok, err := listenHub.Disable(method)
+		if err != nil {
+			fmt.Printf("Unable to close %s listener: %s", method, err)
+		} else if !ok {
+			log.Printf("No active %s listener, ignoring.\n", method)
 		}
 	}
-
-	// Make sure the Web clients are updated with the list of active listeners
-	websocketHub.UpdateStatus()
 }
 
 func Listen(listenStr string) {
-	cc := make(chan incomingConnect, 2)
-
 	methods := strings.FieldsFunc(listenStr, SplitFunc)
 	for _, method := range methods {
 		switch strings.ToLower(method) {
 		case MethodWinmor:
-			if err := initWinmorTNC(); err != nil {
-				log.Fatal(err)
-			}
-
-			listenWinmor(cc)
+			listenHub.Enable(WINMORListener{})
 		case MethodArdop:
-			if err := initArdopTNC(); err != nil {
-				log.Fatal(err)
-			}
-
-			listenArdop(cc)
+			listenHub.Enable(ARDOPListener{})
 		case MethodTelnet:
-			listenTelnet(cc)
+			listenHub.Enable(TelnetListener{})
 		case MethodAX25:
-			listenAX25(cc)
+			listenHub.Enable(&AX25Listener{})
 		case MethodSerialTNC:
 			log.Printf("%s listen not implemented, ignoring.", method)
 		default:
@@ -66,164 +46,105 @@ func Listen(listenStr string) {
 			return
 		}
 	}
-
-	go func() {
-		for {
-			connect := <-cc
-			eventLog.LogConn("accept", connect.freq, connect.conn, nil)
-			log.Printf("Got connect (%s:%s)", connect.kind, connect.remoteCall)
-
-			err := exchange(connect.conn, connect.remoteCall, true)
-			if err != nil {
-				log.Printf("Exchange failed: %s", err)
-			} else {
-				log.Println("Disconnected.")
-			}
-		}
-	}()
-
-	log.Printf("Listening for incoming traffic (%s)...", listenStr)
-	websocketHub.UpdateStatus()
+	log.Printf("Listening for incoming traffic on %s...", listenStr)
 }
 
-func listenWinmor(incoming chan<- incomingConnect) {
-	// RMS Express runs bw at 500Hz except when sending/receiving message. Why?
-	// ... Or is it cmdRobust True?
-	ln, err := wmTNC.Listen(config.Winmor.InboundBandwidth)
-	if err != nil {
-		log.Fatal(err)
-	}
+type AX25Listener struct{ stopBeacon chan<- struct{} }
 
-	listeners[MethodWinmor] = ln
-	go func() {
-		defer func() {
-			delete(listeners, MethodWinmor)
-			log.Printf("%s listener closed.", MethodWinmor)
-		}()
-
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-
-			var freq Frequency
-			if rig, ok := rigs[config.Winmor.Rig]; ok {
-				f, _ := rig.GetFreq()
-				freq = Frequency(f)
-			}
-
-			incoming <- incomingConnect{
-				conn:       conn,
-				remoteCall: conn.RemoteAddr().String(),
-				kind:       MethodWinmor,
-				freq:       freq,
-			}
-		}
-	}()
+func (l *AX25Listener) Init() (net.Listener, error) {
+	return ax25.ListenAX25(config.AX25.Port, fOptions.MyCall)
 }
 
-func listenArdop(incoming chan<- incomingConnect) {
-	ln, err := adTNC.Listen()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if sec := config.Ardop.BeaconInterval; sec > 0 {
-		adTNC.BeaconEvery(time.Duration(sec) * time.Second)
-	}
-
-	listeners[MethodArdop] = ln
-	go func() {
-		defer func() {
-			delete(listeners, MethodArdop)
-			log.Printf("%s listener closed.", MethodArdop)
-		}()
-
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-
-			var freq Frequency
-			if rig, ok := rigs[config.Ardop.Rig]; ok {
-				f, _ := rig.GetFreq()
-				freq = Frequency(f)
-			}
-
-			incoming <- incomingConnect{
-				conn:       conn,
-				remoteCall: conn.RemoteAddr().String(),
-				kind:       MethodArdop,
-				freq:       freq,
-			}
-		}
-	}()
-}
-
-func listenAX25(incoming chan<- incomingConnect) {
+func (l *AX25Listener) BeaconStart() error {
 	if config.AX25.Beacon.Every > 0 {
+		l.stopBeacon = l.beaconLoop(time.Duration(config.AX25.Beacon.Every) * time.Second)
+	}
+	return nil
+}
+
+func (l *AX25Listener) BeaconStop() {
+	select {
+	case l.stopBeacon <- struct{}{}:
+	default:
+	}
+}
+
+func (l *AX25Listener) beaconLoop(dur time.Duration) chan<- struct{} {
+	stop := make(chan struct{}, 1)
+	go func() {
 		b, err := ax25.NewAX25Beacon(config.AX25.Port, fOptions.MyCall, config.AX25.Beacon.Destination, config.AX25.Beacon.Message)
 		if err != nil {
 			log.Printf("Unable to activate beacon: %s", err)
-		} else {
-			go b.Every(time.Duration(config.AX25.Beacon.Every) * time.Second)
+			return
 		}
-	}
 
-	ln, err := ax25.ListenAX25(config.AX25.Port, fOptions.MyCall)
-	if err != nil {
-		log.Printf("Unable to start AX.25 listener: %s", err)
-		return
-	}
-
-	listeners[MethodAX25] = ln
-	go func() {
-		defer func() {
-			delete(listeners, MethodAX25)
-			log.Printf("%s listener closed.", MethodAX25)
-		}()
-
+		t := time.Tick(dur)
 		for {
-			conn, err := ln.Accept()
-			if err != nil {
+			select {
+			case <-t:
+				if err := b.Now(); err != nil {
+					log.Printf("%s beacon failed: %s", l.Name(), err)
+					return
+				}
+			case <-stop:
 				return
-			}
-
-			incoming <- incomingConnect{
-				conn:       conn,
-				remoteCall: conn.RemoteAddr().String(),
-				kind:       MethodAX25,
 			}
 		}
 	}()
+	return stop
 }
 
-func listenTelnet(incoming chan<- incomingConnect) {
-	ln, err := telnet.Listen(config.Telnet.ListenAddr)
-	if err != nil {
-		log.Fatal(err)
+func (l *AX25Listener) CurrentFreq() (Frequency, bool) { return 0, false }
+func (l *AX25Listener) Name() string                   { return MethodAX25 }
+
+type ARDOPListener struct{}
+
+func (l ARDOPListener) Name() string { return MethodArdop }
+func (l ARDOPListener) Init() (net.Listener, error) {
+	if err := initArdopTNC(); err != nil {
+		return nil, err
 	}
-
-	listeners[MethodTelnet] = ln
-	go func() {
-		defer func() {
-			delete(listeners, MethodTelnet)
-			log.Printf("%s listener closed.", MethodTelnet)
-		}()
-
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return
-			}
-
-			incoming <- incomingConnect{
-				conn:       conn,
-				remoteCall: conn.(*telnet.Conn).RemoteCall(),
-				kind:       MethodTelnet,
-			}
-		}
-	}()
+	ln, err := adTNC.Listen()
+	if err != nil {
+		return nil, err
+	}
+	return ln, err
 }
+
+func (l ARDOPListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := rigs[config.Ardop.Rig]; ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
+
+func (l ARDOPListener) BeaconStart() error {
+	return adTNC.BeaconEvery(time.Duration(config.Ardop.BeaconInterval) * time.Second)
+}
+
+func (l ARDOPListener) BeaconStop() { adTNC.BeaconEvery(0) }
+
+type WINMORListener struct{}
+
+func (l WINMORListener) Name() string { return MethodWinmor }
+func (l WINMORListener) Init() (net.Listener, error) {
+	if err := initWinmorTNC(); err != nil {
+		return nil, err
+	}
+	return wmTNC.Listen(config.Winmor.InboundBandwidth)
+}
+
+func (l WINMORListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := rigs[config.Winmor.Rig]; ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
+
+type TelnetListener struct{}
+
+func (l TelnetListener) Name() string                   { return MethodTelnet }
+func (l TelnetListener) Init() (net.Listener, error)    { return telnet.Listen(config.Telnet.ListenAddr) }
+func (l TelnetListener) CurrentFreq() (Frequency, bool) { return 0, false }

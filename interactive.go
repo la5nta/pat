@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -56,6 +58,10 @@ func execCmd(line string) (quit bool) {
 		freq(param)
 	case "qtc":
 		PrintQTC()
+	case "debug":
+		os.Setenv("ardop_debug", "1")
+		os.Setenv("winmor_debug", "1")
+		fmt.Println("Number of goroutines:", runtime.NumGoroutine())
 	case "q", "quit":
 		return true
 	case "":

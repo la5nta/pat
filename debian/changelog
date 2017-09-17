@@ -1,3 +1,13 @@
+pat (0.4.0) stable; urgency=medium
+
+  * Desktop notifications for web GUI users (https://github.com/la5nta/pat/issues/85)
+  * New status indicator in web GUI for display of various alerts and info (https://github.com/la5nta/pat/issues/86)
+  * Add Cc field to the web GUI composer (https://github.com/la5nta/pat/issues/83)
+  * Tokenize address input in the web GUI composer (https://github.com/la5nta/pat/issues/84)
+  * Check for empty To/Cc on compose (https://github.com/la5nta/pat/issues/89)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 17 Sep 2017 11:14:59 +0200
+
 pat (0.3.0) stable; urgency=high (Fixes compatibility with an upcoming Winlink CMS release)
 
   * Fix critical compatibility issues with WL2K-4.0 aka "AWS-CMS" (https://github.com/la5nta/pat/issues/81)

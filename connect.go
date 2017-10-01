@@ -222,6 +222,12 @@ func initWinmorTNC() error {
 		return fmt.Errorf("WINMOR TNC initialization failed: %s", err)
 	}
 
+	if config.Winmor.DriveLevel != 0 {
+		if err := wmTNC.SetDriveLevel(config.Winmor.DriveLevel); err != nil {
+			log.Println("Failed to set WINMOR drive level:", err)
+		}
+	}
+
 	if v, err := wmTNC.Version(); err != nil {
 		return fmt.Errorf("WINMOR TNC initialization failed: %s", err)
 	} else {

@@ -99,6 +99,11 @@ type WinmorConfig struct {
 	// Bandwidth to use when getting an inbound connection (500/1600).
 	InboundBandwidth int `json:"inbound_bandwidth"`
 
+	// TX audio drive level
+	//
+	// Set to 0 to use WINMOR defaults
+	DriveLevel int `json:"drive_level"`
+
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`
 

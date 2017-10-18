@@ -457,6 +457,16 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
+	// Attachments are potentially unsanitized HTML and/or javascript.
+	// To avoid XSS, we enable the CSP sandbox directive so that these
+	// attachments can't call other parts of the API (deny same origin).
+	w.Header().Set("Content-Security-Policy", "sandbox allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts")
+
+	// Allow different sandboxed attachments to refer to each other.
+	// This can be useful to provide rich HTML content as attachments,
+	// without having to bundle it all up in one big file.
+	w.Header().Set("Access-Control-Allow-Origin", "null")
+
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))

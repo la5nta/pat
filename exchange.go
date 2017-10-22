@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/howeyc/gopass"
-
 	"github.com/la5nta/wl2k-go/fbb"
 )
 
@@ -92,14 +90,8 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		if config.SecureLoginPassword != "" {
 			return config.SecureLoginPassword, nil
 		}
-
-		fmt.Print("Enter secure login password: ")
-
-		passwd, err := gopass.GetPasswdMasked()
-		if err != nil {
-			return "", err
-		}
-		return string(passwd), nil
+		resp := <-promptHub.Prompt("password", "Enter secure login password")
+		return resp.Value, resp.Err
 	})
 
 	for _, addr := range config.AuxAddrs {

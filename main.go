@@ -144,7 +144,9 @@ var (
 	exchangeConn net.Conn            // Pointer to the active session connection (exchange)
 	mbox         *mailbox.DirHandler // The mailbox
 	listenHub    *ListenerHub
-	appDir       string
+	promptHub    *PromptHub
+
+	appDir string
 )
 
 var fOptions struct {
@@ -182,6 +184,7 @@ func optionsSet() *pflag.FlagSet {
 
 func init() {
 	listenHub = NewListenerHub()
+	promptHub = NewPromptHub()
 
 	var err error
 	appDir, err = mailbox.DefaultAppDir()
@@ -355,6 +358,8 @@ func httpHandle(args []string) {
 		set.Usage()
 		os.Exit(1)
 	}
+
+	promptHub.OmitTerminal(true)
 
 	if err := ListenAndServe(addr); err != nil {
 		log.Fatal(err)

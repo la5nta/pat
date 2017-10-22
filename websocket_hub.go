@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"io"
 	"log"
 	"os"
@@ -40,6 +41,11 @@ func NewWSHub() *WSHub {
 func (w *WSHub) UpdateStatus()                    { w.WriteJSON(struct{ Status Status }{getStatus()}) }
 func (w *WSHub) WriteProgress(p Progress)         { w.WriteJSON(struct{ Progress Progress }{p}) }
 func (w *WSHub) WriteNotification(n Notification) { w.WriteJSON(struct{ Notification Notification }{n}) }
+
+func (w *WSHub) Prompt(p Prompt) {
+	w.WriteJSON(struct{ Prompt Prompt }{p})
+	go func() { <-p.cancel; w.WriteJSON(struct{ PromptAbort Prompt }{p}) }()
+}
 
 func (w *WSHub) WriteJSON(v interface{}) {
 	if w == nil {
@@ -192,14 +198,27 @@ func tailFile(path string) (<-chan []byte, chan<- struct{}, error) {
 	return (<-chan []byte)(lines), (chan<- struct{})(done), nil
 }
 
+func handleWSMessage(v map[string]json.RawMessage) {
+	raw, ok := v["prompt_response"]
+	if !ok {
+		return
+	}
+	var resp PromptResponse
+	json.Unmarshal(raw, &resp)
+	promptHub.Respond(resp.ID, resp.Value, resp.Err)
+}
+
 func wsReadLoop(c *websocket.Conn) <-chan struct{} {
 	quit := make(chan struct{})
 	go func() {
 		for {
-			if _, _, err := c.NextReader(); err != nil {
+			v := map[string]json.RawMessage{}
+			err := c.ReadJSON(&v)
+			if err != nil {
 				close(quit)
 				return
 			}
+			go handleWSMessage(v)
 		}
 	}()
 	return quit

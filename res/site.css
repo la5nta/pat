@@ -17,6 +17,16 @@ body > .container {
   margin: 0px 0px 0;
 }
 
+@media screen and ( min-width: 1024px ) {
+  .modal.modal-narrow .modal-dialog {
+    width: 30%;
+  }
+
+  .modal-narrow .modal-body {
+    overflow-y: auto;
+  }
+}
+
 .progress-text {
   padding-top: 3px;
   font-size: 11px !important;

@@ -497,10 +497,12 @@ function showGUIStatus(e, show)
 	updateGUIStatus();
 }
 
+var ws;
+
 function initConsole()
 {
 	if("WebSocket" in window){
-		var ws = new WebSocket(wsURL);
+		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
 			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
 			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
@@ -526,6 +528,12 @@ function initConsole()
 			if(msg.Progress) {
 				updateProgress(msg.Progress)
 			}
+			if(msg.Prompt) {
+				processPromptQuery(msg.Prompt)
+			}
+			if(msg.PromptAbort) {
+				$('#promptModal').modal('hide');
+			}
 		};
 		ws.onclose   = function(evt) {
 			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
@@ -537,6 +545,34 @@ function initConsole()
 		wsError = true;
 		alert("Websocket not supported by your browser, please upgrade your browser.");
 	}
+}
+
+function processPromptQuery(p)
+{
+	console.log(p)
+
+	if(p.kind != "password"){
+		console.log("Ignoring unsupported prompt of kind: " + p.kind)
+		return;
+	}
+
+	$('#promptID').val(p.id);
+	$('#promptResponseValue').val('');
+	$('#promptMessage').text(p.message)
+	$('#promptModal').modal('show');
+}
+
+function postPromptResponse()
+{
+	var id = $('#promptID').val();
+	var value = $('#promptResponseValue').val();
+	$('#promptModal').modal('hide');
+	ws.send(JSON.stringify({
+		prompt_response: {
+			id:    id,
+			value: value,
+		},
+	}));
 }
 
 function updateConsole(msg)

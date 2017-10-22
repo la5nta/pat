@@ -89,6 +89,29 @@
     <!-- Begin page content -->
     <div class="container">
 
+      <!-- Begin prompt modal -->
+      <div class="modal fade modal-narrow" id="promptModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="promptMessage"></h4>
+            </div>
+	    <form onsubmit="return false">
+            <div class="modal-body">
+                  <input type="password" id="promptResponseValue" name="response" class="form-control" placeholder="">
+                  <input type="hidden" id="promptID" name="id" class="form-control" placeholder="">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <input type="submit" value="OK" class="btn btn-primary" onclick="return postPromptResponse()">
+            </div>
+	    </form>
+          </div>
+        </div>
+      </div>
+      <!-- End prompt -->
+
       <!-- Begin connect modal -->
       <div class="modal fade" id="connectModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog">

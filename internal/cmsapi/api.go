@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	RootURL        = "http://server.winlink.org:8085"
+	RootURL        = "http://cms.winlink.org:8085"
 	PathVersionAdd = "/version/add"
 )
 

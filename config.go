@@ -5,7 +5,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -32,10 +34,41 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 	return config, nil
 }
 
+func replaceDeprecatedCMSHostname(path string, data []byte) ([]byte, error) {
+	const o = "@server.winlink.org:8772/wl2k"
+	const n = "@cms.winlink.org:8772/wl2k"
+
+	if !bytes.Contains(data, []byte(o)) {
+		return data, nil
+	}
+
+	data = bytes.Replace(data, []byte(o), []byte(n), -1)
+
+	f, err := os.Open(path)
+	if err != nil {
+		return data, err
+	}
+	stat, err := f.Stat()
+	f.Close()
+	if err != nil {
+		return data, err
+	}
+	return data, ioutil.WriteFile(path, data, stat.Mode())
+}
+
 func ReadConfig(path string) (config cfg.Config, err error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return
+	}
+
+	//TODO: Remove after some release cycles (2017-11-09)
+	data, err = replaceDeprecatedCMSHostname(path, data)
+	if err != nil {
+		fmt.Println("Failed to rewrite deprecated CMS hostname:", err)
+		fmt.Println("Please update your config's 'telnet' connect alias manually to:")
+		fmt.Println(cfg.DefaultConfig.ConnectAliases["telnet"])
+		fmt.Println("")
 	}
 
 	err = json.Unmarshal(data, &config)

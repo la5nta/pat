@@ -176,7 +176,7 @@ var DefaultConfig Config = Config{
 	MOTD:     []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs: []string{},
 	ConnectAliases: map[string]string{
-		"telnet": "telnet://{mycall}:CMSTelnet@server.winlink.org:8772/wl2k",
+		"telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k",
 	},
 	Listen:   []string{},
 	HTTPAddr: "localhost:8080",

@@ -78,7 +78,13 @@ func Connect(connectStr string) (success bool) {
 			if config.SerialTNC.Baudrate > 0 {
 				url.Params.Set("baud", fmt.Sprint(config.SerialTNC.Baudrate))
 			}
+		case "ptc":
+			url.Host = config.PTC.Path
 		}
+	}
+
+	if url.Scheme == "ptc" && config.PTC.InitScript != "" && url.Params.Get("init_script") == "" {
+		url.Params.Set("init_script", config.PTC.InitScript)
 	}
 
 	// Radio Only?
@@ -162,6 +168,8 @@ func qsy(method, addr string) (revert func(), err error) {
 		rigName = config.Ardop.Rig
 	case MethodAX25:
 		rigName = config.AX25.Rig
+	case MethodPTC:
+		rigName = config.PTC.Rig
 	default:
 		return noop, fmt.Errorf("Not supported with transport '%s'", method)
 	}

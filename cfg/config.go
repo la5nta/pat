@@ -53,6 +53,7 @@ type Config struct {
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Winmor    WinmorConfig    `json:"winmor"`     // See WinmorConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
+	PTC       PTCConfig       `json:"ptc"`        // See PTCConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// Address and port to a GPSd daemon for position reporting.
@@ -131,6 +132,17 @@ type ArdopConfig struct {
 	CWID bool `json:"cwid_enabled"`
 }
 
+type PTCConfig struct {
+	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
+	Path string `json:"path"`
+
+	// (optional) Reference name to the Hamlib rig for frequency control.
+	Rig string `json:"rig"`
+
+	// (optional) Path to custom TNC initialization script.
+	InitScript string `json:"custom_init_script"`
+}
+
 type TelnetConfig struct {
 	// Network address (and port) to listen for telnet-p2p connections (e.g. :8774).
 	ListenAddr string `json:"listen_addr"`
@@ -201,6 +213,9 @@ var DefaultConfig Config = Config{
 		Addr:         "localhost:8515",
 		ARQBandwidth: ardop.Bandwidth500Max,
 		CWID:         true,
+	},
+	PTC: PTCConfig{
+		Path: "/dev/ttyUSB0",
 	},
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",

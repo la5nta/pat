@@ -80,6 +80,9 @@ func Connect(connectStr string) (success bool) {
 			}
 		case "ptc":
 			url.Host = config.PTC.Path
+			if config.PTC.Baudrate > 0 {
+				url.Params.Set("baud", fmt.Sprint(config.PTC.Baudrate))
+			}
 		}
 	}
 

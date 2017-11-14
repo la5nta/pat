@@ -136,6 +136,9 @@ type PTCConfig struct {
 	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
 	Path string `json:"path"`
 
+	// Baudrate for the serial port (e.g. 57600).
+	Baudrate int `json:"baudrate"`
+
 	// (optional) Reference name to the Hamlib rig for frequency control.
 	Rig string `json:"rig"`
 
@@ -215,7 +218,8 @@ var DefaultConfig Config = Config{
 		CWID:         true,
 	},
 	PTC: PTCConfig{
-		Path: "/dev/ttyUSB0",
+		Path:     "/dev/ttyUSB0",
+		Baudrate: 57600,
 	},
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",

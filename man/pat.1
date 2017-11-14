@@ -1,0 +1,72 @@
+.TH PAT 1 "2017-09-04" "" "Pat Overview"
+.SH NAME
+pat \- a cross platform Winlink client with basic messaging capabilities
+.SH SYNOPSIS
+\fBpat\fP [options] \fIcommand\fP [arguments]
+.SS Commands
+.TP
+\fIconnect\fP
+Connect to a remote station.
+.TP
+\fIinteractive\fP
+Run interactive mode.
+.TP
+\fIhttp\fP
+Run http server for web gui.
+.TP
+\fIcompose\fP
+Compose a new message.
+.TP
+\fIread\fP
+Read Messages.
+.TP
+\fIposition\fP
+Post a position report (GPSd or manual entry).
+.TP
+\fIextract\fP
+Extract attachments from a message file.
+.TP
+\fIrmslist\fP
+Print/search in list of RMS nodes.
+.TP
+\fIconfigure\fP
+Open configuration file for editing.
+.TP
+\fIversion\fP
+Print the application version.
+.TP
+\fIhelp\fP
+Print detailed help for a given command.
+.SS Options
+.TP
+\fR--config string\fP
+Path to config file (default "/home/USER/.wl2k/config.json").
+.TP
+\fR--event-log string\fP
+Path to event log file (default "/home/USER/.wl2k/config.json").
+.TP
+\fR--ignore-busy\fP
+Don't wait for clear channel before connevting to a node.
+.TP
+\fR-l, --listen string\fP
+Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).
+.TP
+\fR--log string\fP
+Path to log file. The file is truncated on each startup (default "/home/USER/.wl2k/pat.log").
+.TP
+\fR--mbox string\fP
+Path to mailbox directory (default "/home/USER/.wl2k/mailbox").
+.TP
+\fR--mycall string\fP
+Your callsing (winlink user).
+.TP
+\fR--radio-only\fP
+Radio Only mode (Winlink Hybrid RMS only).
+.TP
+\fR-r, --robust\fP
+Use robust modes only (Usefull to improve s/n ratio at remote winmor station).
+.TP
+\fR-s, --send-only\fP
+Download inbound messages later, send only.
+.SH "See Also"
+pat-configure(1)

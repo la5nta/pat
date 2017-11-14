@@ -1,0 +1,18 @@
+.TH PAT 1 "2017-09-04" "" "Pat Configure"
+.SH NAME
+pat configure \- opens Pats configuration file using the system default editor
+.SH Configuration
+.SS Main Configuration
+The default configuration file for pat is \fI~/.wl2k/config.json\fP
+.sp 1
+To get "on the air" you'll first have to set up your callsign, maidenhead locator, and secure login credentials. Look for the attributes \fImycall\fP, \fIlocator\fP and \fIsecure_login_password\fP and set them appropriately.
+.sp 1
+.in 20
+{
+  "mycall": "LA5NTA",
+  "locator": "JP20qe",
+  "secure_login_password": "MYPASSWORD",
+}
+.in
+.SH "See Also"
+pat(1)

@@ -25,6 +25,7 @@ binary-arch: clean build
 	cp -r share/* $(PKGDIR)/usr/share/pat/
 	cp debian/pat@.service $(PKGDIR)/lib/systemd/system/
 
+	dh_installman
 	dh_strip
 	dh_compress
 	dh_fixperms

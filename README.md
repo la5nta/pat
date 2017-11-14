@@ -63,6 +63,7 @@ Copyright (c) 2014-2017 Martin Hebnes Pedersen LA5NTA
 ### Contributors (alphabetical)
 
 * KD8DRX - Will Davidson
+* KE8HMG - Andrew Huebner
 * LA3QMA - Kai Günter Brandt
 * LA4TTA - Erlend Grimseid
 * LA5NTA - Martin Hebnes Pedersen

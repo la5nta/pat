@@ -1,3 +1,15 @@
+pat (0.5.0) stable; urgency=high
+
+  * Fix XSS vulnerability when serving attachments over HTTP (https://github.com/la5nta/pat/issues/105)
+  * Gracefully recover/initialize failed external devices (https://github.com/la5nta/pat/issues/88)
+  * Switch to the new Winlink CMS and API hostname (https://github.com/la5nta/pat/issues/104)
+  * Add config option for WINMOR's Drive Level parameter (https://github.com/la5nta/pat/issues/99)
+  * Add password prompt in web GUI (https://github.com/la5nta/pat/issues/90)
+  * Include man pages in deb and pkg packages (https://github.com/la5nta/pat/pull/91)
+  * Various minor web GUI improvements (https://github.com/la5nta/pat/issues/97)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 18 Nov 2017 11:40:28 +0100
+
 pat (0.4.0) stable; urgency=medium
 
   * Desktop notifications for web GUI users (https://github.com/la5nta/pat/issues/85)

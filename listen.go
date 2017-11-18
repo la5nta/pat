@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"strings"
@@ -20,7 +19,7 @@ func Unlisten(param string) {
 	for _, method := range methods {
 		ok, err := listenHub.Disable(method)
 		if err != nil {
-			fmt.Printf("Unable to close %s listener: %s", method, err)
+			log.Printf("Unable to close %s listener: %s", method, err)
 		} else if !ok {
 			log.Printf("No active %s listener, ignoring.\n", method)
 		}

@@ -15,7 +15,7 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
 
-	// Register ax25 and telnet dialers
+	// Register AX.25 and telnet dialers
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
 	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )
@@ -49,7 +49,7 @@ func Connect(connectStr string) (success bool) {
 		return false
 	}
 
-	// Init TNCs
+	// Initialize TNCs
 	switch url.Scheme {
 	case "ardop":
 		if err := initArdopTNC(); err != nil {
@@ -125,7 +125,7 @@ func Connect(connectStr string) (success bool) {
 		waitBusy(wmTNC)
 	}
 
-	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.
+	// Catch interrupts (signals) while dialing, so users can abort ARDOP/WINMOR connects.
 	doneHandleInterrupt := handleInterrupt()
 
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)

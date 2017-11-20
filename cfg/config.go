@@ -46,7 +46,7 @@ type Config struct {
 	// Example: ["ax25", "winmor", "telnet", "ardop"]
 	Listen []string `json:"listen"`
 
-	// Hamlib rigs available (with reference name) for ptt and frequency control.
+	// Hamlib rigs available (with reference name) for PTT and frequency control.
 	HamlibRigs map[string]HamlibConfig `json:"hamlib_rigs"`
 
 	AX25      AX25Config      `json:"ax25"`       // See AX25Config.
@@ -55,7 +55,7 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
-	// Address and port to a GPSd daemon for position reporting.
+	// Address and port to a GPSd for position reporting.
 	GPSdAddr string `json:"gpsd_addr"`
 
 	// Command schedule (cron-like syntax).
@@ -104,7 +104,7 @@ type WinmorConfig struct {
 	// Set to 0 to use WINMOR defaults
 	DriveLevel int `json:"drive_level"`
 
-	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	// (optional) Reference name to the Hamlib rig to control frequency and PTT.
 	Rig string `json:"rig"`
 
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
@@ -118,10 +118,10 @@ type ArdopConfig struct {
 	// ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
 
-	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	// (optional) Reference name to the Hamlib rig to control frequency and PTT.
 	Rig string `json:"rig"`
 
-	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	// Set to true if hamlib should control PTT (SignaLink=false, most RigExpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
 
 	// (optional) Send ID frame at a regular interval when the listener is active (unit is seconds)

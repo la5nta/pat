@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# This script is written to help configure an axport to use as a winlink node.
+# This script is written to help configure an axport to use as a Winlink node.
 # It sets AX.25 and KISS params appropriate to the given HBAUD (link baudrate)
 set -e
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]

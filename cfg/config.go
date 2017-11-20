@@ -25,14 +25,14 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
-	// Default HTTP listen address (for web UI).
+	// Default HTTP listen address (for web user interface).
 	//
 	// Use ":8080" to listen on any device, port 8080.
 	HTTPAddr string `json:"http_addr"`
 
 	// Handshake comment lines sent to remote node on incoming connections.
 	//
-	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with Signalink USB"]
+	// Example: ["QTH: Hagavik, Norway. Operator: Martin", "Rig: FT-897 with SignaLink USB"]
 	MOTD []string `json:"motd"`
 
 	// Connect aliases
@@ -64,7 +64,7 @@ type Config struct {
 	//   # Connect to telnet once every hour
 	//   "@hourly": "connect telnet"
 	//
-	//   # Change winmor listen frequency based on hour of day
+	//   # Change WINMOR listen frequency based on hour of day
 	//   "00 10 * * *": "freq winmor:7350.000", # 40m from 10:00
 	//   "00 18 * * *": "freq winmor:5347.000", # 60m from 18:00
 	//   "00 22 * * *": "freq winmor:3602.000"  # 80m from 22:00
@@ -84,7 +84,7 @@ type HamlibConfig struct {
 
 	// The rig address.
 	//
-	// For tcp (rigctld): "address:port" (e.g. localhost:4532).
+	// For TCP (rigctld): "address:port" (e.g. localhost:4532).
 	// For serial: "/path/to/tty?model=&baudrate=" (e.g. /dev/ttyS0?model=123&baudrate=4800).
 	Address string `json:"address,omitempty"`
 
@@ -93,10 +93,10 @@ type HamlibConfig struct {
 }
 
 type WinmorConfig struct {
-	// Network address of the Winmor TNC (e.g. localhost:8500).
+	// Network address of the WINMOR TNC (e.g. localhost:8500).
 	Addr string `json:"addr"`
 
-	// Bandwidth to use when getting an inbound connection (500/1600).
+	// Bandwidth in Hertz to use when getting an inbound connection (500/1600).
 	InboundBandwidth int `json:"inbound_bandwidth"`
 
 	// TX audio drive level
@@ -107,21 +107,21 @@ type WinmorConfig struct {
 	// (optional) Reference name to the Hamlib rig to control frequency and PTT.
 	Rig string `json:"rig"`
 
-	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	// Set to true if Hamlib should control PTT (SignaLink=false, most RigExpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
 }
 
 type ArdopConfig struct {
-	// Network address of the Ardop TNC (e.g. localhost:8515).
+	// Network address of the ARDOP TNC (e.g. localhost:8515).
 	Addr string `json:"addr"`
 
-	// ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
+	// ARQ bandwidth in Hertz (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and PTT.
 	Rig string `json:"rig"`
 
-	// Set to true if hamlib should control PTT (SignaLink=false, most RigExpert=true).
+	// Set to true if Hamlib should control PTT (SignaLink=false, most RigExpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
 
 	// (optional) Send ID frame at a regular interval when the listener is active (unit is seconds)
@@ -140,7 +140,7 @@ type TelnetConfig struct {
 }
 
 type SerialTNCConfig struct {
-	// Serial port (e.g. /dev/ttyUSB0 or COM1).
+	// Serial port (e.g. /dev/ttyUSB0 in Linux or COM1 in Windows).
 	Path string `json:"path"`
 
 	// Baudrate for the serial port (e.g. 57600).

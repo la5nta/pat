@@ -32,14 +32,14 @@ type Positioner interface {
 
 // Position holds geopgraphic positioning data.
 type Position struct {
-	Lat, Lon float64   // Latitude/longitude in degrees. +/- signifies north/south.
+	Lat, Lon float64   // Latitude/longitude in degrees. +/- signifies north/south or east/west
 	Alt      float64   // Altitude in meters.
 	Track    float64   // Course over ground, degrees from true north.
 	Speed    float64   // Speed over ground, meters per second.
 	Time     time.Time // Time as reported by the device.
 }
 
-// Conn represents a socket connection to an GPSd daemon.
+// Conn represents a socket connection to a GPSd.
 type Conn struct {
 	Version Version
 
@@ -50,7 +50,7 @@ type Conn struct {
 	closed       bool
 }
 
-// Dial establishes a socket connection to the GPSd daemon.
+// Dial establishes a socket connection to a GPSd.
 func Dial(addr string) (*Conn, error) {
 	tcpConn, err := net.DialTimeout("tcp", addr, 30*time.Second)
 	if err != nil {
@@ -117,14 +117,14 @@ func (c *Conn) Watch(enable bool) bool {
 	return c.watchEnabled
 }
 
-// Close closes the GPSd daemon connection.
+// Close closes a GPSd connection.
 func (c *Conn) Close() error {
 	c.Watch(false)
 	c.closed = true
 	return c.tcpConn.Close()
 }
 
-// Next returns the next object sent from the daemon, or an error.
+// Next returns the next object sent from a daemon, or an error.
 //
 // The empty interface returned can be any of the following types:
 //   * Sky: A Sky object reports a sky view of the GPS satellite positions.
@@ -195,7 +195,7 @@ func (c *Conn) NextPosTimeout(timeout time.Duration) (Position, error) {
 	}
 }
 
-// Devices returns a list of all devices GPSd is aware of.
+// Devices returns a list of all devices a GPSd is aware of.
 //
 // ErrWatchModeEnabled will be returned if the connection is in watch mode.
 // A nil-slice will be returned if the connection has been closed.

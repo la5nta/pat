@@ -7,125 +7,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/spf13/pflag"
 
 	"github.com/la5nta/wl2k-go/mailbox"
+
+	"github.com/la5nta/pat/internal/cmsapi"
 )
-
-const GatewayStatusUrl = "http://server.winlink.org:8085/gateway/status.json"
-
-type GatewayStatus struct {
-	ServerName string    `json:"ServerName"`
-	ErrorCode  int       `json:"ErrorCode"`
-	Gateways   []Gateway `json:"Gateways"`
-}
-
-type Gateway struct {
-	Callsign      string
-	BaseCallsign  string
-	RequestedMode string
-	Comments      string
-	LastStatus    RFC1123Time
-	Latitude      float64
-	Longitude     float64
-
-	Channels []GatewayChannel `json:"GatewayChannels"`
-}
-
-type GatewayChannel struct {
-	OperatingHours string
-	SupportedModes string
-	Frequency      float64
-	ServiceCode    string
-	Baud           string
-	RadioRange     string
-	Mode           int
-	Gridsquare     string
-	Antenna        string
-}
-
-type RFC1123Time struct{ time.Time }
-
-// GetGatewayStatus fetches the gateway status list returned by GatewayStatusUrl
-//
-// mode can be any of [packet, pactor, winmor, robustpacket, allhf or anyall]. Empty is AnyAll.
-// historyHours is the number of hours of history to include (maximum: 48). If < 1, then API default is used.
-// serviceCodes defaults to "PUBLIC".
-func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io.ReadCloser, error) {
-	switch {
-	case mode == "":
-		mode = "AnyAll"
-	case historyHours > 48:
-		historyHours = 48
-	case len(serviceCodes) == 0:
-		serviceCodes = []string{"PUBLIC"}
-	}
-
-	params := url.Values{"Mode": {mode}}
-	if historyHours >= 0 {
-		params.Add("HistoryHours", fmt.Sprintf("%d", historyHours))
-	}
-	for _, str := range serviceCodes {
-		params.Add("ServiceCodes", str)
-	}
-
-	resp, err := http.PostForm(GatewayStatusUrl, params)
-	switch {
-	case err != nil:
-		return nil, err
-	case resp.StatusCode != http.StatusOK:
-		return nil, fmt.Errorf("Unexpected http status '%s'.", resp.Status)
-	}
-
-	return resp.Body, err
-}
-
-func GetGatewayStatusCached(cacheFile string, forceDownload bool) (io.ReadCloser, error) {
-	if !forceDownload {
-		file, err := os.Open(cacheFile)
-		if err == nil {
-			return file, nil
-		}
-	}
-
-	file, err := os.Create(cacheFile)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Println("Downloading latest gateway status information...")
-	fresh, err := GetGatewayStatus("", 48)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = io.Copy(file, fresh)
-	file.Seek(0, 0)
-
-	if err == nil {
-		log.Println("download succeeded.")
-	}
-
-	return file, err
-}
-
-func (t *RFC1123Time) UnmarshalJSON(b []byte) (err error) {
-	var str string
-	if err = json.Unmarshal(b, &str); err != nil {
-		return err
-	}
-	t.Time, err = time.Parse(time.RFC1123, str)
-	return err
-}
 
 func rmsListHandle(args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
@@ -145,13 +37,13 @@ func rmsListHandle(args []string) {
 		query = strings.ToUpper(set.Args()[0])
 	}
 
-	file, err := GetGatewayStatusCached(filePath, *forceDownload)
+	file, err := cmsapi.GetGatewayStatusCached(filePath, *forceDownload)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	var status GatewayStatus
+	var status cmsapi.GatewayStatus
 
 	err = json.NewDecoder(file).Decode(&status)
 	if err != nil {
@@ -187,7 +79,7 @@ func rmsListHandle(args []string) {
 				printed = true
 			}
 
-			url := channel.URL(gw.Callsign)
+			url := toURL(channel, gw.Callsign)
 			fmt.Printf(fmtStr, gw.Callsign, channel.Gridsquare, channel.SupportedModes, dial, freq, url)
 		}
 		if printed {
@@ -196,14 +88,14 @@ func rmsListHandle(args []string) {
 	}
 }
 
-func (gc GatewayChannel) URL(targetcall string) *url.URL {
+func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
 
-	url, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", gc.Transport(), targetcall, freq.KHz()))
+	url, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetcall, freq.KHz()))
 	return url
 }
 
-func (gc GatewayChannel) Transport() string {
+func toTransport(gc cmsapi.GatewayChannel) string {
 	modes := strings.ToLower(gc.SupportedModes)
 	switch {
 	case strings.Contains(modes, "winmor"):

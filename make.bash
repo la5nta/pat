@@ -3,6 +3,8 @@ set -e
 
 export GO15VENDOREXPERIMENT=1
 
+if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
+
 GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 
@@ -20,7 +22,7 @@ function install_libax25 {
 [[ "$1" == "libax25" ]] && install_libax25 && exit 0;
 
 # Link against libax25 (statically) on Linux
-if [[ "$OSTYPE" == "linux"* ]]; then
+if [[ "$OS" == "linux"* ]]; then
 	TAGS="libax25 $TAGS"
 	LIB=".build/${AX25DIST}/.libs/libax25.a"
 	if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
@@ -51,7 +53,7 @@ echo "Building Pat v$VERSION..."
 go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\""
 
 # Build macOS pkg (amd64)
-if [[ "$OSTYPE" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then
+if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then
 	echo "Generating macOS installer package..."
 	packagesbuild osx/pat.pkgproj
 	mv 'Pat :: A Modern Winlink Client.pkg' "pat_${VERSION}_darwin_amd64_unsigned.pkg"

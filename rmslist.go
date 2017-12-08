@@ -104,6 +104,8 @@ func toTransport(gc cmsapi.GatewayChannel) string {
 		return "ax25"
 	case strings.Contains(modes, "pactor"):
 		return "pactor"
+	case strings.Contains(modes, "ardop"):
+		return "ardop"
 	default:
 		return ""
 	}

@@ -95,18 +95,14 @@ func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	return url
 }
 
+var transports = []string{"winmor", "packet", "pactor", "ardop"}
+
 func toTransport(gc cmsapi.GatewayChannel) string {
 	modes := strings.ToLower(gc.SupportedModes)
-	switch {
-	case strings.Contains(modes, "winmor"):
-		return "winmor"
-	case strings.Contains(modes, "packet"):
-		return "ax25"
-	case strings.Contains(modes, "pactor"):
-		return "pactor"
-	case strings.Contains(modes, "ardop"):
-		return "ardop"
-	default:
-		return ""
+	for _, transport := range transports {
+		if strings.Contains(modes, transport) {
+			return transport
+		}
 	}
+	return ""
 }

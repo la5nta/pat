@@ -17,9 +17,12 @@ import (
 )
 
 const (
-	RootURL           = "http://cms.winlink.org:8085"
+	RootURL           = "https://api.winlink.org"
 	PathVersionAdd    = "/version/add"
 	PathGatewayStatus = "/gateway/status.json"
+
+	// Issued December 2017 by the WDT for use with Pat
+	AccessKey = "1880278F11684B358F36845615BD039A"
 )
 
 type VersionAdd struct {
@@ -33,7 +36,8 @@ func (v VersionAdd) Post() error {
 	b, _ := json.Marshal(v)
 	buf := bytes.NewBuffer(b)
 
-	req, _ := http.NewRequest("POST", RootURL+PathVersionAdd, buf)
+	url := RootURL + PathVersionAdd + "?key=" + AccessKey
+	req, _ := http.NewRequest("POST", url, buf)
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
 
@@ -103,6 +107,7 @@ func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io
 	}
 
 	params := url.Values{"Mode": {mode}}
+	params.Set("key", AccessKey)
 	if historyHours >= 0 {
 		params.Add("HistoryHours", fmt.Sprintf("%d", historyHours))
 	}

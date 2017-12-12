@@ -1,3 +1,12 @@
+pat (0.5.1) stable; urgency=medium
+
+  * Support ARDOP >= v1.0 (https://github.com/la5nta/pat/issues/108)
+  * Add rmslist support for ARDOP nodes
+  * Switch to the new Winlink rest API (https://github.com/la5nta/pat/issues/110)
+  * Fix bug which caused WINMOR connection failure when dialing the (non-idle) TNC
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 12 Dec 2017 19:03:04 +0100
+
 pat (0.5.0) stable; urgency=high
 
   * Fix XSS vulnerability when serving attachments over HTTP (https://github.com/la5nta/pat/issues/105)

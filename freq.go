@@ -54,6 +54,12 @@ func (f Frequency) KHz() float64 { return float64(f) / 1e3 }
 func (f Frequency) Dial(mode string) Frequency {
 	mode = strings.ToLower(mode)
 
+	// Try to detect FM modes
+	// (ARDOP on FM is reported as `ARDOP 2000 FM`)
+	if strings.HasSuffix(mode, "fm") {
+		return f
+	}
+
 	offsets := map[string]Frequency{
 		"winmor": 1500,
 		"pactor": 1500,

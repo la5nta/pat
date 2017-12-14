@@ -112,6 +112,7 @@ var commands = []Command{
 			"--mode, -m":           "Mode filter.",
 			"--band, -b":           "Band filter (e.g. '80m').",
 			"--force-download, -d": "Force download of latest list from winlink.org.",
+			"--sort-distance, -s":  "Sort by distance",
 		},
 		HandleFunc: rmsListHandle,
 	},

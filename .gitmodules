@@ -71,3 +71,6 @@
 [submodule "vendor/github.com/nfnt/resize"]
 	path = vendor/github.com/nfnt/resize
 	url = https://github.com/nfnt/resize.git
+[submodule "vendor/github.com/pd0mz/go-maidenhead"]
+	path = vendor/github.com/pd0mz/go-maidenhead
+	url = https://github.com/pd0mz/go-maidenhead.git

@@ -17,13 +17,34 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 
 	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/pd0mz/go-maidenhead"
+	"strconv"
+	"sort"
 )
+type rms struct {
+	callsign string
+	gridsq string
+	distance float64
+	azimuth float64
+	modes string
+	freq string
+	dial string
+	url *url.URL
+}
+
+type byDist []rms
+
+func (r byDist) Len() int           { return len(r) }
+func (r byDist) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r byDist) Less(i, j int) bool { return r[i].distance < r[j].distance }
+
 
 func rmsListHandle(args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
 	mode := set.StringP("mode", "m", "", "")
 	band := set.StringP("band", "b", "", "")
 	forceDownload := set.BoolP("force-download", "d", false, "")
+	byDistance := set.BoolP("sort-distance", "s", false, "")
 	set.Parse(args)
 
 	appDir, err := mailbox.DefaultAppDir()
@@ -50,12 +71,17 @@ func rmsListHandle(args []string) {
 		log.Fatal(err)
 	}
 
+	noLocator := false
+
+	me, err := maidenhead.ParseLocator(config.Locator)
+	if err != nil {
+		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
+		noLocator = true
+	}
+
 	*mode = strings.ToLower(*mode)
 
-	fmtStr := "%-9.9s [%-6.6s] %-15.15s %14.14s %14.14s %s\n"
-
-	// Print header
-	fmt.Printf(fmtStr, "callsign", "gridsq", "mode(s)", "dial freq", "center freq", "url") //TODO: "center frequency" of packet is wrong...
+	rList:= []rms{}
 
 	// Print gateways (separated by blank line)
 	for _, gw := range status.Gateways {
@@ -65,24 +91,53 @@ func rmsListHandle(args []string) {
 		default:
 		}
 
-		var printed bool
 		for _, channel := range gw.Channels {
-			freq := Frequency(channel.Frequency)
-			dial := freq.Dial(channel.SupportedModes)
+
+			r := rms{
+				callsign: gw.Callsign,
+				gridsq: channel.Gridsquare,
+				modes: channel.SupportedModes,
+			}
+
+			f := Frequency(channel.Frequency)
+			r.dial = f.Dial(channel.SupportedModes).String()
+			r.freq = f.String()
 
 			switch {
 			case mode != nil && !strings.Contains(strings.ToLower(channel.SupportedModes), *mode):
 				continue
-			case !bands[*band].Contains(freq):
+			case !bands[*band].Contains(f):
 				continue
-			default:
-				printed = true
+			}
+			r.distance = float64(0)
+			r.azimuth = float64(0)
+			if ! noLocator {
+				if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil {
+					r.distance = me.Distance(them)
+					r.azimuth = me.Bearing(them)
+				}
 			}
 
-			url := toURL(channel, gw.Callsign)
-			fmt.Printf(fmtStr, gw.Callsign, channel.Gridsquare, channel.SupportedModes, dial, freq, url)
+			r.url = toURL(channel, gw.Callsign)
+
+			rList = append(rList, r)
 		}
-		if printed {
+	}
+	if *byDistance {
+		sort.Sort(byDist(rList))
+	}
+	fmtStr := "%-9.9s [%-6.6s] %-6.6s %3.3s %-15.15s %14.14s %14.14s %s\n"
+
+	// Print header
+	fmt.Printf(fmtStr, "callsign", "gridsq", "dist", "Az", "mode(s)", "dial freq", "center freq", "url") //TODO: "center frequency" of packet is wrong...
+
+	for i:=0; i < len(rList); i++ {
+		r := rList[i]
+		distance := strconv.FormatFloat(r.distance, 'f', 0, 64)
+		azimuth := strconv.FormatFloat(r.azimuth, 'f', 0, 64)
+
+		fmt.Printf(fmtStr, r.callsign, r.gridsq, distance, azimuth, r.modes, r.dial, r.freq, r.url)
+		if i+1 < len(rList) && rList[i].callsign != rList[i+1].callsign {
 			fmt.Println("")
 		}
 	}

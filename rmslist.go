@@ -18,18 +18,19 @@ import (
 
 	"github.com/la5nta/pat/internal/cmsapi"
 	"github.com/pd0mz/go-maidenhead"
-	"strconv"
 	"sort"
+	"strconv"
 )
+
 type rms struct {
 	callsign string
-	gridsq string
+	gridsq   string
 	distance float64
-	azimuth float64
-	modes string
-	freq string
-	dial string
-	url *url.URL
+	azimuth  float64
+	modes    string
+	freq     string
+	dial     string
+	url      *url.URL
 }
 
 type byDist []rms
@@ -37,7 +38,6 @@ type byDist []rms
 func (r byDist) Len() int           { return len(r) }
 func (r byDist) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r byDist) Less(i, j int) bool { return r[i].distance < r[j].distance }
-
 
 func rmsListHandle(args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
@@ -81,7 +81,7 @@ func rmsListHandle(args []string) {
 
 	*mode = strings.ToLower(*mode)
 
-	rList:= []rms{}
+	rList := []rms{}
 
 	// Print gateways (separated by blank line)
 	for _, gw := range status.Gateways {
@@ -95,8 +95,8 @@ func rmsListHandle(args []string) {
 
 			r := rms{
 				callsign: gw.Callsign,
-				gridsq: channel.Gridsquare,
-				modes: channel.SupportedModes,
+				gridsq:   channel.Gridsquare,
+				modes:    channel.SupportedModes,
 			}
 
 			f := Frequency(channel.Frequency)
@@ -111,7 +111,7 @@ func rmsListHandle(args []string) {
 			}
 			r.distance = float64(0)
 			r.azimuth = float64(0)
-			if ! noLocator {
+			if !noLocator {
 				if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil {
 					r.distance = me.Distance(them)
 					r.azimuth = me.Bearing(them)
@@ -131,7 +131,7 @@ func rmsListHandle(args []string) {
 	// Print header
 	fmt.Printf(fmtStr, "callsign", "gridsq", "dist", "Az", "mode(s)", "dial freq", "center freq", "url") //TODO: "center frequency" of packet is wrong...
 
-	for i:=0; i < len(rList); i++ {
+	for i := 0; i < len(rList); i++ {
 		r := rList[i]
 		distance := strconv.FormatFloat(r.distance, 'f', 0, 64)
 		azimuth := strconv.FormatFloat(r.azimuth, 'f', 0, 64)

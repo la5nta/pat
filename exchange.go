@@ -116,6 +116,13 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	startTs := time.Now()
 
 	stats, err := session.Exchange(conn)
+	if fbb.IsLoginFailure(err) {
+		fmt.Println("NOTE: A new password scheme for Winlink is being implemented as of 2018-01-31.")
+		fmt.Println("      Users with passwords created/changed prior to January 31, 2018 should be")
+		fmt.Println("      aware that their password MUST be entered in ALL-UPPERCASE letters. Only")
+		fmt.Println("      passwords created/changed/issued after January 31, 2018 should/may contain")
+		fmt.Println("      lowercase letters. - https://github.com/la5nta/pat/issues/113")
+	}
 
 	event := map[string]interface{}{
 		"mycall":              session.Mycall(),

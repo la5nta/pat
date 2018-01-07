@@ -1,0 +1,11 @@
+[Unit]
+Description=ardopc - ARDOP softmodem for %i
+After=network.target sound.target
+
+[Service]
+User=%i
+ExecStart=/bin/sh -c "cd /tmp && /usr/local/bin/ardopc"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

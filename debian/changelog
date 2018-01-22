@@ -1,3 +1,11 @@
+pat (0.6.0) stable; urgency=high
+
+  * Support Winlink's new mixed-case password scheme (https://github.com/la5nta/pat/issues/113)
+  * Support for distance and azumuth in rmslist (https://github.com/la5nta/pat/pull/112)
+  * Improved ARDOP ID-frame parser
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Mon, 22 Jan 2018 21:41:13 +0100
+
 pat (0.5.1) stable; urgency=medium
 
   * Support ARDOP >= v1.0 (https://github.com/la5nta/pat/issues/108)

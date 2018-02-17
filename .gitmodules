@@ -74,3 +74,9 @@
 [submodule "vendor/github.com/pd0mz/go-maidenhead"]
 	path = vendor/github.com/pd0mz/go-maidenhead
 	url = https://github.com/pd0mz/go-maidenhead.git
+[submodule "vendor/github.com/harenber/ptc-go"]
+	path = vendor/github.com/harenber/ptc-go
+	url = https://github.com/harenber/ptc-go.git
+[submodule "vendor/github.com/tarm/serial"]
+	path = vendor/github.com/tarm/serial
+	url = https://github.com/tarm/serial.git

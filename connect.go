@@ -15,7 +15,8 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
 
-	// Register ax25 and telnet dialers
+	// Register other dialers
+	_ "github.com/harenber/ptc-go/ptc"
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
 	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )

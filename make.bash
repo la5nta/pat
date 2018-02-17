@@ -9,7 +9,7 @@ GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 
 # Go 1.5 or later is required
-GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d)/; print $1;')
+GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
 [ "$GO_POINT_VERSION" -lt "5" ] && echo "Go 1.5 or later required" && exit 1;
 
 AX25DIST="libax25-0.0.12-rc4"

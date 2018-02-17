@@ -6,11 +6,14 @@ clone_folder: c:\gopath\src\github.com\la5nta\pat
 environment:
   global:
     GOPATH: C:\gopath
-    GOROOT: C:\go19-x86
+    GOVERSION: "1.10"
     MSYS_PATH: C:\MinGW\msys\1.0
-
+install:
+  - set PATH=C:\go\bin;%MSYS_PATH%\bin;C:\MinGW\bin;%PATH%
+  - rmdir c:\go /s /q
+  - appveyor DownloadFile https://dl.google.com/go/go%GOVERSION%.windows-386.zip
+  - 7z x go%GOVERSION%.windows-386.zip -y -oC:\ > NUL
 build_script:
-  - set PATH=%GOROOT%\bin;%MSYS_PATH%\bin;C:\MinGW\bin;%PATH%
   - go version
   - '%MSYS_PATH%\bin\bash -lc "cd /c/gopath/src/github.com/la5nta/pat && ./make.bash"'
 

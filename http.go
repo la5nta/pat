@@ -192,7 +192,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		// For some unknown reason, we receive this empty unnamed file when no
 		// attachment is provided. Prior to Go 1.10, this was filtered by
 		// multipart.Reader.
-		if f.Size == 0 && f.Filename == "" {
+		if isEmptyFormFile(f) {
 			continue
 		}
 

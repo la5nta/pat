@@ -196,6 +196,10 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		if f.Filename == "" {
+			http.Error(w, "Missing attachment name", http.StatusBadRequest)
+			return
+		}
 		file, err := f.Open()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

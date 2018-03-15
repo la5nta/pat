@@ -189,6 +189,13 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// files
 	files := m.File["files"]
 	for _, f := range files {
+		// For some unknown reason, we receive this empty unnamed file when no
+		// attachment is provided. Prior to Go 1.10, this was filtered by
+		// multipart.Reader.
+		if f.Size == 0 && f.Filename == "" {
+			continue
+		}
+
 		file, err := f.Open()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

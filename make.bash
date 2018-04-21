@@ -52,7 +52,7 @@ go test -tags "$TAGS" `go list ./...|grep -v vendor` `go list ./...|grep wl2k-go
 echo
 
 echo "Building Pat v$VERSION..."
-go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\""
+go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\"" $(go list .)
 
 # Build macOS pkg (amd64)
 if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then

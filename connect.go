@@ -77,7 +77,7 @@ func Connect(connectStr string) (success bool) {
 		case "serial-tnc":
 			url.Host = config.SerialTNC.Path
 			if config.SerialTNC.Baudrate > 0 {
-				url.Params.Set("baud", fmt.Sprint(config.SerialTNC.Baudrate))
+				url.Params.Set("hbaud", fmt.Sprint(config.SerialTNC.Baudrate))
 			}
 		case "ptc":
 			url.Host = config.PTC.Path

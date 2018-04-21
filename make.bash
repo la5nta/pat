@@ -12,11 +12,13 @@ VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
 [ "$GO_POINT_VERSION" -lt "5" ] && echo "Go 1.5 or later required" && exit 1;
 
-AX25DIST="libax25-0.0.12-rc4"
+AX25VERSION="0.0.12-rc4"
+AX25DIST="libax25-${AX25VERSION}"
+AX25DIST_URL="http://http.debian.net/debian/pool/main/liba/libax25/libax25_${AX25VERSION}.orig.tar.gz"
 function install_libax25 {
 	mkdir -p .build && cd .build
-	[[ -f "${AX25DIST}.tar.gz" ]] || curl -Ssf "http://www.linux-ax25.org/pub/libax25/${AX25DIST}.tar.gz" | tar zx
-	cd "${AX25DIST}" && ./configure --prefix=/ && make && cd ../../
+	[[ -f "${AX25DIST}" ]] || curl -LSsf "${AX25DIST_URL}" | tar zx
+	cd "${AX25DIST}/" && ./configure --prefix=/ && make && cd ../../
 }
 
 [[ "$1" == "libax25" ]] && install_libax25 && exit 0;
@@ -50,7 +52,7 @@ go test -tags "$TAGS" `go list ./...|grep -v vendor` `go list ./...|grep wl2k-go
 echo
 
 echo "Building Pat v$VERSION..."
-go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\""
+go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\"" $(go list .)
 
 # Build macOS pkg (amd64)
 if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then

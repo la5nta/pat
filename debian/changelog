@@ -1,3 +1,12 @@
+pat (0.6.1) stable; urgency=medium
+
+  * Add deb package `dist` as conflicting package (https://github.com/la5nta/pat/issues/131)
+  * Include systemd unit file for ARDOPc (https://github.com/la5nta/pat/issues/130)
+  * Set correct URL parameter for serial-tnc.Baudrate (https://github.com/la5nta/pat/issues/129)
+  * Fix Go 1.10 compatibility issue (https://github.com/la5nta/pat/issues/121)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 21 Apr 2018 11:23:40 +0200
+
 pat (0.6.0) stable; urgency=high
 
   * Support Winlink's new mixed-case password scheme (https://github.com/la5nta/pat/issues/113)

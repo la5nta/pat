@@ -41,6 +41,8 @@ const (
 	MethodSerialTNC = "serial-tnc"
 )
 
+const gpsdNextTimeoutS = 20 // Get GPS position timeout set to 20s
+
 var commands = []Command{
 	{
 		Str:        "connect",
@@ -141,11 +143,12 @@ var (
 	logWriter io.Writer
 	eventLog  *EventLogger
 
-	exchangeChan chan ex             // The channel that the exchange loop is listening on
-	exchangeConn net.Conn            // Pointer to the active session connection (exchange)
-	mbox         *mailbox.DirHandler // The mailbox
-	listenHub    *ListenerHub
-	promptHub    *PromptHub
+	exchangeChan		chan ex             // The channel that the exchange loop is listening on
+	exchangeConn		net.Conn            // Pointer to the active session connection (exchange)
+	mbox			*mailbox.DirHandler // The mailbox
+	listenHub		*ListenerHub
+	promptHub		*PromptHub
+	gpsdConn		*gpsd.Conn
 
 	appDir string
 )
@@ -248,6 +251,23 @@ func main() {
 	if err != nil {
 		log.Fatal("Unable to open event log file:", err)
 	}
+
+	// Initialize GPSd if aviable
+	if config.GPSdAddr != "" {
+		gpsdConn, err = gpsd.Dial(config.GPSdAddr)
+		if err != nil {
+			log.Printf("GPSd daemon failed: %s", err)
+			gpsdConn = nil
+		} else {
+			gpsdConn.Watch(true)
+			log.Printf("Listening on GPSd %s", config.GPSdAddr)
+		}
+
+	} else {
+		log.Println("GPSd is not set up")
+		gpsdConn = nil
+	}
+
 
 	// Read command line options from config if unset
 	if fOptions.MyCall == "" && config.MyCall == "" {
@@ -395,6 +415,12 @@ func helpHandle(args []string) {
 
 func cleanup() {
 	listenHub.Close()
+
+	if gpsdConn != nil {
+		if err := gpsdConn.Close(); err != nil {
+			log.Fatalf("Failure to close connection to GPSd: %s", err)
+		}
+	}
 
 	if wmTNC != nil {
 		if err := wmTNC.Close(); err != nil {
@@ -722,17 +748,9 @@ func posReportHandle(args []string) {
 			log.Fatal(err)
 		}
 		report.Lon = &lon
-	} else if config.GPSdAddr != "" {
-		conn, err := gpsd.Dial(config.GPSdAddr)
-		if err != nil {
-			log.Fatalf("GPSd daemon: %s", err)
-		}
-		defer conn.Close()
-
-		conn.Watch(true)
-
+	} else if gpsdConn != nil {
 		log.Println("Waiting for position from GPSd...") //TODO: Spinning bar?
-		pos, err := conn.NextPos()
+		pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
 		if err != nil {
 			log.Fatalf("GPSd: %s", err)
 		}

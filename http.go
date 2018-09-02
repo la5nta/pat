@@ -72,6 +72,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/{box}", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
+	r.HandleFunc("/api/gpsd", gpsdHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
@@ -274,6 +275,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// Post to outbox
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -339,6 +341,22 @@ func getStatus() Status {
 }
 
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
+
+func gpsdHandler(w http.ResponseWriter, req *http.Request) {
+	if gpsdConn != nil {
+		log.Println("API is waiting for position from GPSd...")
+                pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
+                if err != nil {
+                        log.Printf("GPSd: %s", err) //do not exit http command (log.Fatalf)
+			http.Error(w, "Could not get position from GPSd", http.StatusInternalServerError)
+		} else {
+			json.NewEncoder(w).Encode(pos)
+		}
+
+	} else {
+		http.Error(w, "GPSd not connected or not configured", http.StatusInternalServerError)
+	}
+}
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 	connectStr := req.FormValue("url")

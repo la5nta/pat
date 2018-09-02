@@ -347,7 +347,7 @@ func gpsdHandler(w http.ResponseWriter, req *http.Request) {
 		log.Println("API is waiting for position from GPSd...")
                 pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
                 if err != nil {
-                        log.Printf("GPSd: %s", err) //do not exit http command (log.Fatalf)
+			log.Printf("GPSd: %s", err) //do not exit http command (log.Fatalf)
 			http.Error(w, "Could not get position from GPSd", http.StatusInternalServerError)
 		} else {
 			json.NewEncoder(w).Encode(pos)

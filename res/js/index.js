@@ -5,6 +5,7 @@ var mycall = "";
 
 var uploadFiles = new Array();
 var statusPopoverDiv;
+var statusPos = $('#pos_status');
 
 function initFrontend(ws_url)
 {
@@ -50,32 +51,31 @@ function initFrontend(ws_url)
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
-			var gpsdData = null;
-
-			$('#pos_status').empty().append("<strong>Checking if GPSd is available...</strong>");
-
 			$.ajax({
 				url: '/api/gpsd',
 				dataType: 'json',
-				async: false,
-				success: function(json){
-					gpsdData = json;
+				beforeSend: function(){
+					statusPos.html("Checking if GPSd is available");
+				},
+				success: function(gpsdData){
+					statusPos.html("GPS position received");
+
+					statusPos.html("<strong>Waiting for position (gpsd)...</strong>");
+					updatePositionGpsd(gpsdData);
 				},
 				error: function( jqXHR, textStatus, errorThrown ){
-					$('#pos_status').empty().append("<strong>GPSd not available!</strong>");
+					statusPos.html("GPSd not available!");
+
+					if (navigator.geolocation) {
+						statusPos.html("<strong>Waiting for position (geolocation)...</strong>");
+						posId = navigator.geolocation.watchPosition(updatePositionGeolocation, handleGeolocationError);
+					} else {
+						statusPos.html("Geolocation is not supported by this browser.");
+					}
 				}
 			});
-
-			if (gpsdData) {
-				$('#pos_status').empty().append("<strong>Waiting for position (gpsd)...</strong>");
-				updatePositionGpsd(gpsdData);
-			} else if (navigator.geolocation) {
-				$('#pos_status').empty().append("<strong>Waiting for position (geolocation)...</strong>");
-				posId = navigator.geolocation.watchPosition(updatePositionGeolocation, handleGeolocationError);
-			} else {
-				$('#pos_status').empty().append("Geolocation is not supported by this browser.");
-			}
 		});
+
 		$('#posModal').on('hidden.bs.modal', function (e) {
 			if (navigator.geolocation) {
 				navigator.geolocation.clearWatch(posId);
@@ -342,12 +342,12 @@ function handleGeolocationError(error) {
 		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
 	}
 	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
-	$('#pos_status').empty().append("Geolocation unavailable.");
+	statusPos.html("Geolocation unavailable.");
 }
 
 function updatePositionGeolocation(pos) {
 	var d = new Date(pos.timestamp);
-	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
+	statusPos.html("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.coords.latitude);
 	$('#pos_long').val(pos.coords.longitude);
 	$('#pos_ts').val(pos.timestamp);
@@ -355,7 +355,7 @@ function updatePositionGeolocation(pos) {
 
 function updatePositionGpsd(pos) {
 	var d = new Date(pos.Time);
-	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
+	statusPos.html("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.Lat);
 	$('#pos_long').val(pos.Lon);
 	$('#pos_ts').val(d.getTime());

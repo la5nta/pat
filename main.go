@@ -41,7 +41,7 @@ const (
 	MethodSerialTNC = "serial-tnc"
 )
 
-const gpsdNextTimeoutS = 20 // Get GPS position timeout set to 20s
+const gpsdNextTimeoutS = 2 // Get GPS position timeout set to 2s
 
 var commands = []Command{
 	{

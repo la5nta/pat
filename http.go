@@ -344,7 +344,6 @@ func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w
 
 func gpsdHandler(w http.ResponseWriter, req *http.Request) {
 	if gpsdConn != nil {
-		log.Println("API is waiting for position from GPSd...")
                 pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
                 if err != nil {
 			log.Printf("GPSd: %s", err) //do not exit http command (log.Fatalf)

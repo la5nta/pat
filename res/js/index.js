@@ -6,7 +6,6 @@ var mycall = "";
 var uploadFiles = new Array();
 var statusPopoverDiv;
 
-
 function initFrontend(ws_url)
 {
 	wsURL = ws_url;
@@ -29,7 +28,7 @@ function initFrontend(ws_url)
 
 		// Setup composer
 		initComposeModal();
-		
+
 		// Setup folder navigation
 		$('#inbox_tab').click(function(evt){ displayFolder("in") });
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
@@ -51,10 +50,29 @@ function initFrontend(ws_url)
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
-			if (navigator.geolocation) {
-				$('#pos_status').empty().append("<strong>Waiting for position...</strong>");
-				posId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError);
-			} else { 
+			var gpsdData = null;
+
+			$('#pos_status').empty().append("<strong>Checking if GPSd is available...</strong>");
+
+			$.ajax({
+				url: '/api/gpsd',
+				dataType: 'json',
+				async: false,
+				success: function(json){
+					gpsdData = json;
+				},
+				error: function( jqXHR, textStatus, errorThrown ){
+					$('#pos_status').empty().append("<strong>GPSd not available!</strong>");
+				}
+			});
+
+			if (gpsdData) {
+				$('#pos_status').empty().append("<strong>Waiting for position (gpsd)...</strong>");
+				updatePositionGpsd(gpsdData);
+			} else if (navigator.geolocation) {
+				$('#pos_status').empty().append("<strong>Waiting for position (geolocation)...</strong>");
+				posId = navigator.geolocation.watchPosition(updatePositionGeolocation, handleGeolocationError);
+			} else {
 				$('#pos_status').empty().append("Geolocation is not supported by this browser.");
 			}
 		});
@@ -68,7 +86,7 @@ function initFrontend(ws_url)
 
 		initConsole();
 		displayFolder("in");
-		
+
 		initNotifications();
 	});
 }
@@ -327,12 +345,20 @@ function handleGeolocationError(error) {
 	$('#pos_status').empty().append("Geolocation unavailable.");
 }
 
-function updatePosition(pos) {
+function updatePositionGeolocation(pos) {
 	var d = new Date(pos.timestamp);
 	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.coords.latitude);
 	$('#pos_long').val(pos.coords.longitude);
 	$('#pos_ts').val(pos.timestamp);
+}
+
+function updatePositionGpsd(pos) {
+	var d = new Date(pos.Time);
+	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
+	$('#pos_lat').val(pos.Lat);
+	$('#pos_long').val(pos.Lon);
+	$('#pos_ts').val(d.getTime());
 }
 
 function postPosition() {
@@ -397,7 +423,7 @@ function notify(data)
 function alert(msg)
 {
     var div = $('#navbar_status');
-    div.empty();    
+    div.empty();
     div.append('<span class="navbar-text status-text">' + msg + '</p>');
     div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
@@ -472,7 +498,7 @@ function updateGUIStatus()
 		statusPopoverDiv.find('#no_error').show();
 	} else {
 		statusPopoverDiv.find('#no_error').hide();
-	}	
+	}
 }
 
 function isInsecureOrigin()

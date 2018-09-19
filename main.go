@@ -33,6 +33,16 @@ import (
 	"github.com/la5nta/pat/internal/gpsd"
 )
 
+type GPSdStatus int
+
+const (
+	closed		GPSdStatus = 0
+	reconnect	GPSdStatus = 1
+	connected	GPSdStatus = 2
+	receive		GPSdStatus = 3
+	fault		GPSdStatus = 4
+)
+
 const (
 	MethodWinmor    = "winmor"
 	MethodArdop     = "ardop"
@@ -40,8 +50,6 @@ const (
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
 )
-
-const gpsdNextTimeoutS = 2 // Get GPS position timeout set to 2s
 
 var commands = []Command{
 	{
@@ -148,7 +156,10 @@ var (
 	mbox			*mailbox.DirHandler // The mailbox
 	listenHub		*ListenerHub
 	promptHub		*PromptHub
+
 	gpsdConn		*gpsd.Conn
+	gpsdPos			gpsd.Position
+	gpsdStatus		GPSdStatus
 
 	appDir string
 )
@@ -254,15 +265,7 @@ func main() {
 
 	// Initialize GPSd if aviable
 	if config.GPSdAddr != "" {
-		gpsdConn, err = gpsd.Dial(config.GPSdAddr)
-		if err != nil {
-			log.Printf("GPSd daemon failed: %s", err)
-			gpsdConn = nil
-		} else {
-			gpsdConn.Watch(true)
-			log.Printf("Listening on GPSd %s", config.GPSdAddr)
-		}
-
+		gpsdService()
 	} else {
 		log.Println("GPSd is not set up")
 		gpsdConn = nil
@@ -436,6 +439,50 @@ func cleanup() {
 
 	eventLog.Close()
 }
+
+func gpsdService() {
+	go func() {
+		var gpsdErr error
+
+		gpsdStatus = closed
+		for {
+			if gpsdStatus == connected || gpsdStatus == receive {
+				gpsdConn.Watch(true)
+				gpsdPos, gpsdErr = gpsdConn.NextPosTimeout(2*time.Second)
+				gpsdConn.Watch(false)
+
+				if gpsdErr == io.EOF {
+					gpsdStatus = reconnect
+					log.Println("GPSd connection lost, try reconnect")
+					gpsdConn.Close()
+				} else {
+					gpsdStatus = receive
+					if gpsdErr != nil {
+						log.Printf("GPSd: %s", gpsdErr)
+					}
+
+					// update only every 30 seconds
+					time.Sleep(time.Duration(30)*time.Second)
+				}
+			} else if gpsdStatus == closed || gpsdStatus == reconnect {
+				gpsdConn, gpsdErr = gpsd.Dial(config.GPSdAddr)
+				if gpsdErr != nil {
+					gpsdStatus = fault
+					log.Printf("GPSd daemon failed: %s", gpsdErr)
+
+					// next try in 60 seconds
+					time.Sleep(time.Duration(60)*time.Second)
+
+					gpsdStatus = reconnect
+				} else {
+					log.Printf("Connected to GPSd %s", config.GPSdAddr)
+					gpsdStatus = connected
+				}
+			}
+		}
+	}()
+}
+
 
 func loadMBox() {
 	mbox = mailbox.NewDirHandler(
@@ -748,22 +795,27 @@ func posReportHandle(args []string) {
 			log.Fatal(err)
 		}
 		report.Lon = &lon
-	} else if gpsdConn != nil {
-		log.Println("Waiting for position from GPSd...") //TODO: Spinning bar?
-		pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
-		if err != nil {
-			log.Fatalf("GPSd: %s", err)
+	} else if config.GPSdAddr != "" {
+		// wait for GPSd go into receiving or error state
+		for {
+			if gpsdStatus == receive || gpsdStatus == fault {
+				break
+			}
 		}
 
-		report.Lat = &pos.Lat
-		report.Lon = &pos.Lon
-		report.Date = pos.Time
+		if gpsdPos != (gpsd.Position{}) {
+			report.Lat = &gpsdPos.Lat
+			report.Lon = &gpsdPos.Lon
+			report.Date = gpsdPos.Time
 
-		// Course and speed is part of the spec, but does not seem to be
-		// supported by winlink.org anymore. Ignore it for now.
-		if false && pos.Track != 0 {
-			course := CourseFromFloat64(pos.Track, false)
-			report.Course = &course
+			// Course and speed is part of the spec, but does not seem to be
+			// supported by winlink.org anymore. Ignore it for now.
+			if false && gpsdPos.Track != 0 {
+				course := CourseFromFloat64(gpsdPos.Track, false)
+				report.Course = &course
+			}
+		} else {
+			log.Fatal("No GPSd position found")
 		}
 	} else {
 		fmt.Println("No position available. See --help")

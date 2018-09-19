@@ -27,6 +27,7 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+	"github.com/la5nta/pat/internal/gpsd"
 )
 
 // Status represents a status report as sent to the Web GUI
@@ -343,17 +344,10 @@ func getStatus() Status {
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
 
 func gpsdHandler(w http.ResponseWriter, req *http.Request) {
-	if gpsdConn != nil {
-                pos, err := gpsdConn.NextPosTimeout(gpsdNextTimeoutS*time.Second)
-                if err != nil {
-			log.Printf("GPSd: %s", err) //do not exit http command (log.Fatalf)
-			http.Error(w, "Could not get position from GPSd", http.StatusInternalServerError)
-		} else {
-			json.NewEncoder(w).Encode(pos)
-		}
-
+	if gpsdPos != (gpsd.Position{}) {
+		json.NewEncoder(w).Encode(gpsdPos)
 	} else {
-		http.Error(w, "GPSd not connected or not configured", http.StatusInternalServerError)
+		http.Error(w, "Could not get position from GPSd", http.StatusInternalServerError)
 	}
 }
 

@@ -10,6 +10,7 @@ var (
 transport:
   winmor:     WINMOR TNC
   ardop:      ARDOP TNC
+  ardop2:     ARDOP2 TNC
   ax25:       AX.25 (Linux only)
   telnet:     TCP/IP
   serial-tnc: Serial AX.25 TNC

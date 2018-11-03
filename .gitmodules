@@ -44,8 +44,8 @@
 	branch = master
 [submodule "vendor/github.com/la5nta/wl2k-go"]
 	path = vendor/github.com/la5nta/wl2k-go
-	url = https://github.com/la5nta/wl2k-go
-	branch = master
+	url = https://github.com/cbs228/wl2k-go.git
+	branch = feature/ardop2
 [submodule "vendor/golang.org/x/net"]
 	path = vendor/golang.org/x/net
 	url = https://go.googlesource.com/net

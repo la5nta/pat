@@ -53,6 +53,7 @@ type Config struct {
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Winmor    WinmorConfig    `json:"winmor"`     // See WinmorConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
+	Ardop2    ArdopTwoConfig  `json:"ardop2"`     // See ArdopTwoConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// Address and port to a GPSd daemon for position reporting.
@@ -117,6 +118,29 @@ type ArdopConfig struct {
 
 	// ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
+
+	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	Rig string `json:"rig"`
+
+	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	PTTControl bool `json:"ptt_ctrl"`
+
+	// (optional) Send ID frame at a regular interval when the listener is active (unit is seconds)
+	BeaconInterval int `json:"beacon_interval"`
+
+	// Send FSK CW ID after an ID frame.
+	CWID bool `json:"cwid_enabled"`
+}
+
+type ArdopTwoConfig struct {
+	// Network address of the Ardop TNC (e.g. localhost:8515).
+	Addr string `json:"addr"`
+
+	// ARQ bandwidth (200/500/2500)
+	ARQBandwidth int `json:"arq_bandwidth"`
+
+	// Negotiate bandwidth
+	NegotiateBandwidth bool `json:"negotiate_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`
@@ -201,6 +225,12 @@ var DefaultConfig Config = Config{
 		Addr:         "localhost:8515",
 		ARQBandwidth: ardop.Bandwidth500Max,
 		CWID:         true,
+	},
+	Ardop2: ArdopTwoConfig{
+		Addr:               "localhost:8515",
+		ARQBandwidth:       500,
+		NegotiateBandwidth: true,
+		CWID:               true,
 	},
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",

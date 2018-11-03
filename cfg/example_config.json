@@ -40,6 +40,15 @@
     "rig": "ft897",
     "ptt_ctrl": false
   },
+  "ardop2": {
+    "addr": "localhost:8515",
+    "arq_bandwidth": 500,
+    "negotiate_bandwidth": true,
+    "beacon_interval": 0,
+    "cwid_enabled": true,
+    "rig": "ft897",
+    "ptt_ctrl": false
+  },
   "telnet": {
     "listen_addr": ":8774",
     "password": ""

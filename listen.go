@@ -34,6 +34,8 @@ func Listen(listenStr string) {
 			listenHub.Enable(WINMORListener{})
 		case MethodArdop:
 			listenHub.Enable(ARDOPListener{})
+		case MethodArdop2:
+			listenHub.Enable(ARDOPTwoListener{})
 		case MethodTelnet:
 			listenHub.Enable(TelnetListener{})
 		case MethodAX25:
@@ -123,6 +125,34 @@ func (l ARDOPListener) BeaconStart() error {
 }
 
 func (l ARDOPListener) BeaconStop() { adTNC.BeaconEvery(0) }
+
+type ARDOPTwoListener struct{}
+
+func (l ARDOPTwoListener) Name() string { return MethodArdop2 }
+func (l ARDOPTwoListener) Init() (net.Listener, error) {
+	if err := initArdop2TNC(); err != nil {
+		return nil, err
+	}
+	ln, err := ad2TNC.Listen()
+	if err != nil {
+		return nil, err
+	}
+	return ln, err
+}
+
+func (l ARDOPTwoListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := rigs[config.Ardop2.Rig]; ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
+
+func (l ARDOPTwoListener) BeaconStart() error {
+	return ad2TNC.BeaconEvery(time.Duration(config.Ardop2.BeaconInterval) * time.Second)
+}
+
+func (l ARDOPTwoListener) BeaconStop() { ad2TNC.BeaconEvery(0) }
 
 type WINMORListener struct{}
 

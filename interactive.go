@@ -78,6 +78,7 @@ func printInteractiveUsage() {
 	methods := []string{
 		MethodWinmor,
 		MethodArdop,
+		MethodArdop2,
 		MethodAX25,
 		MethodTelnet,
 		MethodSerialTNC,
@@ -131,6 +132,17 @@ func PrintHeard() {
 	if adTNC == nil {
 		fmt.Println("  (not initialized)")
 	} else if heard := adTNC.Heard(); len(heard) == 0 {
+		fmt.Println("  (none)")
+	} else {
+		for call, t := range heard {
+			pf(call, t)
+		}
+	}
+
+	fmt.Println("ardop2:")
+	if ad2TNC == nil {
+		fmt.Println("  (not initialized)")
+	} else if heard := ad2TNC.Heard(); len(heard) == 0 {
 		fmt.Println("  (none)")
 	} else {
 		for call, t := range heard {

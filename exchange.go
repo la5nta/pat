@@ -158,8 +158,9 @@ func handleInterrupt() (stop chan struct{}) {
 		signal.Notify(sig, os.Interrupt)
 		defer func() { signal.Stop(sig); close(sig) }()
 
-		wmDisc := false // So we can DirtyDisconnect on second interrupt
-		adDisc := false // So we can Abort on second interrupt
+		wmDisc := false  // So we can DirtyDisconnect on second interrupt
+		adDisc := false  // So we can Abort on second interrupt
+		ad2Disc := false // So we can Abort on second interrupt
 		for {
 			select {
 			case <-stop:
@@ -200,6 +201,23 @@ func handleInterrupt() (stop chan struct{}) {
 								log.Println(err)
 							} else {
 								adDisc = false
+							}
+						}()
+					}
+				}
+				if ad2TNC != nil && !ad2TNC.Idle() {
+					if ad2Disc {
+						log.Println("Dirty disconnecting ardop2...")
+						ad2TNC.Abort()
+						ad2Disc = false
+					} else {
+						log.Println("Disconnecting ardop...")
+						ad2Disc = true
+						go func() {
+							if err := ad2TNC.Disconnect(); err != nil {
+								log.Println(err)
+							} else {
+								ad2Disc = false
 							}
 						}()
 					}

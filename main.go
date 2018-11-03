@@ -36,6 +36,7 @@ import (
 const (
 	MethodWinmor    = "winmor"
 	MethodArdop     = "ardop"
+	MethodArdop2    = "ardop2"
 	MethodTelnet    = "telnet"
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
@@ -405,6 +406,12 @@ func cleanup() {
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)
+		}
+	}
+
+	if ad2TNC != nil {
+		if err := ad2TNC.Close(); err != nil {
+			log.Fatalf("Failure to close ardop2 TNC: %s", err)
 		}
 	}
 

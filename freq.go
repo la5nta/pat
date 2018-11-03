@@ -83,6 +83,8 @@ func VFOForTransport(transport string) (vfo hamlib.VFO, ok bool) {
 		vfo, ok = rigs[config.Winmor.Rig]
 	case MethodArdop:
 		vfo, ok = rigs[config.Ardop.Rig]
+	case MethodArdop2:
+		vfo, ok = rigs[config.Ardop2.Rig]
 	case MethodAX25:
 		vfo, ok = rigs[config.AX25.Rig]
 	}

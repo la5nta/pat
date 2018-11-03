@@ -13,6 +13,7 @@ import (
 
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
+	"github.com/la5nta/wl2k-go/transport/ardop2"
 	"github.com/la5nta/wl2k-go/transport/winmor"
 
 	// Register ax25 and telnet dialers
@@ -21,8 +22,9 @@ import (
 )
 
 var (
-	wmTNC *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
+	wmTNC  *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
+	adTNC  *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
+	ad2TNC *ardop2.TNC // Pointer to the ARDOP2 TNC used by Listen and Connect
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -53,6 +55,11 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case "ardop":
 		if err := initArdopTNC(); err != nil {
+			log.Println(err)
+			return
+		}
+	case "ardop2":
+		if err := initArdop2TNC(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -121,6 +128,8 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case "ardop":
 		waitBusy(adTNC)
+	case "ardop2":
+		waitBusy(ad2TNC)
 	case "winmor":
 		waitBusy(wmTNC)
 	}
@@ -160,6 +169,8 @@ func qsy(method, addr string) (revert func(), err error) {
 		rigName = config.Winmor.Rig
 	case MethodArdop:
 		rigName = config.Ardop.Rig
+	case MethodArdop2:
+		rigName = config.Ardop2.Rig
 	case MethodAX25:
 		rigName = config.AX25.Rig
 	default:
@@ -292,5 +303,51 @@ func initArdopTNC() error {
 	}
 
 	adTNC.SetPTT(rig)
+	return nil
+}
+
+func initArdop2TNC() error {
+	if ad2TNC != nil && ad2TNC.Ping() == nil {
+		return nil
+	}
+
+	if ad2TNC != nil {
+		ad2TNC.Close()
+	}
+
+	var err error
+	ad2TNC, err = ardop2.OpenTCP(config.Ardop2.Addr, fOptions.MyCall, config.Locator)
+	if err != nil {
+		return fmt.Errorf("ARDOP2 TNC initialization failed: %s", err)
+	}
+
+	if config.Ardop2.ARQBandwidth != 0 {
+		if err := ad2TNC.SetARQBandwidth(config.Ardop2.ARQBandwidth); err != nil {
+			return fmt.Errorf("Unable to set ARQ bandwidth for ardop2 TNC: %s", err)
+		}
+	}
+
+	if err := ad2TNC.SetCWID(config.Ardop2.CWID); err != nil {
+		return fmt.Errorf("Unable to configure CWID for ardop2 TNC: %s", err)
+	}
+
+	if v, err := ad2TNC.Version(); err != nil {
+		return fmt.Errorf("ARDOP2 TNC initialization failed: %s", err)
+	} else {
+		log.Printf("ARDOP2 TNC (%s) initialized", v)
+	}
+
+	transport.RegisterDialer("ardop2", ad2TNC)
+
+	if !config.Ardop2.PTTControl {
+		return nil
+	}
+
+	rig, ok := rigs[config.Ardop2.Rig]
+	if !ok {
+		return fmt.Errorf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop2.Rig)
+	}
+
+	ad2TNC.SetPTT(rig)
 	return nil
 }

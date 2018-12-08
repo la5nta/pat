@@ -53,7 +53,7 @@ type Config struct {
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Winmor    WinmorConfig    `json:"winmor"`     // See WinmorConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
-	PTC       PTCConfig       `json:"ptc"`        // See PTCConfig.
+	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// Address and port to a GPSd daemon for position reporting.
@@ -132,7 +132,7 @@ type ArdopConfig struct {
 	CWID bool `json:"cwid_enabled"`
 }
 
-type PTCConfig struct {
+type PactorConfig struct {
 	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
 	Path string `json:"path"`
 
@@ -217,7 +217,7 @@ var DefaultConfig Config = Config{
 		ARQBandwidth: ardop.Bandwidth500Max,
 		CWID:         true,
 	},
-	PTC: PTCConfig{
+	Pactor: PactorConfig{
 		Path:     "/dev/ttyUSB0",
 		Baudrate: 57600,
 	},

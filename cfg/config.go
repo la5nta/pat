@@ -55,8 +55,8 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
-	// Address and port to a GPSd daemon for position reporting.
-	GPSdAddr string `json:"gpsd_addr"`
+	// GPSd configuration, see GPSdConfig
+	GPSd GPSdConfig `json:"gpsd"`
 
 	// Command schedule (cron-like syntax).
 	//
@@ -172,6 +172,14 @@ type BeaconConfig struct {
 	Destination string `json:"destination"`
 }
 
+type GPSdConfig struct {
+	// Address and port to a GPSd daemon for position reporting.
+	Addr string `json:"addr"`
+
+	// Use either GPS time or local server time
+	UseServerTime bool `json:"use_server_time"`
+}
+
 var DefaultConfig Config = Config{
 	MOTD:     []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs: []string{},
@@ -206,7 +214,10 @@ var DefaultConfig Config = Config{
 		ListenAddr: ":8774",
 		Password:   "",
 	},
-	GPSdAddr:   "localhost:2947", // Default listen address for GPSd
+	GPSd: GPSdConfig{
+		Addr:          "localhost:2947", // Default listen address for GPSd
+		UseServerTime: false,
+	},
 	Schedule:   map[string]string{},
 	HamlibRigs: map[string]HamlibConfig{},
 }

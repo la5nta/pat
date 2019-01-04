@@ -44,6 +44,10 @@
     "listen_addr": ":8774",
     "password": ""
   },
+  "gpsd": {
+    "addr": "localhost:2947",
+    "use_server_time": false
+  },
   "schedule": {
     "*/30 * * * *": "connect offgrid"
   }

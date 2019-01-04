@@ -264,7 +264,7 @@ func main() {
 	}
 
 	// Initialize GPSd if aviable
-	if config.GPSdAddr != "" {
+	if config.GPSd.Addr != "" {
 		gpsdService()
 	} else {
 		log.Println("GPSd is not set up")
@@ -448,7 +448,7 @@ func gpsdService() {
 		for {
 			if gpsdStatus == connected || gpsdStatus == receive {
 				gpsdConn.Watch(true)
-				gpsdPos, gpsdErr = gpsdConn.NextPosTimeout(2*time.Second)
+				gpsdPos, gpsdErr = gpsdConn.NextPosTimeout(2*time.Second, config.GPSd.UseServerTime)
 				gpsdConn.Watch(false)
 
 				if gpsdErr == io.EOF {
@@ -465,7 +465,7 @@ func gpsdService() {
 					time.Sleep(time.Duration(30)*time.Second)
 				}
 			} else if gpsdStatus == closed || gpsdStatus == reconnect {
-				gpsdConn, gpsdErr = gpsd.Dial(config.GPSdAddr)
+				gpsdConn, gpsdErr = gpsd.Dial(config.GPSd.Addr)
 				if gpsdErr != nil {
 					gpsdStatus = fault
 					log.Printf("GPSd daemon failed: %s", gpsdErr)
@@ -475,7 +475,7 @@ func gpsdService() {
 
 					gpsdStatus = reconnect
 				} else {
-					log.Printf("Connected to GPSd %s", config.GPSdAddr)
+					log.Printf("Connected to GPSd %s", config.GPSd.Addr)
 					gpsdStatus = connected
 				}
 			}
@@ -795,7 +795,7 @@ func posReportHandle(args []string) {
 			log.Fatal(err)
 		}
 		report.Lon = &lon
-	} else if config.GPSdAddr != "" {
+	} else if config.GPSd.Addr != "" {
 		// wait for GPSd go into receiving or error state
 		for {
 			if gpsdStatus == receive || gpsdStatus == fault {

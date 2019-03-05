@@ -40,7 +40,7 @@ func (b Band) Contains(f Frequency) bool {
 	return f >= b.lower && f <= b.upper
 }
 
-type Frequency int
+type Frequency int // Hz
 
 func (f Frequency) String() string {
 	m := f / 1e6
@@ -121,7 +121,7 @@ func setFreq(rig hamlib.VFO, freq string) (newFreq, oldFreq int, err error) {
 		return 0, 0, fmt.Errorf("Unable to get rig frequency: %s", err)
 	}
 
-	f, err := strconv.ParseFloat(freq, 32)
+	f, err := strconv.ParseFloat(freq, 64)
 	if err != nil {
 		return 0, 0, err
 	}

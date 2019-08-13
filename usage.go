@@ -13,6 +13,7 @@ transport:
   ax25:       AX.25 (Linux only)
   telnet:     TCP/IP
   serial-tnc: Serial AX.25 TNC
+  pactor:     SCS PTC modems
 
 host:
   Used to address the host interface (TNC/modem), _not_ to be confused with the connection PATH.
@@ -20,6 +21,7 @@ host:
 
   telnet:       [user:pass]@host:port
   ax25:         (optional) host=axport
+  pactor:       (optional) serial device (e.g. COM1 or /dev/ttyUSB0)
 
 path:
   The last element of the path is the target station's callsign. If the path has
@@ -39,6 +41,7 @@ params:
   connect ardop:///LA3F              Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
   connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
   connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.
+  connect pactor:///LA3F             Connect to RMS HF Gateway LA3F using PACTOR.
 `
 )
 

@@ -39,6 +39,7 @@ const (
 	MethodTelnet    = "telnet"
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
+	MethodPactor    = "pactor"
 )
 
 var commands = []Command{

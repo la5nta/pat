@@ -1,3 +1,12 @@
+pat (0.7.0) stable; urgency=medium
+
+  * Support PACTOR PTC-II and PTC-III (https://github.com/la5nta/pat/issues/40)
+  * Fix QSY frequency rounding error (https://github.com/la5nta/pat/issues/147)
+  * Fix panic on ARDOP TNC connection teardown (https://github.com/la5nta/pat/issues/137)
+  * Fix ARDOP compatibility issue (https://github.com/la5nta/pat/issues/139)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Wed, 18 Sep 2019 21:56:17 +0200
+
 pat (0.6.1) stable; urgency=medium
 
   * Add deb package `dist` as conflicting package (https://github.com/la5nta/pat/issues/131)

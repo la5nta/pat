@@ -6,7 +6,7 @@ os:
 
 go:
   - 1.6
-  - "1.12"
+  - "1.13"
 
 matrix:
   exclude:

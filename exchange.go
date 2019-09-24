@@ -170,6 +170,13 @@ func handleInterrupt() (stop chan struct{}) {
 					exchangeConn.Close()
 					break
 				}
+				if pModem != nil {
+					log.Println("Disconnecting pactor...")
+					if err := pModem.Close(); err != nil {
+						log.Println(err)
+					}
+					break
+				}
 				if wmTNC != nil && !wmTNC.Idle() {
 					if wmDisc {
 						log.Println("Dirty disconnecting winmor...")

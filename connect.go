@@ -309,8 +309,9 @@ func initPactorModem() error {
 		pModem.Close()
 	}
 
-	pModem, err := pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript)
-	if err != nil {
+	var err error
+	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript)
+	if err != nil || pModem == nil {
 		return fmt.Errorf("Pactor initialization failed: %s", err)
 	}
 

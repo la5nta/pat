@@ -409,6 +409,12 @@ func cleanup() {
 		}
 	}
 
+	if pModem != nil {
+		if err := pModem.Close(); err != nil {
+			log.Fatalf("Failure to close pactor modem: %s", err)
+		}
+	}
+
 	eventLog.Close()
 }
 

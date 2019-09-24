@@ -14,9 +14,9 @@ import (
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
+	"github.com/harenber/ptc-go/ptc"
 
 	// Register other dialers
-	_ "github.com/harenber/ptc-go/ptc"
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
 	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )
@@ -24,6 +24,7 @@ import (
 var (
 	wmTNC *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
 	adTNC *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
+	pModem *pactor.Modem
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -62,6 +63,11 @@ func Connect(connectStr string) (success bool) {
 			log.Println(err)
 			return
 		}
+	case "pactor":
+		if err := initPactorModem(); err != nil {
+			log.Println(err)
+			return
+		}
 	}
 
 	// Set default userinfo (mycall)
@@ -79,16 +85,7 @@ func Connect(connectStr string) (success bool) {
 			if config.SerialTNC.Baudrate > 0 {
 				url.Params.Set("hbaud", fmt.Sprint(config.SerialTNC.Baudrate))
 			}
-		case "pactor":
-			url.Host = config.Pactor.Path
-			if config.Pactor.Baudrate > 0 {
-				url.Params.Set("baud", fmt.Sprint(config.Pactor.Baudrate))
-			}
 		}
-	}
-
-	if url.Scheme == "pactor" && config.Pactor.InitScript != "" && url.Params.Get("init_script") == "" {
-		url.Params.Set("init_script", config.Pactor.InitScript)
 	}
 
 	// Radio Only?
@@ -304,5 +301,20 @@ func initArdopTNC() error {
 	}
 
 	adTNC.SetPTT(rig)
+	return nil
+}
+
+func initPactorModem() error {
+	if pModem !=  nil {
+		pModem.Close()
+	}
+
+	pModem, err := pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript)
+	if err != nil {
+		return fmt.Errorf("Pactor initialization failed: %s", err)
+	}
+
+	transport.RegisterDialer("pactor", pModem)
+
 	return nil
 }

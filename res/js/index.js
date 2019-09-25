@@ -5,7 +5,7 @@ var mycall = "";
 
 var uploadFiles = new Array();
 var statusPopoverDiv;
-
+var statusPos = $('#pos_status');
 
 function initFrontend(ws_url)
 {
@@ -29,7 +29,7 @@ function initFrontend(ws_url)
 
 		// Setup composer
 		initComposeModal();
-		
+
 		// Setup folder navigation
 		$('#inbox_tab').click(function(evt){ displayFolder("in") });
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
@@ -51,13 +51,31 @@ function initFrontend(ws_url)
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
-			if (navigator.geolocation) {
-				$('#pos_status').empty().append("<strong>Waiting for position...</strong>");
-				posId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError);
-			} else { 
-				$('#pos_status').empty().append("Geolocation is not supported by this browser.");
-			}
+			$.ajax({
+				url: '/api/gpsdPosition',
+				dataType: 'json',
+				beforeSend: function(){
+					statusPos.html("Checking if GPSd is available");
+				},
+				success: function(gpsdData){
+					statusPos.html("GPS position received");
+
+					statusPos.html("<strong>Waiting for position (gpsd)...</strong>");
+					updatePositionGpsd(gpsdData);
+				},
+				error: function( jqXHR, textStatus, errorThrown ){
+					statusPos.html("GPSd not available!");
+
+					if (navigator.geolocation) {
+						statusPos.html("<strong>Waiting for position (geolocation)...</strong>");
+						posId = navigator.geolocation.watchPosition(updatePositionGeolocation, handleGeolocationError);
+					} else {
+						statusPos.html("Geolocation is not supported by this browser.");
+					}
+				}
+			});
 		});
+
 		$('#posModal').on('hidden.bs.modal', function (e) {
 			if (navigator.geolocation) {
 				navigator.geolocation.clearWatch(posId);
@@ -68,7 +86,7 @@ function initFrontend(ws_url)
 
 		initConsole();
 		displayFolder("in");
-		
+
 		initNotifications();
 	});
 }
@@ -324,15 +342,23 @@ function handleGeolocationError(error) {
 		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
 	}
 	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
-	$('#pos_status').empty().append("Geolocation unavailable.");
+	statusPos.html("Geolocation unavailable.");
 }
 
-function updatePosition(pos) {
+function updatePositionGeolocation(pos) {
 	var d = new Date(pos.timestamp);
-	$('#pos_status').empty().append("Last position update " + dateFormat(d) + "...");
+	statusPos.html("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.coords.latitude);
 	$('#pos_long').val(pos.coords.longitude);
 	$('#pos_ts').val(pos.timestamp);
+}
+
+function updatePositionGpsd(pos) {
+	var d = new Date(pos.Time);
+	statusPos.html("Last position update " + dateFormat(d) + "...");
+	$('#pos_lat').val(pos.Lat);
+	$('#pos_long').val(pos.Lon);
+	$('#pos_ts').val(d.getTime());
 }
 
 function postPosition() {
@@ -397,7 +423,7 @@ function notify(data)
 function alert(msg)
 {
     var div = $('#navbar_status');
-    div.empty();    
+    div.empty();
     div.append('<span class="navbar-text status-text">' + msg + '</p>');
     div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
@@ -472,7 +498,7 @@ function updateGUIStatus()
 		statusPopoverDiv.find('#no_error').show();
 	} else {
 		statusPopoverDiv.find('#no_error').hide();
-	}	
+	}
 }
 
 function isInsecureOrigin()
@@ -832,10 +858,10 @@ function dateFormat(previous) {
     if (elapsed < msPerDay ) {
 		return (previous.getHours() < 10 ?"0":"") + previous.getHours() + ':' + (previous.getMinutes() < 10 ?"0":"") + previous.getMinutes();
     } else if (elapsed < msPerMonth) {
-        return 'approximately ' + Math.round(elapsed/msPerDay) + ' days ago';   
+        return 'approximately ' + Math.round(elapsed/msPerDay) + ' days ago';
     } else if (elapsed < msPerYear) {
-        return 'approximately ' + Math.round(elapsed/msPerMonth) + ' months ago';   
+        return 'approximately ' + Math.round(elapsed/msPerMonth) + ' months ago';
     } else {
-        return 'approximately ' + Math.round(elapsed/msPerYear ) + ' years ago';   
+        return 'approximately ' + Math.round(elapsed/msPerYear ) + ' years ago';
     }
 }

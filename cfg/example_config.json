@@ -46,5 +46,8 @@
   },
   "schedule": {
     "*/30 * * * *": "connect offgrid"
-  }
+},
+  "gpsd_enable_http": false,
+  "gpsd_use_server_time": false,
+  "gpsd_addr": "localhost:2947"
 }

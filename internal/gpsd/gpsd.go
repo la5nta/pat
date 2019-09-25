@@ -180,7 +180,7 @@ func (c *Conn) NextPosTimeout(timeout time.Duration) (Position, error) {
 	for {
 		obj, err := c.Next()
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			return Position{}, nil
+			return Position{}, ErrTimeout
 		} else if err != nil {
 			return Position{}, err
 		}
@@ -190,7 +190,7 @@ func (c *Conn) NextPosTimeout(timeout time.Duration) (Position, error) {
 		}
 
 		if !deadline.IsZero() && time.Now().After(deadline) {
-			return Position{}, nil
+			return Position{}, ErrTimeout
 		}
 	}
 }

@@ -740,7 +740,11 @@ func posReportHandle(args []string) {
 
 		report.Lat = &pos.Lat
 		report.Lon = &pos.Lon
-		report.Date = pos.Time
+		if config.GPSdUseServerTime {
+			report.Date = time.Now()
+		} else {
+			report.Date = pos.Time
+		}
 
 		// Course and speed is part of the spec, but does not seem to be
 		// supported by winlink.org anymore. Ignore it for now.

@@ -59,8 +59,17 @@ type Config struct {
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
-	// Address and port to a GPSd daemon for position reporting.
-	GPSdAddr string `json:"gpsd_addr"`
+	// WARNING: If you enable GPSd http endpoint (gpsd_enable_http) you might
+	// expose your current position to anyone who has access to Pat!!!
+	//
+	// gpsd_enable_http:     enable GPSd support in web interface
+	// gpsd_use_server_time: Use server time instead of timestamp provided by
+	//                       GPSd (e.g for older GPS device with week roll-over
+	//                       issue)
+	// gpsd_addr             Address and port of GPSd server (e.g. localhost:2947)
+	GPSdEnableHttp bool    `json:"gpsd_enable_http"`
+	GPSdUseServerTime bool `json:"gpsd_use_server_time"`
+	GPSdAddr string        `json:"gpsd_addr"`
 
 	// Command schedule (cron-like syntax).
 	//
@@ -229,7 +238,9 @@ var DefaultConfig Config = Config{
 		ListenAddr: ":8774",
 		Password:   "",
 	},
-	GPSdAddr:   "localhost:2947", // Default listen address for GPSd
-	Schedule:   map[string]string{},
-	HamlibRigs: map[string]HamlibConfig{},
+	GPSdEnableHttp:    false,
+	GPSdUseServerTime: false,
+	GPSdAddr:          "localhost:2947", // Default listen address for GPSd
+	Schedule:          map[string]string{},
+	HamlibRigs:        map[string]HamlibConfig{},
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+	"github.com/la5nta/pat/internal/gpsd"
 )
 
 // Status represents a status report as sent to the Web GUI
@@ -61,6 +62,15 @@ var websocketHub *WSHub
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
+	if config.GPSdEnableHttp {
+		// can't use fmt.Printf as it would not show on the web interface
+		// TODO: maybe make a popup showing the warning?
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
+		log.Printf("\nWARNING: You have enable GPSd http endpoint (gpsd_enable_http). You might expose \n" +
+		           "         your current position to anyone who has access to the Pat web interface!\n\n")
+		log.SetFlags(log.Flags() ^ (log.Ldate | log.Ltime))
+	}
+
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
@@ -72,6 +82,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/{box}", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
+	r.HandleFunc("/api/gpsdPosition", positionHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
@@ -339,6 +350,43 @@ func getStatus() Status {
 }
 
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
+
+func positionHandler(w http.ResponseWriter, req *http.Request) {
+	// Throw error if GPSd http endpoint is not enabled
+	if config.GPSdEnableHttp {
+		log.Println("GPS data has been accessed! Was it you?")
+		if config.GPSdAddr != ""{
+			conn, err := gpsd.Dial(config.GPSdAddr)
+			if err != nil {
+				// do not pass error message to response as GPSd address might be leaked
+				http.Error(w, "GPSd Dial failed", http.StatusInternalServerError)
+				return
+			}
+			defer conn.Close()
+
+			conn.Watch(true)
+
+			pos, err := conn.NextPosTimeout(5 * time.Second)
+			if err != nil {
+				http.Error(w, "GPSd get next position failed: " + err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if config.GPSdUseServerTime {
+				pos.Time = time.Now()
+			}
+
+			json.NewEncoder(w).Encode(pos)
+			return
+		}
+
+		http.Error(w, "GPSd not enabled but no address set in config", http.StatusInternalServerError)
+		return
+	}
+
+	http.Error(w, "GPSd not enabled in config file", http.StatusInternalServerError)
+	return
+}
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 	connectStr := req.FormValue("url")

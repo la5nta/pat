@@ -16,10 +16,11 @@ import (
 
 	"github.com/la5nta/wl2k-go/mailbox"
 
-	"github.com/la5nta/pat/internal/cmsapi"
-	"github.com/pd0mz/go-maidenhead"
 	"sort"
 	"strconv"
+
+	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/pd0mz/go-maidenhead"
 )
 
 type rms struct {
@@ -51,14 +52,19 @@ func rmsListHandle(args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	filePath := path.Join(appDir, "rmslist.json") // Should be moved to a tmp-folder, along with logfile.
+	fileName := "rmslist"
+	isDefaultServiceCode := len(config.ServiceCodes) == 1 && config.ServiceCodes[0] == "PUBLIC"
+	if !isDefaultServiceCode {
+		fileName += "-" + strings.Join(config.ServiceCodes, "-")
+	}
+	filePath := path.Join(appDir, fileName+".json") // Should be moved to a tmp-folder, along with logfile.
 
 	var query string
 	if len(set.Args()) > 0 {
 		query = strings.ToUpper(set.Args()[0])
 	}
 
-	file, err := cmsapi.GetGatewayStatusCached(filePath, *forceDownload)
+	file, err := cmsapi.GetGatewayStatusCached(filePath, *forceDownload, config.ServiceCodes...)
 	if err != nil {
 		log.Fatal(err)
 	}

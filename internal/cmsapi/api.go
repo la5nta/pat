@@ -126,7 +126,7 @@ func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io
 	return resp.Body, err
 }
 
-func GetGatewayStatusCached(cacheFile string, forceDownload bool) (io.ReadCloser, error) {
+func GetGatewayStatusCached(cacheFile string, forceDownload bool, serviceCodes ...string) (io.ReadCloser, error) {
 	if !forceDownload {
 		file, err := os.Open(cacheFile)
 		if err == nil {
@@ -140,7 +140,7 @@ func GetGatewayStatusCached(cacheFile string, forceDownload bool) (io.ReadCloser
 	}
 
 	log.Println("Downloading latest gateway status information...")
-	fresh, err := GetGatewayStatus("", 48)
+	fresh, err := GetGatewayStatus("", 48, serviceCodes...)
 	if err != nil {
 		return nil, err
 	}

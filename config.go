@@ -31,6 +31,11 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.ConnectAliases["telnet"] = cfg.DefaultConfig.ConnectAliases["telnet"]
 	}
 
+	// Ensure ServiceCodes has a default value
+	if len(config.ServiceCodes) == 0 {
+		config.ServiceCodes = cfg.DefaultConfig.ServiceCodes
+	}
+
 	return config, nil
 }
 

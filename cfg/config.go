@@ -25,6 +25,9 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
+	// List of service codes for rmslist (defaults to PUBLIC)
+	ServiceCodes []string `json:"service_codes"`
+
 	// Default HTTP listen address (for web UI).
 	//
 	// Use ":8080" to listen on any device, port 8080.
@@ -188,8 +191,9 @@ type BeaconConfig struct {
 }
 
 var DefaultConfig Config = Config{
-	MOTD:     []string{"Open source Winlink client - getpat.io"},
-	AuxAddrs: []string{},
+	MOTD:         []string{"Open source Winlink client - getpat.io"},
+	AuxAddrs:     []string{},
+	ServiceCodes: []string{"PUBLIC"},
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k",
 	},

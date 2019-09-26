@@ -36,6 +36,11 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.ServiceCodes = cfg.DefaultConfig.ServiceCodes
 	}
 
+	// Ensure Pactor has a default value
+	if config.Pactor == (cfg.PactorConfig{}) {
+		config.Pactor = cfg.DefaultConfig.Pactor
+	}
+
 	return config, nil
 }
 

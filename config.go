@@ -41,6 +41,11 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.Pactor = cfg.DefaultConfig.Pactor
 	}
 
+	//TODO: Remove after some release cycles (2019-09-29)
+	if config.GPSdAddrLegacy != "" {
+		config.GPSd.Addr = config.GPSdAddrLegacy
+	}
+
 	return config, nil
 }
 

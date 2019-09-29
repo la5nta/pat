@@ -64,6 +64,9 @@ type Config struct {
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:gpsd`
 
+	// Legacy support for old config files
+	GPSdAddrLegacy string `json:"gpsd_addr"`
+
 	// Command schedule (cron-like syntax).
 	//
 	// Examples:
@@ -248,6 +251,7 @@ var DefaultConfig Config = Config{
 		UseServerTime: false,
 		Addr:          "localhost:2947", // Default listen address for GPSd
 	},
+	GPSdAddrLegacy: "",
 	Schedule:          map[string]string{},
 	HamlibRigs:        map[string]HamlibConfig{},
 }

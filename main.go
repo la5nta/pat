@@ -723,8 +723,8 @@ func posReportHandle(args []string) {
 			log.Fatal(err)
 		}
 		report.Lon = &lon
-	} else if config.GPSdAddr != "" {
-		conn, err := gpsd.Dial(config.GPSdAddr)
+	} else if config.GPSd.Addr != "" {
+		conn, err := gpsd.Dial(config.GPSd.Addr)
 		if err != nil {
 			log.Fatalf("GPSd daemon: %s", err)
 		}
@@ -740,7 +740,7 @@ func posReportHandle(args []string) {
 
 		report.Lat = &pos.Lat
 		report.Lon = &pos.Lon
-		if config.GPSdUseServerTime {
+		if config.GPSd.UseServerTime {
 			report.Date = time.Now()
 		} else {
 			report.Date = pos.Time

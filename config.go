@@ -31,6 +31,11 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.ConnectAliases["telnet"] = cfg.DefaultConfig.ConnectAliases["telnet"]
 	}
 
+	//TODO: Remove after some release cycles (2019-09-29)
+	if config.GPSdAddrLegacy != "" {
+		config.GPSd.Addr = config.GPSdAddrLegacy
+	}
+
 	return config, nil
 }
 

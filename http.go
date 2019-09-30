@@ -65,10 +65,8 @@ func ListenAndServe(addr string) error {
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
-		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
-		log.Printf("\nWARNING: You have enable GPSd http endpoint (enable_http). You might expose \n" +
-		           "         your current position to anyone who has access to the Pat web interface!\n\n")
-		log.SetFlags(log.Flags() ^ (log.Ldate | log.Ltime))
+		fmt.Fprintf(logWriter,"\nWARNING: You have enable GPSd HTTP endpoint (enable_http). You might expose" +
+		                      "\n         your current position to anyone who has access to the Pat web interface!\n\n")
 	}
 
 	r := mux.NewRouter()

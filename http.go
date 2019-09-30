@@ -80,7 +80,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/mailbox/{box}", postMessageHandler).Methods("POST")
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
-	r.HandleFunc("/api/gpsdPosition", positionHandler).Methods("GET")
+	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")

@@ -53,7 +53,8 @@ function initFrontend(ws_url)
 		$('#posModal').on('shown.bs.modal', function (e) {
 			if (navigator.geolocation) {
 				$('#pos_status').empty().append("<strong>Waiting for position...</strong>");
-				posId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError);
+				var options = { enableHighAccuracy: true, maximumAge: 0 };
+				posId = navigator.geolocation.watchPosition(updatePosition, handleGeolocationError, options);
 			} else { 
 				$('#pos_status').empty().append("Geolocation is not supported by this browser.");
 			}

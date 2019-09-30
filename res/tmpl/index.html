@@ -348,7 +348,8 @@
     <script language="javascript" type="text/javascript">
       function init()
       {
-        initFrontend("ws://{{.Addr}}/ws");
+        var wsURL = (location.protocol == 'https:' ? "wss://" : "ws://") + location.host + "/ws";
+        initFrontend(wsURL);
       }
       window.addEventListener("load", init, false);
     </script>

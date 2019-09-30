@@ -63,8 +63,7 @@ var websocketHub *WSHub
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
-	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHttp {
-		// can't use fmt.Printf as it would not show on the web interface
+	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
 		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
 		log.Printf("\nWARNING: You have enable GPSd http endpoint (enable_http). You might expose \n" +
@@ -354,7 +353,7 @@ func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w
 
 func positionHandler(w http.ResponseWriter, req *http.Request) {
 	// Throw error if GPSd http endpoint is not enabled
-	if config.GPSd.EnableHttp && config.GPSd.Addr != "" {
+	if config.GPSd.EnableHTTP && config.GPSd.Addr != "" {
 		host, _, _ := net.SplitHostPort(req.RemoteAddr)
 		log.Printf("Location data from GPSd served to %s", host)
 

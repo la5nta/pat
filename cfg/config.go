@@ -193,7 +193,9 @@ type BeaconConfig struct {
 
 type GPSdConfig struct {
 	// enable GPSd support in web interface
-	EnableHttp bool    `json:"enable_http"`
+	// WARNING: If you enable GPSd http endpoint (enable_http) you might
+	// expose your current position to anyone who has access to Pat!!!
+	EnableHTTP bool    `json:"enable_http"`
 
 	// Use server time instead of timestamp provided by GPSd (e.g for older GPS
 	// device with week roll-over issue)
@@ -242,7 +244,7 @@ var DefaultConfig Config = Config{
 		Password:   "",
 	},
 	GPSd: GPSdConfig{
-		EnableHttp:    false,
+		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)
 		UseServerTime: false,
 		Addr:          "localhost:2947", // Default listen address for GPSd
 	},

@@ -56,13 +56,12 @@ type Config struct {
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
-	// WARNING: If you enable GPSd http endpoint (enable_http) you might
-	// expose your current position to anyone who has access to Pat!!!
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:gpsd`
 
-	// Legacy support for old config files
-	GPSdAddrLegacy string `json:"gpsd_addr"`
+	// Legacy support for old config files only. This field is deprecated!
+	// Please use "Addr" field in GPSd config struct (GPSd.Addr)
+	GPSdAddrLegacy string `json:"gpsd_addr,omitempty"`
 
 	// Command schedule (cron-like syntax).
 	//

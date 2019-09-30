@@ -351,35 +351,35 @@ func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w
 
 func positionHandler(w http.ResponseWriter, req *http.Request) {
 	// Throw error if GPSd http endpoint is not enabled
-	if config.GPSd.EnableHTTP && config.GPSd.Addr != "" {
-		host, _, _ := net.SplitHostPort(req.RemoteAddr)
-		log.Printf("Location data from GPSd served to %s", host)
-
-		conn, err := gpsd.Dial(config.GPSd.Addr)
-		if err != nil {
-			// do not pass error message to response as GPSd address might be leaked
-			http.Error(w, "GPSd Dial failed", http.StatusInternalServerError)
-			return
-		}
-		defer conn.Close()
-
-		conn.Watch(true)
-
-		pos, err := conn.NextPosTimeout(5 * time.Second)
-		if err != nil {
-			http.Error(w, "GPSd get next position failed: " + err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if config.GPSd.UseServerTime {
-			pos.Time = time.Now()
-		}
-
-		json.NewEncoder(w).Encode(pos)
+	if !config.GPSd.EnableHTTP || config.GPSd.Addr == "" {
+		http.Error(w, "GPSd not enabled or address not set in config file", http.StatusInternalServerError)
 		return
 	}
 
-	http.Error(w, "GPSd not enabled or address not set in config file", http.StatusInternalServerError)
+	host, _, _ := net.SplitHostPort(req.RemoteAddr)
+	log.Printf("Location data from GPSd served to %s", host)
+
+	conn, err := gpsd.Dial(config.GPSd.Addr)
+	if err != nil {
+		// do not pass error message to response as GPSd address might be leaked
+		http.Error(w, "GPSd Dial failed", http.StatusInternalServerError)
+		return
+	}
+	defer conn.Close()
+
+	conn.Watch(true)
+
+	pos, err := conn.NextPosTimeout(5 * time.Second)
+	if err != nil {
+		http.Error(w, "GPSd get next position failed: " + err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if config.GPSd.UseServerTime {
+		pos.Time = time.Now()
+	}
+
+	json.NewEncoder(w).Encode(pos)
 	return
 }
 

@@ -52,19 +52,19 @@ function initFrontend(ws_url)
 
 		$('#posModal').on('shown.bs.modal', function (e) {
 			$.ajax({
-				url: '/api/gpsdPosition',
+				url: '/api/current_gps_position',
 				dataType: 'json',
 				beforeSend: function(){
-					statusPos.html("Checking if GPSd is available");
+					statusPos.html("Checking if GPS device is available");
 				},
-				success: function(gpsdData){
+				success: function(gpsData){
 					statusPos.html("GPS position received");
 
-					statusPos.html("<strong>Waiting for position (gpsd)...</strong>");
-					updatePositionGpsd(gpsdData);
+					statusPos.html("<strong>Waiting for position form GPS device...</strong>");
+					updatePositionGPS(gpsData);
 				},
 				error: function( jqXHR, textStatus, errorThrown ){
-					statusPos.html("GPSd not available!");
+					statusPos.html("GPS device not available!");
 
 					if (navigator.geolocation) {
 						statusPos.html("<strong>Waiting for position (geolocation)...</strong>");
@@ -354,7 +354,7 @@ function updatePositionGeolocation(pos) {
 	$('#pos_ts').val(pos.timestamp);
 }
 
-function updatePositionGpsd(pos) {
+function updatePositionGPS(pos) {
 	var d = new Date(pos.Time);
 	statusPos.html("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.Lat);

@@ -1,3 +1,13 @@
+pat (0.8.0) stable; urgency=medium
+
+  * GPSd support in Web GUI
+  * User configurable Service Code
+  * High Accuracy HTML5 Geolocation
+  * Minor PACTOR enhancements and bug fixes
+  * Fixed ARDOP listener issue
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Thu, 03 Oct 2019 21:48:51 +0200
+
 pat (0.7.0) stable; urgency=medium
 
   * Support PACTOR PTC-II and PTC-III (https://github.com/la5nta/pat/issues/40)

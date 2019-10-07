@@ -56,7 +56,7 @@ func (w *WSHub) WriteJSON(v interface{}) {
 	for c, _ := range w.pool {
 		select {
 		case c.out <- v:
-		default:
+		case <-time.After(3 * time.Second):
 			log.Println("Closing one unresponsive web socket")
 			c.conn.Close()
 			delete(w.pool, c)

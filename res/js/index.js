@@ -82,6 +82,8 @@ function initFrontend(ws_url)
 				navigator.geolocation.clearWatch(posId);
 			}
 		});
+		$('input[name=lat').change(updatePosMarker);
+		$('input[name=long').change(updatePosMarker);
 
 		initConnectModal();
 
@@ -346,12 +348,51 @@ function handleGeolocationError(error) {
 	statusPos.html("Geolocation unavailable.");
 }
 
+var map = null;
+var markers = null;
+
+function updatePosMarker(e) {
+ 	if( map == null ) {
+		map = new OpenLayers.Map("mapdiv");
+		map.events.register('zoomend', map, storeMapZoomLevel);
+		map.addLayer(new OpenLayers.Layer.OSM());
+		markers = new OpenLayers.Layer.Markers( "Markers" );
+		map.addLayer(markers);
+	} else {
+		markers.clearMarkers();
+	}
+
+	var lat = $('#pos_lat').val();
+	var lon = $('#pos_long').val();
+	var lonLat = new OpenLayers.LonLat(lon, lat).transform(
+            new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+            map.getProjectionObject() // to Spherical Mercator Projection
+	);
+
+	var zoom=getMapZoomLevel();
+	map.setCenter(lonLat, zoom);
+	markers.addMarker(new OpenLayers.Marker(lonLat));
+}
+
+function storeMapZoomLevel() {
+	Cookies.set("ol-zoom", map.getZoom());
+}
+
+function getMapZoomLevel() {
+	var zoom = Cookies.get("ol-zoom");
+	if( zoom == null ){
+		zoom = 5;
+	}
+	return zoom;
+}
+
 function updatePositionGeolocation(pos) {
 	var d = new Date(pos.timestamp);
 	statusPos.html("Last position update " + dateFormat(d) + "...");
 	$('#pos_lat').val(pos.coords.latitude);
 	$('#pos_long').val(pos.coords.longitude);
 	$('#pos_ts').val(pos.timestamp);
+	updatePosMarker(null);
 }
 
 function updatePositionGPS(pos) {
@@ -360,6 +401,7 @@ function updatePositionGPS(pos) {
 	$('#pos_lat').val(pos.Lat);
 	$('#pos_long').val(pos.Lon);
 	$('#pos_ts').val(d.getTime());
+	updatePosMarker(null);
 }
 
 function postPosition() {

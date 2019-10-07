@@ -299,3 +299,9 @@ input[type=checkbox], input[type=radio]
   margin: 0;
   padding: 0;
 }
+
+#OpenLayers_Control_Attribution_7
+{
+  position: absolute;
+  bottom: 0em;
+}

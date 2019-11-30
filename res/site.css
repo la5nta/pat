@@ -95,6 +95,10 @@ body > .container {
   font-size: 80%;
 }
 
+.sorted {
+  color: maroon;
+}
+
 /*
  * Message viewer
  */

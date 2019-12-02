@@ -65,6 +65,7 @@ Copyright (c) 2014-2017 Martin Hebnes Pedersen LA5NTA
 
 * DL1THM - Torsten Harenberg
 * HB9GPA - Matthias Renner
+* K0SWE - Chris Keller
 * KD8DRX - Will Davidson
 * KE8HMG - Andrew Huebner
 * LA3QMA - Kai Günter Brandt

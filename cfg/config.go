@@ -198,14 +198,14 @@ type GPSdConfig struct {
 	// enable GPSd support in web interface
 	// WARNING: If you enable GPSd http endpoint (enable_http) you might
 	// expose your current position to anyone who has access to Pat!!!
-	EnableHTTP bool    `json:"enable_http"`
+	EnableHTTP bool `json:"enable_http"`
 
 	// Use server time instead of timestamp provided by GPSd (e.g for older GPS
 	// device with week roll-over issue)
 	UseServerTime bool `json:"use_server_time"`
 
 	// Address and port of GPSd server (e.g. localhost:2947)
-	Addr string        `json:"addr"`
+	Addr string `json:"addr"`
 }
 
 var DefaultConfig Config = Config{
@@ -253,6 +253,6 @@ var DefaultConfig Config = Config{
 		Addr:          "localhost:2947", // Default listen address for GPSd
 	},
 	GPSdAddrLegacy: "",
-	Schedule:          map[string]string{},
-	HamlibRigs:        map[string]HamlibConfig{},
+	Schedule:       map[string]string{},
+	HamlibRigs:     map[string]HamlibConfig{},
 }

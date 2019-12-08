@@ -25,10 +25,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
 
+	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
-	"github.com/la5nta/pat/internal/gpsd"
 )
 
 // Status represents a status report as sent to the Web GUI
@@ -65,8 +65,8 @@ func ListenAndServe(addr string) error {
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
-		fmt.Fprintf(logWriter,"\nWARNING: You have enable GPSd HTTP endpoint (enable_http). You might expose" +
-		                      "\n         your current position to anyone who has access to the Pat web interface!\n\n")
+		fmt.Fprintf(logWriter, "\nWARNING: You have enable GPSd HTTP endpoint (enable_http). You might expose"+
+			"\n         your current position to anyone who has access to the Pat web interface!\n\n")
 	}
 
 	r := mux.NewRouter()
@@ -371,7 +371,7 @@ func positionHandler(w http.ResponseWriter, req *http.Request) {
 
 	pos, err := conn.NextPosTimeout(5 * time.Second)
 	if err != nil {
-		http.Error(w, "GPSd get next position failed: " + err.Error(), http.StatusInternalServerError)
+		http.Error(w, "GPSd get next position failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

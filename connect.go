@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/harenber/ptc-go/ptc"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
-	"github.com/harenber/ptc-go/ptc"
 
 	// Register other dialers
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	wmTNC *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
+	wmTNC  *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
+	adTNC  *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
 	pModem *pactor.Modem
 )
 
@@ -305,7 +305,7 @@ func initArdopTNC() error {
 }
 
 func initPactorModem() error {
-	if pModem !=  nil {
+	if pModem != nil {
 		pModem.Close()
 	}
 

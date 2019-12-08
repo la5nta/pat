@@ -18,4 +18,5 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./make.bash libax25; fi
 
 script:
+  - go vet ./...
   - ./make.bash

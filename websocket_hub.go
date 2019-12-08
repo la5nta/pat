@@ -11,12 +11,14 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 
+	"github.com/la5nta/pat/internal/osutil"
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
@@ -79,6 +81,16 @@ func (w *WSHub) ClientAddrs() []string {
 }
 
 func (w *WSHub) watchMBox() {
+	// Maximise ulimit -n:
+	//   fsnotify opens a file descriptor for every file in the directories it watches, which
+	//   may more files than the current soft limit. The is especially a problem on macOS which
+	//   has a default soft limit of only 256 files. Windows does not have a such a limit.
+	if runtime.GOOS != "windows" {
+		if err := osutil.RaiseOpenFileLimit(4096); err != nil {
+			log.Printf("Unable to raise open file limit: %v", err)
+		}
+	}
+
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Println("Unable to start fs watcher: ", err)

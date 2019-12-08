@@ -60,7 +60,7 @@ type Config struct {
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 
 	// See GPSdConfig.
-	GPSd GPSdConfig `json:gpsd`
+	GPSd GPSdConfig `json:"gpsd"`
 
 	// Legacy support for old config files only. This field is deprecated!
 	// Please use "Addr" field in GPSd config struct (GPSd.Addr)

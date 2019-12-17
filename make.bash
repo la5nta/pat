@@ -47,6 +47,9 @@ fi
 echo -e "Updating git submodules..."
 git submodule update --init --recursive
 
+echo -e "Regenerating web resources..."
+go generate
+
 echo "Running tests..."
 go test -tags "$TAGS" `go list ./...|grep -v vendor` `go list ./...|grep wl2k-go|egrep -v '/vendor/.*/vendor/'`
 echo

@@ -30,6 +30,7 @@ To make the process as seamless as possible, we ask for the following:
       - Run `go fmt`
       - Consider squashing your commits into a single commit. `git rebase -i`. It's okay to force update your pull request.
       - **Write a good commit message.** This [blog article](http://chris.beams.io/posts/git-commit/) is a good resource for learning how to write good commit messages, the most important part being that each commit message should have a title/subject in imperative mood starting with a capital letter and no trailing period: *"Return error on wrong use of the Paginator"*, **NOT** *"returning some error."* Also, if your commit references one or more GitHub issues, always end your commit message body with *See #1234* or *Fixes #1234*. Replace *1234* with the GitHub issue ID. The last example will close the issue when the commit is merged into *master*.
+      - Don't commit changes to the generated file `bindata_assetfs.go`. It must be in the repository to preserve `go get` functionality, but timestamp changes create too much churn. It will be updated for releases. If you like, use `git update-index --assume-unchanged bindata_assetfs.go` to ignore local changes.
       - Make sure `go test ./...` passes, and `go build` completes. Our [Travis CI loop](https://travis-ci.org/la5nta/pat) (Linux and OS&nbsp;X) will catch most things that are missing.
 
 ## The release process

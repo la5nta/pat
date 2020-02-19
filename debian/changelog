@@ -1,3 +1,13 @@
+pat (0.9.0) stable; urgency=medium
+
+  * Less aggressive websocket timeout
+  * Add column sorting in Web GUI
+  * Require Go 1.10 or later
+  * Fix GPSd config bug introduced in v0.8.0
+  * Fix (mainly macOS) bug related to many open file descriptors
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Wed, 19 Feb 2020 20:13:18 +0100
+
 pat (0.8.0) stable; urgency=medium
 
   * GPSd support in Web GUI

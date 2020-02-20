@@ -59,7 +59,7 @@ For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 
 ## Copyright/License
 
-Copyright (c) 2014-2017 Martin Hebnes Pedersen LA5NTA
+Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 
 ### Contributors (alphabetical)
 

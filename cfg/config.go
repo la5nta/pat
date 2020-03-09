@@ -82,6 +82,13 @@ type Config struct {
 	//
 	// Set to true if you don't want your information sent.
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
+
+	// Path to root of the Winlink Standard_Forms folder.
+	// Unzip after downloading from
+	// https://winlink.org/content/how_manually_update_standard_templates_version_101150
+	// https://1drv.ms/u/s!Ao2MJOj8BM8JmQUXR4awcspLyKQ_?e=S4CWIe
+	FormsPath string `json:"forms_path"`
+
 }
 
 type HamlibConfig struct {
@@ -255,4 +262,11 @@ var DefaultConfig Config = Config{
 	GPSdAddrLegacy: "",
 	Schedule:       map[string]string{},
 	HamlibRigs:     map[string]HamlibConfig{},
+
+	// Path to root of the Winlink Standard_Forms folder.
+	// Unzip after downloading from
+	// https://winlink.org/content/how_manually_update_standard_templates_version_101150
+	// https://1drv.ms/u/s!Ao2MJOj8BM8JmQUXR4awcspLyKQ_?e=S4CWIe
+	FormsPath:      "/Users/username/.wl2k/Standard_Forms",
+
 }

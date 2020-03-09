@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -86,6 +87,16 @@ var commands = []Command{
 		HandleFunc: func(args []string) {
 			readMail()
 		},
+	},
+	{
+		Str:     "composeform",
+		Aliases: []string{"formPath"},
+		Desc:    "Post form-based report.",
+		Usage:   "[options]",
+		Options: map[string]string{
+			"--template":      "path to the form template file (default ICS213)",
+		},
+		HandleFunc: composeFormReport,
 	},
 	{
 		Str:     "position",
@@ -515,7 +526,8 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeMessage(replyMsg *fbb.Message) {
+func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
+
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -590,6 +602,14 @@ func composeMessage(replyMsg *fbb.Message) {
 	if msg.Subject() == "" {
 		msg.SetSubject("<No subject>")
 	}
+
+	return msg;
+
+}
+
+func composeMessage(replyMsg *fbb.Message) {
+
+	msg := composeMessageHeader(replyMsg);
 
 	// Read body
 	fmt.Printf(`Press ENTER to start composing the message body. `)
@@ -768,6 +788,129 @@ func posReportHandle(args []string) {
 	}
 
 	postMessage(report.Message(fOptions.MyCall))
+}
+
+func getFormsVersion(templatePath string) string {
+	// walking up the path to find a version file.
+	// Winlink's Standard_Forms.zip include it in its root.
+	dir := filepath.Dir(templatePath)
+	verFilePath := ""
+	var verFile *os.File
+	for {
+		verFilePath = filepath.Join(dir, "Standard_Forms_Version.dat")
+		fd, verFileErr := os.Open(verFilePath)
+		if dir == "." ||
+			 dir == ".." ||
+			 dir == string(os.PathSeparator) ||
+			 verFileErr == nil ||
+			 fd != nil {
+			verFile = fd
+			break
+		}
+		dir = filepath.Dir(dir) // going up by one
+	}
+	if verFile != nil {
+		scanner := bufio.NewScanner(verFile)
+		if scanner.Scan() {
+			verFile.Close()
+			return scanner.Text()
+		}
+	}
+	return "unknown"
+}
+
+func composeFormReport(args []string) {
+	var tmplPathArg string
+
+	set := pflag.NewFlagSet("form", pflag.ExitOnError)
+	set.StringVar(&tmplPathArg, "template", filepath.Join(config.FormsPath, "ICS USA Forms/ICS213"), "")
+	set.Parse(args)
+
+	tmplPath := filepath.Clean(tmplPathArg)
+	if filepath.Ext(tmplPath) == "" {
+		tmplPath += ".txt"
+	}
+
+	infile, err := os.Open(tmplPath);
+	if (err != nil) {
+		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
+		os.Exit(1)
+	}
+
+	msg := composeMessageHeader(nil)
+	var varMap map[string]string
+	varMap = make(map[string]string)
+	varMap["Subjectline"] = msg.Subject()
+	varMap["Templateversion"] = getFormsVersion(tmplPath)
+	varMap["MsgSender"] = fOptions.MyCall
+	fmt.Println("forms version: " + varMap["Templateversion"] )
+
+	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
+	scanner := bufio.NewScanner(infile)
+	bodyContent := ""
+	for scanner.Scan() {
+		lineTmpl := scanner.Text()
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + Version, -1)
+		if strings.HasPrefix(lineTmpl, "Form:") ||
+			 strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			 strings.HasPrefix(lineTmpl, "To:") ||
+			 strings.HasPrefix(lineTmpl, "Msg:") {
+			continue
+		}
+		matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
+		fmt.Println(string(lineTmpl))
+		for i := range matches {
+			varName := matches[i][1]
+			if varMap[varName] == "" {
+				fmt.Print(varName + ": ")
+				varMap[varName] = "blank"
+				val := readLine();
+				if val != "" {
+					varMap[varName] = val
+				}
+			}
+		}
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		if strings.HasPrefix(lineTmpl, "Subject:") {
+			msg.SetSubject(strings.TrimPrefix(lineTmpl, "Subject:"))
+		} else {
+			bodyContent += lineTmpl + "\n"
+		}
+	}
+	infile.Close()
+	bodyContent = strings.TrimSpace(bodyContent)
+
+	fmt.Println("================================================================")
+	fmt.Print("To: ")
+	fmt.Println(msg.To())
+	fmt.Print("Cc: ")
+	fmt.Println(msg.Cc())
+	fmt.Print("From: ")
+	fmt.Println(msg.From())
+	fmt.Println("Subject: " + msg.Subject())
+	fmt.Println(bodyContent)
+	fmt.Println("================================================================")
+	fmt.Println("Press ENTER to post this message in the outbox, Ctrl-C to abort.")
+	fmt.Println("================================================================")
+	readLine()
+
+	msg.SetBody(bodyContent)
+
+	postMessage(msg)
+}
+
+func fillPlaceholders (s string, re *regexp.Regexp, values map[string]string) string {
+	result := s;
+	matches := re.FindAllStringSubmatch(s, -1);
+	for _, match := range matches {
+		value := values[match[1]];
+		if (value != "") {
+			result = strings.Replace(result, match[0], value, -1);
+		}
+	}
+	return result;
 }
 
 func CourseFromFloat64(f float64, magnetic bool) catalog.Course {

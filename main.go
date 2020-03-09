@@ -94,7 +94,7 @@ var commands = []Command{
 		Desc:    "Post form-based report.",
 		Usage:   "[options]",
 		Options: map[string]string{
-			"--template":      "path to the form template file (default ICS213)",
+			"--template": "path to the form template file (default ICS213)",
 		},
 		HandleFunc: composeFormReport,
 	},
@@ -603,13 +603,13 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 		msg.SetSubject("<No subject>")
 	}
 
-	return msg;
+	return msg
 
 }
 
 func composeMessage(replyMsg *fbb.Message) {
 
-	msg := composeMessageHeader(replyMsg);
+	msg := composeMessageHeader(replyMsg)
 
 	// Read body
 	fmt.Printf(`Press ENTER to start composing the message body. `)
@@ -800,10 +800,10 @@ func getFormsVersion(templatePath string) string {
 		verFilePath = filepath.Join(dir, "Standard_Forms_Version.dat")
 		fd, verFileErr := os.Open(verFilePath)
 		if dir == "." ||
-			 dir == ".." ||
-			 dir == string(os.PathSeparator) ||
-			 verFileErr == nil ||
-			 fd != nil {
+			dir == ".." ||
+			dir == string(os.PathSeparator) ||
+			verFileErr == nil ||
+			fd != nil {
 			verFile = fd
 			break
 		}
@@ -831,8 +831,8 @@ func composeFormReport(args []string) {
 		tmplPath += ".txt"
 	}
 
-	infile, err := os.Open(tmplPath);
-	if (err != nil) {
+	infile, err := os.Open(tmplPath)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
 		os.Exit(1)
 	}
@@ -843,7 +843,7 @@ func composeFormReport(args []string) {
 	varMap["Subjectline"] = msg.Subject()
 	varMap["Templateversion"] = getFormsVersion(tmplPath)
 	varMap["MsgSender"] = fOptions.MyCall
-	fmt.Println("forms version: " + varMap["Templateversion"] )
+	fmt.Println("forms version: " + varMap["Templateversion"])
 
 	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
@@ -852,11 +852,11 @@ func composeFormReport(args []string) {
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
 		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + Version, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+Version, -1)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
-			 strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
-			 strings.HasPrefix(lineTmpl, "To:") ||
-			 strings.HasPrefix(lineTmpl, "Msg:") {
+			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			strings.HasPrefix(lineTmpl, "To:") ||
+			strings.HasPrefix(lineTmpl, "Msg:") {
 			continue
 		}
 		matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
@@ -866,7 +866,7 @@ func composeFormReport(args []string) {
 			if varMap[varName] == "" {
 				fmt.Print(varName + ": ")
 				varMap[varName] = "blank"
-				val := readLine();
+				val := readLine()
 				if val != "" {
 					varMap[varName] = val
 				}
@@ -901,16 +901,16 @@ func composeFormReport(args []string) {
 	postMessage(msg)
 }
 
-func fillPlaceholders (s string, re *regexp.Regexp, values map[string]string) string {
-	result := s;
-	matches := re.FindAllStringSubmatch(s, -1);
+func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {
+	result := s
+	matches := re.FindAllStringSubmatch(s, -1)
 	for _, match := range matches {
-		value := values[match[1]];
-		if (value != "") {
-			result = strings.Replace(result, match[0], value, -1);
+		value := values[match[1]]
+		if value != "" {
+			result = strings.Replace(result, match[0], value, -1)
 		}
 	}
-	return result;
+	return result
 }
 
 func CourseFromFloat64(f float64, magnetic bool) catalog.Course {

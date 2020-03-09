@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -86,6 +88,16 @@ var commands = []Command{
 		HandleFunc: func(args []string) {
 			readMail()
 		},
+	},
+	{
+		Str:     "composeform",
+		Aliases: []string{"formPath"},
+		Desc:    "Post form-based report.",
+		Usage:   "[options]",
+		Options: map[string]string{
+			"--template": "path to the form template file. Uses the config file's forms_path as root. Defaults to 'ICS USA Forms/ICS213.txt'",
+		},
+		HandleFunc: composeFormReport,
 	},
 	{
 		Str:     "position",
@@ -185,6 +197,7 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
+
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 
@@ -515,7 +528,8 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeMessage(replyMsg *fbb.Message) {
+func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
+
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -590,6 +604,14 @@ func composeMessage(replyMsg *fbb.Message) {
 	if msg.Subject() == "" {
 		msg.SetSubject("<No subject>")
 	}
+
+	return msg
+
+}
+
+func composeMessage(replyMsg *fbb.Message) {
+
+	msg := composeMessageHeader(replyMsg)
 
 	// Read body
 	fmt.Printf(`Press ENTER to start composing the message body. `)
@@ -770,6 +792,238 @@ func posReportHandle(args []string) {
 	postMessage(report.Message(fOptions.MyCall))
 }
 
+func getFormsVersion(templatePath string) string {
+	// walking up the path to find a version file.
+	// Winlink's Standard_Forms.zip include it in its root.
+	dir := templatePath
+	if strings.HasSuffix(templatePath, ".txt") {
+		dir = filepath.Dir(templatePath)
+	}
+	verFilePath := ""
+	var verFile *os.File
+	for {
+		verFilePath = path.Join(dir, "Standard_Forms_Version.dat")
+		fd, verFileErr := os.Open(verFilePath)
+		if dir == "." ||
+			dir == ".." ||
+			strings.HasSuffix(dir, string(os.PathSeparator)) ||
+			verFileErr == nil ||
+			fd != nil {
+			verFile = fd
+			break
+		}
+		dir = filepath.Dir(dir) // going up by one
+	}
+	if verFile != nil {
+		scanner := bufio.NewScanner(verFile)
+		if scanner.Scan() {
+			verFile.Close()
+			return scanner.Text()
+		}
+	}
+	return "unknown"
+}
+
+func composeFormReport(args []string) {
+	var tmplPathArg string
+
+	set := pflag.NewFlagSet("form", pflag.ExitOnError)
+	set.StringVar(&tmplPathArg, "template", "ICS USA Forms/ICS213", "")
+	set.Parse(args)
+
+	tmplPath := filepath.Clean(tmplPathArg)
+
+	formFolder, err := buildFormFolder(config.FormsPath)
+	if err != nil {
+		log.Printf("can't build form folder tree %s", err)
+		return
+	}
+
+	form, err := findFormFromURI(tmplPath, formFolder)
+	if err != nil {
+		log.Printf("can't find form to match form %s", tmplPath)
+		return
+	}
+
+	msg := composeMessageHeader(nil)
+	var varMap map[string]string
+	varMap = make(map[string]string)
+	varMap["subjectline"] = msg.Subject()
+	varMap["templateversion"] = getFormsVersion(config.FormsPath)
+	varMap["msgsender"] = fOptions.MyCall
+	fmt.Println("forms version: " + varMap["templateversion"])
+
+	msgSubject, bodyContent, msgXml, err := buildFormMessage(form, varMap, true, false)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
+		os.Exit(1)
+	}
+	msg.SetSubject(msgSubject)
+
+	fmt.Println("================================================================")
+	fmt.Print("To: ")
+	fmt.Println(msg.To())
+	fmt.Print("Cc: ")
+	fmt.Println(msg.Cc())
+	fmt.Print("From: ")
+	fmt.Println(msg.From())
+	fmt.Println("Subject: " + msg.Subject())
+	fmt.Println(bodyContent)
+	fmt.Println("================================================================")
+	fmt.Println("Press ENTER to post this message in the outbox, Ctrl-C to abort.")
+	fmt.Println("================================================================")
+	readLine()
+
+	msg.SetBody(bodyContent)
+
+	attachmentName := GetXmlAttachmentNameForForm(form, false)
+	attachmentFile := fbb.NewFile(attachmentName, []byte(msgXml))
+	msg.AddFile(attachmentFile)
+
+	postMessage(msg)
+}
+
+func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
+	attachmentName := filepath.Base(f.ViewerURI)
+	if isReply {
+		attachmentName = filepath.Base(f.ReplyViewerURI)
+	}
+	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
+	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
+	if len(attachmentName) > 50 {
+		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
+	}
+	return attachmentName
+}
+
+//returns message subject, body, and XML attachment content for the given template and variable map
+func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isreply bool) (string, string, string, error) {
+
+	tmplPath := path.Join(config.FormsPath, tmpl.TxtFileURI)
+	if filepath.Ext(tmplPath) == "" {
+		tmplPath += ".txt"
+	}
+	if isreply && tmpl.ReplyTxtFileURI != "" {
+		tmplPath = path.Join(config.FormsPath, tmpl.ReplyTxtFileURI)
+	}
+
+	infile, err := os.Open(tmplPath)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
+	scanner := bufio.NewScanner(infile)
+	msgBody := ""
+	msgSubject := ""
+
+	for scanner.Scan() {
+		lineTmpl := scanner.Text()
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+versionStringShort(), -1)
+		if strings.HasPrefix(lineTmpl, "Form:") ||
+			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			strings.HasPrefix(lineTmpl, "To:") ||
+			strings.HasPrefix(lineTmpl, "Msg:") {
+			continue
+		}
+		if interactive {
+			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
+			fmt.Println(string(lineTmpl))
+			for i := range matches {
+				varName := matches[i][1]
+				varNameLower := strings.ToLower(varName)
+				if varMap[varNameLower] == "" {
+					fmt.Print(varName + ": ")
+					varMap[varNameLower] = "blank"
+					val := readLine()
+					if val != "" {
+						varMap[varNameLower] = val
+					}
+				}
+			}
+		}
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		if strings.HasPrefix(lineTmpl, "Subject:") {
+			msgSubject = strings.TrimPrefix(lineTmpl, "Subject:")
+		} else {
+			msgBody += lineTmpl + "\n"
+		}
+	}
+	infile.Close()
+
+	formVarsAsXml := ""
+	for varKey, varVal := range varMap {
+		formVarsAsXml += fmt.Sprintf("    <%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
+	}
+
+	viewer := ""
+	if tmpl.ViewerURI != "" {
+		viewer = filepath.Base(tmpl.ViewerURI)
+	}
+	if isreply && tmpl.ReplyViewerURI != "" {
+		viewer = filepath.Base(tmpl.ReplyViewerURI)
+	}
+
+	replier := ""
+	if !isreply && tmpl.ReplyTxtFileURI != "" {
+		replier = filepath.Base(tmpl.ReplyTxtFileURI)
+	}
+
+	msgXml := fmt.Sprintf(`%s<RMS_Express_Form>
+  <form_parameters>
+    <xml_file_version>%s</xml_file_version>
+    <rms_express_version>%s</rms_express_version>
+    <submission_datetime>%s</submission_datetime>
+    <senders_callsign>%s</senders_callsign>
+    <grid_square>%s</grid_square>
+    <display_form>%s</display_form>
+    <reply_template>%s</reply_template>
+  </form_parameters>
+  <variables>
+%s
+  </variables>
+</RMS_Express_Form>
+`,
+		xml.Header,
+		"1.0",
+		versionStringShort(),
+		time.Now().UTC().Format("20060102150405"),
+		fOptions.MyCall,
+		config.Locator,
+		viewer,
+		replier,
+		formVarsAsXml)
+	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), msgXml, nil
+}
+
+func XmlEscape(s string) string {
+	sEscaped := bytes.NewBuffer(make([]byte, 0))
+	err := xml.EscapeText(sEscaped, []byte(s))
+	sEscapedStr := ""
+	if err == nil {
+		sEscapedStr = sEscaped.String()
+	}
+	return sEscapedStr
+}
+
+func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {
+	if _, ok := values["txtstr"]; !ok {
+		values["txtstr"] = ""
+	}
+	result := s
+	matches := re.FindAllStringSubmatch(s, -1)
+	for _, match := range matches {
+		value, ok := values[strings.ToLower(match[1])]
+		if ok {
+			result = strings.Replace(result, match[0], value, -1)
+		}
+	}
+	return result
+}
+
 func CourseFromFloat64(f float64, magnetic bool) catalog.Course {
 	c := catalog.Course{Magnetic: magnetic}
 
@@ -793,4 +1047,8 @@ func postMessage(msg *fbb.Message) {
 
 func versionString() string {
 	return fmt.Sprintf("v%s (%s) %s/%s - %s", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+func versionStringShort() string {
+	return fmt.Sprintf("v%s (%s)", Version, GitRev)
 }

@@ -40,9 +40,11 @@ func NewWSHub() *WSHub {
 	return w
 }
 
-func (w *WSHub) UpdateStatus()                    { w.WriteJSON(struct{ Status Status }{getStatus()}) }
-func (w *WSHub) WriteProgress(p Progress)         { w.WriteJSON(struct{ Progress Progress }{p}) }
-func (w *WSHub) WriteNotification(n Notification) { w.WriteJSON(struct{ Notification Notification }{n}) }
+func (w *WSHub) UpdateStatus()            { w.WriteJSON(struct{ Status Status }{getStatus()}) }
+func (w *WSHub) WriteProgress(p Progress) { w.WriteJSON(struct{ Progress Progress }{p}) }
+func (w *WSHub) WriteNotification(n Notification) {
+	w.WriteJSON(struct{ Notification Notification }{n})
+}
 
 func (w *WSHub) Prompt(p Prompt) {
 	w.WriteJSON(struct{ Prompt Prompt }{p})

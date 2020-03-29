@@ -3,8 +3,7 @@ var posId = 0;
 var connectAliases;
 var mycall = "";
 
-var uploadFiles = new Array();
-var statusPopoverDiv;
+var statusDiv;
 var statusPos = $('#pos_status');
 
 function initFrontend(ws_url)
@@ -12,7 +11,8 @@ function initFrontend(ws_url)
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
-		initStatusPopover()
+
+		initStatusModal();
 
 		// Setup actions
 		$('#connect_btn').click(connect);
@@ -35,19 +35,15 @@ function initFrontend(ws_url)
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
 		$('#sent_tab').click(function(evt){ displayFolder("sent") });
 		$('#archive_tab').click(function(evt){ displayFolder("archive") });
-		$('.navbar li').click(function(e) {
-			$('.navbar li.active').removeClass('active');
+		$('.navbar a').click(function(e) {
 			var $this = $(this);
-			if (!$this.hasClass('active')) {
-				$this.addClass('active');
+			if (!$this.hasClass('dropdown-toggle')) {
+				$('.navbar a.active').removeClass('active');
+				if (!$this.hasClass('active')) {
+					$this.addClass('active');
+				}
 			}
 			e.preventDefault();
-		});
-
-		$('.nav :not(.dropdown) a').on('click', function(){
-    		if($('.navbar-toggle').css('display') !='none'){
-				$(".navbar-toggle").trigger( "click" );
-			}
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
@@ -95,16 +91,16 @@ function initFrontend(ws_url)
 function initNotifications()
 {
 	if( !isNotificationsSupported() ){
-		statusPopoverDiv.find('#notifications_error').find('.panel-body').html('Not supported by this browser.');
+		statusDiv.find('#notifications_error').find('.card-text').html('Not supported by this browser.');
 		return
 	}
 	Notification.requestPermission(function(permission) {
 		if( permission === "granted" ){
-			showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
+			showGUIStatus(statusDiv.find('#notifications_error'), false)
 		} else if (isInsecureOrigin()) {
 			// There is no way of knowing for sure if the permission was denied by the user
 			// or prohibited because of insecure origin (Chrome). This is just a lucky guess.
-			appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
+			appendInsecureOriginWarning(statusDiv.find('#notifications_error'))
 		}
 	});
 }
@@ -138,39 +134,26 @@ function updateProgress(p) {
 		if( p.subject ){
 			text += " - " + htmlEscape(p.subject)
 		}
-		$('#navbar_progress .progress-text').text(text);
-		$('#navbar_progress .progress-bar').css("width", percent + "%").text(percent + "%");
+		$('#navbar_progress .progress-bar').css("width", percent + "%").text(text + " " + percent + "%");
 	}
 
-	if( $('#navbar_progress').is(':visible') && p.done ){
+	if( !$('#navbar_progress').hasClass("d-none") && p.done ){
 		window.setTimeout(function() {
 			if (!cancelCloseTimer) {
-				$('#navbar_progress').fadeOut(500);
+				$('#navbar_progress').addClass("d-none");
 			}
 		}, 3000);
 	} else if( (p.receiving || p.sending) && !p.done ){
-		$('#navbar_progress').show();
+		$('#navbar_progress').removeClass("d-none");
 	}
 }
 
-function initStatusPopover() {
-	statusPopoverDiv = $('#status_popover_content');
+function initStatusModal() {
+	statusDiv = $('#statusModal');
 	showGUIStatus($('#websocket_error'), true);
 	showGUIStatus($('#notifications_error'), true);
-	$('#gui_status_light').popover({
-		placement: 'bottom',
-		content: statusPopoverDiv,
-		html: true,
-	});
 
-	// Hack to force popover to grab it's content div
-	$('#gui_status_light').popover('show');
-	$('#gui_status_light').popover('hide');
-	statusPopoverDiv.show();
-
-	// Bind click on navbar-brand
-	$('#gui_status_light').unbind()
-	$('.navbar-brand').click(function(e){ $('#gui_status_light').popover('toggle'); })
+	$('.navbar-brand').click(function(e){ $('#statusModal').modal('toggle'); })
 }
 
 function initComposeModal() {
@@ -185,6 +168,9 @@ function initComposeModal() {
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
 	$('#composer_error').hide();
 
+	$('#compose_cancel').click(function(evt){
+		closeComposer(true);
+	});
 
 	$('#composer_form').submit(function(e) {
 		var form = $('#composer_form');
@@ -241,7 +227,7 @@ function updateConnectAliases() {
 
 		var select = $('#aliasSelect');
 		Object.keys(data).forEach(function (key) {
-			select.append('<option>' + key + '</option>');
+			select.append(new Option(key));
 		});
 
 		select.change(function() {
@@ -340,9 +326,9 @@ function refreshExtraInputGroups() {
 
 function handleGeolocationError(error) {
 	if(error.message.search("insecure origin") > 0 || isInsecureOrigin()) {
-		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
+		appendInsecureOriginWarning(statusDiv.find('#geolocation_error'))
 	}
-	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
+	showGUIStatus(statusDiv.find('#geolocation_error'), true)
 	statusPos.html("Geolocation unavailable.");
 }
 
@@ -387,25 +373,25 @@ function postPosition() {
 function previewAttachmentFiles() {
 	var files = $(this).get(0).files;
 	attachments = $('#composer_attachments');
+	attachments.empty();
 	for (var i = 0; i < files.length; i++) {
 		file = files.item(i);
-
-		uploadFiles[uploadFiles.length] = file;
 
 		if(isImageSuffix(file.name)){
 			var reader = new FileReader();
 			reader.onload = function(e) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-					'<img src="'+ e.target.result + '" alt="' + file.name + '">' +
+					'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					(file.size/1024).toFixed(2) + 'kB' +
+					'<img class="img-fluid img-thumbnail" src="'+ e.target.result + '" alt="' + file.name + '">' +
 					'</a></div>'
 				);
 			}
 			reader.readAsDataURL(file);
 		} else {
 			attachments.append(
-				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-				file.name + '<br />(' + file.size + ' bytes)' +
+				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+				file.name + '<br />(' + (file.size/1024).toFixed(2) + 'kB)' +
 				'</a></div>'
 			);
 		}
@@ -423,10 +409,10 @@ function notify(data)
 
 function alert(msg)
 {
-    var div = $('#navbar_status');
-    div.empty();
-    div.append('<span class="navbar-text status-text">' + msg + '</p>');
-    div.show();
+	var div = $('#navbar_status');
+	div.empty();
+	div.append('<span class="navbar-text status-text">' + msg + '</span>');
+	div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
 }
 
@@ -439,10 +425,12 @@ function updateStatus(data)
 		st.append("Connected " + data.remote_addr + "");
 	} else if(data.active_listeners.length > 0){
 		st.append("<i>Listening " + data.active_listeners + "</i>");
+	} else {
+		st.append("<i>Idle</i>");
 	}
 
 	var n = data.http_clients.length;
-	statusPopoverDiv.find('#webserver_info').find('.panel-body').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
+	statusDiv.find('#webserver_info').find('.card-text').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
 function closeComposer(clear)
@@ -468,14 +456,13 @@ function closeComposer(clear)
 function connect(evt)
 {
 	url = getConnectURL()
-
 	$('#connectModal').modal('hide');
 
 	$.getJSON("/api/connect?url=" + url, function(data){
 		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}
-	}).error(function() {
+	}).fail(function() {
 		alert("Connect failed. See console for detailed information.");
 	});
 }
@@ -483,22 +470,22 @@ function connect(evt)
 function updateGUIStatus()
 {
 	var color = "success";
-	statusPopoverDiv.find('.panel-info').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-info').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "info";
 	});
-	statusPopoverDiv.find('.panel-warning').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-warning').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "warning";
 	});
-	statusPopoverDiv.find('.panel-danger').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-danger').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "danger";
 	});
 	$('#gui_status_light').removeClass (function (index, className) {
 		return (className.match (/(^|\s)btn-\S+/g) || []).join(' ');
 	}).addClass('btn-' + color);
 	if(color == "success") {
-		statusPopoverDiv.find('#no_error').show();
+		statusDiv.find('#no_error').removeClass('d-none');
 	} else {
-		statusPopoverDiv.find('#no_error').hide();
+		statusDiv.find('#no_error').addClass('d-none');
 	}
 }
 
@@ -513,14 +500,14 @@ function isInsecureOrigin()
 
 function appendInsecureOriginWarning(e)
 {
-	e.removeClass('panel-info').addClass('panel-warning')
-	e.find('.panel-body').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
+	e.removeClass('bg-info').addClass('bg-warning')
+	e.find('.card-text').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
 	updateGUIStatus()
 }
 
 function showGUIStatus(e, show)
 {
-	show ? e.removeClass('hidden') : e.addClass('hidden');
+	show ? e.removeClass('d-none') : e.addClass('d-none');
 	updateGUIStatus();
 }
 
@@ -531,8 +518,8 @@ function initConsole()
 	if("WebSocket" in window){
 		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
-			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
-			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
+			showGUIStatus(statusDiv.find('#websocket_error'), false);
+			showGUIStatus(statusDiv.find('#webserver_info'), true);
 			$('#console').empty();
 		};
 		ws.onmessage = function(evt) {
@@ -563,8 +550,8 @@ function initConsole()
 			}
 		};
 		ws.onclose   = function(evt) {
-			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
-			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
+			showGUIStatus(statusDiv.find('#websocket_error'), true)
+			showGUIStatus(statusDiv.find('#webserver_info'), false)
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
 	} else {
@@ -717,14 +704,15 @@ function displayMessage(elem) {
 
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a class="thumbnail" target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' + (file.Size/1024).toFixed(2) + 'kB' +
-					'<img src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					(file.Size/1024).toFixed(2) + 'kB' +
+					'<img class="img-fluid img-thumbnail" src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
 					'</a></div>'
 				);
 			} else {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-					file.Name + '<br />(' + file.Size + ' bytes)' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					file.Name + '<br />(' + (file.Size/1024).toFixed(2) + 'kB)' +
 					'</a></div>'
 				);
 			}

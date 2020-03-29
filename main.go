@@ -94,7 +94,7 @@ var commands = []Command{
 		Desc:    "Post form-based report.",
 		Usage:   "[options]",
 		Options: map[string]string{
-			"--template": "path to the form template file (default ICS213)",
+			"--template": "path to the form template file. Uses the config file's forms_path as root. Defaults to 'ICS USA Forms/ICS213.txt'",
 		},
 		HandleFunc: composeFormReport,
 	},

@@ -26,8 +26,8 @@
 				<span class="navbar-text">   </span>
 			</div>
 			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-		    <span class="navbar-toggler-icon"></span>
-		  </button>
+				<span class="navbar-toggler-icon"></span>
+			</button>
 			<div class="collapse navbar-collapse" id="navbarSupportedContent">
 				<ul class="navbar-nav mr-auto nav-tabs">
 					<li class="nav-item"><a class="nav-link active" href="#" id="inbox_tab">Inbox</a></li>
@@ -40,7 +40,7 @@
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#connectModal"><span class="fas fa-sync" /> Connect...</a>
 							<div class="dropdown-divider"></div>
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#composer"><span class="fas fa-pencil-alt" /> Compose...</a>
-							<!--a class="dropdown-item" href="#" data-toggle="modal" data-target="#fillForm"><span class="fas fa-edit" /> Form-based...</a-->
+							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#selectForm"><span class="fas fa-edit" /> Form-based...</a>
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#posModal"><span class="fas fa-map-marker-alt" /> Position...</a>
 							<div class="dropdown-divider"></div>
 							<div class="dropdown-header">Other stuff</div>
@@ -160,12 +160,12 @@
 									<div class="col-md-6">
 										<select class="selectpicker form-control" data-width="100%" id="transportSelect" title="(select transport)">
 											<optgroup label="transports">
-	 											<option value="winmor">WINMOR</option>
-	 											<option value="ax25">AX.25</option>
-	 											<option value="ardop">ARDOP</option>
-	 											<option value="serial-tnc">serial-tnc</option>
-	 											<option value="pactor">Pactor</option>
-	 											<option value="telnet">telnet</option>
+												<option value="winmor">WINMOR</option>
+												<option value="ax25">AX.25</option>
+												<option value="ardop">ARDOP</option>
+												<option value="serial-tnc">serial-tnc</option>
+												<option value="pactor">Pactor</option>
+												<option value="telnet">telnet</option>
 											</optgroup>
 										</select>
 									</div>
@@ -246,61 +246,27 @@
 		</div>
 
 		<!-- Begin composing a form modal -->
-		<!--div class="modal fade" id="fillForm" tabindex="-1" role="dialog" aria-labelledby="fillFormModalLabel" aria-hidden="true">
+		<div class="modal fade" id="selectForm" tabindex="-1" role="dialog" aria-labelledby="fillFormModalLabel" aria-hidden="true">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-						<h4 class="modal-title">Select a form...</h4>
+						<div class="container">
+							<div class="d-flex">
+								<h5 class="modal-title w-100">Select a form...</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							</div>
+							<div class="row">
+								<div class="col">
+									<small id="formsRootFolderName">root folder path</small>
+								</div>
+							</div>
+						</div>
 					</div>
-					<div class="modal-body" id="posView">
+					<div class="modal-body">
 						<div class="row">
-							<div class="accordion" id="accordionExample">
-							  <div class="card">
-							    <div class="card-header" id="headingOne">
-							      <h2 class="mb-0">
-							        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-							          Collapsible Group Item #1
-							        </button>
-							      </h2>
-							    </div>
-
-							    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
-							      <div class="card-body">
-							        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
-							      </div>
-							    </div>
-							  </div>
-							  <div class="card">
-							    <div class="card-header" id="headingTwo">
-							      <h2 class="mb-0">
-							        <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-							          Collapsible Group Item #2
-							        </button>
-							      </h2>
-							    </div>
-							    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
-							      <div class="card-body">
-							        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
-							      </div>
-							    </div>
-							  </div>
-							  <div class="card">
-							    <div class="card-header" id="headingThree">
-							      <h2 class="mb-0">
-							        <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-							          Collapsible Group Item #3
-							        </button>
-							      </h2>
-							    </div>
-							    <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
-							      <div class="card-body">
-							        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. Food truck quinoa nesciunt laborum eiusmod. Brunch 3 wolf moon tempor, sunt aliqua put a bird on it squid single-origin coffee nulla assumenda shoreditch et. Nihil anim keffiyeh helvetica, craft beer labore wes anderson cred nesciunt sapiente ea proident. Ad vegan excepteur butcher vice lomo. Leggings occaecat craft beer farm-to-table, raw denim aesthetic synth nesciunt you probably haven't heard of them accusamus labore sustainable VHS.
-							      </div>
-							    </div>
-							  </div>
-							</div>						</div>
-						<input type="hidden" id="pos_ts">
+							<div class="col" id="formFolderRoot">
+							</div>
+						</div>
 						<p id="pos_status"></p>
 					</div>
 					<div class="modal-footer">
@@ -309,7 +275,7 @@
 					</div>
 				</div>
 			</div>
-		</div-->
+		</div>
 
 		<!-- Begin about modal -->
 		<div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
@@ -319,7 +285,7 @@
 						<h5 class="modal-title">About</h5>
 						<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
 					</div>
-					<div class="modal-body" id="posView">
+					<div class="modal-body">
 						<p id="version">{{.AppName}} {{.Version}}</p>
 						<img src="res/images/pat_logo.png" width="35%" class="rounded mx-auto d-block" />
 					</div>
@@ -340,34 +306,32 @@
 					</div>
 					<div class="modal-body">
 						<form id="composer_form" enctype="multipart/form-data">
-							<div class="input-group input-group-sm mb-3">
+							<div class="input-group input-group-sm">
 								<div class="input-group-prepend"><span class="input-group-text">To</span></div>
 								<input type="text" id="msg_to" name="to" class="form-control" placeholder="N0CALL">
 							</div>
-							<div class="input-group input-group-sm mb-3">
+							<div class="input-group input-group-sm">
 								<div class="input-group-prepend"><span class="input-group-text">Cc</span></div>
 								<input type="text" id="msg_cc" name="cc" class="form-control" placeholder="N0CALL">
 							</div>
-							<div class="input-group input-group-sm mb-3">
+							<div class="input-group input-group-sm">
 								<div class="input-group-prepend"><span class="input-group-text">Subject</span></div>
 								<input type="text" id="msg_subject" name="subject" class="form-control" placeholder="">
+							</div>
+							<div class="input-group input-group-sm mb-3">
+								<div class="input-group-prepend">
+									<div class="input-group-text">
+										<input type="checkbox" id="msg_p2p_only">
+									</div>
+								</div>
+								<input type="text" class="form-control" value="P2P only" readonly>
 							</div>
 							<div class="form-group">
 								<textarea name="body" class="form-control" id="msg_body"></textarea>
 							</div>
-							<div id="composer_actions" class="row">
-								<div class="input-group col-3">
-									<div class="input-group-prepend">
-										<div class="input-group-text">
-											<input type="checkbox" id="msg_p2p_only">
-										</div>
-									</div>
-									<input type="text" class="form-control" value="P2P" readonly>
-								</div>
-								<span class="col-4 btn btn-secondary btn-file">Add attachment&hellip; <input id="msg_attachments_input" name="files" type="file" multiple></span>
-								<div class="col-1"></div>
-								<button id="post_btn" type="submit" class="col-3 btn btn-primary">Post <span class="fas fa-paper-plane"></span></button>
-								<div class="col-1"></div>
+							<div id="composer_actions">
+								<span class="btn btn-secondary btn-file">Add attachment <span class="fas fa-paperclip"></span><input id="msg_attachments_input" name="files" type="file" multiple></span>
+								<button id="post_btn" type="submit" class="btn btn-primary float-right">Post <span class="fas fa-paper-plane"></span></button>
 							</div>
 							<div class="row">
 								<span id="composer_error" class="col badge badge-pill badge-danger float-right">This is an error</span>

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -56,6 +58,21 @@ type Notification struct {
 	Body  string `json:"body"`
 }
 
+// Form
+type Form struct {
+	Name string `json:name`
+	InitialPath string `json:path`
+	ViewerPath string `json:path`
+}
+
+// Folder with forms
+type FormFolder struct {
+	Name    string       `json:name`
+	Path    string       `json:path`
+	Forms   []Form       `json:forms`
+	Folders []FormFolder `json:folders`
+}
+
 var websocketHub *WSHub
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
@@ -72,6 +89,7 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
+	r.HandleFunc("/api/forms", getFormsHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
@@ -99,6 +117,104 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.ConnectAliases)
+}
+
+func buildFormFolder(rootPath string) (FormFolder, error) {
+
+	rootFile, err := os.Open(rootPath)
+	if err != nil {
+		return FormFolder{}, err
+	}
+	rootFileInfo, err := os.Stat(rootPath)
+
+	if !rootFileInfo.IsDir() {
+		return FormFolder{}, errors.New(rootPath + " is not a directory")
+	}
+
+	formsArr := make([]Form, 1000)
+	foldersArr := make([]FormFolder, 1000)
+
+	retVal := FormFolder{
+		Name:    rootFileInfo.Name(),
+		Path:    rootFile.Name(),
+		Forms:   formsArr[0:0],
+		Folders: foldersArr[0:0],
+	}
+
+	infos, err := rootFile.Readdir(0)
+	if err != nil {
+		return retVal, err
+	}
+
+	folderCnt := 0
+	formCnt := 0
+	for _, info := range infos {
+		if info.IsDir() {
+			folderCnt++
+			retVal.Folders = foldersArr[0:folderCnt]
+			retVal.Folders[folderCnt-1], err = buildFormFolder(path.Join(rootPath, info.Name()))
+			if err != nil {
+				return retVal, err
+			}
+		} else {
+			if (filepath.Ext(info.Name()) == ".txt") {
+				initialPath, viewerPath, err := GetHtmlPathsFromFormTxt(path.Join(rootPath,info.Name()))
+				if err != nil {
+					continue
+				}
+				formCnt++
+				retVal.Forms = formsArr[0:formCnt]
+				retVal.Forms[formCnt-1] = Form {
+					Name: strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
+					InitialPath: initialPath,
+					ViewerPath: viewerPath,
+				}
+			}
+		}
+	}
+	sort.Slice(retVal.Folders, func(i, j int) bool {
+		return retVal.Folders[i].Name < retVal.Folders[j].Name
+	})
+	sort.Slice(retVal.Forms, func(i, j int) bool {
+		return retVal.Forms[i].Name < retVal.Forms[j].Name
+	})
+	return retVal, nil
+}
+
+func GetHtmlPathsFromFormTxt(txtPath string) (string, string, error) {
+	fd, err := os.Open(txtPath)
+	if err != nil {
+		return "", "", err
+	}
+	scanner := bufio.NewScanner(fd)
+	initialPath := path.Dir(txtPath)
+	viewerPath := path.Dir(txtPath)
+	for scanner.Scan() {
+		l := scanner.Text()
+		if strings.HasPrefix(l, "Form:") {
+			fileNamePattern := regexp.MustCompile(`\w+\.html`)
+			fileNames := fileNamePattern.FindAllString(l, -1)
+			if (fileNames != nil && len(fileNames) >= 2){
+				initialPath = path.Join(initialPath,fileNames[0])
+				viewerPath = path.Join(initialPath,fileNames[1])
+				break
+			}
+		}
+	}
+	fd.Close()
+	return initialPath, viewerPath, nil
+}
+
+func getFormsHandler(w http.ResponseWriter, r *http.Request) {
+	path := config.FormsPath
+
+	formFolder, err := buildFormFolder(path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		return
+	}
+	json.NewEncoder(w).Encode(formFolder)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {

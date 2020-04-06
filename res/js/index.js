@@ -85,6 +85,7 @@ function initFrontend(ws_url)
 		displayFolder("in");
 
 		initNotifications();
+		initForms();
 	});
 }
 
@@ -204,6 +205,52 @@ function initComposeModal() {
 		});
 		e.preventDefault();
 	});
+}
+
+function initForms() {
+	$.getJSON("/api/forms", function(data){
+		$('#formsRootFolderName').text(data.Path);
+		appendFormFolder('formFolderRoot', data);
+//				if (form.Name) formsTree.append(new Option("=>" + form.Name));
+	});
+}
+
+function appendFormFolder(rootId, data) {
+	if (data.Folders && data.Folders.length > 0) {
+		var rootAcc = `${rootId}Acc`
+		$(`#${rootId}`).append(`
+			<div class="accordion" id="${rootAcc}">
+			</div>
+			`);
+		data.Folders.forEach(function (folder) {
+			var folderNameId = folder.Name.replace( /\s/g, "_" );
+			var cardBodyId = folderNameId+"Body";
+			var card =
+			`
+			<div class="card">
+				<div class="card-header d-flex">
+					<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
+						${folder.Name}
+					</button>
+				</div>
+				<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
+					<div class="card-body" id=${cardBodyId}>
+					</div>
+				</div>
+			</div>
+			`
+			$(`#${rootAcc}`).append(card)
+			appendFormFolder(`${cardBodyId}`, folder)
+			if (folder.Forms && folder.Forms.length > 0){
+				var cardBodyFormsId = `${cardBodyId}Forms`
+				$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
+				folder.Forms.forEach((form) => {
+					$(`#${cardBodyFormsId}`).append(`<a href="file:${form.InitialPath}" target="_blank" class="list-group-item list-group-item-action list-group-item-light">${form.Name}</a>`)
+				});
+
+			}
+		});
+	}
 }
 
 function initConnectModal() {
@@ -381,7 +428,7 @@ function previewAttachmentFiles() {
 			var reader = new FileReader();
 			reader.onload = function(e) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 					(file.size/1024).toFixed(2) + 'kB' +
 					'<img class="img-fluid img-thumbnail" src="'+ e.target.result + '" alt="' + file.name + '">' +
 					'</a></div>'
@@ -390,7 +437,7 @@ function previewAttachmentFiles() {
 			reader.readAsDataURL(file);
 		} else {
 			attachments.append(
-				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 				file.name + '<br />(' + (file.size/1024).toFixed(2) + 'kB)' +
 				'</a></div>'
 			);
@@ -625,7 +672,7 @@ function displayFolder(dir) {
 			//TODO: Cleanup (Sorry about this...)
 			var html = '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
 			if(msg.Files.length > 0){
-				html += '<span class="glyphicon glyphicon-paperclip" />';
+				html += '<span class="glyphicon glyphicon-paperclip"></span>';
 			}
 			html += '</td><td>' + htmlEscape(msg.Subject) + "</td><td>";
 			if( !is_from && !msg.To ){
@@ -638,7 +685,7 @@ function displayFolder(dir) {
 				html += msg.To[0].Addr + "...";
 			}
 			html += '</td>'
-			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
+			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : '') + '</td>')
 			html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)
@@ -704,14 +751,14 @@ function displayMessage(elem) {
 
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 					(file.Size/1024).toFixed(2) + 'kB' +
 					'<img class="img-fluid img-thumbnail" src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
 					'</a></div>'
 				);
 			} else {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip" /> ' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 					file.Name + '<br />(' + (file.Size/1024).toFixed(2) + 'kB)' +
 					'</a></div>'
 				);

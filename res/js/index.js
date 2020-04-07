@@ -89,8 +89,7 @@ function initFrontend(ws_url)
 	});
 }
 
-function initNotifications()
-{
+function initNotifications() {
 	if( !isNotificationsSupported() ){
 		statusDiv.find('#notifications_error').find('.card-text').html('Not supported by this browser.');
 		return
@@ -211,7 +210,6 @@ function initForms() {
 	$.getJSON("/api/forms", function(data){
 		$('#formsRootFolderName').text(data.Path);
 		appendFormFolder('formFolderRoot', data);
-//				if (form.Name) formsTree.append(new Option("=>" + form.Name));
 	});
 }
 
@@ -245,7 +243,7 @@ function appendFormFolder(rootId, data) {
 				var cardBodyFormsId = `${cardBodyId}Forms`
 				$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
 				folder.Forms.forEach((form) => {
-					$(`#${cardBodyFormsId}`).append(`<a href="file:${form.InitialPath}" target="_blank" class="list-group-item list-group-item-action list-group-item-light">${form.Name}</a>`)
+					$(`#${cardBodyFormsId}`).append(`<a href="${form.InitialURI}" target="_blank" class="list-group-item list-group-item-action list-group-item-light">${form.Name}</a>`)
 				});
 
 			}

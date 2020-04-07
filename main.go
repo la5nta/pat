@@ -196,6 +196,7 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
+
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 

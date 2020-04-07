@@ -61,8 +61,8 @@ type Notification struct {
 // Form
 type Form struct {
 	Name string `json:name`
-	InitialPath string `json:path`
-	ViewerPath string `json:path`
+	InitialURI string `json:path`
+	ViewerURI string `json:path`
 }
 
 // Folder with forms
@@ -101,10 +101,12 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
+//	r.HandleFunc("/form", formHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	http.Handle("/", r)
 	http.Handle("/res/", http.StripPrefix("/res/", http.FileServer(assetFS())))
+	http.Handle("/forms/", http.StripPrefix("/forms/", http.FileServer(http.Dir(config.FormsPath))))
 
 	websocketHub = NewWSHub()
 
@@ -158,16 +160,18 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			}
 		} else {
 			if (filepath.Ext(info.Name()) == ".txt") {
-				initialPath, viewerPath, err := GetHtmlPathsFromFormTxt(path.Join(rootPath,info.Name()))
+				initialURI, viewerURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath,info.Name()))
 				if err != nil {
 					continue
 				}
-				formCnt++
-				retVal.Forms = formsArr[0:formCnt]
-				retVal.Forms[formCnt-1] = Form {
-					Name: strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
-					InitialPath: initialPath,
-					ViewerPath: viewerPath,
+				if initialURI != "" || viewerURI != "" {
+					formCnt++
+					retVal.Forms = formsArr[0:formCnt]
+					retVal.Forms[formCnt-1] = Form {
+						Name: strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
+						InitialURI: initialURI,
+						ViewerURI: viewerURI,
+					}
 				}
 			}
 		}
@@ -181,28 +185,32 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	return retVal, nil
 }
 
-func GetHtmlPathsFromFormTxt(txtPath string) (string, string, error) {
+func GetHtmlUrisFromFormTxt(txtPath string) (string, string, error) {
 	fd, err := os.Open(txtPath)
 	if err != nil {
 		return "", "", err
 	}
 	scanner := bufio.NewScanner(fd)
-	initialPath := path.Dir(txtPath)
-	viewerPath := path.Dir(txtPath)
+	baseURI := strings.Replace( path.Dir(txtPath), config.FormsPath, "forms", -1)
+	baseURI = strings.Replace(baseURI, "\\", "/", -1	)
+	initialPath := baseURI
+	viewerPath := baseURI
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "Form:") {
-			fileNamePattern := regexp.MustCompile(`\w+\.html`)
-			fileNames := fileNamePattern.FindAllString(l, -1)
+			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
+			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
+			fileNames := fileNamePattern.FindAllString(trimmed, -1)
 			if (fileNames != nil && len(fileNames) >= 2){
-				initialPath = path.Join(initialPath,fileNames[0])
-				viewerPath = path.Join(initialPath,fileNames[1])
-				break
+				initialPath = initialPath + "/" + fileNames[0]
+				viewerPath = initialPath + "/" + fileNames[1]
+				fd.Close()
+				return initialPath, viewerPath, nil
 			}
 		}
 	}
 	fd.Close()
-	return initialPath, viewerPath, nil
+	return "", "", nil
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {

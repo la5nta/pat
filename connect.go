@@ -64,7 +64,11 @@ func Connect(connectStr string) (success bool) {
 			return
 		}
 	case "pactor":
-		if err := initPactorModem(); err != nil {
+		pt_cmdinit := ""
+		if val, ok := url.Params["init"]; ok {
+			pt_cmdinit = strings.Join(val, "\n")
+		}
+		if err := initPactorModem(pt_cmdinit); err != nil {
 			log.Println(err)
 			return
 		}
@@ -304,13 +308,12 @@ func initArdopTNC() error {
 	return nil
 }
 
-func initPactorModem() error {
+func initPactorModem(cmdlineinit string) error {
 	if pModem != nil {
 		pModem.Close()
 	}
-
 	var err error
-	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript)
+	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript, cmdlineinit)
 	if err != nil || pModem == nil {
 		return fmt.Errorf("Pactor initialization failed: %s", err)
 	}

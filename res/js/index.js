@@ -243,7 +243,8 @@ function appendFormFolder(rootId, data) {
 				var cardBodyFormsId = `${cardBodyId}Forms`
 				$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
 				folder.Forms.forEach((form) => {
-					$(`#${cardBodyFormsId}`).append(`<a href="${form.InitialURI}" target="_blank" class="list-group-item list-group-item-action list-group-item-light">${form.Name}</a>`)
+					$(`#${cardBodyFormsId}`).append(`<a href="${form.InitialURI}" target="_blank" class="list-group-item list-group-item-action list-group-item-light formLaunch">${form.Name}</a>`)
+//					$(`#${cardBodyFormsId}`).append(`<a onclick="onFormSelect('${form.Name}', '${form.InitialURI}')" class="list-group-item list-group-item-action list-group-item-light formLaunch" href="#" data-dismiss="modal" data-toggle="modal" data-target="#formContainerModal">${form.Name}</a>`)
 				});
 
 			}

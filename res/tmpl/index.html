@@ -40,7 +40,6 @@
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#connectModal"><span class="fas fa-sync" /> Connect...</a>
 							<div class="dropdown-divider"></div>
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#composer"><span class="fas fa-pencil-alt" /> Compose...</a>
-							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#selectForm"><span class="fas fa-edit" /> Form-based...</a>
 							<a class="dropdown-item" href="#" data-toggle="modal" data-target="#posModal"><span class="fas fa-map-marker-alt" /> Position...</a>
 							<div class="dropdown-divider"></div>
 							<div class="dropdown-header">Other stuff</div>
@@ -243,34 +242,6 @@
 			</div>
 		</div>
 
-		<!-- Begin composing a form modal -->
-		<div class="modal fade" id="selectForm" tabindex="-1" role="dialog" aria-labelledby="fillFormModalLabel" aria-hidden="true">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<div class="container">
-							<div class="d-flex">
-								<h5 class="modal-title w-100">Select a form...</h5>
-								<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-							</div>
-							<div class="row">
-								<div class="col">
-									<small id="formsRootFolderName">root folder path</small>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="modal-body">
-						<div class="row">
-							<div class="col" id="formFolderRoot">
-							</div>
-						</div>
-						<p id="pos_status"></p>
-					</div>
-				</div>
-			</div>
-		</div>
-
 		<!-- Begin about modal -->
 		<div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
 			<div class="modal-dialog">
@@ -325,7 +296,8 @@
 								<textarea name="formFrame" class="form-control d-none" id="msg_form"></textarea>
 							</div>
 							<div id="composer_actions">
-								<span class="btn btn-secondary btn-file">Add attachment <span class="fas fa-paperclip"></span><input id="msg_attachments_input" name="files" type="file" multiple></span>
+								<span class="btn btn-secondary btn-file">Attachments <span class="fas fa-paperclip"></span><input id="msg_attachments_input" name="files" type="file" multiple></span>
+								<a class="btn btn-secondary" href="#" data-toggle="modal" data-target="#selectForm">Template <span class="fas fa-edit" /></a>
 								<button id="post_btn" type="submit" class="btn btn-primary float-right">Post <span class="fas fa-paper-plane"></span></button>
 							</div>
 							<div class="row">
@@ -335,6 +307,34 @@
 					</div>
 					<div class="modal-footer primary">
 						<div id="composer_attachments" class="row"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Begin composing a form modal -->
+		<div class="modal fade" id="selectForm" tabindex="-1" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<div class="container">
+							<div class="d-flex">
+								<h5 class="modal-title w-100">Select a form...</h5>
+								<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+							</div>
+							<div class="row">
+								<div class="col">
+									<small id="formsRootFolderName">root folder path</small>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="modal-body">
+						<div class="row">
+							<div class="col" id="formFolderRoot">
+							</div>
+						</div>
+						<p id="pos_status"></p>
 					</div>
 				</div>
 			</div>

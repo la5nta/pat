@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -60,18 +61,27 @@ type Notification struct {
 
 // Form
 type Form struct {
-	Name string `json:name`
-	InitialURI string `json:path`
-	ViewerURI string `json:path`
+	Name string
+	InitialURI string
+	ViewerURI string
 }
 
 // Folder with forms
 type FormFolder struct {
-	Name    string       `json:name`
-	Path    string       `json:path`
-	Forms   []Form       `json:forms`
-	Folders []FormFolder `json:folders`
+	Name    string
+	Path    string
+	Forms   []Form
+	Folders []FormFolder
 }
+
+type FormData struct {
+	TargetForm Form
+	Fields map[string] string
+}
+
+//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
+//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
+var lastPostedFormData FormData
 
 var websocketHub *WSHub
 
@@ -89,7 +99,10 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
-	r.HandleFunc("/api/forms", getFormsHandler).Methods("GET")
+	r.HandleFunc("/api/formcatalog", getFormsHandler).Methods("GET")
+	r.HandleFunc("/api/form", postFormData).Methods("POST")
+	r.HandleFunc("/api/form", getFormData).Methods("GET")
+	r.HandleFunc("/api/forms", getFormTemplate).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
@@ -101,12 +114,10 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
-//	r.HandleFunc("/form", formHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	http.Handle("/", r)
 	http.Handle("/res/", http.StripPrefix("/res/", http.FileServer(assetFS())))
-	http.Handle("/forms/", http.StripPrefix("/forms/", http.FileServer(http.Dir(config.FormsPath))))
 
 	websocketHub = NewWSHub()
 
@@ -191,8 +202,7 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, error) {
 		return "", "", err
 	}
 	scanner := bufio.NewScanner(fd)
-	baseURI := strings.Replace( path.Dir(txtPath), config.FormsPath, "forms", -1)
-	baseURI = strings.Replace(baseURI, "\\", "/", -1	)
+	baseURI := path.Dir(txtPath)
 	initialPath := baseURI
 	viewerPath := baseURI
 	for scanner.Scan() {
@@ -214,15 +224,73 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, error) {
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {
-	path := config.FormsPath
-
-	formFolder, err := buildFormFolder(path)
+	formFolder, err := buildFormFolder(config.FormsPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 		return
 	}
 	json.NewEncoder(w).Encode(formFolder)
+}
+
+func postFormData(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(10000000); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else {
+		formPath, ok := r.URL.Query()["formPath"]
+		if !ok {
+			http.Error(w, "formPath query param missing", http.StatusBadRequest)
+			log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
+		}
+
+		formFolder, err := buildFormFolder(config.FormsPath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+			return
+		}
+
+		form, err := findFormFromURI(formPath[0], formFolder)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("can't find form to match posted form data %s %s", formPath[0], r.URL)
+			return
+		}
+		//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
+		//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
+		lastPostedFormData.TargetForm = form
+		lastPostedFormData.Fields = make (map[string]string)
+		for key, values := range r.PostForm {
+			lastPostedFormData.Fields[key] = values[0]
+		}
+	}
+	r.Body.Close()
+
+	getFormData(w, r)
+}
+
+func findFormFromURI(path string, folder FormFolder) (Form, error) {
+	var retVal Form
+	retVal.Name = "unknown"
+	for _, subFolder := range folder.Folders {
+		form, err := findFormFromURI(path, subFolder)
+		if err == nil {
+			return form, nil
+		}
+	}
+	for _, form := range folder.Forms {
+		if form.InitialURI == path {
+			return form, nil
+		}
+	}
+	return retVal, errors.New("form not found")
+}
+
+func getFormData(w http.ResponseWriter, r *http.Request) {
+	//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
+	//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
+	json.NewEncoder(w).Encode(lastPostedFormData)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -448,6 +516,30 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 	err = t.Execute(w, tmplData)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func getFormTemplate(w http.ResponseWriter, r *http.Request) {
+	formPath, ok := r.URL.Query()["formPath"]
+	if !ok {
+		http.Error(w, "formPath query param missing", http.StatusBadRequest)
+		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
+	}
+
+	fd, err := os.Open(formPath[0])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, err)
+	}
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		l := scanner.Text()
+		l = strings.Replace(l, "http://{FormServer}:{FormPort}", "form?"+r.URL.Query().Encode(), -1)
+		_, err = io.WriteString(w, l)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("can't write form template into response %s %s: %s", r.Method, r.URL.Path, err)
+		}
 	}
 }
 

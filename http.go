@@ -204,8 +204,6 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, error) {
 	}
 	scanner := bufio.NewScanner(fd)
 	baseURI := path.Dir(txtPath)
-	initialPath := baseURI
-	viewerPath := baseURI
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "Form:") {
@@ -213,10 +211,10 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, error) {
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
 			if (fileNames != nil && len(fileNames) >= 2){
-				initialPath = initialPath + "/" + fileNames[0]
-				viewerPath = initialPath + "/" + fileNames[1]
+				initialPath := baseURI + "/" + fileNames[0]
+				viewerPath := baseURI + "/" + fileNames[1]
 				fd.Close()
-				return initialPath, viewerPath, nil
+				return strings.TrimPrefix(initialPath, config.FormsPath), strings.TrimPrefix(viewerPath, config.FormsPath), nil
 			}
 		}
 	}
@@ -265,7 +263,6 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 			log.Printf("missing cookie %s %s", formPath[0], r.URL)
 			return
 		}
-		log.Printf("forminstance: %s", key)
 		var formData FormData
 		formData.TargetForm = form
 		formData.Fields = make (map[string]string)
@@ -297,7 +294,13 @@ func findFormFromURI(path string, folder FormFolder) (Form, error) {
 }
 
 func getFormData(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(postedFormData)
+	key, err := r.Cookie("forminstance")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("missing cookie %s %s", key, r.URL)
+		return
+	}
+	json.NewEncoder(w).Encode(postedFormData[key.Value])
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -533,10 +536,10 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 	}
 
-	fd, err := os.Open(formPath[0])
+	fd, err := os.Open(path.Join(config.FormsPath, strings.TrimLeft(path.Clean( formPath[0]), "./\\")))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, err)
+		http.Error(w, "can't open template " + formPath[0], http.StatusBadRequest)
+		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, "can't open template " + formPath[0])
 	}
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {

@@ -272,8 +272,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		postedFormData[key.Value] = formData
 	}
 	r.Body.Close()
-
-	getFormData(w, r)
+	io.WriteString(w, "<script>window.close()</script>")
 }
 
 func findFormFromURI(path string, folder FormFolder) (Form, error) {

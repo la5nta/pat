@@ -211,7 +211,7 @@ function initForms() {
 		$('#formsRootFolderName').text(data.Path);
 		appendFormFolder('formFolderRoot', data);
 	});
-	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1); 
+	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1);
 }
 
 function setCookie(cname, cvalue, exdays) {

@@ -79,9 +79,7 @@ type FormData struct {
 	Fields map[string] string
 }
 
-//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
-//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
-var lastPostedFormData FormData
+var postedFormData map[string]FormData
 
 var websocketHub *WSHub
 
@@ -89,6 +87,9 @@ var websocketHub *WSHub
 //go:generate go-bindata-assetfs res/...
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
+
+	postedFormData = make (map[string]FormData)
+
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
@@ -257,13 +258,21 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 			log.Printf("can't find form to match posted form data %s %s", formPath[0], r.URL)
 			return
 		}
-		//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
-		//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
-		lastPostedFormData.TargetForm = form
-		lastPostedFormData.Fields = make (map[string]string)
-		for key, values := range r.PostForm {
-			lastPostedFormData.Fields[key] = values[0]
+
+		key, err := r.Cookie("forminstance")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("missing cookie %s %s", formPath[0], r.URL)
+			return
 		}
+		log.Printf("forminstance: %s", key)
+		var formData FormData
+		formData.TargetForm = form
+		formData.Fields = make (map[string]string)
+		for key, values := range r.PostForm {
+			formData.Fields[key] = values[0]
+		}
+		postedFormData[key.Value] = formData
 	}
 	r.Body.Close()
 
@@ -288,9 +297,7 @@ func findFormFromURI(path string, folder FormFolder) (Form, error) {
 }
 
 func getFormData(w http.ResponseWriter, r *http.Request) {
-	//TODO: storing the last posted for data in a global won't work when multiple clients are posting forms.
-	//      Also it's not secure, any client can read the form fields. But it's OK as long as Pat is intended for single users.
-	json.NewEncoder(w).Encode(lastPostedFormData)
+	json.NewEncoder(w).Encode(postedFormData)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {

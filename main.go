@@ -794,7 +794,10 @@ func posReportHandle(args []string) {
 func getFormsVersion(templatePath string) string {
 	// walking up the path to find a version file.
 	// Winlink's Standard_Forms.zip include it in its root.
-	dir := filepath.Dir(templatePath)
+	dir := templatePath
+	if (strings.HasSuffix(templatePath, ".txt")){
+		dir = filepath.Dir(templatePath)
+	}
 	verFilePath := ""
 	var verFile *os.File
 	for {
@@ -828,16 +831,6 @@ func composeFormReport(args []string) {
 	set.Parse(args)
 
 	tmplPath := filepath.Clean(tmplPathArg)
-	if filepath.Ext(tmplPath) == "" {
-		tmplPath += ".txt"
-	}
-
-	infile, err := os.Open(tmplPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
-		os.Exit(1)
-	}
-
 	msg := composeMessageHeader(nil)
 	var varMap map[string]string
 	varMap = make(map[string]string)
@@ -846,42 +839,13 @@ func composeFormReport(args []string) {
 	varMap["MsgSender"] = fOptions.MyCall
 	fmt.Println("forms version: " + varMap["Templateversion"])
 
-	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
-	scanner := bufio.NewScanner(infile)
-	bodyContent := ""
-	for scanner.Scan() {
-		lineTmpl := scanner.Text()
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
-		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+Version, -1)
-		if strings.HasPrefix(lineTmpl, "Form:") ||
-			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
-			strings.HasPrefix(lineTmpl, "To:") ||
-			strings.HasPrefix(lineTmpl, "Msg:") {
-			continue
-		}
-		matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
-		fmt.Println(string(lineTmpl))
-		for i := range matches {
-			varName := matches[i][1]
-			if varMap[varName] == "" {
-				fmt.Print(varName + ": ")
-				varMap[varName] = "blank"
-				val := readLine()
-				if val != "" {
-					varMap[varName] = val
-				}
-			}
-		}
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
-		if strings.HasPrefix(lineTmpl, "Subject:") {
-			msg.SetSubject(strings.TrimPrefix(lineTmpl, "Subject:"))
-		} else {
-			bodyContent += lineTmpl + "\n"
-		}
+	msgSubject, bodyContent, err := buildFormMessage(tmplPath, varMap, true)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
+		os.Exit(1)
 	}
-	infile.Close()
-	bodyContent = strings.TrimSpace(bodyContent)
+	msg.SetSubject(msgSubject)
 
 	fmt.Println("================================================================")
 	fmt.Print("To: ")
@@ -900,6 +864,58 @@ func composeFormReport(args []string) {
 	msg.SetBody(bodyContent)
 
 	postMessage(msg)
+}
+
+//returns message subject and body for the given template and variable map
+func buildFormMessage(tmplPath string, varMap map[string]string, interactive bool) (string, string, error) {
+	if filepath.Ext(tmplPath) == "" {
+		tmplPath += ".txt"
+	}
+
+	infile, err := os.Open(tmplPath)
+	if err != nil {
+		return "", "", err
+	}
+
+	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
+	scanner := bufio.NewScanner(infile)
+	msgBody := ""
+	msgSubject := ""
+	for scanner.Scan() {
+		lineTmpl := scanner.Text()
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+Version, -1)
+		if strings.HasPrefix(lineTmpl, "Form:") ||
+			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			strings.HasPrefix(lineTmpl, "To:") ||
+			strings.HasPrefix(lineTmpl, "Msg:") {
+			continue
+		}
+		matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
+		if interactive {
+			fmt.Println(string(lineTmpl))
+		}
+		for i := range matches {
+			varName := matches[i][1]
+			if interactive && varMap[varName] == "" {
+				fmt.Print(varName + ": ")
+				varMap[varName] = "blank"
+				val := readLine()
+				if val != "" {
+					varMap[varName] = val
+				}
+			}
+		}
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		if strings.HasPrefix(lineTmpl, "Subject:") {
+			msgSubject = strings.TrimPrefix(lineTmpl, "Subject:")
+		} else {
+			msgBody += lineTmpl + "\n"
+		}
+	}
+	infile.Close()
+	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), nil
 }
 
 func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {

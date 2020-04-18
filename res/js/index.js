@@ -191,7 +191,8 @@ function pollFormData() {
 
 function writeFormDataToComposer(data) {
 	if (data.TargetForm) {
-		$('#msg_body').val(JSON.stringify(data))
+		$('#msg_body').val(data.MsgBody)
+		$('#msg_subject').val(data.MsgSubject)
 	}
 }
 
@@ -253,6 +254,7 @@ function initComposeModal() {
 
 function initForms() {
 	$.getJSON("/api/formcatalog", function(data){
+		$('#formsVersion').text("(v" + data.Version + ")");
 		$('#formsRootFolderName').text(data.Path);
 		appendFormFolder('formFolderRoot', data);
 	});

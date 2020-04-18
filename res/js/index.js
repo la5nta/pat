@@ -156,6 +156,45 @@ function initStatusModal() {
 	$('.navbar-brand').click(function(e){ $('#statusModal').modal('toggle'); })
 }
 
+function onFormLaunching() {
+	$('#selectForm').modal('hide')
+	startPollingFormData()
+}
+
+function startPollingFormData() {
+	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1);
+	pollFormData()
+}
+
+function forgetFormData() {
+	deleteCookie("forminstance");
+}
+
+function pollFormData() {
+	$.get(
+		'api/form',
+		{},
+		function(data) {
+			console.log(data)
+			if ($('#composer').hasClass('show') && (!data.TargetForm || !data.TargetForm.Name)) {
+				window.setTimeout(pollFormData, 1000)
+			} else {
+				console.log("done polling")
+				if ($('#composer').hasClass('show') && data.TargetForm && data.TargetForm.Name) {
+					writeFormDataToComposer(data)
+				}
+			}
+		},
+		'json'
+	)
+}
+
+function writeFormDataToComposer(data) {
+	if (data.TargetForm) {
+		$('#msg_body').val(JSON.stringify(data))
+	}
+}
+
 function initComposeModal() {
 	$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
 	var tokenfieldConfig = {
@@ -166,6 +205,12 @@ function initComposeModal() {
 	$('#msg_to').tokenfield(tokenfieldConfig);
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
+	$('#composer').on('hide.bs.modal', forgetFormData);
+	$('#composer').on('shown.bs.modal', function() {
+			$('.formLaunch').click( onFormLaunching );
+		}
+	);
+
 	$('#composer_error').hide();
 
 	$('#compose_cancel').click(function(evt){
@@ -211,7 +256,6 @@ function initForms() {
 		$('#formsRootFolderName').text(data.Path);
 		appendFormFolder('formFolderRoot', data);
 	});
-	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1);
 }
 
 function setCookie(cname, cvalue, exdays) {
@@ -219,6 +263,10 @@ function setCookie(cname, cvalue, exdays) {
   d.setTime(d.getTime() + (exdays*24*60*60*1000));
   var expires = "expires="+ d.toUTCString();
   document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function deleteCookie(cname) {
+  document.cookie = cname + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }
 
 function appendFormFolder(rootId, data) {

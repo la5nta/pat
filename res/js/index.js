@@ -253,10 +253,14 @@ function initComposeModal() {
 }
 
 function initForms() {
+	$('#formsSelectBtn').hide()
 	$.getJSON("/api/formcatalog", function(data){
-		$('#formsVersion').text("(v" + data.Version + ")");
-		$('#formsRootFolderName').text(data.Path);
-		appendFormFolder('formFolderRoot', data);
+		if (data.Path && data.Path != "" && data.Path != ".") {
+			$('#formsVersion').text("(v" + data.Version + ")");
+			$('#formsRootFolderName').text(data.Path);
+			$('#formsSelectBtn').show()
+			appendFormFolder('formFolderRoot', data);
+		}
 	});
 }
 

@@ -834,10 +834,10 @@ func composeFormReport(args []string) {
 	msg := composeMessageHeader(nil)
 	var varMap map[string]string
 	varMap = make(map[string]string)
-	varMap["Subjectline"] = msg.Subject()
-	varMap["Templateversion"] = getFormsVersion(tmplPath)
-	varMap["MsgSender"] = fOptions.MyCall
-	fmt.Println("forms version: " + varMap["Templateversion"])
+	varMap["subjectline"] = msg.Subject()
+	varMap["templateversion"] = getFormsVersion(tmplPath)
+	varMap["msgsender"] = fOptions.MyCall
+	fmt.Println("forms version: " + varMap["templateversion"])
 
 	msgSubject, bodyContent, err := buildFormMessage(tmplPath, varMap, true)
 
@@ -892,18 +892,19 @@ func buildFormMessage(tmplPath string, varMap map[string]string, interactive boo
 			strings.HasPrefix(lineTmpl, "Msg:") {
 			continue
 		}
-		matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
 		if interactive {
+			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
 			fmt.Println(string(lineTmpl))
-		}
-		for i := range matches {
-			varName := matches[i][1]
-			if interactive && varMap[varName] == "" {
-				fmt.Print(varName + ": ")
-				varMap[varName] = "blank"
-				val := readLine()
-				if val != "" {
-					varMap[varName] = val
+			for i := range matches {
+				varName := matches[i][1]
+				varNameLower := strings.ToLower(varName)
+				if varMap[varNameLower] == "" {
+					fmt.Print(varName + ": ")
+					varMap[varNameLower] = "blank"
+					val := readLine()
+					if val != "" {
+						varMap[varNameLower] = val
+					}
 				}
 			}
 		}
@@ -922,7 +923,7 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 	result := s
 	matches := re.FindAllStringSubmatch(s, -1)
 	for _, match := range matches {
-		value := values[match[1]]
+		value := values[strings.ToLower(match[1])]
 		if value != "" {
 			result = strings.Replace(result, match[0], value, -1)
 		}

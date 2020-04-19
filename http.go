@@ -243,50 +243,49 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10000000); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	} else {
-		formPath, ok := r.URL.Query()["formPath"]
-		if !ok {
-			http.Error(w, "formPath query param missing", http.StatusBadRequest)
-			log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
-		}
-
-		formFolder, err := buildFormFolder(config.FormsPath)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-			return
-		}
-
-		form, err := findFormFromURI(formPath[0], formFolder)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("can't find form to match posted form data %s %s", formPath[0], r.URL)
-			return
-		}
-
-		key, err := r.Cookie("forminstance")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("missing cookie %s %s", formPath[0], r.URL)
-			return
-		}
-		var formData FormData
-		formData.TargetForm = form
-		formData.Fields = make (map[string]string)
-		for key, values := range r.PostForm {
-			formData.Fields[key] = values[0]
-		}
-
-		fullFormPath := filepath.Join(config.FormsPath, form.TxtFileURI)
-		msgSubject, msgBody, err := buildFormMessage(fullFormPath, formData.Fields, false)
-		if (err != nil) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-		}
-		formData.MsgSubject = msgSubject
-		formData.MsgBody = msgBody
-		postedFormData[key.Value] = formData
 	}
+	formPath, ok := r.URL.Query()["formPath"]
+	if !ok {
+		http.Error(w, "formPath query param missing", http.StatusBadRequest)
+		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
+	}
+
+	formFolder, err := buildFormFolder(config.FormsPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		return
+	}
+
+	form, err := findFormFromURI(formPath[0], formFolder)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("can't find form to match posted form data %s %s", formPath[0], r.URL)
+		return
+	}
+
+	key, err := r.Cookie("forminstance")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("missing cookie %s %s", formPath[0], r.URL)
+		return
+	}
+	var formData FormData
+	formData.TargetForm = form
+	formData.Fields = make (map[string]string)
+	for key, values := range r.PostForm {
+		formData.Fields[strings.ToLower(key)] = values[0]
+	}
+
+	fullFormPath := filepath.Join(config.FormsPath, form.TxtFileURI)
+	msgSubject, msgBody, err := buildFormMessage(fullFormPath, formData.Fields, false)
+	if (err != nil) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+	}
+	formData.MsgSubject = msgSubject
+	formData.MsgBody = msgBody
+	postedFormData[key.Value] = formData
 	r.Body.Close()
 	io.WriteString(w, "<script>window.close()</script>")
 }
@@ -560,7 +559,7 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 	for scanner.Scan() {
 		l := scanner.Text()
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", "form?"+r.URL.Query().Encode(), -1)
-		_, err = io.WriteString(w, l)
+		_, err = io.WriteString(w, l+"\n")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			log.Printf("can't write form template into response %s %s: %s", r.Method, r.URL.Path, err)

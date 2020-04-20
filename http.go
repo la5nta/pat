@@ -65,6 +65,7 @@ type Form struct {
 	TxtFileURI string
 	InitialURI string
 	ViewerURI string
+	ReplyURI string
 }
 
 // Folder with forms
@@ -81,6 +82,7 @@ type FormData struct {
 	Fields map[string] string
 	MsgSubject string
 	MsgBody string
+	MsgXml string
 }
 
 var postedFormData map[string]FormData
@@ -176,7 +178,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			}
 		} else {
 			if (filepath.Ext(info.Name()) == ".txt") {
-				txtURI, initialURI, viewerURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath,info.Name()))
+				txtURI, initialURI, viewerURI, replyURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath,info.Name()))
 				if err != nil {
 					continue
 				}
@@ -188,6 +190,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 						TxtFileURI: txtURI,
 						InitialURI: initialURI,
 						ViewerURI: viewerURI,
+						ReplyURI: replyURI,
 					}
 				}
 			}
@@ -202,13 +205,18 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	return retVal, nil
 }
 
-func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, error) {
+func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, error) {
 	fd, err := os.Open(txtPath)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 	scanner := bufio.NewScanner(fd)
-	baseURI := path.Dir(txtPath)
+	baseURI := path.Dir(txtPath) + string(os.PathSeparator)
+	formsPathWithSlash := config.FormsPath + string(os.PathSeparator)
+	txtPathTrimmed := strings.TrimPrefix(txtPath, formsPathWithSlash)
+	initialPath := ""
+	viewerPath := ""
+	replyPath := ""
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "Form:") {
@@ -216,16 +224,18 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, error) {
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
 			if (fileNames != nil && len(fileNames) >= 2){
-				txtPathTrimmed := strings.TrimPrefix(txtPath, config.FormsPath)
-				initialPath := strings.TrimPrefix(baseURI + "/" + fileNames[0], config.FormsPath)
-				viewerPath := strings.TrimPrefix(baseURI + "/" + fileNames[1], config.FormsPath)
-				fd.Close()
-				return txtPathTrimmed, initialPath,viewerPath, nil
+				initialPath = strings.TrimPrefix(baseURI + fileNames[0], formsPathWithSlash)
+				viewerPath = strings.TrimPrefix(baseURI + fileNames[1], formsPathWithSlash)
 			}
+		}
+		if strings.HasPrefix(l, "ReplyTemplate:") {
+			replyPath = strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:"))
+			replyPath = strings.TrimPrefix(baseURI + replyPath, formsPathWithSlash)
 		}
 	}
 	fd.Close()
-	return "", "", "", nil
+	//log.Printf("'%s' '%s' '%s' '%s'", txtPathTrimmed, initialPath, viewerPath, replyPath)
+	return txtPathTrimmed, initialPath, viewerPath, replyPath, nil
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {
@@ -277,14 +287,14 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		formData.Fields[strings.ToLower(key)] = values[0]
 	}
 
-	fullFormPath := filepath.Join(config.FormsPath, form.TxtFileURI)
-	msgSubject, msgBody, err := buildFormMessage(fullFormPath, formData.Fields, false)
+	msgSubject, msgBody, msgXml, err := buildFormMessage(form, formData.Fields, false)
 	if (err != nil) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 	}
 	formData.MsgSubject = msgSubject
 	formData.MsgBody = msgBody
+	formData.MsgXml = msgXml
 	postedFormData[key.Value] = formData
 	r.Body.Close()
 	io.WriteString(w, "<script>window.close()</script>")
@@ -300,7 +310,7 @@ func findFormFromURI(path string, folder FormFolder) (Form, error) {
 		}
 	}
 	for _, form := range folder.Forms {
-		if form.InitialURI == path {
+		if form.InitialURI == path || form.InitialURI == path + ".html" || form.ViewerURI == path || form.ViewerURI == path + ".html" || form.ReplyURI == path || form.ReplyURI == path + ".0" || form.TxtFileURI == path || form.TxtFileURI == path + ".txt" {
 			return form, nil
 		}
 	}
@@ -457,6 +467,13 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg.AddFile(fbb.NewFile(f.Filename, p))
+	}
+
+	key, err := r.Cookie("forminstance")
+	if err == nil {
+		xml := postedFormData[key.Value].MsgXml
+		form := postedFormData[key.Value].TargetForm
+		msg.AddFile(fbb.NewFile(GetXmlAttachmentNameForForm(form), []byte(xml)))
 	}
 
 	// Other fields

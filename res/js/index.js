@@ -206,7 +206,7 @@ function initComposeModal() {
 	$('#msg_to').tokenfield(tokenfieldConfig);
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
-	$('#composer').on('hide.bs.modal', forgetFormData);
+	$('#composer').on('hidden.bs.modal', forgetFormData);
 	$('#composer').on('shown.bs.modal', function() {
 			$('.formLaunch').click( onFormLaunching );
 		}

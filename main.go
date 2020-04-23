@@ -796,7 +796,7 @@ func getFormsVersion(templatePath string) string {
 	// walking up the path to find a version file.
 	// Winlink's Standard_Forms.zip include it in its root.
 	dir := templatePath
-	if (strings.HasSuffix(templatePath, ".txt")){
+	if strings.HasSuffix(templatePath, ".txt") {
 		dir = filepath.Dir(templatePath)
 	}
 	verFilePath := ""
@@ -878,7 +878,7 @@ func composeFormReport(args []string) {
 	msg.SetBody(bodyContent)
 
 	attachmentName := GetXmlAttachmentNameForForm(form)
-	attachmentFile := fbb.NewFile(attachmentName, []byte (msgXml))
+	attachmentFile := fbb.NewFile(attachmentName, []byte(msgXml))
 	msg.AddFile(attachmentFile)
 
 	postMessage(msg)

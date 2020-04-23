@@ -61,29 +61,29 @@ type Notification struct {
 
 // Form
 type Form struct {
-	Name string
+	Name       string
 	TxtFileURI string
 	InitialURI string
-	ViewerURI string
-	ReplyURI string
+	ViewerURI  string
+	ReplyURI   string
 }
 
 // Folder with forms
 type FormFolder struct {
-	Name    string
-	Path    string
-	Version string
+	Name      string
+	Path      string
+	Version   string
 	FormCount int
-	Forms   []Form
-	Folders []FormFolder
+	Forms     []Form
+	Folders   []FormFolder
 }
 
 type FormData struct {
 	TargetForm Form
-	Fields map[string] string
+	Fields     map[string]string
 	MsgSubject string
-	MsgBody string
-	MsgXml string
+	MsgBody    string
+	MsgXml     string
 }
 
 var postedFormData map[string]FormData
@@ -95,8 +95,7 @@ var websocketHub *WSHub
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
-	postedFormData = make (map[string]FormData)
-
+	postedFormData = make(map[string]FormData)
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
@@ -155,11 +154,11 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	foldersArr := make([]FormFolder, 1000)
 
 	retVal := FormFolder{
-		Name:    rootFileInfo.Name(),
-		Path:    rootFile.Name(),
+		Name:      rootFileInfo.Name(),
+		Path:      rootFile.Name(),
 		FormCount: 0,
-		Forms:   formsArr[0:0],
-		Folders: foldersArr[0:0],
+		Forms:     formsArr[0:0],
+		Folders:   foldersArr[0:0],
 	}
 
 	infos, err := rootFile.Readdir(0)
@@ -179,20 +178,20 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			}
 			retVal.FormCount += retVal.Folders[folderCnt-1].FormCount
 		} else {
-			if (filepath.Ext(info.Name()) == ".txt") {
-				txtURI, initialURI, viewerURI, replyURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath,info.Name()))
+			if filepath.Ext(info.Name()) == ".txt" {
+				txtURI, initialURI, viewerURI, replyURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath, info.Name()))
 				if err != nil {
 					continue
 				}
 				if initialURI != "" || viewerURI != "" {
 					formCnt++
 					retVal.Forms = formsArr[0:formCnt]
-					retVal.Forms[formCnt-1] = Form {
-						Name: strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
+					retVal.Forms[formCnt-1] = Form{
+						Name:       strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
 						TxtFileURI: txtURI,
 						InitialURI: initialURI,
-						ViewerURI: viewerURI,
-						ReplyURI: replyURI,
+						ViewerURI:  viewerURI,
+						ReplyURI:   replyURI,
 					}
 					retVal.FormCount++
 				}
@@ -226,14 +225,14 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, err
 			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
-			if (fileNames != nil && len(fileNames) >= 2){
-				initialPath = strings.TrimPrefix(baseURI + fileNames[0], formsPathWithSlash)
-				viewerPath = strings.TrimPrefix(baseURI + fileNames[1], formsPathWithSlash)
+			if fileNames != nil && len(fileNames) >= 2 {
+				initialPath = strings.TrimPrefix(baseURI+fileNames[0], formsPathWithSlash)
+				viewerPath = strings.TrimPrefix(baseURI+fileNames[1], formsPathWithSlash)
 			}
 		}
 		if strings.HasPrefix(l, "ReplyTemplate:") {
 			replyPath = strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:"))
-			replyPath = strings.TrimPrefix(baseURI + replyPath, formsPathWithSlash)
+			replyPath = strings.TrimPrefix(baseURI+replyPath, formsPathWithSlash)
 		}
 	}
 	fd.Close()
@@ -285,13 +284,13 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	}
 	var formData FormData
 	formData.TargetForm = form
-	formData.Fields = make (map[string]string)
+	formData.Fields = make(map[string]string)
 	for key, values := range r.PostForm {
 		formData.Fields[strings.ToLower(key)] = values[0]
 	}
 
 	msgSubject, msgBody, msgXml, err := buildFormMessage(form, formData.Fields, false)
-	if (err != nil) {
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 	}
@@ -313,7 +312,7 @@ func findFormFromURI(path string, folder FormFolder) (Form, error) {
 		}
 	}
 	for _, form := range folder.Forms {
-		if form.InitialURI == path || form.InitialURI == path + ".html" || form.ViewerURI == path || form.ViewerURI == path + ".html" || form.ReplyURI == path || form.ReplyURI == path + ".0" || form.TxtFileURI == path || form.TxtFileURI == path + ".txt" {
+		if form.InitialURI == path || form.InitialURI == path+".html" || form.ViewerURI == path || form.ViewerURI == path+".html" || form.ReplyURI == path || form.ReplyURI == path+".0" || form.TxtFileURI == path || form.TxtFileURI == path+".txt" {
 			return form, nil
 		}
 	}
@@ -570,10 +569,10 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 	}
 
-	fd, err := os.Open(path.Join(config.FormsPath, strings.TrimLeft(path.Clean( formPath[0]), "./\\")))
+	fd, err := os.Open(path.Join(config.FormsPath, strings.TrimLeft(path.Clean(formPath[0]), "./\\")))
 	if err != nil {
-		http.Error(w, "can't open template " + formPath[0], http.StatusBadRequest)
-		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, "can't open template " + formPath[0])
+		http.Error(w, "can't open template "+formPath[0], http.StatusBadRequest)
+		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
 	}
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {

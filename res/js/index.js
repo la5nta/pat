@@ -266,7 +266,7 @@ function initFormSelect(data){
 		&& data.Path != "."
 		&& (data.Folders && data.Folders.length > 0 || data.Forms && data.Forms.length > 0)
 	) {
-		$('#formsVersion').text("(v" + data.Version + ")");
+		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.Version+'</a>)</span>');
 		$('#formsRootFolderName').text(data.Path);
 		appendFormFolder('formFolderRoot', data);
 	}

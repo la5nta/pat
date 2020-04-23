@@ -253,15 +253,34 @@ function initComposeModal() {
 }
 
 function initForms() {
-	$('#formsSelectBtn').hide()
-	$.getJSON("/api/formcatalog", function(data){
-		if (data.Path && data.Path != "" && data.Path != ".") {
-			$('#formsVersion').text("(v" + data.Version + ")");
-			$('#formsRootFolderName').text(data.Path);
-			$('#formsSelectBtn').show()
-			appendFormFolder('formFolderRoot', data);
-		}
-	});
+	$.getJSON("/api/formcatalog")
+		.done(function(data){initFormSelect(data)})
+		.fail(function(data){initFormSelect(null)})
+		;
+}
+
+function initFormSelect(data){
+	if (data
+		&& data.Path
+		&& data.Path != ""
+		&& data.Path != "."
+		&& (data.Folders && data.Folders.length > 0 || data.Forms && data.Forms.length > 0)
+	) {
+		$('#formsVersion').text("(v" + data.Version + ")");
+		$('#formsRootFolderName').text(data.Path);
+		appendFormFolder('formFolderRoot', data);
+	}
+	else {
+		$('#formsRootFolderName').text('missing forms_path in Pat config');
+		$(`#formFolderRoot`).append(`
+			<h6>Form templates not configured correctly</h6>
+			<ul>
+				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
+				<li>Unzip the Standard_Forms archive</li>
+				<li>Use 'pat configure' to point to the template folder. E.g. "forms_path": "/Users/walter/.wl2k/Standard_Forms"</li>
+			</ul>
+			`);
+	}
 }
 
 function setCookie(cname, cvalue, exdays) {
@@ -276,38 +295,40 @@ function deleteCookie(cname) {
 }
 
 function appendFormFolder(rootId, data) {
-	if (data.Folders && data.Folders.length > 0) {
+	if (data.Folders && data.Folders.length > 0 && data.FormCount > 0) {
 		var rootAcc = `${rootId}Acc`
 		$(`#${rootId}`).append(`
 			<div class="accordion" id="${rootAcc}">
 			</div>
 			`);
 		data.Folders.forEach(function (folder) {
-			var folderNameId = folder.Name.replace( /\s/g, "_" );
-			var cardBodyId = folderNameId+"Body";
-			var card =
-			`
-			<div class="card">
-				<div class="card-header d-flex">
-					<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
-						${folder.Name}
-					</button>
-				</div>
-				<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
-					<div class="card-body" id=${cardBodyId}>
+			if (folder.FormCount > 0) {
+				var folderNameId = rootId + folder.Name.replace( /\s/g, "_" );
+				var cardBodyId = folderNameId+"Body";
+				var card =
+				`
+				<div class="card">
+					<div class="card-header d-flex">
+						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
+							${folder.Name}
+						</button>
+					</div>
+					<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
+						<div class="card-body" id=${cardBodyId}>
+						</div>
 					</div>
 				</div>
-			</div>
-			`
-			$(`#${rootAcc}`).append(card)
-			appendFormFolder(`${cardBodyId}`, folder)
-			if (folder.Forms && folder.Forms.length > 0){
-				var cardBodyFormsId = `${cardBodyId}Forms`
-				$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
-				folder.Forms.forEach((form) => {
-					var pathEncoded = encodeURIComponent(form.InitialURI)
-					$(`#${cardBodyFormsId}`).append(`<a href="api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light formLaunch">${form.Name}</a>`)
-				});
+				`
+				$(`#${rootAcc}`).append(card)
+				appendFormFolder(`${cardBodyId}`, folder)
+				if (folder.Forms && folder.Forms.length > 0){
+					var cardBodyFormsId = `${cardBodyId}Forms`
+					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
+					folder.Forms.forEach((form) => {
+						var pathEncoded = encodeURIComponent(form.InitialURI)
+						$(`#${cardBodyFormsId}`).append(`<a href="api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light formLaunch">${form.Name}</a>`)
+					});
+				}
 			}
 		});
 	}

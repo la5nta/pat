@@ -73,6 +73,7 @@ type FormFolder struct {
 	Name    string
 	Path    string
 	Version string
+	FormCount int
 	Forms   []Form
 	Folders []FormFolder
 }
@@ -140,7 +141,6 @@ func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func buildFormFolder(rootPath string) (FormFolder, error) {
-
 	rootFile, err := os.Open(rootPath)
 	if err != nil {
 		return FormFolder{}, err
@@ -157,6 +157,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	retVal := FormFolder{
 		Name:    rootFileInfo.Name(),
 		Path:    rootFile.Name(),
+		FormCount: 0,
 		Forms:   formsArr[0:0],
 		Folders: foldersArr[0:0],
 	}
@@ -176,6 +177,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			if err != nil {
 				return retVal, err
 			}
+			retVal.FormCount += retVal.Folders[folderCnt-1].FormCount
 		} else {
 			if (filepath.Ext(info.Name()) == ".txt") {
 				txtURI, initialURI, viewerURI, replyURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath,info.Name()))
@@ -192,6 +194,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 						ViewerURI: viewerURI,
 						ReplyURI: replyURI,
 					}
+					retVal.FormCount++
 				}
 			}
 		}

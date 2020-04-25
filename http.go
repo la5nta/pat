@@ -213,9 +213,9 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, err
 		return "", "", "", "", err
 	}
 	scanner := bufio.NewScanner(fd)
-	baseURI := path.Dir(txtPath) + string(os.PathSeparator)
-	formsPathWithSlash := config.FormsPath + string(os.PathSeparator)
+	formsPathWithSlash := config.FormsPath + "/"
 	txtPathTrimmed := strings.TrimPrefix(txtPath, formsPathWithSlash)
+	baseURI := path.Dir(txtPathTrimmed)
 	initialPath := ""
 	viewerPath := ""
 	replyPath := ""
@@ -226,13 +226,13 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, err
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
 			if fileNames != nil && len(fileNames) >= 2 {
-				initialPath = strings.TrimPrefix(baseURI+fileNames[0], formsPathWithSlash)
-				viewerPath = strings.TrimPrefix(baseURI+fileNames[1], formsPathWithSlash)
+				initialPath = path.Join(baseURI, fileNames[0])
+				viewerPath = path.Join(baseURI, fileNames[1])
 			}
 		}
 		if strings.HasPrefix(l, "ReplyTemplate:") {
 			replyPath = strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:"))
-			replyPath = strings.TrimPrefix(baseURI+replyPath, formsPathWithSlash)
+			replyPath = path.Join(baseURI, replyPath)
 		}
 	}
 	fd.Close()
@@ -574,10 +574,27 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't open template "+formPath[0], http.StatusBadRequest)
 		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
 	}
+
+	now := time.Now()
+	nowDateTime := now.Format(time.RFC3339)
+	nowDateTimeUTC := now.UTC().Format(time.RFC3339)
+	nowDate := now.Format("02-Jan-2006")
+	nowTime := now.Format("15:04 MST")
+
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
 		l := scanner.Text()
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", "form?"+r.URL.Query().Encode(), -1)
+		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
+		l = strings.Replace(l, "http://localhost:8001", "form?"+r.URL.Query().Encode(), -1)
+		l = strings.Replace(l, "{MsgSender}", fOptions.MyCall, -1)
+		l = strings.Replace(l, "{Callsign}", fOptions.MyCall, -1)
+		l = strings.Replace(l, "{ProgramVersion}", "Pat " + versionStringShort(), -1)
+		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
+		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
+		l = strings.Replace(l, "{Date}", nowDate, -1)
+		l = strings.Replace(l, "{UDTG}", nowDate, -1)
+		l = strings.Replace(l, "{Time}", nowTime, -1)
 		_, err = io.WriteString(w, l+"\n")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

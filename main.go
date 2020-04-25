@@ -802,15 +802,15 @@ func getFormsVersion(templatePath string) string {
 	verFilePath := ""
 	var verFile *os.File
 	for {
-		verFilePath = filepath.Join(dir, "Standard_Forms_Version.dat")
+		verFilePath = path.Join(dir, "Standard_Forms_Version.dat")
 		fd, verFileErr := os.Open(verFilePath)
 		if dir == "." ||
 			dir == ".." ||
-			dir == string(os.PathSeparator) ||
+			strings.HasSuffix(dir, string(os.PathSeparator)) ||
 			verFileErr == nil ||
 			fd != nil {
-			verFile = fd
-			break
+				verFile = fd
+				break
 		}
 		dir = filepath.Dir(dir) // going up by one
 	}
@@ -896,7 +896,7 @@ func GetXmlAttachmentNameForForm(f Form) string {
 
 //returns message subject, body, and XML attachment content for the given template and variable map
 func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (string, string, string, error) {
-	tmplPath := filepath.Join(config.FormsPath, tmpl.TxtFileURI)
+	tmplPath := path.Join(config.FormsPath, tmpl.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
 		tmplPath += ".txt"
 	}
@@ -915,7 +915,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
 		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+Version, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + versionStringShort(), -1)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
 			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
 			strings.HasPrefix(lineTmpl, "To:") ||
@@ -969,7 +969,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 `,
 		xml.Header,
 		"tbd",
-		"Pat "+Version,
+		versionString(),
 		now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(),
 		fOptions.MyCall,
 		config.Locator,
@@ -1024,4 +1024,8 @@ func postMessage(msg *fbb.Message) {
 
 func versionString() string {
 	return fmt.Sprintf("v%s (%s) %s/%s - %s", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+func versionStringShort() string {
+	return fmt.Sprintf("v%s (%s)", Version, GitRev)
 }

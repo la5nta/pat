@@ -175,11 +175,11 @@ function pollFormData() {
 		'api/form',
 		{},
 		function(data) {
-			console.log(data)
+//			console.log(data)
 			if ($('#composer').hasClass('show') && (!data.TargetForm || !data.TargetForm.Name)) {
 				window.setTimeout(pollFormData, 1000)
 			} else {
-				console.log("done polling")
+//				console.log("done polling")
 				if ($('#composer').hasClass('show') && data.TargetForm && data.TargetForm.Name) {
 					writeFormDataToComposer(data)
 				}

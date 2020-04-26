@@ -165,6 +165,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	if err != nil {
 		return retVal, err
 	}
+	rootFile.Close()
 
 	folderCnt := 0
 	formCnt := 0
@@ -569,7 +570,34 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 	}
 
-	fd, err := os.Open(path.Join(config.FormsPath, strings.TrimLeft(path.Clean(formPath[0]), "./\\")))
+	absPathTemplate := path.Join(config.FormsPath, strings.TrimLeft(path.Clean(formPath[0]), "./\\"))
+
+	// now deal with cases where the html file name specified in the .txt file, has differnet caseness than the actual .html file on disk.
+	absPathTemplateFolder := filepath.Dir(absPathTemplate)
+
+	templateDirFd, err := os.Open(absPathTemplateFolder)
+	if err != nil {
+		http.Error(w, "can't read template folder", http.StatusBadRequest)
+		log.Printf("can't read template folder %s, %s", absPathTemplateFolder, r.URL.Path)
+	}
+
+	fileNames, err := templateDirFd.Readdirnames(0)
+	if err != nil {
+		http.Error(w, "can't read template folder", http.StatusBadRequest)
+		log.Printf("can't read template folder %s, %s", absPathTemplateFolder, r.URL.Path)
+	}
+
+	templateDirFd.Close()
+
+	absPathTemplate = ""
+	for _, name := range fileNames {
+		if strings.HasSuffix(strings.ToLower(formPath[0]), strings.ToLower(name)) {
+			absPathTemplate = path.Join( absPathTemplateFolder, name)
+			break
+		}
+	}
+
+	fd, err := os.Open(absPathTemplate)
 	if err != nil {
 		http.Error(w, "can't open template "+formPath[0], http.StatusBadRequest)
 		log.Printf("can't find form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
@@ -601,6 +629,7 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 			log.Printf("can't write form template into response %s %s: %s", r.Method, r.URL.Path, err)
 		}
 	}
+	fd.Close()
 }
 
 func getStatus() Status {

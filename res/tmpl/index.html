@@ -18,7 +18,7 @@
 
 <body>
 	<!-- Fixed navbar -->
-	<nav class="navbar navbar-expand-lg navbar-light bg-light" role="navigation">
+	<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light" role="navigation">
 		<div class="container">
 			<div class="navbar-header">
 				<a class="navbar-brand" href="#" data-toggle="modal" data-target="#statusModal"><span id="gui_status_light" class="btn status-light btn-danger"></span> {{.Mycall}}</a>
@@ -30,10 +30,10 @@
 			</button>
 			<div class="collapse navbar-collapse" id="navbarSupportedContent">
 				<ul class="navbar-nav mr-auto nav-tabs">
-					<li class="nav-item"><a class="nav-link active" href="#" id="inbox_tab">Inbox</a></li>
-					<li class="nav-item"><a class="nav-link" href="#" id="outbox_tab">Outbox</a></li>
-					<li class="nav-item"><a class="nav-link" href="#" id="sent_tab">Sent</a></li>
-					<li class="nav-item"><a class="nav-link" href="#" id="archive_tab">Archive</a></li>
+					<li class="nav-item"><a class="nav-link active" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="inbox_tab">Inbox</a></li>
+					<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="outbox_tab">Outbox</a></li>
+					<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="sent_tab">Sent</a></li>
+					<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="archive_tab">Archive</a></li>
 					<li class="nav-item dropdown float-right">
 						<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></a>
 						<div class="dropdown-menu" role="menu">
@@ -51,7 +51,7 @@
 			</div>
 		</div>
 	</nav>
-	<div class="container">
+	<div class="container mt-5">
 		<div class="row">
 			<div id="navbar_progress" class="col d-none" >
 				<div class="progress">
@@ -341,7 +341,7 @@
 		</div>
 
 		<!-- Begin folder -->
-		<div class="table-responsive text-nowrap panel panel-default" id="folder">
+		<div class="table-responsive text-nowrap panel panel-default mt-2" id="folder">
 			<table class="table table-sm table-striped table-condensed table-hover"></table>
 		</div>
 

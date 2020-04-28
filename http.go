@@ -604,10 +604,13 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	nowDateTime := now.Format(time.RFC3339)
-	nowDateTimeUTC := now.UTC().Format(time.RFC3339)
-	nowDate := now.Format("02-Jan-2006")
-	nowTime := now.Format("15:04 MST")
+	nowDateTime := now.Format("2006-01-02 15:04:05")
+	nowDateTimeUTC := now.UTC().Format("2006-01-02 15:04:05Z")
+	nowDate := now.Format("2006-01-02")
+	nowTime := now.Format("15:04:05")
+	nowDateUTC := now.UTC().Format("2006-01-02Z")
+	nowTimeUTC := now.UTC().Format("15:04:05Z")
+	udtg := strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
 
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
@@ -621,8 +624,10 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
 		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
 		l = strings.Replace(l, "{Date}", nowDate, -1)
-		l = strings.Replace(l, "{UDTG}", nowDate, -1)
+		l = strings.Replace(l, "{UDate}", nowDateUTC, -1)
+		l = strings.Replace(l, "{UDTG}", udtg, -1)
 		l = strings.Replace(l, "{Time}", nowTime, -1)
+		l = strings.Replace(l, "{UTime}", nowTimeUTC, -1)
 		_, err = io.WriteString(w, l+"\n")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

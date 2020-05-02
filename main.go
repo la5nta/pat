@@ -990,11 +990,14 @@ func XmlEscape(s string) string {
 }
 
 func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {
+	if _, ok := values["txtstr"]; !ok {
+		values["txtstr"] = ""
+	}
 	result := s
 	matches := re.FindAllStringSubmatch(s, -1)
 	for _, match := range matches {
-		value := values[strings.ToLower(match[1])]
-		if value != "" {
+		value, ok := values[strings.ToLower(match[1])]
+		if ok {
 			result = strings.Replace(result, match[0], value, -1)
 		}
 	}

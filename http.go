@@ -968,8 +968,11 @@ func renderForm(contentData []byte) (string, error) {
 
 	retVal := ""
 	scanner := bufio.NewScanner(fd)
+	placeholderRegEx := regexp.MustCompile(`\{var\s+(\w+)\s*\}`)
+
 	for scanner.Scan() {
 		l := scanner.Text()
+		l = fillPlaceholders(l, placeholderRegEx, formVars)
 		retVal += l+"\n"
 	}
 	fd.Close()

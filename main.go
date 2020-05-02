@@ -974,7 +974,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 		fOptions.MyCall,
 		config.Locator,
 		filepath.Base(tmpl.ViewerURI),
-		filepath.Base(tmpl.ReplyURI),
+		filepath.Base(tmpl.ReplyInitialURI),
 		formVarsAsXml)
 	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), msgXml, nil
 }

@@ -2,6 +2,7 @@ var wsURL = "";
 var posId = 0;
 var connectAliases;
 var mycall = "";
+var formsCatalog;
 
 var statusDiv;
 var statusPos = $('#pos_status');
@@ -260,6 +261,7 @@ function initForms() {
 }
 
 function initFormSelect(data){
+	formsCatalog = data;
 	if (data
 		&& data.Path
 		&& data.Path != ""
@@ -829,17 +831,24 @@ function displayMessage(elem) {
 		}
 		for(var i = 0; data.Files && i < data.Files.length; i++){
 			var file = data.Files[i];
+			var formName = formXmlToFormName(file.Name);
 
+			var attachUrl = msg_url + "/" + file.Name + '?avoidcache=' + Math.floor(Math.random() * 1E9)
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 					(file.Size/1024).toFixed(2) + 'kB' +
-					'<img class="img-fluid img-thumbnail" src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
+					'<img class="img-fluid img-thumbnail" src="' + attachUrl + '" alt="' + file.Name + '">' +
 					'</a></div>'
+				);
+			} else if(formName) {
+				attachments.append(
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-edit"></span> ' +
+					formName + '</a></div>'
 				);
 			} else {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
 					file.Name + '<br />(' + (file.Size/1024).toFixed(2) + 'kB)' +
 					'</a></div>'
 				);
@@ -893,6 +902,21 @@ function displayMessage(elem) {
 		}
 		elem.attr('class', 'active');
 	});
+}
+
+function formXmlToFormName(fileName) {
+
+	var match = fileName.match( /^RMS_Express_Form_(\w+)-\d+\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	match = fileName.match( /^RMS_Express_Form_(\w+)\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	return null;
 }
 
 function replyCarbonCopyList(msg) {

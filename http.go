@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"html/template"
@@ -65,7 +66,8 @@ type Form struct {
 	TxtFileURI string
 	InitialURI string
 	ViewerURI  string
-	ReplyURI   string
+	ReplyInitialURI   string
+	ReplyViewerURI   string
 }
 
 // Folder with forms
@@ -180,7 +182,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			retVal.FormCount += retVal.Folders[folderCnt-1].FormCount
 		} else {
 			if filepath.Ext(info.Name()) == ".txt" {
-				txtURI, initialURI, viewerURI, replyURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath, info.Name()))
+				txtURI, initialURI, viewerURI, replyInitialURI, replyViewerURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath, info.Name()))
 				if err != nil {
 					continue
 				}
@@ -192,7 +194,8 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 						TxtFileURI: txtURI,
 						InitialURI: initialURI,
 						ViewerURI:  viewerURI,
-						ReplyURI:   replyURI,
+						ReplyInitialURI:   replyInitialURI,
+						ReplyViewerURI:   replyViewerURI,
 					}
 					retVal.FormCount++
 				}
@@ -208,10 +211,10 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	return retVal, nil
 }
 
-func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, error) {
+func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, string, error) {
 	fd, err := os.Open(txtPath)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", "", "", err
 	}
 	scanner := bufio.NewScanner(fd)
 	formsPathWithSlash := config.FormsPath + "/"
@@ -219,7 +222,8 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, err
 	baseURI := path.Dir(txtPathTrimmed)
 	initialPath := ""
 	viewerPath := ""
-	replyPath := ""
+	replyInitialPath := ""
+	replyViewerPath := ""
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "Form:") {
@@ -232,13 +236,13 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, err
 			}
 		}
 		if strings.HasPrefix(l, "ReplyTemplate:") {
-			replyPath = strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:"))
-			replyPath = path.Join(baseURI, replyPath)
+			replyPath := path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
+			_, replyInitialPath, replyViewerPath, _, _, err = GetHtmlUrisFromFormTxt(path.Join(config.FormsPath, replyPath))
 		}
 	}
 	fd.Close()
-	//log.Printf("'%s' '%s' '%s' '%s'", txtPathTrimmed, initialPath, viewerPath, replyPath)
-	return txtPathTrimmed, initialPath, viewerPath, replyPath, nil
+	//log.Printf("'%s' '%s' '%s' '%s' '%s'", txtPathTrimmed, initialPath, viewerPath, replyInitialPath, replyViewerPath)
+	return txtPathTrimmed, initialPath, viewerPath, replyInitialPath, replyViewerPath, err
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {
@@ -303,17 +307,39 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "<script>window.close()</script>")
 }
 
-func findFormFromURI(path string, folder FormFolder) (Form, error) {
+func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 	var retVal Form
 	retVal.Name = "unknown"
 	for _, subFolder := range folder.Folders {
-		form, err := findFormFromURI(path, subFolder)
+		form, err := findFormFromURI(formName, subFolder)
 		if err == nil {
 			return form, nil
 		}
 	}
+
 	for _, form := range folder.Forms {
-		if form.InitialURI == path || form.InitialURI == path+".html" || form.ViewerURI == path || form.ViewerURI == path+".html" || form.ReplyURI == path || form.ReplyURI == path+".0" || form.TxtFileURI == path || form.TxtFileURI == path+".txt" {
+		if form.InitialURI == formName ||
+		form.InitialURI == formName+".html" ||
+		form.ViewerURI == formName ||
+		form.ViewerURI == formName+".html" ||
+		form.ReplyInitialURI == formName ||
+		form.ReplyInitialURI == formName+".0" ||
+		form.ReplyViewerURI == formName ||
+		form.ReplyViewerURI == formName+".0" ||
+		form.TxtFileURI == formName ||
+		form.TxtFileURI == formName+".txt" {
+			return form, nil
+		}
+	}
+
+	// couldn't find it by full path, so try to find match by guessing folder name
+	formName = path.Join(folder.Name, formName)
+	for _, form := range folder.Forms {
+		if strings.Contains(form.InitialURI, formName) ||
+		strings.Contains(form.ViewerURI, formName) ||
+		strings.Contains(form.ReplyInitialURI, formName) ||
+		strings.Contains(form.ReplyViewerURI, formName) ||
+		strings.Contains(form.TxtFileURI, formName) {
 			return form, nil
 		}
 	}
@@ -563,6 +589,35 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func findAbsPathForTemplatePath(tmplPath string) (string, error) {
+	absPathTemplate := path.Join(config.FormsPath, strings.TrimLeft(path.Clean(tmplPath), "./\\"))
+
+	// now deal with cases where the html file name specified in the .txt file, has different caseness than the actual .html file on disk.
+	absPathTemplateFolder := filepath.Dir(absPathTemplate)
+
+	templateDirFd, err := os.Open(absPathTemplateFolder)
+	if err != nil {
+		return "", errors.New("can't read template folder")
+	}
+
+	fileNames, err := templateDirFd.Readdirnames(0)
+	if err != nil {
+		return "", errors.New("can't read template folder")
+	}
+
+	templateDirFd.Close()
+
+	absPathTemplate = ""
+	for _, name := range fileNames {
+		if strings.HasSuffix(strings.ToLower(tmplPath), strings.ToLower(name)) {
+			absPathTemplate = path.Join( absPathTemplateFolder, name)
+			break
+		}
+	}
+
+	return absPathTemplate, nil
+}
+
 func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 	formPath, ok := r.URL.Query()["formPath"]
 	if !ok {
@@ -570,31 +625,10 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 	}
 
-	absPathTemplate := path.Join(config.FormsPath, strings.TrimLeft(path.Clean(formPath[0]), "./\\"))
-
-	// now deal with cases where the html file name specified in the .txt file, has differnet caseness than the actual .html file on disk.
-	absPathTemplateFolder := filepath.Dir(absPathTemplate)
-
-	templateDirFd, err := os.Open(absPathTemplateFolder)
+	absPathTemplate, err := findAbsPathForTemplatePath(formPath[0])
 	if err != nil {
-		http.Error(w, "can't read template folder", http.StatusBadRequest)
-		log.Printf("can't read template folder %s, %s", absPathTemplateFolder, r.URL.Path)
-	}
-
-	fileNames, err := templateDirFd.Readdirnames(0)
-	if err != nil {
-		http.Error(w, "can't read template folder", http.StatusBadRequest)
-		log.Printf("can't read template folder %s, %s", absPathTemplateFolder, r.URL.Path)
-	}
-
-	templateDirFd.Close()
-
-	absPathTemplate = ""
-	for _, name := range fileNames {
-		if strings.HasSuffix(strings.ToLower(formPath[0]), strings.ToLower(name)) {
-			absPathTemplate = path.Join( absPathTemplateFolder, name)
-			break
-		}
+		http.Error(w, "find the full path for requested template "+formPath[0], http.StatusBadRequest)
+		log.Printf("find the full path for requested template %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
 	}
 
 	fd, err := os.Open(absPathTemplate)
@@ -821,6 +855,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
+
 	// Attachments are potentially unsanitized HTML and/or javascript.
 	// To avoid XSS, we enable the CSP sandbox directive so that these
 	// attachments can't call other parts of the API (deny same origin).
@@ -850,12 +885,95 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		found = true
-		http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+
+		formRendered, err := renderForm(f.Data())
+
+		if err != nil {
+			log.Println(err)
+			//http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+			return
+		}
+
+		http.ServeContent(w, r, f.Name()+".html", msg.Date(), bytes.NewReader([]byte(formRendered)))
 	}
 
 	if !found {
 		http.NotFound(w, r)
 	}
+}
+
+type Node struct {
+	XMLName xml.Name
+	Content []byte `xml:",innerxml"`
+	Nodes   []Node `xml:",any"`
+}
+
+func renderForm(contentData []byte) (string, error) {
+	buf := bytes.NewBuffer(contentData)
+	dec := xml.NewDecoder(buf)
+
+	var n1 Node
+	formParams := make(map[string]string)
+	formVars := make(map[string]string)
+
+	err := dec.Decode(&n1)
+	if err != nil {
+		return "", err
+	}
+
+	if n1.XMLName.Local != "RMS_Express_Form" {
+		return "", errors.New ("missing RMS_Express_Form tag in form XML")
+	}
+	for _, n2 := range n1.Nodes {
+		if n2.XMLName.Local == "form_parameters" {
+			for _, n3 := range n2.Nodes {
+				formParams[n3.XMLName.Local] = string(n3.Content)
+			}
+		}
+		if n2.XMLName.Local == "variables" {
+			for _, n3 := range n2.Nodes {
+				formVars[n3.XMLName.Local] = string(n3.Content)
+			}
+		}
+	}
+	if formParams["display_form"] == "" {
+		return "", errors.New ("missing display_form tag in form XML")
+	}
+
+	formFolder, err := buildFormFolder(config.FormsPath)
+	if err != nil {
+		return "", err
+	}
+
+	viewerForm, err := findFormFromURI(formParams["display_form"], formFolder)
+	if err != nil {
+		return "", err
+	}
+
+	viewerFormRelPath := viewerForm.ViewerURI
+	if (!strings.HasSuffix(viewerFormRelPath, formParams["display_form"])) {
+		viewerFormRelPath = viewerForm.ReplyViewerURI
+	}
+
+	absPathTemplate, err := findAbsPathForTemplatePath(viewerFormRelPath)
+	if err != nil {
+		return "", err
+	}
+
+	fd, err := os.Open(absPathTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	retVal := ""
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		l := scanner.Text()
+		retVal += l+"\n"
+	}
+	fd.Close()
+	return retVal, nil
 }
 
 // toHTML takes the given body and turns it into proper html with

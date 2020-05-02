@@ -809,8 +809,8 @@ func getFormsVersion(templatePath string) string {
 			strings.HasSuffix(dir, string(os.PathSeparator)) ||
 			verFileErr == nil ||
 			fd != nil {
-				verFile = fd
-				break
+			verFile = fd
+			break
 		}
 		dir = filepath.Dir(dir) // going up by one
 	}
@@ -915,7 +915,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
 		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + versionStringShort(), -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+versionStringShort(), -1)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
 			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
 			strings.HasPrefix(lineTmpl, "To:") ||

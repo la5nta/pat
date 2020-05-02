@@ -62,12 +62,12 @@ type Notification struct {
 
 // Form
 type Form struct {
-	Name       string
-	TxtFileURI string
-	InitialURI string
-	ViewerURI  string
-	ReplyInitialURI   string
-	ReplyViewerURI   string
+	Name            string
+	TxtFileURI      string
+	InitialURI      string
+	ViewerURI       string
+	ReplyInitialURI string
+	ReplyViewerURI  string
 }
 
 // Folder with forms
@@ -190,12 +190,12 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 					formCnt++
 					retVal.Forms = formsArr[0:formCnt]
 					retVal.Forms[formCnt-1] = Form{
-						Name:       strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
-						TxtFileURI: txtURI,
-						InitialURI: initialURI,
-						ViewerURI:  viewerURI,
-						ReplyInitialURI:   replyInitialURI,
-						ReplyViewerURI:   replyViewerURI,
+						Name:            strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
+						TxtFileURI:      txtURI,
+						InitialURI:      initialURI,
+						ViewerURI:       viewerURI,
+						ReplyInitialURI: replyInitialURI,
+						ReplyViewerURI:  replyViewerURI,
 					}
 					retVal.FormCount++
 				}
@@ -319,15 +319,15 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 
 	for _, form := range folder.Forms {
 		if form.InitialURI == formName ||
-		form.InitialURI == formName+".html" ||
-		form.ViewerURI == formName ||
-		form.ViewerURI == formName+".html" ||
-		form.ReplyInitialURI == formName ||
-		form.ReplyInitialURI == formName+".0" ||
-		form.ReplyViewerURI == formName ||
-		form.ReplyViewerURI == formName+".0" ||
-		form.TxtFileURI == formName ||
-		form.TxtFileURI == formName+".txt" {
+			form.InitialURI == formName+".html" ||
+			form.ViewerURI == formName ||
+			form.ViewerURI == formName+".html" ||
+			form.ReplyInitialURI == formName ||
+			form.ReplyInitialURI == formName+".0" ||
+			form.ReplyViewerURI == formName ||
+			form.ReplyViewerURI == formName+".0" ||
+			form.TxtFileURI == formName ||
+			form.TxtFileURI == formName+".txt" {
 			return form, nil
 		}
 	}
@@ -336,10 +336,10 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 	formName = path.Join(folder.Name, formName)
 	for _, form := range folder.Forms {
 		if strings.Contains(form.InitialURI, formName) ||
-		strings.Contains(form.ViewerURI, formName) ||
-		strings.Contains(form.ReplyInitialURI, formName) ||
-		strings.Contains(form.ReplyViewerURI, formName) ||
-		strings.Contains(form.TxtFileURI, formName) {
+			strings.Contains(form.ViewerURI, formName) ||
+			strings.Contains(form.ReplyInitialURI, formName) ||
+			strings.Contains(form.ReplyViewerURI, formName) ||
+			strings.Contains(form.TxtFileURI, formName) {
 			return form, nil
 		}
 	}
@@ -610,7 +610,7 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	absPathTemplate = ""
 	for _, name := range fileNames {
 		if strings.HasSuffix(strings.ToLower(tmplPath), strings.ToLower(name)) {
-			absPathTemplate = path.Join( absPathTemplateFolder, name)
+			absPathTemplate = path.Join(absPathTemplateFolder, name)
 			break
 		}
 	}
@@ -654,7 +654,7 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 		l = strings.Replace(l, "http://localhost:8001", "form?"+r.URL.Query().Encode(), -1)
 		l = strings.Replace(l, "{MsgSender}", fOptions.MyCall, -1)
 		l = strings.Replace(l, "{Callsign}", fOptions.MyCall, -1)
-		l = strings.Replace(l, "{ProgramVersion}", "Pat " + versionStringShort(), -1)
+		l = strings.Replace(l, "{ProgramVersion}", "Pat "+versionStringShort(), -1)
 		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
 		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
 		l = strings.Replace(l, "{Date}", nowDate, -1)
@@ -923,7 +923,7 @@ func renderForm(contentData []byte) (string, error) {
 	}
 
 	if n1.XMLName.Local != "RMS_Express_Form" {
-		return "", errors.New ("missing RMS_Express_Form tag in form XML")
+		return "", errors.New("missing RMS_Express_Form tag in form XML")
 	}
 	for _, n2 := range n1.Nodes {
 		if n2.XMLName.Local == "form_parameters" {
@@ -938,7 +938,7 @@ func renderForm(contentData []byte) (string, error) {
 		}
 	}
 	if formParams["display_form"] == "" {
-		return "", errors.New ("missing display_form tag in form XML")
+		return "", errors.New("missing display_form tag in form XML")
 	}
 
 	formFolder, err := buildFormFolder(config.FormsPath)
@@ -952,7 +952,7 @@ func renderForm(contentData []byte) (string, error) {
 	}
 
 	viewerFormRelPath := viewerForm.ViewerURI
-	if (!strings.HasSuffix(viewerFormRelPath, formParams["display_form"])) {
+	if !strings.HasSuffix(viewerFormRelPath, formParams["display_form"]) {
 		viewerFormRelPath = viewerForm.ReplyViewerURI
 	}
 
@@ -973,7 +973,7 @@ func renderForm(contentData []byte) (string, error) {
 	for scanner.Scan() {
 		l := scanner.Text()
 		l = fillPlaceholders(l, placeholderRegEx, formVars)
-		retVal += l+"\n"
+		retVal += l + "\n"
 	}
 	fd.Close()
 	return retVal, nil

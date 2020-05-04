@@ -66,6 +66,7 @@ type Form struct {
 	TxtFileURI      string
 	InitialURI      string
 	ViewerURI       string
+	ReplyTxtFileURI string
 	ReplyInitialURI string
 	ReplyViewerURI  string
 }
@@ -182,21 +183,14 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			retVal.FormCount += retVal.Folders[folderCnt-1].FormCount
 		} else {
 			if filepath.Ext(info.Name()) == ".txt" {
-				txtURI, initialURI, viewerURI, replyInitialURI, replyViewerURI, err := GetHtmlUrisFromFormTxt(path.Join(rootPath, info.Name()))
+				frm, err := BuildFormFromTxt(path.Join(rootPath, info.Name()))
 				if err != nil {
 					continue
 				}
-				if initialURI != "" || viewerURI != "" {
+				if frm.InitialURI != "" || frm.ViewerURI != "" {
 					formCnt++
 					retVal.Forms = formsArr[0:formCnt]
-					retVal.Forms[formCnt-1] = Form{
-						Name:            strings.TrimSuffix(filepath.Base(info.Name()), ".txt"),
-						TxtFileURI:      txtURI,
-						InitialURI:      initialURI,
-						ViewerURI:       viewerURI,
-						ReplyInitialURI: replyInitialURI,
-						ReplyViewerURI:  replyViewerURI,
-					}
+					retVal.Forms[formCnt-1] = frm
 					retVal.FormCount++
 				}
 			}
@@ -211,19 +205,25 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	return retVal, nil
 }
 
-func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, string, error) {
+func BuildFormFromTxt(txtPath string) (Form, error) {
 	fd, err := os.Open(txtPath)
 	if err != nil {
-		return "", "", "", "", "", err
+		return Form{}, err
+	}
+
+	formsPathWithSlash := config.FormsPath + "/"
+
+	retVal := Form{
+		Name:            strings.TrimSuffix(path.Base(txtPath), ".txt"),
+		TxtFileURI:      strings.TrimPrefix(txtPath, formsPathWithSlash),
+		InitialURI:      "",
+		ViewerURI:       "",
+		ReplyTxtFileURI: "",
+		ReplyInitialURI: "",
+		ReplyViewerURI:  "",
 	}
 	scanner := bufio.NewScanner(fd)
-	formsPathWithSlash := config.FormsPath + "/"
-	txtPathTrimmed := strings.TrimPrefix(txtPath, formsPathWithSlash)
-	baseURI := path.Dir(txtPathTrimmed)
-	initialPath := ""
-	viewerPath := ""
-	replyInitialPath := ""
-	replyViewerPath := ""
+	baseURI := path.Dir(retVal.TxtFileURI)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "Form:") {
@@ -231,18 +231,20 @@ func GetHtmlUrisFromFormTxt(txtPath string) (string, string, string, string, str
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
 			if fileNames != nil && len(fileNames) >= 2 {
-				initialPath = path.Join(baseURI, fileNames[0])
-				viewerPath = path.Join(baseURI, fileNames[1])
+				retVal.InitialURI = path.Join(baseURI, fileNames[0])
+				retVal.ViewerURI = path.Join(baseURI, fileNames[1])
 			}
 		}
 		if strings.HasPrefix(l, "ReplyTemplate:") {
-			replyPath := path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
-			_, replyInitialPath, replyViewerPath, _, _, err = GetHtmlUrisFromFormTxt(path.Join(config.FormsPath, replyPath))
+			retVal.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
+			tmpForm, _ := BuildFormFromTxt(path.Join(config.FormsPath, retVal.ReplyTxtFileURI))
+			retVal.ReplyInitialURI = tmpForm.InitialURI
+			retVal.ReplyViewerURI = tmpForm.ViewerURI
 		}
 	}
 	fd.Close()
-	//log.Printf("'%s' '%s' '%s' '%s' '%s'", txtPathTrimmed, initialPath, viewerPath, replyInitialPath, replyViewerPath)
-	return txtPathTrimmed, initialPath, viewerPath, replyInitialPath, replyViewerPath, err
+	//log.Printf("'%s'", retVal)
+	return retVal, err
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {

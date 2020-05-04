@@ -951,12 +951,11 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 	for varKey, varVal := range varMap {
 		formVarsAsXml += fmt.Sprintf("\t\t<%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
 	}
-	now := time.Now()
 	msgXml := fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
     <rms_express_version>%s</rms_express_version>
-    <submission_datetime>%04d%02d%02d%02d%02d%02d</submission_datetime>
+    <submission_datetime>%s</submission_datetime>
     <senders_callsign>%s</senders_callsign>
     <grid_square>%s</grid_square>
     <display_form>%s</display_form>
@@ -968,13 +967,13 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 </RMS_Express_Form>
 `,
 		xml.Header,
-		"tbd",
-		versionString(),
-		now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(),
+		"1.0",
+		versionStringShort(),
+		time.Now().UTC().Format("20060102150405"),
 		fOptions.MyCall,
 		config.Locator,
 		filepath.Base(tmpl.ViewerURI),
-		filepath.Base(tmpl.ReplyInitialURI),
+		filepath.Base(tmpl.ReplyTxtFileURI),
 		formVarsAsXml)
 	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), msgXml, nil
 }

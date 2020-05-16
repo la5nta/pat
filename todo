@@ -1,0 +1,13 @@
+missing in XML:
+<msgto></msgto>
+<msgcc></msgcc>
+<msgsender>KI7RMJ-5</msgsender>
+<msgsubject></msgsubject>
+<msgbody></msgbody>
+<msgp2p>False</msgp2p>
+<msgisreply>False</msgisreply>
+<msgisforward>False</msgisforward>
+<msgisacknowledgement>False</msgisacknowledgement>
+<msgseqnum>0</msgseqnum>
+
+what's this? Def: MsgOriginalBody=<var MsgOriginalBody>

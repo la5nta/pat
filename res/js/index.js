@@ -168,8 +168,11 @@ function startPollingFormData() {
 }
 
 function forgetFormData() {
+	window.clearTimeout(pollTimer)
 	deleteCookie("forminstance");
 }
+
+var pollTimer;
 
 function pollFormData() {
 	$.get(
@@ -178,7 +181,7 @@ function pollFormData() {
 		function(data) {
 //			console.log(data)
 			if ($('#composer').hasClass('show') && (!data.TargetForm || !data.TargetForm.Name)) {
-				window.setTimeout(pollFormData, 1000)
+				pollTimer = window.setTimeout(pollFormData, 1000)
 			} else {
 //				console.log("done polling")
 				if ($('#composer').hasClass('show') && data.TargetForm && data.TargetForm.Name) {
@@ -193,7 +196,10 @@ function pollFormData() {
 function writeFormDataToComposer(data) {
 	if (data.TargetForm) {
 		$('#msg_body').val(data.MsgBody)
-		$('#msg_subject').val(data.MsgSubject)
+		if (data.MsgSubject) {
+			// in case of composing a form-based reply we keep the 'Re: ...' subject line
+			$('#msg_subject').val(data.MsgSubject)
+		}
 	}
 }
 
@@ -208,10 +214,6 @@ function initComposeModal() {
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
 	$('#composer').on('hidden.bs.modal', forgetFormData);
-	$('#composer').on('shown.bs.modal', function() {
-			$('.formLaunch').click( onFormLaunching );
-		}
-	);
 
 	$('#composer_error').hide();
 
@@ -328,7 +330,7 @@ function appendFormFolder(rootId, data) {
 					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
 					folder.Forms.forEach((form) => {
 						var pathEncoded = encodeURIComponent(form.InitialURI)
-						$(`#${cardBodyFormsId}`).append(`<a href="api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light formLaunch">${form.Name}</a>`)
+						$(`#${cardBodyFormsId}`).append(`<a href="/api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching();">${form.Name}</a>`)
 					});
 				}
 			}
@@ -833,7 +835,7 @@ function displayMessage(elem) {
 			var file = data.Files[i];
 			var formName = formXmlToFormName(file.Name);
 
-			var attachUrl = msg_url + "/" + file.Name + '?avoidcache=' + Math.floor(Math.random() * 1E9)
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=true&avoidcache=' + Math.floor(Math.random() * 1E9)
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
 					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
@@ -868,6 +870,11 @@ function displayMessage(elem) {
 			$('#msg_body').val(quoteMsg(data));
 
 			$('#composer').modal('show');
+
+			//opens browser window for a form-based reply,
+			// or does nothing if this is not a form-based message
+			showReplyForm(msg_url, data);
+
 		});
 		$('#forward_btn').off('click');
 		$('#forward_btn').click(function(evt){
@@ -917,6 +924,35 @@ function formXmlToFormName(fileName) {
 	}
 
 	return null;
+}
+
+function showReplyForm(orgMsgUrl, msg){
+	for(var i = 0; msg.Files && i < msg.Files.length; i++){
+		var file = msg.Files[i];
+		var formName = formXmlToFormName(file.Name);
+		if (!formName){
+			continue
+		}
+		// retrieve form XML attachment and determine if it specifies a form-based reply
+		var attachUrl = orgMsgUrl + "/" + file.Name + '?&avoidcache=' + Math.floor(Math.random() * 1E9)
+		$.get(
+			attachUrl + "&rendertohtml=false&composereply=false",
+			{},
+			function(data) {
+				parser = new DOMParser();
+				xmlDoc = parser.parseFromString(data,"text/xml");
+				if (xmlDoc){
+					replyTmpl = xmlDoc.evaluate("/RMS_Express_Form/form_parameters/reply_template", xmlDoc, null, XPathResult.STRING_TYPE, null)
+					if ( replyTmpl && replyTmpl.stringValue ) {
+						window.setTimeout(startPollingFormData, 500)
+						open(attachUrl + "&rendertohtml=true&composereply=true")
+					}
+				}
+			},
+			"text"
+		)
+		return
+	}
 }
 
 function replyCarbonCopyList(msg) {

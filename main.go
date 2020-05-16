@@ -853,7 +853,7 @@ func composeFormReport(args []string) {
 	varMap["msgsender"] = fOptions.MyCall
 	fmt.Println("forms version: " + varMap["templateversion"])
 
-	msgSubject, bodyContent, msgXml, err := buildFormMessage(form, varMap, true)
+	msgSubject, bodyContent, msgXml, err := buildFormMessage(form, varMap, true, false)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
@@ -877,17 +877,20 @@ func composeFormReport(args []string) {
 
 	msg.SetBody(bodyContent)
 
-	attachmentName := GetXmlAttachmentNameForForm(form)
+	attachmentName := GetXmlAttachmentNameForForm(form, false)
 	attachmentFile := fbb.NewFile(attachmentName, []byte(msgXml))
 	msg.AddFile(attachmentFile)
 
 	postMessage(msg)
 }
 
-func GetXmlAttachmentNameForForm(f Form) string {
+func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	attachmentName := filepath.Base(f.ViewerURI)
+	if isReply {
+		attachmentName = filepath.Base(f.ReplyViewerURI)
+	}
 	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
-	attachmentName = "RMS_Express_Form_" + attachmentName + "-1.xml"
+	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
 	if len(attachmentName) > 50 {
 		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
 	}
@@ -895,10 +898,14 @@ func GetXmlAttachmentNameForForm(f Form) string {
 }
 
 //returns message subject, body, and XML attachment content for the given template and variable map
-func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (string, string, string, error) {
+func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isreply bool) (string, string, string, error) {
+
 	tmplPath := path.Join(config.FormsPath, tmpl.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
 		tmplPath += ".txt"
+	}
+	if isreply && tmpl.ReplyTxtFileURI != "" {
+		tmplPath = path.Join(config.FormsPath, tmpl.ReplyTxtFileURI)
 	}
 
 	infile, err := os.Open(tmplPath)
@@ -949,8 +956,22 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 
 	formVarsAsXml := ""
 	for varKey, varVal := range varMap {
-		formVarsAsXml += fmt.Sprintf("\t\t<%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
+		formVarsAsXml += fmt.Sprintf("    <%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
 	}
+
+	viewer := ""
+	if tmpl.ViewerURI != "" {
+		viewer = filepath.Base(tmpl.ViewerURI)
+	}
+	if isreply && tmpl.ReplyViewerURI != "" {
+		viewer = filepath.Base(tmpl.ReplyViewerURI)
+	}
+
+	replier := ""
+	if !isreply && tmpl.ReplyTxtFileURI != "" {
+		replier = filepath.Base(tmpl.ReplyTxtFileURI)
+	}
+
 	msgXml := fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
@@ -961,9 +982,9 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
     <display_form>%s</display_form>
     <reply_template>%s</reply_template>
   </form_parameters>
-	<variables>
+  <variables>
 %s
-	</variables>
+  </variables>
 </RMS_Express_Form>
 `,
 		xml.Header,
@@ -972,8 +993,8 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool) (st
 		time.Now().UTC().Format("20060102150405"),
 		fOptions.MyCall,
 		config.Locator,
-		filepath.Base(tmpl.ViewerURI),
-		filepath.Base(tmpl.ReplyTxtFileURI),
+		viewer,
+		replier,
 		formVarsAsXml)
 	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), msgXml, nil
 }

@@ -654,7 +654,7 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func fillFormTemplate (absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
+func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
 	fd, err := os.Open(absPathTemplate)
 	if err != nil {
 		return "", err
@@ -689,7 +689,7 @@ func fillFormTemplate (absPathTemplate string, formDestUrl string, placeholderRe
 		if placeholderRegEx != nil {
 			l = fillPlaceholders(l, placeholderRegEx, formVars)
 		}
-		retVal += l+"\n"
+		retVal += l + "\n"
 	}
 	fd.Close()
 	return retVal, nil
@@ -997,14 +997,13 @@ func renderForm(contentData []byte, composereply bool) (string, error) {
 	if composereply {
 		// authoring a form reply
 		formRelPath = form.ReplyInitialURI
- 	}	else if strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]) {
+	} else if strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]) {
 		//viewing a form reply
 		formRelPath = form.ReplyViewerURI
-	}	else {
+	} else {
 		// viewing a form
 		formRelPath = form.ViewerURI
- 	}
-
+	}
 
 	absPathTemplate, err := findAbsPathForTemplatePath(formRelPath)
 	if err != nil {

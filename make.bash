@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-export GO15VENDOREXPERIMENT=1
+export GO111MODULE=on
 
 if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
 
@@ -43,12 +43,11 @@ if [[ "$OS" == "linux"* ]]; then
 	fi
 fi
 
-# Update submodules (dependencies)
-echo -e "Updating git submodules..."
-git submodule update --init --recursive
+echo -e "Downloading Go dependencies..."
+go mod download
 
 echo "Running tests..."
-go test -tags "$TAGS" `go list ./...|grep -v vendor` `go list ./...|grep wl2k-go|egrep -v '/vendor/.*/vendor/'`
+go test -tags "$TAGS" ./... github.com/la5nta/wl2k-go/...
 echo
 
 echo "Building Pat v$VERSION..."

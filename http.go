@@ -29,6 +29,9 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+
+	_ "github.com/elazarl/go-bindata-assetfs"
+	_ "github.com/jteeuwen/go-bindata"
 )
 
 // Status represents a status report as sent to the Web GUI
@@ -58,8 +61,10 @@ type Notification struct {
 
 var websocketHub *WSHub
 
-//go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-//go:generate go-bindata-assetfs res/...
+//go:generate mkdir -p .build
+//go:generate go build -v -o .build/go-bindata-assetfs github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+//go:generate go build -v -o .build/go-bindata github.com/jteeuwen/go-bindata/go-bindata
+//go:generate sh -c "PATH=\"$PATH:.build/\" go-bindata-assetfs res/..."
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 

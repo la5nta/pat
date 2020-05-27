@@ -5,18 +5,18 @@ os:
   - osx
 
 go:
-  - "1.10"
-  - "1.13.8"
+  - 1.11.x
+  - 1.x
 
 matrix:
   exclude:
   - os: osx
-    go: "1.10"
+    go: 1.11.x
 
 install:
-  - git submodule update --init --recursive
+  - GO111MODULE=on go mod download
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./make.bash libax25; fi
 
 script:
-  - go vet ./...
+  - GO111MODULE=on go vet ./...
   - ./make.bash

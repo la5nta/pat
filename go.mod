@@ -13,16 +13,14 @@ require (
 	github.com/harenber/ptc-go v2.0.2+incompatible
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
-	github.com/la5nta/wl2k-go v0.7.0
+	github.com/la5nta/wl2k-go v0.7.2
 	github.com/mattn/go-runewidth v0.0.3-0.20170510074858-97311d9f7767 // indirect
 	github.com/microcosm-cc/bluemonday v0.0.0-20171222152607-542fd4642604
 	github.com/nfnt/resize v0.0.0-20160724205520-891127d8d1b5
-	github.com/paulrosania/go-charset v0.0.0-20151028000031-621bb39fcc83 // indirect
 	github.com/pd0mz/go-maidenhead v0.0.0-20170221185439-faa09c24425e
 	github.com/peterh/liner v1.0.1-0.20171122030339-3681c2a91233
 	github.com/spf13/pflag v1.0.0
 	github.com/stretchr/testify v1.5.1 // indirect
-	github.com/tarm/goserial v0.0.0-20151007205400-b3440c3c6355 // indirect
 	github.com/tarm/serial v0.0.0-20180114052751-eaafced92e96 // indirect
 	golang.org/x/crypto v0.0.0-20170720175935-691496433715 // indirect
 	golang.org/x/net v0.0.0-20170721033204-ab5485076ff3 // indirect

@@ -891,7 +891,7 @@ func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	}
 	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
 	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
-	if len(attachmentName) > 50 {
+	if len(attachmentName) > 255 {
 		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
 	}
 	return attachmentName
@@ -913,7 +913,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		return "", "", "", err
 	}
 
-	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
+	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
 	msgBody := ""
 	msgSubject := ""
@@ -953,6 +953,23 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		}
 	}
 	infile.Close()
+
+	if isreply {
+		varMap["msgisreply"] = "True"
+	} else {
+		varMap["msgisreply"] = "False"
+	}
+	varMap["msgsender"] = fOptions.MyCall
+
+	// some defaults that we can't set yet. Winlink doesn't seem to care about these
+	varMap["msgto"] = ""
+	varMap["msgcc"] = ""
+	varMap["msgsubject"] = ""
+	varMap["msgbody"] = ""
+	varMap["msgp2p"] = ""
+	varMap["msgisforward"] = "False"
+	varMap["msgisacknowledgement"] = "False"
+	varMap["msgseqnum"] = "0"
 
 	formVarsAsXml := ""
 	for varKey, varVal := range varMap {

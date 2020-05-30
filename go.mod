@@ -4,13 +4,14 @@ go 1.11
 
 require (
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
+	github.com/creack/goselect v0.1.1 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gorhill/cronexpr v0.0.0-20161205141322-d520615e531a
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.1
 	github.com/gorilla/websocket v1.2.1-0.20180201015256-4ac909741dfa
-	github.com/harenber/ptc-go v2.0.2+incompatible
+	github.com/harenber/ptc-go/pactor/v2 v2.0.0-20200530161150-3f4e076b41f2
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
 	github.com/la5nta/wl2k-go v0.7.2
@@ -21,8 +22,5 @@ require (
 	github.com/peterh/liner v1.0.1-0.20171122030339-3681c2a91233
 	github.com/spf13/pflag v1.0.0
 	github.com/stretchr/testify v1.5.1 // indirect
-	github.com/tarm/serial v0.0.0-20180114052751-eaafced92e96 // indirect
-	golang.org/x/crypto v0.0.0-20170720175935-691496433715 // indirect
-	golang.org/x/net v0.0.0-20170721033204-ab5485076ff3 // indirect
-	golang.org/x/sys v0.0.0-20170721163517-c4489faa6e5a // indirect
+	go.uber.org/multierr v1.5.0 // indirect
 )

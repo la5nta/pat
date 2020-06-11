@@ -48,11 +48,6 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
 
-	// preventing malicious configuration that exposes files from outside the forms folder
-	if strings.Contains(config.FormsPath, "..") {
-		config.FormsPath = "."
-	}
-
 	// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 	config.FormsPath = filepath.Clean(config.FormsPath)
 	config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")

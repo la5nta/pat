@@ -84,9 +84,7 @@ type Config struct {
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
 
 	// Path to root of the Winlink Standard_Forms folder.
-	// Unzip after downloading from
-	// https://winlink.org/content/how_manually_update_standard_templates_version_101150
-	// https://1drv.ms/u/s!Ao2MJOj8BM8JmQUXR4awcspLyKQ_?e=S4CWIe
+	// Unzip after downloading from winlink.org
 	FormsPath string `json:"forms_path"`
 
 }
@@ -263,10 +261,7 @@ var DefaultConfig Config = Config{
 	Schedule:       map[string]string{},
 	HamlibRigs:     map[string]HamlibConfig{},
 
-	// Path to root of the Winlink Standard_Forms folder.
-	// Unzip after downloading from
-	// https://winlink.org/content/how_manually_update_standard_templates_version_101150
-	// https://1drv.ms/u/s!Ao2MJOj8BM8JmQUXR4awcspLyKQ_?e=S4CWIe
-	FormsPath:      "/Users/username/.wl2k/Standard_Forms",
+	// Path to root of the unzipped Winlink Standard_Forms folder.
+	FormsPath:      "",
 
 }

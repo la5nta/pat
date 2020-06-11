@@ -11,15 +11,16 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/la5nta/pat/cfg"
 )
 
-func LoadConfig(configPath string, fallback cfg.Config) (config cfg.Config, err error) {
-	config, err = ReadConfig(configPath)
+func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error) {
+	config, err = ReadConfig(path)
 	if os.IsNotExist(err) {
-		return fallback, WriteConfig(fallback, configPath)
+		return fallback, WriteConfig(fallback, path)
 	} else if err != nil {
 		return config, err
 	}
@@ -53,7 +54,7 @@ func LoadConfig(configPath string, fallback cfg.Config) (config cfg.Config, err 
 	}
 
 	// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
-	config.FormsPath = path.Clean(config.FormsPath)
+	config.FormsPath = filepath.Clean(config.FormsPath)
 	config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
 
 	return config, nil

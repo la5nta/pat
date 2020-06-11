@@ -197,7 +197,6 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
-
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 
@@ -794,15 +793,15 @@ func posReportHandle(args []string) {
 
 func getFormsVersion(templatePath string) string {
 	// walking up the path to find a version file.
-	// Winlink's Standard_Forms.zip include it in its root.
+	// Winlink's Standard_Forms.zip includes it in its root.
 	dir := templatePath
-	if strings.HasSuffix(templatePath, ".txt") {
+	if filepath.Ext(templatePath) == ".txt" {
 		dir = filepath.Dir(templatePath)
 	}
 	verFilePath := ""
 	var verFile *os.File
 	for {
-		verFilePath = path.Join(dir, "Standard_Forms_Version.dat")
+		verFilePath = filepath.Join(dir, "Standard_Forms_Version.dat")
 		fd, verFileErr := os.Open(verFilePath)
 		if dir == "." ||
 			dir == ".." ||

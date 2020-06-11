@@ -798,29 +798,36 @@ func getFormsVersion(templatePath string) string {
 	if filepath.Ext(templatePath) == ".txt" {
 		dir = filepath.Dir(templatePath)
 	}
-	verFilePath := ""
+
 	var verFile *os.File
+	// loop to walk up the subfolders until we find the top, or Winlink's Standard_Forms_Version.dat file
 	for {
-		verFilePath = filepath.Join(dir, "Standard_Forms_Version.dat")
-		fd, verFileErr := os.Open(verFilePath)
-		if dir == "." ||
-			dir == ".." ||
-			strings.HasSuffix(dir, string(os.PathSeparator)) ||
-			verFileErr == nil ||
-			fd != nil {
-			verFile = fd
-			break
+		f, err := os.Open(filepath.Join(dir, "Standard_Forms_Version.dat"))
+		if err != nil {
+			dir = filepath.Dir(dir) // have not found the version file or couldn't open it, going up by one
+			if dir == "." || dir == ".." || strings.HasSuffix(dir, string(os.PathSeparator)) {
+				return "unknown" // reached top-level and couldn't find version .dat file
+			}
+			continue
 		}
-		dir = filepath.Dir(dir) // going up by one
+		defer f.Close()
+		// found and opened the version file
+		verFile = f
+		break
 	}
+
 	if verFile != nil {
-		scanner := bufio.NewScanner(verFile)
-		if scanner.Scan() {
-			verFile.Close()
-			return scanner.Text()
-		}
+		return readFileFirstLine(verFile)
 	}
 	return "unknown"
+}
+
+func readFileFirstLine(f *os.File) string {
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+	return ""
 }
 
 func composeFormReport(args []string) {

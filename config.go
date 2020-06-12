@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/la5nta/pat/cfg"
@@ -47,13 +48,8 @@ func LoadConfig(configPath string, fallback cfg.Config) (config cfg.Config, err 
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
 
-	// preventing malicious configuration that exposes files from outside the forms folder
-	if strings.Contains(config.FormsPath, "..") {
-		config.FormsPath = "."
-	}
-
 	// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
-	config.FormsPath = path.Clean(config.FormsPath)
+	config.FormsPath = filepath.Clean(config.FormsPath)
 	config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
 
 	return config, nil

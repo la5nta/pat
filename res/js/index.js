@@ -913,12 +913,12 @@ function displayMessage(elem) {
 
 function formXmlToFormName(fileName) {
 
-	var match = fileName.match( /^RMS_Express_Form_([\w ]+)-\d+\.xml$/i );
+	var match = fileName.match( /^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i );
 	if (match){
 		return match[1];
 	}
 
-	match = fileName.match( /^RMS_Express_Form_([\w ]+)\.xml$/i );
+	match = fileName.match( /^RMS_Express_Form_([\w \.]+)\.xml$/i );
 	if (match){
 		return match[1];
 	}

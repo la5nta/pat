@@ -44,6 +44,12 @@ const (
 	MethodPactor    = "pactor"
 )
 
+type MessageForm struct {
+	Subject string
+	Body string
+	AttachmentXml string
+}
+
 var commands = []Command{
 	{
 		Str:        "connect",
@@ -859,13 +865,13 @@ func composeFormReport(args []string) {
 	varMap["msgsender"] = fOptions.MyCall
 	fmt.Println("forms version: " + varMap["templateversion"])
 
-	msgSubject, bodyContent, msgXml, err := buildFormMessage(form, varMap, true, false)
+	formMsg, err := buildFormMessage(form, varMap, true, false)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
 		os.Exit(1)
 	}
-	msg.SetSubject(msgSubject)
+	msg.SetSubject(formMsg.Subject)
 
 	fmt.Println("================================================================")
 	fmt.Print("To: ")
@@ -875,16 +881,16 @@ func composeFormReport(args []string) {
 	fmt.Print("From: ")
 	fmt.Println(msg.From())
 	fmt.Println("Subject: " + msg.Subject())
-	fmt.Println(bodyContent)
+	fmt.Println(formMsg.Body)
 	fmt.Println("================================================================")
 	fmt.Println("Press ENTER to post this message in the outbox, Ctrl-C to abort.")
 	fmt.Println("================================================================")
 	readLine()
 
-	msg.SetBody(bodyContent)
+	msg.SetBody(formMsg.Body)
 
 	attachmentName := GetXmlAttachmentNameForForm(form, false)
-	attachmentFile := fbb.NewFile(attachmentName, []byte(msgXml))
+	attachmentFile := fbb.NewFile(attachmentName, []byte(formMsg.AttachmentXml))
 	msg.AddFile(attachmentFile)
 
 	postMessage(msg)
@@ -904,7 +910,7 @@ func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 }
 
 //returns message subject, body, and XML attachment content for the given template and variable map
-func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isreply bool) (string, string, string, error) {
+func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isreply bool) (MessageForm, error) {
 
 	tmplPath := path.Join(config.FormsPath, tmpl.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
@@ -914,15 +920,15 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		tmplPath = path.Join(config.FormsPath, tmpl.ReplyTxtFileURI)
 	}
 
+	var retVal MessageForm
+
 	infile, err := os.Open(tmplPath)
 	if err != nil {
-		return "", "", "", err
+		return retVal, err
 	}
 
 	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
-	msgBody := ""
-	msgSubject := ""
 
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
@@ -953,9 +959,9 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		}
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
 		if strings.HasPrefix(lineTmpl, "Subject:") {
-			msgSubject = strings.TrimPrefix(lineTmpl, "Subject:")
+			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
 		} else {
-			msgBody += lineTmpl + "\n"
+			retVal.Body += lineTmpl + "\n"
 		}
 	}
 	infile.Close()
@@ -978,7 +984,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		replier = filepath.Base(tmpl.ReplyTxtFileURI)
 	}
 
-	msgXml := fmt.Sprintf(`%s<RMS_Express_Form>
+	retVal.AttachmentXml = fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
     <rms_express_version>%s</rms_express_version>
@@ -1002,7 +1008,11 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 		viewer,
 		replier,
 		formVarsAsXml)
-	return strings.TrimSpace(msgSubject), strings.TrimSpace(msgBody), msgXml, nil
+
+	retVal.Subject = strings.TrimSpace(retVal.Subject)
+	retVal.Body = strings.TrimSpace(retVal.Body)
+
+	return retVal, nil
 }
 
 func XmlEscape(s string) string {

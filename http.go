@@ -302,14 +302,14 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}
 
-	msgSubject, msgBody, msgXml, err := buildFormMessage(form, formData.Fields, false, composereply)
+	formMsg, err := buildFormMessage(form, formData.Fields, false, composereply)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 	}
-	formData.MsgSubject = msgSubject
-	formData.MsgBody = msgBody
-	formData.MsgXml = msgXml
+	formData.MsgSubject = formMsg.Subject
+	formData.MsgBody = formMsg.Body
+	formData.MsgXml = formMsg.AttachmentXml
 	postedFormData[key.Value] = formData
 	r.Body.Close()
 	io.WriteString(w, "<script>window.close()</script>")

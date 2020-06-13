@@ -302,7 +302,13 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}
 
-	formMsg, err := buildFormMessage(form, formData.Fields, false, composereply)
+	formMsg, err := FormMessageBuilder {
+		Template: form,
+		FormValues: formData.Fields,
+		Interactive: false,
+		IsReply: composereply,
+	}.Build()
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)

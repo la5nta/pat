@@ -865,7 +865,12 @@ func composeFormReport(args []string) {
 	varMap["msgsender"] = fOptions.MyCall
 	fmt.Println("forms version: " + varMap["templateversion"])
 
-	formMsg, err := buildFormMessage(form, varMap, true, false)
+	formMsg, err := FormMessageBuilder {
+		Template: form,
+		FormValues: varMap,
+		Interactive: true,
+		IsReply: false,
+	}.Build()
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
@@ -909,15 +914,22 @@ func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	return attachmentName
 }
 
-//returns message subject, body, and XML attachment content for the given template and variable map
-func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isreply bool) (MessageForm, error) {
+type FormMessageBuilder struct {
+	Interactive bool
+	IsReply     bool
+	Template Form
+	FormValues map[string]string
+}
 
-	tmplPath := path.Join(config.FormsPath, tmpl.TxtFileURI)
+//returns message subject, body, and XML attachment content for the given template and variable map
+func (b FormMessageBuilder) Build () (MessageForm, error) {
+
+	tmplPath := path.Join(config.FormsPath, b.Template.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
 		tmplPath += ".txt"
 	}
-	if isreply && tmpl.ReplyTxtFileURI != "" {
-		tmplPath = path.Join(config.FormsPath, tmpl.ReplyTxtFileURI)
+	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
+		tmplPath = path.Join(config.FormsPath, b.Template.ReplyTxtFileURI)
 	}
 
 	var retVal MessageForm
@@ -932,7 +944,7 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
 		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+versionStringShort(), -1)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
@@ -941,23 +953,23 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 			strings.HasPrefix(lineTmpl, "Msg:") {
 			continue
 		}
-		if interactive {
+		if b.Interactive {
 			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
 			fmt.Println(string(lineTmpl))
 			for i := range matches {
 				varName := matches[i][1]
 				varNameLower := strings.ToLower(varName)
-				if varMap[varNameLower] == "" {
+				if b.FormValues[varNameLower] == "" {
 					fmt.Print(varName + ": ")
-					varMap[varNameLower] = "blank"
+					b.FormValues[varNameLower] = "blank"
 					val := readLine()
 					if val != "" {
-						varMap[varNameLower] = val
+						b.FormValues[varNameLower] = val
 					}
 				}
 			}
 		}
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, varMap)
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		if strings.HasPrefix(lineTmpl, "Subject:") {
 			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
 		} else {
@@ -967,21 +979,21 @@ func buildFormMessage(tmpl Form, varMap map[string]string, interactive bool, isr
 	infile.Close()
 
 	formVarsAsXml := ""
-	for varKey, varVal := range varMap {
+	for varKey, varVal := range b.FormValues {
 		formVarsAsXml += fmt.Sprintf("    <%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
 	}
 
 	viewer := ""
-	if tmpl.ViewerURI != "" {
-		viewer = filepath.Base(tmpl.ViewerURI)
+	if b.Template.ViewerURI != "" {
+		viewer = filepath.Base(b.Template.ViewerURI)
 	}
-	if isreply && tmpl.ReplyViewerURI != "" {
-		viewer = filepath.Base(tmpl.ReplyViewerURI)
+	if b.IsReply && b.Template.ReplyViewerURI != "" {
+		viewer = filepath.Base(b.Template.ReplyViewerURI)
 	}
 
 	replier := ""
-	if !isreply && tmpl.ReplyTxtFileURI != "" {
-		replier = filepath.Base(tmpl.ReplyTxtFileURI)
+	if !b.IsReply && b.Template.ReplyTxtFileURI != "" {
+		replier = filepath.Base(b.Template.ReplyTxtFileURI)
 	}
 
 	retVal.AttachmentXml = fmt.Sprintf(`%s<RMS_Express_Form>

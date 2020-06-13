@@ -843,14 +843,13 @@ func composeFormReport(args []string) {
 	set.StringVar(&tmplPathArg, "template", "ICS USA Forms/ICS213", "")
 	set.Parse(args)
 
-	tmplPath := filepath.Clean(tmplPathArg)
-
 	formFolder, err := buildFormFolder(config.FormsPath)
 	if err != nil {
 		log.Printf("can't build form folder tree %s", err)
 		return
 	}
 
+	tmplPath := filepath.Clean(tmplPathArg)
 	form, err := findFormFromURI(tmplPath, formFolder)
 	if err != nil {
 		log.Printf("can't find form to match form %s", tmplPath)

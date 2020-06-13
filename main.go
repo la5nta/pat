@@ -958,13 +958,14 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 			for i := range matches {
 				varName := matches[i][1]
 				varNameLower := strings.ToLower(varName)
-				if b.FormValues[varNameLower] == "" {
-					fmt.Print(varName + ": ")
-					b.FormValues[varNameLower] = "blank"
-					val := readLine()
-					if val != "" {
-						b.FormValues[varNameLower] = val
-					}
+				if b.FormValues[varNameLower] != "" {
+					continue
+				}
+				fmt.Print(varName + ": ")
+				b.FormValues[varNameLower] = "blank"
+				val := readLine()
+				if val != "" {
+					b.FormValues[varNameLower] = val
 				}
 			}
 		}

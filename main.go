@@ -1029,9 +1029,11 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 
 func XmlEscape(s string) string {
 	sEscaped := bytes.NewBuffer(make([]byte, 0))
-	err := xml.EscapeText(sEscaped, []byte(s))
 	sEscapedStr := ""
-	if err == nil {
+
+	if err := xml.EscapeText(sEscaped, []byte(s)); err != nil {
+		log.Printlf("Error trying to escape XML string %s" err)
+	} else {
 		sEscapedStr = sEscaped.String()
 	}
 	return sEscapedStr

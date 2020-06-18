@@ -182,18 +182,19 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 			}
 			retVal.Folders = append(retVal.Folders, subfolder)
 			retVal.FormCount += subfolder.FormCount
-		} else {
-			if filepath.Ext(info.Name()) == ".txt" {
-				frm, err := BuildFormFromTxt(path.Join(rootPath, info.Name()))
-				if err != nil {
-					continue
-				}
-				if frm.InitialURI != "" || frm.ViewerURI != "" {
-					formCnt++
-					retVal.Forms = append(retVal.Forms, frm)
-					retVal.FormCount++
-				}
-			}
+			continue
+		}
+		if filepath.Ext(info.Name()) != ".txt" {
+			continue
+		}
+		frm, err := BuildFormFromTxt(path.Join(rootPath, info.Name()))
+		if err != nil {
+			continue
+		}
+		if frm.InitialURI != "" || frm.ViewerURI != "" {
+			formCnt++
+			retVal.Forms = append(retVal.Forms, frm)
+			retVal.FormCount++
 		}
 	}
 	sort.Slice(retVal.Folders, func(i, j int) bool {

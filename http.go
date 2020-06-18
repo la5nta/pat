@@ -159,15 +159,12 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 		return FormFolder{}, errors.New(rootPath + " is not a directory")
 	}
 
-	formsArr := make([]Form, 1000)
-	foldersArr := make([]FormFolder, 1000)
-
 	retVal := FormFolder{
 		Name:      rootFileInfo.Name(),
 		Path:      rootFile.Name(),
 		FormCount: 0,
-		Forms:     formsArr[0:0],
-		Folders:   foldersArr[0:0],
+		Forms:     []Form{},
+		Folders:   []FormFolder{},
 	}
 
 	infos, err := rootFile.Readdir(0)
@@ -176,17 +173,15 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	}
 	rootFile.Close()
 
-	folderCnt := 0
 	formCnt := 0
 	for _, info := range infos {
 		if info.IsDir() {
-			folderCnt++
-			retVal.Folders = foldersArr[0:folderCnt]
-			retVal.Folders[folderCnt-1], err = buildFormFolder(path.Join(rootPath, info.Name()))
+			subfolder, err := buildFormFolder(path.Join(rootPath, info.Name()))
 			if err != nil {
 				return retVal, err
 			}
-			retVal.FormCount += retVal.Folders[folderCnt-1].FormCount
+			retVal.Folders = append(retVal.Folders, subfolder)
+			retVal.FormCount += subfolder.FormCount
 		} else {
 			if filepath.Ext(info.Name()) == ".txt" {
 				frm, err := BuildFormFromTxt(path.Join(rootPath, info.Name()))
@@ -195,8 +190,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 				}
 				if frm.InitialURI != "" || frm.ViewerURI != "" {
 					formCnt++
-					retVal.Forms = formsArr[0:formCnt]
-					retVal.Forms[formCnt-1] = frm
+					retVal.Forms = append(retVal.Forms, frm)
 					retVal.FormCount++
 				}
 			}

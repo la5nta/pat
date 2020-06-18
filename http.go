@@ -311,7 +311,6 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	formData.MsgBody = formMsg.Body
 	formData.MsgXml = formMsg.AttachmentXml
 	postedFormData[formInstanceKey.Value] = formData
-	r.Body.Close()
 	io.WriteString(w, "<script>window.close()</script>")
 }
 

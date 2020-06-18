@@ -152,6 +152,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 	if err != nil {
 		return FormFolder{}, err
 	}
+	defer rootFile.Close()
 	rootFileInfo, err := os.Stat(rootPath)
 
 	if !rootFileInfo.IsDir() {

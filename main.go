@@ -923,12 +923,12 @@ type FormMessageBuilder struct {
 //returns message subject, body, and XML attachment content for the given template and variable map
 func (b FormMessageBuilder) Build () (MessageForm, error) {
 
-	tmplPath := path.Join(config.FormsPath, b.Template.TxtFileURI)
+	tmplPath := filepath.Join(config.FormsPath, b.Template.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
 		tmplPath += ".txt"
 	}
 	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
-		tmplPath = path.Join(config.FormsPath, b.Template.ReplyTxtFileURI)
+		tmplPath = filepath.Join(config.FormsPath, b.Template.ReplyTxtFileURI)
 	}
 
 	var retVal MessageForm

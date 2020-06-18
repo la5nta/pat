@@ -90,6 +90,10 @@ type FormData struct {
 	IsReply    bool
 }
 
+// When the web frontend POSTs the form template data, this map holds the POST'ed data.
+// Each form composer instance renders into another browser tab, and has a unique instance cookie.
+// This instance cookie is the key into this map.
+// This keeps the values from different form authoring sessions separate from each other.
 var postedFormData map[string]FormData
 
 var websocketHub *WSHub
@@ -288,7 +292,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := r.Cookie("forminstance")
+	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("missing cookie %s %s", formPath[0], r.URL)
@@ -316,7 +320,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	formData.MsgSubject = formMsg.Subject
 	formData.MsgBody = formMsg.Body
 	formData.MsgXml = formMsg.AttachmentXml
-	postedFormData[key.Value] = formData
+	postedFormData[formInstanceKey.Value] = formData
 	r.Body.Close()
 	io.WriteString(w, "<script>window.close()</script>")
 }
@@ -362,13 +366,13 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 }
 
 func getFormData(w http.ResponseWriter, r *http.Request) {
-	key, err := r.Cookie("forminstance")
+	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", key, r.URL)
+		log.Printf("missing cookie %s %s", formInstanceKey, r.URL)
 		return
 	}
-	json.NewEncoder(w).Encode(postedFormData[key.Value])
+	json.NewEncoder(w).Encode(postedFormData[formInstanceKey.Value])
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -513,11 +517,11 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		msg.AddFile(fbb.NewFile(f.Filename, p))
 	}
 
-	key, err := r.Cookie("forminstance")
+	formInstanceKey, err := r.Cookie("forminstance")
 	if err == nil {
-		xml := postedFormData[key.Value].MsgXml
-		form := postedFormData[key.Value].TargetForm
-		isReply := postedFormData[key.Value].IsReply
+		xml := postedFormData[formInstanceKey.Value].MsgXml
+		form := postedFormData[formInstanceKey.Value].TargetForm
+		isReply := postedFormData[formInstanceKey.Value].IsReply
 		msg.AddFile(fbb.NewFile(GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
 	}
 

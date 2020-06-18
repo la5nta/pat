@@ -1032,7 +1032,7 @@ func XmlEscape(s string) string {
 	sEscapedStr := ""
 
 	if err := xml.EscapeText(sEscaped, []byte(s)); err != nil {
-		log.Printlf("Error trying to escape XML string %s" err)
+		log.Printf("Error trying to escape XML string %s", err)
 	} else {
 		sEscapedStr = sEscaped.String()
 	}

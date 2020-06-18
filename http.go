@@ -239,7 +239,6 @@ func BuildFormFromTxt(txtPath string) (Form, error) {
 			retVal.ReplyViewerURI = tmpForm.ViewerURI
 		}
 	}
-	//log.Printf("'%s'", retVal)
 	return retVal, err
 }
 

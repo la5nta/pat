@@ -834,8 +834,12 @@ function displayMessage(elem) {
 		for(var i = 0; data.Files && i < data.Files.length; i++){
 			var file = data.Files[i];
 			var formName = formXmlToFormName(file.Name);
+			var renderToHtml = "false"
+			if (formName) {
+				renderToHtml = "true"
+			}
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=' + renderToHtml + '&avoidcache=' + Math.floor(Math.random() * 1E9)
 
-			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=true&avoidcache=' + Math.floor(Math.random() * 1E9)
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
 					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +

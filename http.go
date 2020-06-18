@@ -207,27 +207,24 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 }
 
 func BuildFormFromTxt(txtPath string) (Form, error) {
-	fd, err := os.Open(txtPath)
+	f, err := os.Open(txtPath)
 	if err != nil {
 		return Form{}, err
 	}
+	defer f.Close()
 
 	formsPathWithSlash := config.FormsPath + "/"
 
 	retVal := Form{
 		Name:            strings.TrimSuffix(path.Base(txtPath), ".txt"),
 		TxtFileURI:      strings.TrimPrefix(txtPath, formsPathWithSlash),
-		InitialURI:      "",
-		ViewerURI:       "",
-		ReplyTxtFileURI: "",
-		ReplyInitialURI: "",
-		ReplyViewerURI:  "",
 	}
-	scanner := bufio.NewScanner(fd)
+	scanner := bufio.NewScanner(f)
 	baseURI := path.Dir(retVal.TxtFileURI)
 	for scanner.Scan() {
 		l := scanner.Text()
-		if strings.HasPrefix(l, "Form:") {
+		switch {
+		case strings.HasPrefix(l, "Form:"):
 			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
 			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
 			fileNames := fileNamePattern.FindAllString(trimmed, -1)
@@ -235,15 +232,13 @@ func BuildFormFromTxt(txtPath string) (Form, error) {
 				retVal.InitialURI = path.Join(baseURI, fileNames[0])
 				retVal.ViewerURI = path.Join(baseURI, fileNames[1])
 			}
-		}
-		if strings.HasPrefix(l, "ReplyTemplate:") {
+		case strings.HasPrefix(l, "ReplyTemplate:"):
 			retVal.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
 			tmpForm, _ := BuildFormFromTxt(path.Join(config.FormsPath, retVal.ReplyTxtFileURI))
 			retVal.ReplyInitialURI = tmpForm.InitialURI
 			retVal.ReplyViewerURI = tmpForm.ViewerURI
 		}
 	}
-	fd.Close()
 	//log.Printf("'%s'", retVal)
 	return retVal, err
 }

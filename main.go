@@ -843,7 +843,7 @@ func composeFormReport(args []string) {
 	set.StringVar(&tmplPathArg, "template", "ICS USA Forms/ICS213", "")
 	set.Parse(args)
 
-	formFolder, err := buildFormFolder(config.FormsPath)
+	formFolder, err := buildFormFolder()
 	if err != nil {
 		log.Printf("can't build form folder tree %s", err)
 		return

@@ -148,6 +148,19 @@ func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.ConnectAliases)
 }
 
+func (f Form) MatchesName(nameToMatch string) bool {
+	return f.InitialURI == nameToMatch ||
+		f.InitialURI == nameToMatch+".html" ||
+		f.ViewerURI == nameToMatch ||
+		f.ViewerURI == nameToMatch+".html" ||
+		f.ReplyInitialURI == nameToMatch ||
+		f.ReplyInitialURI == nameToMatch+".0" ||
+		f.ReplyViewerURI == nameToMatch ||
+		f.ReplyViewerURI == nameToMatch+".0" ||
+		f.TxtFileURI == nameToMatch ||
+		f.TxtFileURI == nameToMatch+".txt"
+}
+
 func buildFormFolder() (FormFolder, error) {
 	formFolder, err := innerRecursiveBuildFormFolder(config.FormsPath)
 	formFolder.Version = getFormsVersion(config.FormsPath)
@@ -155,7 +168,6 @@ func buildFormFolder() (FormFolder, error) {
 }
 
 func innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
-
 	rootFile, err := os.Open(rootPath)
 	if err != nil {
 		return FormFolder{}, err
@@ -330,16 +342,7 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 	}
 
 	for _, form := range folder.Forms {
-		if form.InitialURI == formName ||
-			form.InitialURI == formName+".html" ||
-			form.ViewerURI == formName ||
-			form.ViewerURI == formName+".html" ||
-			form.ReplyInitialURI == formName ||
-			form.ReplyInitialURI == formName+".0" ||
-			form.ReplyViewerURI == formName ||
-			form.ReplyViewerURI == formName+".0" ||
-			form.TxtFileURI == formName ||
-			form.TxtFileURI == formName+".txt" {
+		if form.MatchesName(formName) {
 			return form, nil
 		}
 	}

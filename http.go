@@ -639,22 +639,25 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 }
 
 func getFormTemplate(w http.ResponseWriter, r *http.Request) {
-	formPath, ok := r.URL.Query()["formPath"]
-	if !ok {
+	formPath := r.URL.Query().Get("formPath")
+	if formPath == "" {
 		http.Error(w, "formPath query param missing", http.StatusBadRequest)
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
+		return
 	}
 
-	absPathTemplate, err := findAbsPathForTemplatePath(formPath[0])
+	absPathTemplate, err := findAbsPathForTemplatePath(formPath)
 	if err != nil {
-		http.Error(w, "find the full path for requested template "+formPath[0], http.StatusBadRequest)
-		log.Printf("find the full path for requested template %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
+		http.Error(w, "find the full path for requested template "+formPath, http.StatusBadRequest)
+		log.Printf("find the full path for requested template %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath)
+		return
 	}
 
 	responseText, err := fillFormTemplate(absPathTemplate, "/api/form?"+r.URL.Query().Encode(), nil, make(map[string]string))
 	if err != nil {
-		http.Error(w, "can't open template "+formPath[0], http.StatusBadRequest)
-		log.Printf("problem filling form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath[0])
+		http.Error(w, "can't open template "+formPath, http.StatusBadRequest)
+		log.Printf("problem filling form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath)
+		return
 	}
 
 	_, err = io.WriteString(w, responseText)

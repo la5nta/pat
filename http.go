@@ -893,7 +893,6 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
-
 	// Attachments are potentially unsanitized HTML and/or javascript.
 	// To avoid XSS, we enable the CSP sandbox directive so that these
 	// attachments can't call other parts of the API (deny same origin).

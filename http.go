@@ -628,15 +628,15 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 		return "", errors.New("can't read template folder")
 	}
 
-	absPathTemplate = ""
+	var retVal string
 	for _, name := range fileNames {
 		if strings.ToLower(filepath.Base(tmplPath)) == strings.ToLower(name) {
-			absPathTemplate = path.Join(absPathTemplateFolder, name)
+			retVal = path.Join(absPathTemplateFolder, name)
 			break
 		}
 	}
 
-	return absPathTemplate, nil
+	return retVal, nil
 }
 
 func getFormTemplate(w http.ResponseWriter, r *http.Request) {

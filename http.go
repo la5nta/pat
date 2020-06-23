@@ -321,8 +321,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 }
 
 func findFormFromURI(formName string, folder FormFolder) (Form, error) {
-	var retVal Form
-	retVal.Name = "unknown"
+	retVal := Form { Name: "unknown" }
 	for _, subFolder := range folder.Folders {
 		form, err := findFormFromURI(formName, subFolder)
 		if err == nil {

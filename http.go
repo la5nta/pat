@@ -265,8 +265,8 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	formPath, ok := r.URL.Query()["formPath"]
-	if !ok {
+	formPath := r.URL.Query().Get("formPath")
+	if formPath == "" {
 		http.Error(w, "formPath query param missing", http.StatusBadRequest)
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 		return
@@ -281,10 +281,10 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	form, err := findFormFromURI(formPath[0], formFolder)
+	form, err := findFormFromURI(formPath, formFolder)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't find form to match posted form data %s %s", formPath[0], r.URL)
+		log.Printf("can't find form to match posted form data %s %s", formPath, r.URL)
 		return
 	}
 

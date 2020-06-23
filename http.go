@@ -616,17 +616,17 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	// now deal with cases where the html file name specified in the .txt file, has different caseness than the actual .html file on disk.
 	absPathTemplateFolder := filepath.Dir(absPathTemplate)
 
-	templateDirFd, err := os.Open(absPathTemplateFolder)
+	templateDir, err := os.Open(absPathTemplateFolder)
 	if err != nil {
 		return "", errors.New("can't read template folder")
 	}
+	defer templateDir.Close()
 
-	fileNames, err := templateDirFd.Readdirnames(0)
+
+	fileNames, err := templateDir.Readdirnames(0)
 	if err != nil {
 		return "", errors.New("can't read template folder")
 	}
-
-	templateDirFd.Close()
 
 	absPathTemplate = ""
 	for _, name := range fileNames {

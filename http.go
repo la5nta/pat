@@ -931,11 +931,9 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		formRendered, err := renderForm(f.Data(), composereply)
-
 		if err != nil {
 			log.Println(err)
-			//http.Error(w, err.Error(), http.StatusInternalServerError)
-			http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

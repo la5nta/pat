@@ -611,7 +611,7 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func findAbsPathForTemplatePath(tmplPath string) (string, error) {
-	absPathTemplate := path.Join(config.FormsPath, strings.TrimLeft(path.Clean(tmplPath), "./\\"))
+	absPathTemplate := filepath.Join(config.FormsPath, path.Clean(tmplPath))
 
 	// now deal with cases where the html file name specified in the .txt file, has different caseness than the actual .html file on disk.
 	absPathTemplateFolder := filepath.Dir(absPathTemplate)
@@ -622,7 +622,6 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	}
 	defer templateDir.Close()
 
-
 	fileNames, err := templateDir.Readdirnames(0)
 	if err != nil {
 		return "", errors.New("can't read template folder")
@@ -631,7 +630,7 @@ func findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	var retVal string
 	for _, name := range fileNames {
 		if strings.ToLower(filepath.Base(tmplPath)) == strings.ToLower(name) {
-			retVal = path.Join(absPathTemplateFolder, name)
+			retVal = filepath.Join(absPathTemplateFolder, name)
 			break
 		}
 	}

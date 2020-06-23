@@ -904,10 +904,8 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "null")
 
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
-	composereplyQueryVal, _ := r.URL.Query()["composereply"]
-	composereply := len(composereplyQueryVal) > 0 && composereplyQueryVal[0] == "true"
-	renderToHtmlQueryVal, _ := r.URL.Query()["rendertohtml"]
-	renderToHtml := len(renderToHtmlQueryVal) > 0 && renderToHtmlQueryVal[0] == "true"
+	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
+	renderToHtml, _ := strconv.ParseBool(r.URL.Query().Get("rendertohtml"))
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {

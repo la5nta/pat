@@ -664,6 +664,7 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("can't write form into response %s %s: %s", r.Method, r.URL.Path, err)
+		return
 	}
 }
 

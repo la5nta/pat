@@ -840,7 +840,7 @@ func composeFormReport(args []string) {
 
 	tmplPath := filepath.Clean(tmplPathArg)
 
-	formFolder, err := buildFormFolder(config.FormsPath)
+	formFolder, err := buildFormFolder()
 	if err != nil {
 		log.Printf("can't build form folder tree %s", err)
 		return

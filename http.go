@@ -143,7 +143,14 @@ func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.ConnectAliases)
 }
 
-func buildFormFolder(rootPath string) (FormFolder, error) {
+func buildFormFolder() (FormFolder, error) {
+	formFolder, err := innerRecursiveBuildFormFolder(config.FormsPath)
+	formFolder.Version = getFormsVersion(config.FormsPath)
+	return formFolder, err
+}
+
+func innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
+
 	rootFile, err := os.Open(rootPath)
 	if err != nil {
 		return FormFolder{}, err
@@ -177,7 +184,7 @@ func buildFormFolder(rootPath string) (FormFolder, error) {
 		if info.IsDir() {
 			folderCnt++
 			retVal.Folders = foldersArr[0:folderCnt]
-			retVal.Folders[folderCnt-1], err = buildFormFolder(path.Join(rootPath, info.Name()))
+			retVal.Folders[folderCnt-1], err = innerRecursiveBuildFormFolder(path.Join(rootPath, info.Name()))
 			if err != nil {
 				return retVal, err
 			}
@@ -250,13 +257,12 @@ func BuildFormFromTxt(txtPath string) (Form, error) {
 }
 
 func getFormsHandler(w http.ResponseWriter, r *http.Request) {
-	formFolder, err := buildFormFolder(config.FormsPath)
+	formFolder, err := buildFormFolder()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 		return
 	}
-	formFolder.Version = getFormsVersion(config.FormsPath)
 	json.NewEncoder(w).Encode(formFolder)
 }
 
@@ -275,7 +281,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	composereplyQueryVal, _ := r.URL.Query()["composereply"]
 	composereply := len(composereplyQueryVal) > 0 && composereplyQueryVal[0] == "true"
 
-	formFolder, err := buildFormFolder(config.FormsPath)
+	formFolder, err := buildFormFolder()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
@@ -979,7 +985,7 @@ func renderForm(contentData []byte, composereply bool) (string, error) {
 		return "", errors.New("missing reply_template tag in form XML for a reply message")
 	}
 
-	formFolder, err := buildFormFolder(config.FormsPath)
+	formFolder, err := buildFormFolder()
 	if err != nil {
 		return "", err
 	}

@@ -301,10 +301,11 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		log.Printf("missing cookie %s %s", formPath[0], r.URL)
 		return
 	}
-	var formData FormData
-	formData.IsReply = composereply
-	formData.TargetForm = form
-	formData.Fields = make(map[string]string)
+	formData := FormData {
+		IsReply: composereply,
+		TargetForm: form,
+		Fields: make(map[string]string),
+	}
 	for key, values := range r.PostForm {
 		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}

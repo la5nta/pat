@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -271,8 +272,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composereplyQueryVal, _ := r.URL.Query()["composereply"]
-	composereply := len(composereplyQueryVal) > 0 && composereplyQueryVal[0] == "true"
+	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
 
 	formFolder, err := buildFormFolder()
 	if err != nil {

@@ -161,6 +161,15 @@ func (f Form) MatchesName(nameToMatch string) bool {
 		f.TxtFileURI == nameToMatch+".txt"
 }
 
+func (f Form) ContainsName(partialName string) bool {
+	return strings.Contains(f.InitialURI, partialName) ||
+		strings.Contains(f.ViewerURI, partialName) ||
+		strings.Contains(f.ReplyInitialURI, partialName) ||
+		strings.Contains(f.ReplyViewerURI, partialName) ||
+		strings.Contains(f.ReplyTxtFileURI, partialName) ||
+		strings.Contains(f.TxtFileURI, partialName)
+}
+
 func buildFormFolder() (FormFolder, error) {
 	formFolder, err := innerRecursiveBuildFormFolder(config.FormsPath)
 	formFolder.Version = getFormsVersion(config.FormsPath)
@@ -350,12 +359,7 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 	// couldn't find it by full path, so try to find match by guessing folder name
 	formName = path.Join(folder.Name, formName)
 	for _, form := range folder.Forms {
-		if strings.Contains(form.InitialURI, formName) ||
-			strings.Contains(form.ViewerURI, formName) ||
-			strings.Contains(form.ReplyInitialURI, formName) ||
-			strings.Contains(form.ReplyViewerURI, formName) ||
-			strings.Contains(form.ReplyTxtFileURI, formName) ||
-			strings.Contains(form.TxtFileURI, formName) {
+		if form.ContainsName(formName) {
 			return form, nil
 		}
 	}

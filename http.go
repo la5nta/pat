@@ -669,10 +669,11 @@ func getFormTemplate(w http.ResponseWriter, r *http.Request) {
 }
 
 func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
-	fd, err := os.Open(absPathTemplate)
+	f, err := os.Open(absPathTemplate)
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 
 	retVal := ""
 	now := time.Now()
@@ -684,7 +685,7 @@ func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderReg
 	nowTimeUTC := now.UTC().Format("15:04:05Z")
 	udtg := strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
 
-	scanner := bufio.NewScanner(fd)
+	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		l := scanner.Text()
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)
@@ -705,7 +706,6 @@ func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderReg
 		}
 		retVal += l + "\n"
 	}
-	fd.Close()
 	return retVal, nil
 }
 

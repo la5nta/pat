@@ -947,7 +947,6 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 
 func renderForm(contentData []byte, composereply bool) (string, error) {
 	buf := bytes.NewBuffer(contentData)
-	dec := xml.NewDecoder(buf)
 
 	type Node struct {
 		XMLName xml.Name
@@ -959,7 +958,7 @@ func renderForm(contentData []byte, composereply bool) (string, error) {
 	formParams := make(map[string]string)
 	formVars := make(map[string]string)
 
-	err := dec.Decode(&n1)
+	err := xml.NewDecoder(buf).Decode(&n1)
 	if err != nil {
 		return "", err
 	}
@@ -968,12 +967,12 @@ func renderForm(contentData []byte, composereply bool) (string, error) {
 		return "", errors.New("missing RMS_Express_Form tag in form XML")
 	}
 	for _, n2 := range n1.Nodes {
-		if n2.XMLName.Local == "form_parameters" {
+		switch n2.XMLName.Local {
+		case "form_parameters":
 			for _, n3 := range n2.Nodes {
 				formParams[n3.XMLName.Local] = string(n3.Content)
 			}
-		}
-		if n2.XMLName.Local == "variables" {
+		case "variables":
 			for _, n3 := range n2.Nodes {
 				formVars[n3.XMLName.Local] = string(n3.Content)
 			}

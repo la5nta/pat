@@ -835,7 +835,7 @@ function displayMessage(elem) {
 			var file = data.Files[i];
 			var formName = formXmlToFormName(file.Name);
 
-			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=true&avoidcache=' + Math.floor(Math.random() * 1E9)
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=true'
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
 					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
@@ -934,9 +934,9 @@ function showReplyForm(orgMsgUrl, msg){
 			continue
 		}
 		// retrieve form XML attachment and determine if it specifies a form-based reply
-		var attachUrl = orgMsgUrl + "/" + file.Name + '?&avoidcache=' + Math.floor(Math.random() * 1E9)
+		var attachUrl = orgMsgUrl + "/" + file.Name
 		$.get(
-			attachUrl + "&rendertohtml=false&composereply=false",
+			attachUrl + "?rendertohtml=false&composereply=false",
 			{},
 			function(data) {
 				parser = new DOMParser();
@@ -945,7 +945,7 @@ function showReplyForm(orgMsgUrl, msg){
 					replyTmpl = xmlDoc.evaluate("/RMS_Express_Form/form_parameters/reply_template", xmlDoc, null, XPathResult.STRING_TYPE, null)
 					if ( replyTmpl && replyTmpl.stringValue ) {
 						window.setTimeout(startPollingFormData, 500)
-						open(attachUrl + "&rendertohtml=true&composereply=true")
+						open(attachUrl + "?rendertohtml=true&composereply=true")
 					}
 				}
 			},

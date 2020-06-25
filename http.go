@@ -876,8 +876,7 @@ func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
-	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
-
+	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]	
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
@@ -896,6 +895,9 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	// To avoid XSS, we enable the CSP sandbox directive so that these
 	// attachments can't call other parts of the API (deny same origin).
 	w.Header().Set("Content-Security-Policy", "sandbox allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts")
+
+	// no-store is needed for displaying and replying to Winlink form-based messages
+	w.Header().Set("Cache-Control", "no-store")
 
 	// Allow different sandboxed attachments to refer to each other.
 	// This can be useful to provide rich HTML content as attachments,

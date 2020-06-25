@@ -945,15 +945,15 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type Node struct {
-	XMLName xml.Name
-	Content []byte `xml:",innerxml"`
-	Nodes   []Node `xml:",any"`
-}
-
 func renderForm(contentData []byte, composereply bool) (string, error) {
 	buf := bytes.NewBuffer(contentData)
 	dec := xml.NewDecoder(buf)
+
+	type Node struct {
+		XMLName xml.Name
+		Content []byte `xml:",innerxml"`
+		Nodes   []Node `xml:",any"`
+	}
 
 	var n1 Node
 	formParams := make(map[string]string)

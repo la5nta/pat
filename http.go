@@ -191,7 +191,6 @@ func innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
 	retVal := FormFolder{
 		Name:      rootFileInfo.Name(),
 		Path:      rootFile.Name(),
-		FormCount: 0,
 		Forms:     []Form{},
 		Folders:   []FormFolder{},
 	}

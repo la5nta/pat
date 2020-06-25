@@ -311,7 +311,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", formPath[0], r.URL)
+		log.Printf("missing cookie %s %s", formPath, r.URL)
 		return
 	}
 	var formData FormData
@@ -876,7 +876,7 @@ func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
-	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]	
+	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)

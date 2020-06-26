@@ -310,7 +310,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	formInstanceKey, err := r.Cookie("forminstance")
-	if err != nil {
+	if err != nil { 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("missing cookie %s %s", formPath, r.URL)
 		return

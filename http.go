@@ -63,32 +63,32 @@ type Notification struct {
 
 // Form
 type Form struct {
-	Name            string
-	TxtFileURI      string
-	InitialURI      string
-	ViewerURI       string
-	ReplyTxtFileURI string
-	ReplyInitialURI string
-	ReplyViewerURI  string
+	Name            string `json:"name"`
+	TxtFileURI      string `json:"txt_file_uri"`
+	InitialURI      string `json:"initial_uri"`
+	ViewerURI       string `json:"viewer_uri"`
+	ReplyTxtFileURI string `json:"reply_txt_file_uri"`
+	ReplyInitialURI string `json:"reply_initial_uri"`
+	ReplyViewerURI  string `json:"reply_viewer_uri"`
 }
 
 // Folder with forms
 type FormFolder struct {
-	Name      string
-	Path      string
-	Version   string
-	FormCount int
-	Forms     []Form
-	Folders   []FormFolder
+	Name      string       `json:"name"`
+	Path      string       `json:"path"`
+	Version   string       `json:"version"`
+	FormCount int          `json:"form_count"`
+	Forms     []Form       `json:"forms"`
+	Folders   []FormFolder `json:"folders"`
 }
 
 type FormData struct {
-	TargetForm Form
-	Fields     map[string]string
-	MsgSubject string
-	MsgBody    string
-	MsgXml     string
-	IsReply    bool
+	TargetForm Form              `json:"target_form"`
+	Fields     map[string]string `json:"fields"`
+	MsgSubject string            `json:"msg_subject"`
+	MsgBody    string            `json:"msg_body"`
+	MsgXml     string            `json:"msg_xml"`
+	IsReply    bool              `json:"is_reply"`
 }
 
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.

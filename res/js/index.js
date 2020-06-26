@@ -180,11 +180,11 @@ function pollFormData() {
 		{},
 		function(data) {
 //			console.log(data)
-			if ($('#composer').hasClass('show') && (!data.TargetForm || !data.TargetForm.Name)) {
+			if ($('#composer').hasClass('show') && (!data.target_form || !data.target_form.name)) {
 				pollTimer = window.setTimeout(pollFormData, 1000)
 			} else {
 //				console.log("done polling")
-				if ($('#composer').hasClass('show') && data.TargetForm && data.TargetForm.Name) {
+				if ($('#composer').hasClass('show') && data.target_form && data.target_form.name) {
 					writeFormDataToComposer(data)
 				}
 			}
@@ -194,11 +194,11 @@ function pollFormData() {
 }
 
 function writeFormDataToComposer(data) {
-	if (data.TargetForm) {
-		$('#msg_body').val(data.MsgBody)
-		if (data.MsgSubject) {
+	if (data.target_form) {
+		$('#msg_body').val(data.msg_body)
+		if (data.msg_subject) {
 			// in case of composing a form-based reply we keep the 'Re: ...' subject line
-			$('#msg_subject').val(data.MsgSubject)
+			$('#msg_subject').val(data.msg_subject)
 		}
 	}
 }
@@ -265,13 +265,13 @@ function initForms() {
 function initFormSelect(data){
 	formsCatalog = data;
 	if (data
-		&& data.Path
-		&& data.Path != ""
-		&& data.Path != "."
-		&& (data.Folders && data.Folders.length > 0 || data.Forms && data.Forms.length > 0)
+		&& data.path
+		&& data.path != ""
+		&& data.path != "."
+		&& (data.folders && data.folders.length > 0 || data.forms && data.forms.length > 0)
 	) {
-		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.Version+'</a>)</span>');
-		$('#formsRootFolderName').text(data.Path);
+		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.version+'</a>)</span>');
+		$('#formsRootFolderName').text(data.path);
 		appendFormFolder('formFolderRoot', data);
 	}
 	else {
@@ -299,22 +299,22 @@ function deleteCookie(cname) {
 }
 
 function appendFormFolder(rootId, data) {
-	if (data.Folders && data.Folders.length > 0 && data.FormCount > 0) {
+	if (data.folders && data.folders.length > 0 && data.form_count > 0) {
 		var rootAcc = `${rootId}Acc`
 		$(`#${rootId}`).append(`
 			<div class="accordion" id="${rootAcc}">
 			</div>
 			`);
-		data.Folders.forEach(function (folder) {
-			if (folder.FormCount > 0) {
-				var folderNameId = rootId + folder.Name.replace( /\s/g, "_" );
+		data.folders.forEach(function (folder) {
+			if (folder.form_count > 0) {
+				var folderNameId = rootId + folder.name.replace( /\s/g, "_" );
 				var cardBodyId = folderNameId+"Body";
 				var card =
 				`
 				<div class="card">
 					<div class="card-header d-flex">
 						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
-							${folder.Name}
+							${folder.name}
 						</button>
 					</div>
 					<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
@@ -325,12 +325,12 @@ function appendFormFolder(rootId, data) {
 				`
 				$(`#${rootAcc}`).append(card)
 				appendFormFolder(`${cardBodyId}`, folder)
-				if (folder.Forms && folder.Forms.length > 0){
+				if (folder.forms && folder.forms.length > 0){
 					var cardBodyFormsId = `${cardBodyId}Forms`
 					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
-					folder.Forms.forEach((form) => {
-						var pathEncoded = encodeURIComponent(form.InitialURI)
-						$(`#${cardBodyFormsId}`).append(`<a href="/api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching();">${form.Name}</a>`)
+					folder.forms.forEach((form) => {
+						var pathEncoded = encodeURIComponent(form.initial_uri)
+						$(`#${cardBodyFormsId}`).append(`<a href="/api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching();">${form.name}</a>`)
 					});
 				}
 			}

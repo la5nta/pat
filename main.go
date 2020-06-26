@@ -979,22 +979,22 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 	}
 	infile.Close()
 
-	if isreply {
-		varMap["msgisreply"] = "True"
+	if b.IsReply {
+		b.FormValues["msgisreply"] = "True"
 	} else {
-		varMap["msgisreply"] = "False"
+		b.FormValues["msgisreply"] = "False"
 	}
-	varMap["msgsender"] = fOptions.MyCall
+	b.FormValues["msgsender"] = fOptions.MyCall
 
 	// some defaults that we can't set yet. Winlink doesn't seem to care about these
-	varMap["msgto"] = ""
-	varMap["msgcc"] = ""
-	varMap["msgsubject"] = ""
-	varMap["msgbody"] = ""
-	varMap["msgp2p"] = ""
-	varMap["msgisforward"] = "False"
-	varMap["msgisacknowledgement"] = "False"
-	varMap["msgseqnum"] = "0"
+	b.FormValues["msgto"] = ""
+	b.FormValues["msgcc"] = ""
+	b.FormValues["msgsubject"] = ""
+	b.FormValues["msgbody"] = ""
+	b.FormValues["msgp2p"] = ""
+	b.FormValues["msgisforward"] = "False"
+	b.FormValues["msgisacknowledgement"] = "False"
+	b.FormValues["msgseqnum"] = "0"
 
 	formVarsAsXml := ""
 	for varKey, varVal := range b.FormValues {

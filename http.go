@@ -72,7 +72,7 @@ type Form struct {
 	ReplyViewerURI  string `json:"reply_viewer_uri"`
 }
 
-// Folder with forms
+// Folder with forms. A tree structure with Form leaves and sub-Folder branches
 type FormFolder struct {
 	Name      string       `json:"name"`
 	Path      string       `json:"path"`
@@ -82,6 +82,7 @@ type FormFolder struct {
 	Folders   []FormFolder `json:"folders"`
 }
 
+// the instance data that define a filled-in form
 type FormData struct {
 	TargetForm Form              `json:"target_form"`
 	Fields     map[string]string `json:"fields"`
@@ -314,10 +315,11 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 		log.Printf("missing cookie %s %s", formPath, r.URL)
 		return
 	}
-	var formData FormData
-	formData.IsReply = composereply
-	formData.TargetForm = form
-	formData.Fields = make(map[string]string)
+	formData =: FormData {
+		IsReply: composereply,
+		TargetForm: form,
+		Fields: make(map[string]string),
+	}
 	for key, values := range r.PostForm {
 		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}

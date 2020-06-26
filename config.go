@@ -50,7 +50,7 @@ func LoadConfig(configPath string, fallback cfg.Config) (config cfg.Config, err 
 
 	// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 	config.FormsPath = filepath.Clean(config.FormsPath)
-	config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
+	config.FormsPath = strings.Replace(config.FormsPath, "\\", "/", -1)
 
 	return config, nil
 }

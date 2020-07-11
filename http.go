@@ -1007,13 +1007,14 @@ func renderForm(contentData []byte, composereply bool) (string, error) {
 	}
 
 	var formRelPath string
-	if composereply {
+	switch {
+	case composereply:
 		// authoring a form reply
 		formRelPath = form.ReplyInitialURI
-	} else if strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]) {
+	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
 		//viewing a form reply
 		formRelPath = form.ReplyViewerURI
-	} else {
+	default:
 		// viewing a form
 		formRelPath = form.ViewerURI
 	}

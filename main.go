@@ -932,16 +932,15 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 		tmplPath = filepath.Join(config.FormsPath, b.Template.ReplyTxtFileURI)
 	}
 
-	var retVal MessageForm
-
 	infile, err := os.Open(tmplPath)
 	if err != nil {
-		return retVal, err
+		return MessageForm{}, err
 	}
 
 	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
 
+	var retVal MessageForm
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
@@ -970,6 +969,7 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 				}
 			}
 		}
+
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		if strings.HasPrefix(lineTmpl, "Subject:") {
 			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")

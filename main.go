@@ -203,6 +203,7 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
+
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 
@@ -907,7 +908,7 @@ func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	}
 	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
 	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
-	if len(attachmentName) > 50 {
+	if len(attachmentName) > 255 {
 		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
 	}
 	return attachmentName
@@ -938,7 +939,7 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 		return retVal, err
 	}
 
-	placeholderRegEx := regexp.MustCompile(`<var\s+(\w+)\s*>`)
+	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
 
 	for scanner.Scan() {
@@ -977,6 +978,23 @@ func (b FormMessageBuilder) Build () (MessageForm, error) {
 		}
 	}
 	infile.Close()
+
+	if b.IsReply {
+		b.FormValues["msgisreply"] = "True"
+	} else {
+		b.FormValues["msgisreply"] = "False"
+	}
+	b.FormValues["msgsender"] = fOptions.MyCall
+
+	// some defaults that we can't set yet. Winlink doesn't seem to care about these
+	b.FormValues["msgto"] = ""
+	b.FormValues["msgcc"] = ""
+	b.FormValues["msgsubject"] = ""
+	b.FormValues["msgbody"] = ""
+	b.FormValues["msgp2p"] = ""
+	b.FormValues["msgisforward"] = "False"
+	b.FormValues["msgisacknowledgement"] = "False"
+	b.FormValues["msgseqnum"] = "0"
 
 	formVarsAsXml := ""
 	for varKey, varVal := range b.FormValues {

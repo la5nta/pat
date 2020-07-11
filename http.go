@@ -255,11 +255,12 @@ func BuildFormFromTxt(txtPath string) (Form, error) {
 		switch {
 		case strings.HasPrefix(l, "Form:"):
 			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
-			fileNamePattern := regexp.MustCompile(`[\w\s\-]+\.html`)
-			fileNames := fileNamePattern.FindAllString(trimmed, -1)
+			fileNames := strings.Split(trimmed, ",")
 			if fileNames != nil && len(fileNames) >= 2 {
-				retVal.InitialURI = path.Join(baseURI, fileNames[0])
-				retVal.ViewerURI = path.Join(baseURI, fileNames[1])
+				initial := strings.TrimSpace(fileNames[0])
+				viewer := strings.TrimSpace(fileNames[1])
+				retVal.InitialURI = path.Join(baseURI, initial)
+				retVal.ViewerURI = path.Join(baseURI, viewer)
 			}
 		case strings.HasPrefix(l, "ReplyTemplate:"):
 			retVal.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
@@ -310,7 +311,7 @@ func postFormData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	formInstanceKey, err := r.Cookie("forminstance")
-	if err != nil { 
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("missing cookie %s %s", formPath, r.URL)
 		return
@@ -689,6 +690,7 @@ func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderReg
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		l := scanner.Text()
+		l = strings.TrimPrefix(l, "\xEF\xBB\xBF") // some templates start with the byte-ordering marker for UTF-8
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
 		l = strings.Replace(l, "http://localhost:8001", formDestUrl, -1)

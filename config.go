@@ -17,10 +17,10 @@ import (
 	"github.com/la5nta/pat/cfg"
 )
 
-func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error) {
-	config, err = ReadConfig(path)
+func LoadConfig(configPath string, fallback cfg.Config) (config cfg.Config, err error) {
+	config, err = ReadConfig(configPath)
 	if os.IsNotExist(err) {
-		return fallback, WriteConfig(fallback, path)
+		return fallback, WriteConfig(fallback, configPath)
 	} else if err != nil {
 		return config, err
 	}

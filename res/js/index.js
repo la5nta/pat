@@ -834,8 +834,12 @@ function displayMessage(elem) {
 		for(var i = 0; data.Files && i < data.Files.length; i++){
 			var file = data.Files[i];
 			var formName = formXmlToFormName(file.Name);
+			var renderToHtml = "false"
+			if (formName) {
+				renderToHtml = "true"
+			}
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=' + renderToHtml
 
-			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=true'
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
 					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
@@ -913,12 +917,12 @@ function displayMessage(elem) {
 
 function formXmlToFormName(fileName) {
 
-	var match = fileName.match( /^RMS_Express_Form_(\w+)-\d+\.xml$/i );
+	var match = fileName.match( /^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i );
 	if (match){
 		return match[1];
 	}
 
-	match = fileName.match( /^RMS_Express_Form_(\w+)\.xml$/i );
+	match = fileName.match( /^RMS_Express_Form_([\w \.]+)\.xml$/i );
 	if (match){
 		return match[1];
 	}

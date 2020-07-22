@@ -8,11 +8,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"encoding/xml"
-	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -20,7 +17,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,6 +26,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
 
+	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
@@ -61,51 +58,12 @@ type Notification struct {
 	Body  string `json:"body"`
 }
 
-// Form
-type Form struct {
-	Name            string `json:"name"`
-	TxtFileURI      string `json:"txt_file_uri"`
-	InitialURI      string `json:"initial_uri"`
-	ViewerURI       string `json:"viewer_uri"`
-	ReplyTxtFileURI string `json:"reply_txt_file_uri"`
-	ReplyInitialURI string `json:"reply_initial_uri"`
-	ReplyViewerURI  string `json:"reply_viewer_uri"`
-}
-
-// Folder with forms. A tree structure with Form leaves and sub-Folder branches
-type FormFolder struct {
-	Name      string       `json:"name"`
-	Path      string       `json:"path"`
-	Version   string       `json:"version"`
-	FormCount int          `json:"form_count"`
-	Forms     []Form       `json:"forms"`
-	Folders   []FormFolder `json:"folders"`
-}
-
-// the instance data that define a filled-in form
-type FormData struct {
-	TargetForm Form              `json:"target_form"`
-	Fields     map[string]string `json:"fields"`
-	MsgSubject string            `json:"msg_subject"`
-	MsgBody    string            `json:"msg_body"`
-	MsgXml     string            `json:"msg_xml"`
-	IsReply    bool              `json:"is_reply"`
-}
-
-// When the web frontend POSTs the form template data, this map holds the POST'ed data.
-// Each form composer instance renders into another browser tab, and has a unique instance cookie.
-// This instance cookie is the key into this map.
-// This keeps the values from different form authoring sessions separate from each other.
-var postedFormData map[string]FormData
-
 var websocketHub *WSHub
 
 //go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go-bindata-assetfs res/...
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
-
-	postedFormData = make(map[string]FormData)
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
@@ -116,10 +74,10 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
-	r.HandleFunc("/api/formcatalog", getFormsHandler).Methods("GET")
-	r.HandleFunc("/api/form", postFormData).Methods("POST")
-	r.HandleFunc("/api/form", getFormData).Methods("GET")
-	r.HandleFunc("/api/forms", getFormTemplate).Methods("GET")
+	r.HandleFunc("/api/formcatalog", forms.GetFormsCatalog).Methods("GET")
+	r.HandleFunc("/api/form", forms.PostFormData).Methods("POST")
+	r.HandleFunc("/api/form", forms.GetFormData).Methods("GET")
+	r.HandleFunc("/api/forms", forms.GetFormTemplate).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
@@ -147,235 +105,6 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config.ConnectAliases)
-}
-
-func (f Form) MatchesName(nameToMatch string) bool {
-	return f.InitialURI == nameToMatch ||
-		f.InitialURI == nameToMatch+".html" ||
-		f.ViewerURI == nameToMatch ||
-		f.ViewerURI == nameToMatch+".html" ||
-		f.ReplyInitialURI == nameToMatch ||
-		f.ReplyInitialURI == nameToMatch+".0" ||
-		f.ReplyViewerURI == nameToMatch ||
-		f.ReplyViewerURI == nameToMatch+".0" ||
-		f.TxtFileURI == nameToMatch ||
-		f.TxtFileURI == nameToMatch+".txt"
-}
-
-func (f Form) ContainsName(partialName string) bool {
-	return strings.Contains(f.InitialURI, partialName) ||
-		strings.Contains(f.ViewerURI, partialName) ||
-		strings.Contains(f.ReplyInitialURI, partialName) ||
-		strings.Contains(f.ReplyViewerURI, partialName) ||
-		strings.Contains(f.ReplyTxtFileURI, partialName) ||
-		strings.Contains(f.TxtFileURI, partialName)
-}
-
-func buildFormFolder() (FormFolder, error) {
-	formFolder, err := innerRecursiveBuildFormFolder(config.FormsPath)
-	formFolder.Version = getFormsVersion(config.FormsPath)
-	return formFolder, err
-}
-
-func innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
-	rootFile, err := os.Open(rootPath)
-	if err != nil {
-		return FormFolder{}, err
-	}
-	defer rootFile.Close()
-	rootFileInfo, err := os.Stat(rootPath)
-
-	if !rootFileInfo.IsDir() {
-		return FormFolder{}, errors.New(rootPath + " is not a directory")
-	}
-
-	retVal := FormFolder{
-		Name:      rootFileInfo.Name(),
-		Path:      rootFile.Name(),
-		Forms:     []Form{},
-		Folders:   []FormFolder{},
-	}
-
-	infos, err := rootFile.Readdir(0)
-	if err != nil {
-		return retVal, err
-	}
-	rootFile.Close()
-
-	formCnt := 0
-	for _, info := range infos {
-		if info.IsDir() {
-			subfolder, err := innerRecursiveBuildFormFolder(path.Join(rootPath, info.Name()))
-			if err != nil {
-				return retVal, err
-			}
-			retVal.Folders = append(retVal.Folders, subfolder)
-			retVal.FormCount += subfolder.FormCount
-			continue
-		}
-		if filepath.Ext(info.Name()) != ".txt" {
-			continue
-		}
-		frm, err := BuildFormFromTxt(path.Join(rootPath, info.Name()))
-		if err != nil {
-			continue
-		}
-		if frm.InitialURI != "" || frm.ViewerURI != "" {
-			formCnt++
-			retVal.Forms = append(retVal.Forms, frm)
-			retVal.FormCount++
-		}
-	}
-	sort.Slice(retVal.Folders, func(i, j int) bool {
-		return retVal.Folders[i].Name < retVal.Folders[j].Name
-	})
-	sort.Slice(retVal.Forms, func(i, j int) bool {
-		return retVal.Forms[i].Name < retVal.Forms[j].Name
-	})
-	return retVal, nil
-}
-
-func BuildFormFromTxt(txtPath string) (Form, error) {
-	f, err := os.Open(txtPath)
-	if err != nil {
-		return Form{}, err
-	}
-	defer f.Close()
-
-	formsPathWithSlash := config.FormsPath + "/"
-
-	retVal := Form{
-		Name:            strings.TrimSuffix(path.Base(txtPath), ".txt"),
-		TxtFileURI:      strings.TrimPrefix(txtPath, formsPathWithSlash),
-	}
-	scanner := bufio.NewScanner(f)
-	baseURI := path.Dir(retVal.TxtFileURI)
-	for scanner.Scan() {
-		l := scanner.Text()
-		switch {
-		case strings.HasPrefix(l, "Form:"):
-			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
-			fileNames := strings.Split(trimmed, ",")
-			if fileNames != nil && len(fileNames) >= 2 {
-				initial := strings.TrimSpace(fileNames[0])
-				viewer := strings.TrimSpace(fileNames[1])
-				retVal.InitialURI = path.Join(baseURI, initial)
-				retVal.ViewerURI = path.Join(baseURI, viewer)
-			}
-		case strings.HasPrefix(l, "ReplyTemplate:"):
-			retVal.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
-			tmpForm, _ := BuildFormFromTxt(path.Join(config.FormsPath, retVal.ReplyTxtFileURI))
-			retVal.ReplyInitialURI = tmpForm.InitialURI
-			retVal.ReplyViewerURI = tmpForm.ViewerURI
-		}
-	}
-	return retVal, err
-}
-
-func getFormsHandler(w http.ResponseWriter, r *http.Request) {
-	formFolder, err := buildFormFolder()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-		return
-	}
-	json.NewEncoder(w).Encode(formFolder)
-}
-
-func postFormData(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10000000); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	formPath := r.URL.Query().Get("formPath")
-	if formPath == "" {
-		http.Error(w, "formPath query param missing", http.StatusBadRequest)
-		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
-		return
-	}
-
-	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
-
-	formFolder, err := buildFormFolder()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-		return
-	}
-
-	form, err := findFormFromURI(formPath, formFolder)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't find form to match posted form data %s %s", formPath, r.URL)
-		return
-	}
-
-	formInstanceKey, err := r.Cookie("forminstance")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", formPath, r.URL)
-		return
-	}
-	formData := FormData {
-		IsReply: composereply,
-		TargetForm: form,
-		Fields: make(map[string]string),
-	}
-	for key, values := range r.PostForm {
-		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
-	}
-
-	formMsg, err := FormMessageBuilder {
-		Template: form,
-		FormValues: formData.Fields,
-		Interactive: false,
-		IsReply: composereply,
-	}.Build()
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-	}
-	formData.MsgSubject = formMsg.Subject
-	formData.MsgBody = formMsg.Body
-	formData.MsgXml = formMsg.AttachmentXml
-	postedFormData[formInstanceKey.Value] = formData
-	io.WriteString(w, "<script>window.close()</script>")
-}
-
-func findFormFromURI(formName string, folder FormFolder) (Form, error) {
-	retVal := Form { Name: "unknown" }
-	for _, subFolder := range folder.Folders {
-		form, err := findFormFromURI(formName, subFolder)
-		if err == nil {
-			return form, nil
-		}
-	}
-
-	for _, form := range folder.Forms {
-		if form.MatchesName(formName) {
-			return form, nil
-		}
-	}
-
-	// couldn't find it by full path, so try to find match by guessing folder name
-	formName = path.Join(folder.Name, formName)
-	for _, form := range folder.Forms {
-		if form.ContainsName(formName) {
-			return form, nil
-		}
-	}
-	return retVal, errors.New("form not found")
-}
-
-func getFormData(w http.ResponseWriter, r *http.Request) {
-	formInstanceKey, err := r.Cookie("forminstance")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", formInstanceKey, r.URL)
-		return
-	}
-	json.NewEncoder(w).Encode(postedFormData[formInstanceKey.Value])
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -522,10 +251,11 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err == nil {
-		xml := postedFormData[formInstanceKey.Value].MsgXml
-		form := postedFormData[formInstanceKey.Value].TargetForm
-		isReply := postedFormData[formInstanceKey.Value].IsReply
-		msg.AddFile(fbb.NewFile(GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
+		formData := forms.GetPostedFormData(formInstanceKey.Value)
+		xml := formData.MsgXml
+		form := formData.TargetForm
+		isReply := formData.IsReply
+		msg.AddFile(fbb.NewFile(forms.GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
 	}
 
 	// Other fields
@@ -610,106 +340,6 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func findAbsPathForTemplatePath(tmplPath string) (string, error) {
-	absPathTemplate := filepath.Join(config.FormsPath, path.Clean(tmplPath))
-
-	// now deal with cases where the html file name specified in the .txt file, has different caseness than the actual .html file on disk.
-	absPathTemplateFolder := filepath.Dir(absPathTemplate)
-
-	templateDir, err := os.Open(absPathTemplateFolder)
-	if err != nil {
-		return "", errors.New("can't read template folder")
-	}
-	defer templateDir.Close()
-
-	fileNames, err := templateDir.Readdirnames(0)
-	if err != nil {
-		return "", errors.New("can't read template folder")
-	}
-
-	var retVal string
-	for _, name := range fileNames {
-		if strings.ToLower(filepath.Base(tmplPath)) == strings.ToLower(name) {
-			retVal = filepath.Join(absPathTemplateFolder, name)
-			break
-		}
-	}
-
-	return retVal, nil
-}
-
-func getFormTemplate(w http.ResponseWriter, r *http.Request) {
-	formPath := r.URL.Query().Get("formPath")
-	if formPath == "" {
-		http.Error(w, "formPath query param missing", http.StatusBadRequest)
-		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
-		return
-	}
-
-	absPathTemplate, err := findAbsPathForTemplatePath(formPath)
-	if err != nil {
-		http.Error(w, "find the full path for requested template "+formPath, http.StatusBadRequest)
-		log.Printf("find the full path for requested template %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath)
-		return
-	}
-
-	responseText, err := fillFormTemplate(absPathTemplate, "/api/form?"+r.URL.Query().Encode(), nil, make(map[string]string))
-	if err != nil {
-		http.Error(w, "can't open template "+formPath, http.StatusBadRequest)
-		log.Printf("problem filling form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath)
-		return
-	}
-
-	_, err = io.WriteString(w, responseText)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't write form into response %s %s: %s", r.Method, r.URL.Path, err)
-		return
-	}
-}
-
-func fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
-	f, err := os.Open(absPathTemplate)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	retVal := ""
-	now := time.Now()
-	nowDateTime := now.Format("2006-01-02 15:04:05")
-	nowDateTimeUTC := now.UTC().Format("2006-01-02 15:04:05Z")
-	nowDate := now.Format("2006-01-02")
-	nowTime := now.Format("15:04:05")
-	nowDateUTC := now.UTC().Format("2006-01-02Z")
-	nowTimeUTC := now.UTC().Format("15:04:05Z")
-	udtg := strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		l := scanner.Text()
-		l = strings.TrimPrefix(l, "\xEF\xBB\xBF") // some templates start with the byte-ordering marker for UTF-8
-		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)
-		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
-		l = strings.Replace(l, "http://localhost:8001", formDestUrl, -1)
-		l = strings.Replace(l, "{MsgSender}", fOptions.MyCall, -1)
-		l = strings.Replace(l, "{Callsign}", fOptions.MyCall, -1)
-		l = strings.Replace(l, "{ProgramVersion}", "Pat "+versionStringShort(), -1)
-		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
-		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
-		l = strings.Replace(l, "{Date}", nowDate, -1)
-		l = strings.Replace(l, "{UDate}", nowDateUTC, -1)
-		l = strings.Replace(l, "{UDTG}", udtg, -1)
-		l = strings.Replace(l, "{Time}", nowTime, -1)
-		l = strings.Replace(l, "{UTime}", nowTimeUTC, -1)
-		if placeholderRegEx != nil {
-			l = fillPlaceholders(l, placeholderRegEx, formVars)
-		}
-		retVal += l + "\n"
-	}
-	return retVal, nil
 }
 
 func getStatus() Status {
@@ -881,6 +511,7 @@ func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
+
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
@@ -935,7 +566,7 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		formRendered, err := renderForm(f.Data(), composereply)
+		formRendered, err := forms.RenderForm(f.Data(), composereply)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -948,84 +579,6 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		http.NotFound(w, r)
 	}
-}
-
-func renderForm(contentData []byte, composereply bool) (string, error) {
-	buf := bytes.NewBuffer(contentData)
-
-	type Node struct {
-		XMLName xml.Name
-		Content []byte `xml:",innerxml"`
-		Nodes   []Node `xml:",any"`
-	}
-
-	var n1 Node
-	formParams := make(map[string]string)
-	formVars := make(map[string]string)
-
-	err := xml.NewDecoder(buf).Decode(&n1)
-	if err != nil {
-		return "", err
-	}
-
-	if n1.XMLName.Local != "RMS_Express_Form" {
-		return "", errors.New("missing RMS_Express_Form tag in form XML")
-	}
-	for _, n2 := range n1.Nodes {
-		switch n2.XMLName.Local {
-		case "form_parameters":
-			for _, n3 := range n2.Nodes {
-				formParams[n3.XMLName.Local] = string(n3.Content)
-			}
-		case "variables":
-			for _, n3 := range n2.Nodes {
-				formVars[n3.XMLName.Local] = string(n3.Content)
-			}
-		}
-	}
-	if formParams["display_form"] == "" {
-		return "", errors.New("missing display_form tag in form XML")
-	}
-	if composereply && formParams["reply_template"] == "" {
-		return "", errors.New("missing reply_template tag in form XML for a reply message")
-	}
-
-	formFolder, err := buildFormFolder()
-	if err != nil {
-		return "", err
-	}
-
-	formToLoad := formParams["display_form"]
-	if composereply {
-		// we're authoring a reply
-		formToLoad = formParams["reply_template"]
-	}
-
-	form, err := findFormFromURI(formToLoad, formFolder)
-	if err != nil {
-		return "", err
-	}
-
-	var formRelPath string
-	switch {
-	case composereply:
-		// authoring a form reply
-		formRelPath = form.ReplyInitialURI
-	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
-		//viewing a form reply
-		formRelPath = form.ReplyViewerURI
-	default:
-		// viewing a form
-		formRelPath = form.ViewerURI
-	}
-
-	absPathTemplate, err := findAbsPathForTemplatePath(formRelPath)
-	if err != nil {
-		return "", err
-	}
-
-	retVal, err := fillFormTemplate(absPathTemplate, "/api/form?composereply=true&formPath="+formRelPath, regexp.MustCompile(`\{var\s+(\w+)\s*\}`), formVars)
-	return retVal, err
 }
 
 // toHTML takes the given body and turns it into proper html with

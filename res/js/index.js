@@ -2,9 +2,9 @@ var wsURL = "";
 var posId = 0;
 var connectAliases;
 var mycall = "";
+var formsCatalog;
 
-var uploadFiles = new Array();
-var statusPopoverDiv;
+var statusDiv;
 var statusPos = $('#pos_status');
 
 function initFrontend(ws_url)
@@ -12,7 +12,8 @@ function initFrontend(ws_url)
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
-		initStatusPopover()
+
+		initStatusModal();
 
 		// Setup actions
 		$('#connect_btn').click(connect);
@@ -35,19 +36,15 @@ function initFrontend(ws_url)
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
 		$('#sent_tab').click(function(evt){ displayFolder("sent") });
 		$('#archive_tab').click(function(evt){ displayFolder("archive") });
-		$('.navbar li').click(function(e) {
-			$('.navbar li.active').removeClass('active');
+		$('.navbar a').click(function(e) {
 			var $this = $(this);
-			if (!$this.hasClass('active')) {
-				$this.addClass('active');
+			if (!$this.hasClass('dropdown-toggle')) {
+				$('.navbar a.active').removeClass('active');
+				if (!$this.hasClass('active')) {
+					$this.addClass('active');
+				}
 			}
 			e.preventDefault();
-		});
-
-		$('.nav :not(.dropdown) a').on('click', function(){
-    		if($('.navbar-toggle').css('display') !='none'){
-				$(".navbar-toggle").trigger( "click" );
-			}
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
@@ -89,22 +86,22 @@ function initFrontend(ws_url)
 		displayFolder("in");
 
 		initNotifications();
+		initForms();
 	});
 }
 
-function initNotifications()
-{
+function initNotifications() {
 	if( !isNotificationsSupported() ){
-		statusPopoverDiv.find('#notifications_error').find('.panel-body').html('Not supported by this browser.');
+		statusDiv.find('#notifications_error').find('.card-text').html('Not supported by this browser.');
 		return
 	}
 	Notification.requestPermission(function(permission) {
 		if( permission === "granted" ){
-			showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
+			showGUIStatus(statusDiv.find('#notifications_error'), false)
 		} else if (isInsecureOrigin()) {
 			// There is no way of knowing for sure if the permission was denied by the user
 			// or prohibited because of insecure origin (Chrome). This is just a lucky guess.
-			appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
+			appendInsecureOriginWarning(statusDiv.find('#notifications_error'))
 		}
 	});
 }
@@ -138,39 +135,72 @@ function updateProgress(p) {
 		if( p.subject ){
 			text += " - " + htmlEscape(p.subject)
 		}
-		$('#navbar_progress .progress-text').text(text);
-		$('#navbar_progress .progress-bar').css("width", percent + "%").text(percent + "%");
+		$('#navbar_progress .progress-bar').css("width", percent + "%").text(text + " " + percent + "%");
 	}
 
-	if( $('#navbar_progress').is(':visible') && p.done ){
+	if( !$('#navbar_progress').hasClass("d-none") && p.done ){
 		window.setTimeout(function() {
 			if (!cancelCloseTimer) {
-				$('#navbar_progress').fadeOut(500);
+				$('#navbar_progress').addClass("d-none");
 			}
 		}, 3000);
 	} else if( (p.receiving || p.sending) && !p.done ){
-		$('#navbar_progress').show();
+		$('#navbar_progress').removeClass("d-none");
 	}
 }
 
-function initStatusPopover() {
-	statusPopoverDiv = $('#status_popover_content');
+function initStatusModal() {
+	statusDiv = $('#statusModal');
 	showGUIStatus($('#websocket_error'), true);
 	showGUIStatus($('#notifications_error'), true);
-	$('#gui_status_light').popover({
-		placement: 'bottom',
-		content: statusPopoverDiv,
-		html: true,
-	});
 
-	// Hack to force popover to grab it's content div
-	$('#gui_status_light').popover('show');
-	$('#gui_status_light').popover('hide');
-	statusPopoverDiv.show();
+	$('.navbar-brand').click(function(e){ $('#statusModal').modal('toggle'); })
+}
 
-	// Bind click on navbar-brand
-	$('#gui_status_light').unbind()
-	$('.navbar-brand').click(function(e){ $('#gui_status_light').popover('toggle'); })
+function onFormLaunching() {
+	$('#selectForm').modal('hide')
+	startPollingFormData()
+}
+
+function startPollingFormData() {
+	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1);
+	pollFormData()
+}
+
+function forgetFormData() {
+	window.clearTimeout(pollTimer)
+	deleteCookie("forminstance");
+}
+
+var pollTimer;
+
+function pollFormData() {
+	$.get(
+		'api/form',
+		{},
+		function(data) {
+//			console.log(data)
+			if ($('#composer').hasClass('show') && (!data.target_form || !data.target_form.name)) {
+				pollTimer = window.setTimeout(pollFormData, 1000)
+			} else {
+//				console.log("done polling")
+				if ($('#composer').hasClass('show') && data.target_form && data.target_form.name) {
+					writeFormDataToComposer(data)
+				}
+			}
+		},
+		'json'
+	)
+}
+
+function writeFormDataToComposer(data) {
+	if (data.target_form) {
+		$('#msg_body').val(data.msg_body)
+		if (data.msg_subject) {
+			// in case of composing a form-based reply we keep the 'Re: ...' subject line
+			$('#msg_subject').val(data.msg_subject)
+		}
+	}
 }
 
 function initComposeModal() {
@@ -183,8 +213,13 @@ function initComposeModal() {
 	$('#msg_to').tokenfield(tokenfieldConfig);
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
+	$('#composer').on('hidden.bs.modal', forgetFormData);
+
 	$('#composer_error').hide();
 
+	$('#compose_cancel').click(function(evt){
+		closeComposer(true);
+	});
 
 	$('#composer_form').submit(function(e) {
 		var form = $('#composer_form');
@@ -220,6 +255,89 @@ function initComposeModal() {
 	});
 }
 
+function initForms() {
+	$.getJSON("/api/formcatalog")
+		.done(function(data){initFormSelect(data)})
+		.fail(function(data){initFormSelect(null)})
+		;
+}
+
+function initFormSelect(data){
+	formsCatalog = data;
+	if (data
+		&& data.path
+		&& data.path != ""
+		&& data.path != "."
+		&& (data.folders && data.folders.length > 0 || data.forms && data.forms.length > 0)
+	) {
+		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.version+'</a>)</span>');
+		$('#formsRootFolderName').text(data.path);
+		appendFormFolder('formFolderRoot', data);
+	}
+	else {
+		$('#formsRootFolderName').text('missing forms_path in Pat config');
+		$(`#formFolderRoot`).append(`
+			<h6>Form templates not configured correctly</h6>
+			<ul>
+				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
+				<li>Unzip the Standard_Forms archive</li>
+				<li>Use 'pat configure' to point to the template folder. E.g. "forms_path": "/Users/walter/.wl2k/Standard_Forms"</li>
+			</ul>
+			`);
+	}
+}
+
+function setCookie(cname, cvalue, exdays) {
+  var d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  var expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function deleteCookie(cname) {
+  document.cookie = cname + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+function appendFormFolder(rootId, data) {
+	if (data.folders && data.folders.length > 0 && data.form_count > 0) {
+		var rootAcc = `${rootId}Acc`
+		$(`#${rootId}`).append(`
+			<div class="accordion" id="${rootAcc}">
+			</div>
+			`);
+		data.folders.forEach(function (folder) {
+			if (folder.form_count > 0) {
+				var folderNameId = rootId + folder.name.replace( /\s/g, "_" );
+				var cardBodyId = folderNameId+"Body";
+				var card =
+				`
+				<div class="card">
+					<div class="card-header d-flex">
+						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
+							${folder.name}
+						</button>
+					</div>
+					<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
+						<div class="card-body" id=${cardBodyId}>
+						</div>
+					</div>
+				</div>
+				`
+				$(`#${rootAcc}`).append(card)
+				appendFormFolder(`${cardBodyId}`, folder)
+				if (folder.forms && folder.forms.length > 0){
+					var cardBodyFormsId = `${cardBodyId}Forms`
+					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
+					folder.forms.forEach((form) => {
+						var pathEncoded = encodeURIComponent(form.initial_uri)
+						$(`#${cardBodyFormsId}`).append(`<a href="/api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching();">${form.name}</a>`)
+					});
+				}
+			}
+		});
+	}
+}
+
 function initConnectModal() {
 	$('#freqInput').change(onConnectInputChange);
 	$('#radioOnlyInput').change(onConnectInputChange);
@@ -241,7 +359,7 @@ function updateConnectAliases() {
 
 		var select = $('#aliasSelect');
 		Object.keys(data).forEach(function (key) {
-			select.append('<option>' + key + '</option>');
+			select.append(new Option(key));
 		});
 
 		select.change(function() {
@@ -340,9 +458,9 @@ function refreshExtraInputGroups() {
 
 function handleGeolocationError(error) {
 	if(error.message.search("insecure origin") > 0 || isInsecureOrigin()) {
-		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
+		appendInsecureOriginWarning(statusDiv.find('#geolocation_error'))
 	}
-	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
+	showGUIStatus(statusDiv.find('#geolocation_error'), true)
 	statusPos.html("Geolocation unavailable.");
 }
 
@@ -387,25 +505,25 @@ function postPosition() {
 function previewAttachmentFiles() {
 	var files = $(this).get(0).files;
 	attachments = $('#composer_attachments');
+	attachments.empty();
 	for (var i = 0; i < files.length; i++) {
 		file = files.item(i);
-
-		uploadFiles[uploadFiles.length] = file;
 
 		if(isImageSuffix(file.name)){
 			var reader = new FileReader();
 			reader.onload = function(e) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-					'<img src="'+ e.target.result + '" alt="' + file.name + '">' +
+					'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+					(file.size/1024).toFixed(2) + 'kB' +
+					'<img class="img-fluid img-thumbnail" src="'+ e.target.result + '" alt="' + file.name + '">' +
 					'</a></div>'
 				);
 			}
 			reader.readAsDataURL(file);
 		} else {
 			attachments.append(
-				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-				file.name + '<br />(' + file.size + ' bytes)' +
+				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+				file.name + '<br />(' + (file.size/1024).toFixed(2) + 'kB)' +
 				'</a></div>'
 			);
 		}
@@ -423,10 +541,10 @@ function notify(data)
 
 function alert(msg)
 {
-    var div = $('#navbar_status');
-    div.empty();
-    div.append('<span class="navbar-text status-text">' + msg + '</p>');
-    div.show();
+	var div = $('#navbar_status');
+	div.empty();
+	div.append('<span class="navbar-text status-text">' + msg + '</span>');
+	div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
 }
 
@@ -439,10 +557,12 @@ function updateStatus(data)
 		st.append("Connected " + data.remote_addr + "");
 	} else if(data.active_listeners.length > 0){
 		st.append("<i>Listening " + data.active_listeners + "</i>");
+	} else {
+		st.append("<i>Idle</i>");
 	}
 
 	var n = data.http_clients.length;
-	statusPopoverDiv.find('#webserver_info').find('.panel-body').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
+	statusDiv.find('#webserver_info').find('.card-text').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
 function closeComposer(clear)
@@ -468,14 +588,13 @@ function closeComposer(clear)
 function connect(evt)
 {
 	url = getConnectURL()
-
 	$('#connectModal').modal('hide');
 
 	$.getJSON("/api/connect?url=" + url, function(data){
 		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}
-	}).error(function() {
+	}).fail(function() {
 		alert("Connect failed. See console for detailed information.");
 	});
 }
@@ -483,22 +602,22 @@ function connect(evt)
 function updateGUIStatus()
 {
 	var color = "success";
-	statusPopoverDiv.find('.panel-info').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-info').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "info";
 	});
-	statusPopoverDiv.find('.panel-warning').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-warning').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "warning";
 	});
-	statusPopoverDiv.find('.panel-danger').not('.hidden').not('.ignore-status').each(function(i) {
+	statusDiv.find('.bg-danger').not('.d-none').not('.ignore-status').each(function(i) {
 		color = "danger";
 	});
 	$('#gui_status_light').removeClass (function (index, className) {
 		return (className.match (/(^|\s)btn-\S+/g) || []).join(' ');
 	}).addClass('btn-' + color);
 	if(color == "success") {
-		statusPopoverDiv.find('#no_error').show();
+		statusDiv.find('#no_error').removeClass('d-none');
 	} else {
-		statusPopoverDiv.find('#no_error').hide();
+		statusDiv.find('#no_error').addClass('d-none');
 	}
 }
 
@@ -513,14 +632,14 @@ function isInsecureOrigin()
 
 function appendInsecureOriginWarning(e)
 {
-	e.removeClass('panel-info').addClass('panel-warning')
-	e.find('.panel-body').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
+	e.removeClass('bg-info').addClass('bg-warning')
+	e.find('.card-text').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
 	updateGUIStatus()
 }
 
 function showGUIStatus(e, show)
 {
-	show ? e.removeClass('hidden') : e.addClass('hidden');
+	show ? e.removeClass('d-none') : e.addClass('d-none');
 	updateGUIStatus();
 }
 
@@ -531,8 +650,8 @@ function initConsole()
 	if("WebSocket" in window){
 		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
-			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
-			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
+			showGUIStatus(statusDiv.find('#websocket_error'), false);
+			showGUIStatus(statusDiv.find('#webserver_info'), true);
 			$('#console').empty();
 		};
 		ws.onmessage = function(evt) {
@@ -563,8 +682,8 @@ function initConsole()
 			}
 		};
 		ws.onclose   = function(evt) {
-			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
-			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
+			showGUIStatus(statusDiv.find('#websocket_error'), true)
+			showGUIStatus(statusDiv.find('#webserver_info'), false)
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
 	} else {
@@ -638,7 +757,7 @@ function displayFolder(dir) {
 			//TODO: Cleanup (Sorry about this...)
 			var html = '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
 			if(msg.Files.length > 0){
-				html += '<span class="glyphicon glyphicon-paperclip" />';
+				html += '<span class="glyphicon glyphicon-paperclip"></span>';
 			}
 			html += '</td><td>' + htmlEscape(msg.Subject) + "</td><td>";
 			if( !is_from && !msg.To ){
@@ -651,7 +770,7 @@ function displayFolder(dir) {
 				html += msg.To[0].Addr + "...";
 			}
 			html += '</td>'
-			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
+			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : '') + '</td>')
 			html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)
@@ -714,17 +833,29 @@ function displayMessage(elem) {
 		}
 		for(var i = 0; data.Files && i < data.Files.length; i++){
 			var file = data.Files[i];
+			var formName = formXmlToFormName(file.Name);
+			var renderToHtml = "false"
+			if (formName) {
+				renderToHtml = "true"
+			}
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=' + renderToHtml
 
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a class="thumbnail" target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' + (file.Size/1024).toFixed(2) + 'kB' +
-					'<img src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+					(file.Size/1024).toFixed(2) + 'kB' +
+					'<img class="img-fluid img-thumbnail" src="' + attachUrl + '" alt="' + file.Name + '">' +
 					'</a></div>'
+				);
+			} else if(formName) {
+				attachments.append(
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-edit"></span> ' +
+					formName + '</a></div>'
 				);
 			} else {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
-					file.Name + '<br />(' + file.Size + ' bytes)' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
+					file.Name + '<br />(' + (file.Size/1024).toFixed(2) + 'kB)' +
 					'</a></div>'
 				);
 			}
@@ -743,6 +874,11 @@ function displayMessage(elem) {
 			$('#msg_body').val(quoteMsg(data));
 
 			$('#composer').modal('show');
+
+			//opens browser window for a form-based reply,
+			// or does nothing if this is not a form-based message
+			showReplyForm(msg_url, data);
+
 		});
 		$('#forward_btn').off('click');
 		$('#forward_btn').click(function(evt){
@@ -777,6 +913,50 @@ function displayMessage(elem) {
 		}
 		elem.attr('class', 'active');
 	});
+}
+
+function formXmlToFormName(fileName) {
+
+	var match = fileName.match( /^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	match = fileName.match( /^RMS_Express_Form_([\w \.]+)\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	return null;
+}
+
+function showReplyForm(orgMsgUrl, msg){
+	for(var i = 0; msg.Files && i < msg.Files.length; i++){
+		var file = msg.Files[i];
+		var formName = formXmlToFormName(file.Name);
+		if (!formName){
+			continue
+		}
+		// retrieve form XML attachment and determine if it specifies a form-based reply
+		var attachUrl = orgMsgUrl + "/" + file.Name
+		$.get(
+			attachUrl + "?rendertohtml=false&composereply=false",
+			{},
+			function(data) {
+				parser = new DOMParser();
+				xmlDoc = parser.parseFromString(data,"text/xml");
+				if (xmlDoc){
+					replyTmpl = xmlDoc.evaluate("/RMS_Express_Form/form_parameters/reply_template", xmlDoc, null, XPathResult.STRING_TYPE, null)
+					if ( replyTmpl && replyTmpl.stringValue ) {
+						window.setTimeout(startPollingFormData, 500)
+						open(attachUrl + "?rendertohtml=true&composereply=true")
+					}
+				}
+			},
+			"text"
+		)
+		return
+	}
 }
 
 function replyCarbonCopyList(msg) {

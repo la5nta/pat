@@ -52,4 +52,5 @@
     "use_server_time": false,
     "addr": "localhost:2947",
   },
+  "forms_path": "",
 }

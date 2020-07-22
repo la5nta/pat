@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -41,6 +43,12 @@ const (
 	MethodSerialTNC = "serial-tnc"
 	MethodPactor    = "pactor"
 )
+
+type MessageForm struct {
+	Subject string
+	Body string
+	AttachmentXml string
+}
 
 var commands = []Command{
 	{
@@ -86,6 +94,16 @@ var commands = []Command{
 		HandleFunc: func(args []string) {
 			readMail()
 		},
+	},
+	{
+		Str:     "composeform",
+		Aliases: []string{"formPath"},
+		Desc:    "Post form-based report.",
+		Usage:   "[options]",
+		Options: map[string]string{
+			"--template": "path to the form template file. Uses the config file's forms_path as root. Defaults to 'ICS USA Forms/ICS213.txt'",
+		},
+		HandleFunc: composeFormReport,
 	},
 	{
 		Str:     "position",
@@ -185,6 +203,7 @@ func optionsSet() *pflag.FlagSet {
 }
 
 func init() {
+
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 
@@ -515,7 +534,8 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeMessage(replyMsg *fbb.Message) {
+func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
+
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -590,6 +610,14 @@ func composeMessage(replyMsg *fbb.Message) {
 	if msg.Subject() == "" {
 		msg.SetSubject("<No subject>")
 	}
+
+	return msg
+
+}
+
+func composeMessage(replyMsg *fbb.Message) {
+
+	msg := composeMessageHeader(replyMsg)
 
 	// Read body
 	fmt.Printf(`Press ENTER to start composing the message body. `)
@@ -770,6 +798,280 @@ func posReportHandle(args []string) {
 	postMessage(report.Message(fOptions.MyCall))
 }
 
+func getFormsVersion(templatePath string) string {
+	// walking up the path to find a version file.
+	// Winlink's Standard_Forms.zip includes it in its root.
+	dir := templatePath
+	if filepath.Ext(templatePath) == ".txt" {
+		dir = filepath.Dir(templatePath)
+	}
+
+	var verFile *os.File
+	// loop to walk up the subfolders until we find the top, or Winlink's Standard_Forms_Version.dat file
+	for {
+		f, err := os.Open(filepath.Join(dir, "Standard_Forms_Version.dat"))
+		if err != nil {
+			dir = filepath.Dir(dir) // have not found the version file or couldn't open it, going up by one
+			if dir == "." || dir == ".." || strings.HasSuffix(dir, string(os.PathSeparator)) {
+				return "unknown" // reached top-level and couldn't find version .dat file
+			}
+			continue
+		}
+		defer f.Close()
+		// found and opened the version file
+		verFile = f
+		break
+	}
+
+	if verFile != nil {
+		return readFileFirstLine(verFile)
+	}
+	return "unknown"
+}
+
+func readFileFirstLine(f *os.File) string {
+	scanner := bufio.NewScanner(f)
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+	return ""
+}
+
+func composeFormReport(args []string) {
+	var tmplPathArg string
+
+	set := pflag.NewFlagSet("form", pflag.ExitOnError)
+	set.StringVar(&tmplPathArg, "template", "ICS USA Forms/ICS213", "")
+	set.Parse(args)
+
+	formFolder, err := buildFormFolder()
+	if err != nil {
+		log.Printf("can't build form folder tree %s", err)
+		return
+	}
+
+	tmplPath := filepath.Clean(tmplPathArg)
+	form, err := findFormFromURI(tmplPath, formFolder)
+	if err != nil {
+		log.Printf("can't find form to match form %s", tmplPath)
+		return
+	}
+
+	msg := composeMessageHeader(nil)
+	var varMap map[string]string
+	varMap = make(map[string]string)
+	varMap["subjectline"] = msg.Subject()
+	varMap["templateversion"] = getFormsVersion(config.FormsPath)
+	varMap["msgsender"] = fOptions.MyCall
+	fmt.Println("forms version: " + varMap["templateversion"])
+
+	formMsg, err := FormMessageBuilder {
+		Template: form,
+		FormValues: varMap,
+		Interactive: true,
+		IsReply: false,
+	}.Build()
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
+		os.Exit(1)
+	}
+	msg.SetSubject(formMsg.Subject)
+
+	fmt.Println("================================================================")
+	fmt.Print("To: ")
+	fmt.Println(msg.To())
+	fmt.Print("Cc: ")
+	fmt.Println(msg.Cc())
+	fmt.Print("From: ")
+	fmt.Println(msg.From())
+	fmt.Println("Subject: " + msg.Subject())
+	fmt.Println(formMsg.Body)
+	fmt.Println("================================================================")
+	fmt.Println("Press ENTER to post this message in the outbox, Ctrl-C to abort.")
+	fmt.Println("================================================================")
+	readLine()
+
+	msg.SetBody(formMsg.Body)
+
+	attachmentName := GetXmlAttachmentNameForForm(form, false)
+	attachmentFile := fbb.NewFile(attachmentName, []byte(formMsg.AttachmentXml))
+	msg.AddFile(attachmentFile)
+
+	postMessage(msg)
+}
+
+func GetXmlAttachmentNameForForm(f Form, isReply bool) string {
+	attachmentName := filepath.Base(f.ViewerURI)
+	if isReply {
+		attachmentName = filepath.Base(f.ReplyViewerURI)
+	}
+	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
+	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
+	if len(attachmentName) > 255 {
+		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
+	}
+	return attachmentName
+}
+
+type FormMessageBuilder struct {
+	Interactive bool
+	IsReply     bool
+	Template Form
+	FormValues map[string]string
+}
+
+//returns message subject, body, and XML attachment content for the given template and variable map
+func (b FormMessageBuilder) Build () (MessageForm, error) {
+
+	tmplPath := filepath.Join(config.FormsPath, b.Template.TxtFileURI)
+	if filepath.Ext(tmplPath) == "" {
+		tmplPath += ".txt"
+	}
+	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
+		tmplPath = filepath.Join(config.FormsPath, b.Template.ReplyTxtFileURI)
+	}
+
+	infile, err := os.Open(tmplPath)
+	if err != nil {
+		return MessageForm{}, err
+	}
+
+	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
+	scanner := bufio.NewScanner(infile)
+
+	var retVal MessageForm
+	for scanner.Scan() {
+		lineTmpl := scanner.Text()
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
+		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", fOptions.MyCall, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+versionStringShort(), -1)
+		if strings.HasPrefix(lineTmpl, "Form:") ||
+			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			strings.HasPrefix(lineTmpl, "To:") ||
+			strings.HasPrefix(lineTmpl, "Msg:") {
+			continue
+		}
+		if b.Interactive {
+			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
+			fmt.Println(string(lineTmpl))
+			for i := range matches {
+				varName := matches[i][1]
+				varNameLower := strings.ToLower(varName)
+				if b.FormValues[varNameLower] != "" {
+					continue
+				}
+				fmt.Print(varName + ": ")
+				b.FormValues[varNameLower] = "blank"
+				val := readLine()
+				if val != "" {
+					b.FormValues[varNameLower] = val
+				}
+			}
+		}
+
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
+		if strings.HasPrefix(lineTmpl, "Subject:") {
+			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
+		} else {
+			retVal.Body += lineTmpl + "\n"
+		}
+	}
+	infile.Close()
+
+	if b.IsReply {
+		b.FormValues["msgisreply"] = "True"
+	} else {
+		b.FormValues["msgisreply"] = "False"
+	}
+	b.FormValues["msgsender"] = fOptions.MyCall
+
+	// some defaults that we can't set yet. Winlink doesn't seem to care about these
+	b.FormValues["msgto"] = ""
+	b.FormValues["msgcc"] = ""
+	b.FormValues["msgsubject"] = ""
+	b.FormValues["msgbody"] = ""
+	b.FormValues["msgp2p"] = ""
+	b.FormValues["msgisforward"] = "False"
+	b.FormValues["msgisacknowledgement"] = "False"
+	b.FormValues["msgseqnum"] = "0"
+
+	formVarsAsXml := ""
+	for varKey, varVal := range b.FormValues {
+		formVarsAsXml += fmt.Sprintf("    <%s>%s</%s>\n", XmlEscape(varKey), XmlEscape(varVal), XmlEscape(varKey))
+	}
+
+	viewer := ""
+	if b.Template.ViewerURI != "" {
+		viewer = filepath.Base(b.Template.ViewerURI)
+	}
+	if b.IsReply && b.Template.ReplyViewerURI != "" {
+		viewer = filepath.Base(b.Template.ReplyViewerURI)
+	}
+
+	replier := ""
+	if !b.IsReply && b.Template.ReplyTxtFileURI != "" {
+		replier = filepath.Base(b.Template.ReplyTxtFileURI)
+	}
+
+	retVal.AttachmentXml = fmt.Sprintf(`%s<RMS_Express_Form>
+  <form_parameters>
+    <xml_file_version>%s</xml_file_version>
+    <rms_express_version>%s</rms_express_version>
+    <submission_datetime>%s</submission_datetime>
+    <senders_callsign>%s</senders_callsign>
+    <grid_square>%s</grid_square>
+    <display_form>%s</display_form>
+    <reply_template>%s</reply_template>
+  </form_parameters>
+  <variables>
+%s
+  </variables>
+</RMS_Express_Form>
+`,
+		xml.Header,
+		"1.0",
+		versionStringShort(),
+		time.Now().UTC().Format("20060102150405"),
+		fOptions.MyCall,
+		config.Locator,
+		viewer,
+		replier,
+		formVarsAsXml)
+
+	retVal.Subject = strings.TrimSpace(retVal.Subject)
+	retVal.Body = strings.TrimSpace(retVal.Body)
+
+	return retVal, nil
+}
+
+func XmlEscape(s string) string {
+	sEscaped := bytes.NewBuffer(make([]byte, 0))
+	sEscapedStr := ""
+
+	if err := xml.EscapeText(sEscaped, []byte(s)); err != nil {
+		log.Printf("Error trying to escape XML string %s", err)
+	} else {
+		sEscapedStr = sEscaped.String()
+	}
+	return sEscapedStr
+}
+
+func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {
+	if _, ok := values["txtstr"]; !ok {
+		values["txtstr"] = ""
+	}
+	result := s
+	matches := re.FindAllStringSubmatch(s, -1)
+	for _, match := range matches {
+		value, ok := values[strings.ToLower(match[1])]
+		if ok {
+			result = strings.Replace(result, match[0], value, -1)
+		}
+	}
+	return result
+}
+
 func CourseFromFloat64(f float64, magnetic bool) catalog.Course {
 	c := catalog.Course{Magnetic: magnetic}
 
@@ -793,4 +1095,8 @@ func postMessage(msg *fbb.Message) {
 
 func versionString() string {
 	return fmt.Sprintf("v%s (%s) %s/%s - %s", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+func versionStringShort() string {
+	return fmt.Sprintf("v%s (%s)", Version, GitRev)
 }

@@ -18,5 +18,5 @@ DEV=/dev/ttyUSB0
 #TNC_INIT_CMD="/usr/local/bin/my_tnc_init_script --serial-tty $DEV --hbaud $HBAUD"
 #
 # Example (for Kenwood TH-D7x and TM-D7x0):
-# Download, modify, compile and install http://www.trinityos.com/HAM/CentosDigitalModes/usr/src/misc/D710/tmd710_tncsetup.c
+# Download, modify, compile and install https://github.com/fmarier/tmd710_tncsetup
 #TNC_INIT_CMD="/usr/local/bin/tmd710_tncsetup -B 1 -S $DEV -b $HBAUD"

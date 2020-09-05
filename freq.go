@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -47,6 +48,19 @@ func (f Frequency) String() string {
 	k := (float64(f) - float64(m)*1e6) / 1e3
 
 	return fmt.Sprintf("%d.%06.2f MHz", m, k)
+}
+
+func (f Frequency) MarshalJSON() ([]byte, error) {
+	type obj struct {
+		Hz   json.Number `json:"hz"`
+		KHz  json.Number `json:"khz"`
+		Desc string      `json:"desc"`
+	}
+	return json.Marshal(obj{
+		Hz:   json.Number(fmt.Sprint(int(f))),
+		KHz:  json.Number(fmt.Sprint(f.KHz())),
+		Desc: f.String(),
+	})
 }
 
 func (f Frequency) KHz() float64 { return float64(f) / 1e3 }

@@ -35,7 +35,7 @@ type RMS struct {
 	Modes      string    `json:"modes"`
 	Freq       Frequency `json:"freq"`
 	Dial       Frequency `json:"dial"`
-	URL        *JSONURL  `json"url"`
+	URL        *JSONURL  `json:"url"`
 }
 
 func (r RMS) IsMode(mode string) bool {

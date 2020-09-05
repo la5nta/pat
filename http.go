@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,6 +88,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
+	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
@@ -355,6 +357,35 @@ func getStatus() Status {
 
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
 
+func rmslistHandler(w http.ResponseWriter, req *http.Request) {
+	forceDownload, _ := strconv.ParseBool(req.FormValue("force-download"))
+	band := req.FormValue("band")
+	mode := strings.ToLower(req.FormValue("mode"))
+	prefix := strings.ToUpper(req.FormValue("prefix"))
+
+	list, err := ReadRMSList(forceDownload, func(r RMS) bool {
+		switch {
+		case r.URL == nil:
+			return false
+		case mode != "" && !r.IsMode(mode):
+			return false
+		case band != "" && !r.IsBand(band):
+			return false
+		case prefix != "" && !strings.HasPrefix(r.Callsign, prefix):
+			return false
+		default:
+			return true
+		}
+	})
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sort.Sort(byDist(list))
+	json.NewEncoder(w).Encode(list)
+}
+
 func qsyHandler(w http.ResponseWriter, req *http.Request) {
 	type QSYPayload struct {
 		Transport string      `json:"transport"`
@@ -365,14 +396,28 @@ func qsyHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err := qsy(payload.Transport, string(payload.Freq))
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+
+	rig, rigName, ok, err := VFOForTransport(payload.Transport)
+	switch {
+	case rigName == "":
+		// Either unsupported mode or no rig configured for this transport
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
+	case !ok:
+		// A rig is configured, but not loaded properly
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("QSY failed: Hamlib rig '%s' not loaded.", rigName)
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("QSY failed: %v", err)
+	default:
+		if _, _, err := setFreq(rig, string(payload.Freq)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("QSY failed: %v", err)
+			return
+		}
+		json.NewEncoder(w).Encode(payload)
 	}
-	json.NewEncoder(w).Encode(payload)
 }
 
 func positionHandler(w http.ResponseWriter, req *http.Request) {

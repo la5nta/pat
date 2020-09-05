@@ -123,7 +123,7 @@ func Connect(connectStr string) (success bool) {
 		defer revertFreq()
 	}
 	var currFreq Frequency
-	if vfo, ok := VFOForTransport(url.Scheme); ok {
+	if vfo, _, ok, _ := VFOForTransport(url.Scheme); ok {
 		f, _ := vfo.GetFreq()
 		currFreq = Frequency(f)
 	}
@@ -164,40 +164,20 @@ func Connect(connectStr string) (success bool) {
 
 func qsy(method, addr string) (revert func(), err error) {
 	noop := func() {}
-
-	var rigName string
-	switch method {
-	case MethodWinmor:
-		rigName = config.Winmor.Rig
-	case MethodArdop:
-		rigName = config.Ardop.Rig
-	case MethodAX25:
-		rigName = config.AX25.Rig
-	case MethodPactor:
-		rigName = config.Pactor.Rig
-	default:
-		return noop, fmt.Errorf("Not supported with transport '%s'", method)
-	}
-
-	if rigName == "" {
-		return noop, fmt.Errorf("Missing rig reference in config section for %s, don't know which rig to qsy", method)
-	}
-
-	var ok bool
-	rig, ok := rigs[rigName]
-	if !ok {
+	rig, rigName, ok, err := VFOForTransport(method)
+	if err != nil {
+		return noop, err
+	} else if !ok {
 		return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", rigName)
 	}
 
 	log.Printf("QSY %s: %s", method, addr)
-
 	_, oldFreq, err := setFreq(rig, addr)
 	if err != nil {
 		return noop, err
 	}
 
 	time.Sleep(3 * time.Second)
-
 	return func() {
 		time.Sleep(time.Second)
 		log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)

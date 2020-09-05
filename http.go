@@ -86,6 +86,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
+	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
@@ -353,6 +354,26 @@ func getStatus() Status {
 }
 
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
+
+func qsyHandler(w http.ResponseWriter, req *http.Request) {
+	type QSYPayload struct {
+		Transport string      `json:"transport"`
+		Freq      json.Number `json:"freq"`
+	}
+	var payload QSYPayload
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err := qsy(payload.Transport, string(payload.Freq))
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	json.NewEncoder(w).Encode(payload)
+}
 
 func positionHandler(w http.ResponseWriter, req *http.Request) {
 	// Throw error if GPSd http endpoint is not enabled

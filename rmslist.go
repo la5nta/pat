@@ -115,8 +115,6 @@ func rmsListHandle(args []string) {
 			case !bands[*band].Contains(f):
 				continue
 			}
-			r.distance = float64(0)
-			r.azimuth = float64(0)
 			if !noLocator {
 				if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil {
 					r.distance = me.Distance(them)

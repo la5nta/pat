@@ -177,12 +177,62 @@
                   </div>
                 </div>
               </form>
+              <span id="connectURLPreview" style="float: left; position: relative; bottom: 5px; color: gray;"></span>
             </div>
             <div class="modal-footer">
-			  <p id="connectURLPreview" class="pull-left"></p>
+              <button type="button" class="btn btn-default btn-sm pull-left" data-toggle="collapse" data-target="#rmslist-container">Show RMS list</button>
               <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-primary" id="connect_btn">Connect</button>
-            </div>
+	    </div>
+            <div class="modal-footer collapse" id="rmslist-container">
+              <div class="form-group row">
+                <div class="col-md-4">
+                  <select class="selectpicker form-control" data-width="100%" id="modeSearchSelect">
+                    <optgroup label="mode">
+                      <option value="">(any mode)</option>
+                      <option value="ardop" selected>ARDOP</option>
+                      <option value="packet">Packet</option>
+                      <option value="pactor">Pactor</option>
+                      <option value="winmor">WINMOR</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <select class="selectpicker form-control" data-width="100%" id="bandSearchSelect">
+                    <optgroup label="band">
+                      <!-- Values from freq.go -->
+                      <option value="">(any band)</option>
+                      <option value="160m">160m</option>
+                      <option value="80m">80m</option>
+                      <option value="60m">60m</option>
+                      <option value="40m">40m</option>
+                      <option value="30m">30m</option>
+                      <option value="20m">20m</option>
+                      <option value="17m">17m</option>
+                      <option value="15m">15m</option>
+                      <option value="12m">12m</option>
+                      <option value="10m">10m</option>
+                      <option value="6m">6m</option>
+                      <option value="4m">4m</option>
+                      <option value="2m">2m</option>
+                      <option value="1.25m">1.25m</option>
+                      <option value="70cm">70cm</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <button id="updateRmslistButton" class="btn btn-default btn-link">Update cache</button>
+                </div>
+              </div>
+              <div class="table-responsive table-fixed">
+                <table id="rmslist" class="table table-hover table-condensed">
+                  <thead>
+                    <tr><th>target</th><th>distance</th><th>mode</th><th class="text-right">dial freq</th></tr>
+                  </thead>
+                  <tbody></tbody> <!-- This is populated by javascript -->
+                </table>
+	      </div>
+	    </div>
           </div>
         </div>
       </div>

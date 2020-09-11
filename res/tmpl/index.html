@@ -35,19 +35,15 @@
             <li><a href="#" id="outbox_tab">Outbox</a></li>
             <li><a href="#" id="sent_tab">Sent</a></li>
             <li><a href="#" id="archive_tab">Archive</a></li>
-            <li class="dropdown">
+<!--          Flattened menu as the additional dropdown was annoying 
+              <li class="dropdown">       
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li><a href="#" data-toggle="modal" data-target="#connectModal"><span class="glyphicon glyphicon-refresh" /> Connect...</a></li>
-				<li class="divider"></li>
-                <li><a href="#" data-toggle="modal" data-target="#composer"><span class="glyphicon glyphicon-edit" /> Compose...</a></li>
-                <li><a href="#" data-toggle="modal" data-target="#posModal"><span class="glyphicon glyphicon-map-marker" /> Position...</a></li>
-                <li class="divider"></li>
-                <li class="dropdown-header">Other stuff</li>
-                <!--<li><a href="#">Settings</a></li>-->
-                <li><a href="#" data-toggle="modal" data-target="#aboutModal">About {{.AppName}}</a></li>
-              </ul>
-            </li>
+-->
+            <li><a href="#" data-toggle="modal" data-target="#connectModal"><span class="glyphicon glyphicon-refresh" /> Connect...</a></li>
+            <li><a href="#" data-toggle="modal" data-target="#composer"><span class="glyphicon glyphicon-edit" /> Compose...</a></li>
+            <li><a href="#" data-toggle="modal" data-target="#posModal"><span class="glyphicon glyphicon-map-marker" /> Position...</a></li>
+	    <li><a href="#" data-toggle="modal" data-target="#aboutModal">About {{.AppName}}</a></li>
           </ul>
         </div><!--/.nav-collapse -->
         <div id="navbar_progress" aria-hidden="true" style="display: none;">

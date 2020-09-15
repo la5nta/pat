@@ -623,6 +623,7 @@ function initConsole()
 	if("WebSocket" in window){
 		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
+			console.log("Websocket opened");
 			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
 			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
 			$('#console').empty();
@@ -653,8 +654,12 @@ function initConsole()
 			if(msg.PromptAbort) {
 				$('#promptModal').modal('hide');
 			}
+			if(msg.Ping) {
+				ws.send(JSON.stringify({Pong: true}));
+			}
 		};
 		ws.onclose   = function(evt) {
+			console.log("Websocket closed");
 			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
 			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
 			window.setTimeout(function() { initConsole(); }, 1000);

@@ -39,6 +39,7 @@ import (
 type Status struct {
 	ActiveListeners []string `json:"active_listeners"`
 	Connected       bool     `json:"connected"`
+	Dialing         bool     `json:"dialing"`
 	RemoteAddr      string   `json:"remote_addr"`
 	HTTPClients     []string `json:"http_clients"`
 }
@@ -338,6 +339,7 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 func getStatus() Status {
 	status := Status{
 		ActiveListeners: []string{},
+		Dialing:         dialing != nil,
 		Connected:       exchangeConn != nil,
 		HTTPClients:     websocketHub.ClientAddrs(),
 	}

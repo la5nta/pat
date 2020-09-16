@@ -525,12 +525,38 @@ function alert(msg)
 function updateStatus(data)
 {
 	var st = $('#status_text');
-	st.empty();
+	st.empty().off('click')
+		.attr('data-toggle', 'tooltip')
+		.attr('data-placement', 'bottom')
+		.tooltip();
 
-	if(data.connected){
-		st.append("Connected " + data.remote_addr + "");
-	} else if(data.active_listeners.length > 0){
-		st.append("<i>Listening " + data.active_listeners + "</i>");
+	onDisconnect = function() {
+		st.tooltip('hide');
+		disconnect(false, () => {
+			// This will be reset by the next updateStatus when the session is aborted
+			st.empty().append('Disconnecting... ');
+			// Issue dirty disconnect on second click
+			st.off('click').click(() => { st.off('click'); disconnect(true); st.tooltip('hide'); });
+			st.attr('title', 'Click to force disconnect').tooltip('fixTitle').tooltip('show');
+		});
+	};
+
+	if(data.dialing){
+		st.append('Dialing... ');
+		st.click(onDisconnect);
+		st.attr('title', 'Click to abort').tooltip('fixTitle').tooltip('show');
+	} else if(data.connected){
+		st.append("Connected " + data.remote_addr);
+		st.click(onDisconnect);
+		st.attr('title', 'Click to disconnect').tooltip('fixTitle').tooltip('hide');
+	} else {
+		if(data.active_listeners.length > 0){
+			st.append("<i>Listening " + data.active_listeners + "</i>");
+		} else {
+			st.append("<i>Ready</i>");
+		}
+		st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
+		st.click(() => { $('#connectModal').modal('toggle'); });
 	}
 
 	var n = data.http_clients.length;
@@ -570,6 +596,16 @@ function connect(evt)
 	}).error(function() {
 		alert("Connect failed. See console for detailed information.");
 	});
+}
+
+function disconnect(dirty, successHandler)
+{
+	if(successHandler === undefined) {
+		successHandler = () => {};
+	}
+	$.post("/api/disconnect?dirty=" + dirty, {}, function(response) {
+		successHandler();
+	}, 'json');
 }
 
 function updateGUIStatus()
@@ -662,6 +698,7 @@ function initConsole()
 			console.log("Websocket closed");
 			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
 			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
+			$('#status_text').empty();
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
 	} else {

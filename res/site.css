@@ -15,6 +15,10 @@ body > .container {
   outline: none !important;
 }
 
+.navbar-link {
+  text-decoration: none !important;
+}
+
 .status-text {
   font-weight: bold;
   font-size: 11px !important;

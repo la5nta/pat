@@ -158,7 +158,7 @@ var (
 	mbox         *mailbox.DirHandler // The mailbox
 	listenHub    *ListenerHub
 	promptHub    *PromptHub
-	formsMgr		 *forms.Manager
+	formsMgr     *forms.Manager
 
 	appDir string
 )
@@ -288,10 +288,10 @@ func main() {
 	}
 
 	// init forms subsystem
-	formsMgr = forms.NewManager( forms.FormsConfig {
-		FormsPath: config.FormsPath,
-		MyCall: fOptions.MyCall,
-		Locator: config.Locator,
+	formsMgr = forms.NewManager(forms.FormsConfig{
+		FormsPath:  config.FormsPath,
+		MyCall:     fOptions.MyCall,
+		Locator:    config.Locator,
 		AppVersion: versionStringShort(),
 		LineReader: readLine,
 	})

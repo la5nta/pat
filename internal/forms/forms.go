@@ -77,10 +77,10 @@ type FormData struct {
 }
 
 type MessageForm struct {
-	Subject 				string
-	Body 						string
-	AttachmentXml 	string
-	AttachmentName 	string
+	Subject        string
+	Body           string
+	AttachmentXml  string
+	AttachmentName string
 }
 
 func NewManager(conf FormsConfig) *Manager {

@@ -26,7 +26,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
 
-	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
@@ -74,10 +73,10 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
-	r.HandleFunc("/api/formcatalog", forms.GetFormsCatalog).Methods("GET")
-	r.HandleFunc("/api/form", forms.PostFormData).Methods("POST")
-	r.HandleFunc("/api/form", forms.GetFormData).Methods("GET")
-	r.HandleFunc("/api/forms", forms.GetFormTemplate).Methods("GET")
+	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalog).Methods("GET")
+	r.HandleFunc("/api/form", formsMgr.PostFormData).Methods("POST")
+	r.HandleFunc("/api/form", formsMgr.GetFormData).Methods("GET")
+	r.HandleFunc("/api/forms", formsMgr.GetFormTemplate).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
@@ -251,11 +250,11 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err == nil {
-		formData := forms.GetPostedFormData(formInstanceKey.Value)
+		formData := formsMgr.GetPostedFormData(formInstanceKey.Value)
 		xml := formData.MsgXml
 		form := formData.TargetForm
 		isReply := formData.IsReply
-		msg.AddFile(fbb.NewFile(forms.GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
+		msg.AddFile(fbb.NewFile(formsMgr.GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
 	}
 
 	// Other fields
@@ -566,7 +565,7 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		formRendered, err := forms.RenderForm(f.Data(), composereply)
+		formRendered, err := formsMgr.RenderForm(f.Data(), composereply)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

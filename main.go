@@ -158,6 +158,7 @@ var (
 	mbox         *mailbox.DirHandler // The mailbox
 	listenHub    *ListenerHub
 	promptHub    *PromptHub
+	formsMgr		 *forms.Manager
 
 	appDir string
 )
@@ -287,7 +288,7 @@ func main() {
 	}
 
 	// init forms subsystem
-	forms.Init( forms.FormsConfig {
+	formsMgr = forms.NewManager( forms.FormsConfig {
 		FormsPath: config.FormsPath,
 		MyCall: fOptions.MyCall,
 		Locator: config.Locator,
@@ -805,7 +806,7 @@ func composeFormReport(args []string) {
 
 	msg := composeMessageHeader(nil)
 
-	formMsg, err := forms.ComposeForm(tmplPathArg, msg.Subject())
+	formMsg, err := formsMgr.ComposeForm(tmplPathArg, msg.Subject())
 	if err != nil {
 		log.Printf("failed to compose message for template %s", tmplPathArg)
 		return

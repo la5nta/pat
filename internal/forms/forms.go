@@ -92,7 +92,7 @@ func NewManager(conf FormsConfig) *Manager {
 
 // Reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message
-func (mgr Manager) GetFormsCatalog(w http.ResponseWriter, r *http.Request) {
+func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request) {
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -104,7 +104,7 @@ func (mgr Manager) GetFormsCatalog(w http.ResponseWriter, r *http.Request) {
 
 // When the user is done filling a form, the frontend posts the input fields to this handler,
 // which stores them in a map, so that other browser tabs can read the values back with GetFormData
-func (mgr Manager) PostFormData(w http.ResponseWriter, r *http.Request) {
+func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10000000); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -167,7 +167,7 @@ func (mgr Manager) PostFormData(w http.ResponseWriter, r *http.Request) {
 }
 
 // Counterpart to PostFormData. Returns the form field values to the frontend
-func (mgr Manager) GetFormData(w http.ResponseWriter, r *http.Request) {
+func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -183,7 +183,7 @@ func (mgr Manager) GetPostedFormData(key string) FormData {
 }
 
 // handles the request for viewing a form filled-in with instance values
-func (mgr Manager) GetFormTemplate(w http.ResponseWriter, r *http.Request) {
+func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	formPath := r.URL.Query().Get("formPath")
 	if formPath == "" {
 		http.Error(w, "formPath query param missing", http.StatusBadRequest)

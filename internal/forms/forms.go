@@ -105,7 +105,7 @@ func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request
 // When the user is done filling a form, the frontend posts the input fields to this handler,
 // which stores them in a map, so that other browser tabs can read the values back with GetFormData
 func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10000000); err != nil {
+	if err := r.ParseMultipartForm(10e6); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

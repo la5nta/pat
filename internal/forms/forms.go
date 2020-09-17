@@ -621,69 +621,12 @@ func (b formMessageBuilder) build () (MessageForm, error) {
 		tmplPath = filepath.Join(b.FormsMgr.config.FormsPath, b.Template.ReplyTxtFileURI)
 	}
 
-	infile, err := os.Open(tmplPath)
+	retVal, err := b.scanTmplBuildMessage(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
 	}
 
-	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
-	scanner := bufio.NewScanner(infile)
-
-	var retVal MessageForm
-	for scanner.Scan() {
-		lineTmpl := scanner.Text()
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + b.FormsMgr.config.AppVersion, -1)
-		if strings.HasPrefix(lineTmpl, "Form:") ||
-			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
-			strings.HasPrefix(lineTmpl, "To:") ||
-			strings.HasPrefix(lineTmpl, "Msg:") {
-			continue
-		}
-		if b.Interactive {
-			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
-			fmt.Println(string(lineTmpl))
-			for i := range matches {
-				varName := matches[i][1]
-				varNameLower := strings.ToLower(varName)
-				if b.FormValues[varNameLower] != "" {
-					continue
-				}
-				fmt.Print(varName + ": ")
-				b.FormValues[varNameLower] = "blank"
-				val := b.FormsMgr.config.LineReader()
-				if val != "" {
-					b.FormValues[varNameLower] = val
-				}
-			}
-		}
-
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		if strings.HasPrefix(lineTmpl, "Subject:") {
-			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
-		} else {
-			retVal.Body += lineTmpl + "\n"
-		}
-	}
-	infile.Close()
-
-	if b.IsReply {
-		b.FormValues["msgisreply"] = "True"
-	} else {
-		b.FormValues["msgisreply"] = "False"
-	}
-	b.FormValues["msgsender"] = b.FormsMgr.config.MyCall
-
-	// some defaults that we can't set yet. Winlink doesn't seem to care about these
-	b.FormValues["msgto"] = ""
-	b.FormValues["msgcc"] = ""
-	b.FormValues["msgsubject"] = ""
-	b.FormValues["msgbody"] = ""
-	b.FormValues["msgp2p"] = ""
-	b.FormValues["msgisforward"] = "False"
-	b.FormValues["msgisacknowledgement"] = "False"
-	b.FormValues["msgseqnum"] = "0"
+	b.initFormValues()
 
 	formVarsAsXml := ""
 	for varKey, varVal := range b.FormValues {
@@ -728,10 +671,80 @@ func (b formMessageBuilder) build () (MessageForm, error) {
 		replier,
 		formVarsAsXml)
 	retVal.AttachmentName = b.FormsMgr.GetXmlAttachmentNameForForm(b.Template, false)
-
 	retVal.Subject = strings.TrimSpace(retVal.Subject)
 	retVal.Body = strings.TrimSpace(retVal.Body)
 
+	return retVal, nil
+}
+
+func (b formMessageBuilder) initFormValues () {
+	if b.IsReply {
+		b.FormValues["msgisreply"] = "True"
+	} else {
+		b.FormValues["msgisreply"] = "False"
+	}
+
+	b.FormValues["msgsender"] = b.FormsMgr.config.MyCall
+
+	// some defaults that we can't set yet. Winlink doesn't seem to care about these
+	b.FormValues["msgto"] = ""
+	b.FormValues["msgcc"] = ""
+	b.FormValues["msgsubject"] = ""
+	b.FormValues["msgbody"] = ""
+	b.FormValues["msgp2p"] = ""
+	b.FormValues["msgisforward"] = "False"
+	b.FormValues["msgisacknowledgement"] = "False"
+	b.FormValues["msgseqnum"] = "0"
+}
+
+func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
+
+	infile, err := os.Open(tmplPath)
+	if err != nil {
+		return MessageForm{}, err
+	}
+	defer infile.Close()
+
+	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
+	scanner := bufio.NewScanner(infile)
+
+	var retVal MessageForm
+	for scanner.Scan() {
+		lineTmpl := scanner.Text()
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
+		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + b.FormsMgr.config.AppVersion, -1)
+		if strings.HasPrefix(lineTmpl, "Form:") ||
+			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
+			strings.HasPrefix(lineTmpl, "To:") ||
+			strings.HasPrefix(lineTmpl, "Msg:") {
+			continue
+		}
+		if b.Interactive {
+			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
+			fmt.Println(string(lineTmpl))
+			for i := range matches {
+				varName := matches[i][1]
+				varNameLower := strings.ToLower(varName)
+				if b.FormValues[varNameLower] != "" {
+					continue
+				}
+				fmt.Print(varName + ": ")
+				b.FormValues[varNameLower] = "blank"
+				val := b.FormsMgr.config.LineReader()
+				if val != "" {
+					b.FormValues[varNameLower] = val
+				}
+			}
+		}
+
+		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
+		if strings.HasPrefix(lineTmpl, "Subject:") {
+			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
+		} else {
+			retVal.Body += lineTmpl + "\n"
+		}
+	}
 
 	return retVal, nil
 }

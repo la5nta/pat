@@ -27,7 +27,7 @@ import (
 )
 
 
-// Manager managed the forms subsystem
+// Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
 // Each form composer instance renders into another browser tab, and has a unique instance cookie.
 // This instance cookie is the key into the map, so that we can keep the values
@@ -56,7 +56,7 @@ type Form struct {
 	ReplyViewerURI  string `json:"reply_viewer_uri"`
 }
 
-// Folder with forms. A tree structure with Form leaves and sub-Folder branches
+// FolderFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches
 type FormFolder struct {
 	Name      string       `json:"name"`
 	Path      string       `json:"path"`
@@ -66,7 +66,7 @@ type FormFolder struct {
 	Folders   []FormFolder `json:"folders"`
 }
 
-// the instance data that define a filled-in form
+// FormData holds the instance data that define a filled-in form
 type FormData struct {
 	TargetForm Form              `json:"target_form"`
 	Fields     map[string]string `json:"fields"`
@@ -83,6 +83,7 @@ type MessageForm struct {
 	AttachmentName string
 }
 
+// NewManager instantiates the forms manager
 func NewManager(conf FormsConfig) *Manager {
   return &Manager{
     postedFormData: make(map[string]FormData),
@@ -90,7 +91,7 @@ func NewManager(conf FormsConfig) *Manager {
   }
 }
 
-// Reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
+// GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message
 func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request) {
 	formFolder, err := mgr.buildFormFolder()
@@ -102,8 +103,8 @@ func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(formFolder)
 }
 
-// When the user is done filling a form, the frontend posts the input fields to this handler,
-// which stores them in a map, so that other browser tabs can read the values back with GetFormData
+// PostFormDataHandler - When the user is done filling a form, the frontend posts the input fields to this handler,
+// which stores them in a map, so that other browser tabs can read the values back with GetFormDataHandler
 func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10e6); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -166,7 +167,7 @@ func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "<script>window.close()</script>")
 }
 
-// Counterpart to PostFormData. Returns the form field values to the frontend
+// GetFormDataHandler is the counterpart to PostFormDataHandler. Returns the form field values to the frontend
 func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
@@ -177,12 +178,12 @@ func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(mgr.GetPostedFormData(formInstanceKey.Value))
 }
 
-// similar to GetFormData, but used when posting the form-based message to the outbox
+// GetPostedFormData is similar to GetFormDataHandler, but used when posting the form-based message to the outbox
 func (mgr Manager) GetPostedFormData(key string) FormData {
 	return mgr.postedFormData[key]
 }
 
-// handles the request for viewing a form filled-in with instance values
+// GetFormTemplateHandler handles the request for viewing a form filled-in with instance values
 func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	formPath := r.URL.Query().Get("formPath")
 	if formPath == "" {
@@ -213,7 +214,7 @@ func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// returns the user-visible filename for the message attachment that holds the form instance values
+// GetXmlAttachmentNameForForm returns the user-visible filename for the message attachment that holds the form instance values
 func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	attachmentName := filepath.Base(f.ViewerURI)
 	if isReply {
@@ -227,7 +228,7 @@ func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 	return attachmentName
 }
 
-// given the contents of a form attachment, finds the associated form and returns the filled-in form in HTML
+// RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
 func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, error) {
 	buf := bytes.NewBuffer(contentData)
 
@@ -306,7 +307,7 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 	return retVal, err
 }
 
-// combines all data needed for the whole form-based message: subject, body, and attachment
+// ComposeForm combines all data needed for the whole form-based message: subject, body, and attachment
 func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, error) {
 
 	formFolder, err := mgr.buildFormFolder()
@@ -609,7 +610,7 @@ type formMessageBuilder struct {
 	FormsMgr Manager
 }
 
-//returns message subject, body, and XML attachment content for the given template and variable map
+//build returns message subject, body, and XML attachment content for the given template and variable map
 func (b formMessageBuilder) build () (MessageForm, error) {
 
 	tmplPath := filepath.Join(b.FormsMgr.config.FormsPath, b.Template.TxtFileURI)

@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,7 +35,10 @@ import (
 // from different form authoring sessions separate from each other.
 type Manager struct {
   config FormsConfig
-  postedFormData map[string]FormData
+  postedFormData struct {
+		sync.RWMutex
+		internalFormDataMap map[string]FormData
+	}
 }
 
 type FormsConfig struct {
@@ -74,6 +78,7 @@ type FormData struct {
 	MsgBody    string            `json:"msg_body"`
 	MsgXml     string            `json:"msg_xml"`
 	IsReply    bool              `json:"is_reply"`
+	Submitted  time.Time         `json:submtted`
 }
 
 type MessageForm struct {
@@ -85,10 +90,11 @@ type MessageForm struct {
 
 // NewManager instantiates the forms manager
 func NewManager(conf FormsConfig) *Manager {
-  return &Manager{
-    postedFormData: make(map[string]FormData),
+	retval := &Manager{
     config: conf,
   }
+	retval.postedFormData.internalFormDataMap = make(map[string]FormData)
+	return retval
 }
 
 // GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
@@ -163,7 +169,13 @@ func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	formData.MsgSubject = formMsg.Subject
 	formData.MsgBody = formMsg.Body
 	formData.MsgXml = formMsg.AttachmentXml
-	mgr.postedFormData[formInstanceKey.Value] = formData
+	formData.Submitted = time.Now()
+
+	mgr.postedFormData.Lock()
+	mgr.postedFormData.internalFormDataMap[formInstanceKey.Value] = formData
+	mgr.postedFormData.Unlock()
+
+	mgr.cleanupOldFormData()
 	io.WriteString(w, "<script>window.close()</script>")
 }
 
@@ -180,7 +192,10 @@ func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetPostedFormData is similar to GetFormDataHandler, but used when posting the form-based message to the outbox
 func (mgr Manager) GetPostedFormData(key string) FormData {
-	return mgr.postedFormData[key]
+	mgr.postedFormData.RLock()
+	retVal := mgr.postedFormData.internalFormDataMap[key]
+	mgr.postedFormData.RUnlock()
+	return retVal
 }
 
 // GetFormTemplateHandler handles the request for viewing a form filled-in with instance values
@@ -774,4 +789,16 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 		}
 	}
 	return result
+}
+
+func (mgr Manager) cleanupOldFormData () {
+	mgr.postedFormData.Lock()
+	for key, form := range mgr.postedFormData.internalFormDataMap {
+		elapsed := time.Now().Sub(form.Submitted).Hours()
+		if elapsed > 24 {
+			log.Println("deleting old FormData after", elapsed, "hrs")
+			delete(mgr.postedFormData.internalFormDataMap, key)
+		}
+	}
+	mgr.postedFormData.Unlock()
 }

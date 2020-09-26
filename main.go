@@ -858,7 +858,7 @@ func postMessage(msg *fbb.Message) {
 }
 
 func versionString() string {
-	return fmt.Sprintf("v%s (%s) %s/%s - %s", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+	return fmt.Sprintf("%s %s/%s - %s", versionStringShort(), runtime.GOOS, runtime.GOARCH, runtime.Version())
 }
 
 func versionStringShort() string {

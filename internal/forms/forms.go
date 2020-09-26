@@ -245,7 +245,6 @@ func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
 func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, error) {
-	buf := bytes.NewBuffer(contentData)
 
 	type Node struct {
 		XMLName xml.Name
@@ -257,11 +256,10 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 	formParams := make(map[string]string)
 	formVars := make(map[string]string)
 
-	err := xml.NewDecoder(buf).Decode(&n1)
-	if err != nil {
-		return "", err
+	if err := xml.Unmarshal(contentData, &n1); err != nil {
+	  return "", err
 	}
-
+	
 	if n1.XMLName.Local != "RMS_Express_Form" {
 		return "", errors.New("missing RMS_Express_Form tag in form XML")
 	}

@@ -27,26 +27,25 @@ import (
 	"time"
 )
 
-
 // Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
 // Each form composer instance renders into another browser tab, and has a unique instance cookie.
 // This instance cookie is the key into the map, so that we can keep the values
 // from different form authoring sessions separate from each other.
 type Manager struct {
-  config FormsConfig
-  postedFormData struct {
+	config         FormsConfig
+	postedFormData struct {
 		sync.RWMutex
 		internalFormDataMap map[string]FormData
 	}
 }
 
 type FormsConfig struct {
-	FormsPath 	string
-	MyCall 			string
-	Locator			string
-	AppVersion 	string
-	LineReader	func () string
+	FormsPath  string
+	MyCall     string
+	Locator    string
+	AppVersion string
+	LineReader func() string
 }
 
 // Form
@@ -91,8 +90,8 @@ type MessageForm struct {
 // NewManager instantiates the forms manager
 func NewManager(conf FormsConfig) *Manager {
 	retval := &Manager{
-    config: conf,
-  }
+		config: conf,
+	}
 	retval.postedFormData.internalFormDataMap = make(map[string]FormData)
 	return retval
 }
@@ -145,21 +144,21 @@ func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("missing cookie %s %s", formPath, r.URL)
 		return
 	}
-	formData := FormData {
-		IsReply: composereply,
+	formData := FormData{
+		IsReply:    composereply,
 		TargetForm: form,
-		Fields: make(map[string]string),
+		Fields:     make(map[string]string),
 	}
 	for key, values := range r.PostForm {
 		formData.Fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}
 
-	formMsg, err := formMessageBuilder {
-		Template: form,
-		FormValues: formData.Fields,
+	formMsg, err := formMessageBuilder{
+		Template:    form,
+		FormValues:  formData.Fields,
 		Interactive: false,
-		IsReply: composereply,
-		FormsMgr: mgr,
+		IsReply:     composereply,
+		FormsMgr:    mgr,
 	}.build()
 
 	if err != nil {
@@ -257,7 +256,7 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 	formVars := make(map[string]string)
 
 	if err := xml.Unmarshal(contentData, &n1); err != nil {
-	  return "", err
+		return "", err
 	}
 
 	if n1.XMLName.Local != "RMS_Express_Form" {
@@ -282,7 +281,7 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 	case composereply && formParams["reply_template"] == "":
 		return "", errors.New("missing reply_template tag in form XML for a reply message")
 	}
-	
+
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
 		return "", err
@@ -327,14 +326,14 @@ func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, er
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
 		log.Printf("can't build form folder tree %s", err)
-		return MessageForm {}, err
+		return MessageForm{}, err
 	}
 
 	tmplPath = filepath.Clean(tmplPath)
 	form, err := findFormFromURI(tmplPath, formFolder)
 	if err != nil {
 		log.Printf("can't find form to match form %s", tmplPath)
-		return MessageForm {}, err
+		return MessageForm{}, err
 	}
 
 	var varMap map[string]string
@@ -342,18 +341,19 @@ func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, er
 	varMap["subjectline"] = subject
 	varMap["templateversion"] = mgr.getFormsVersion()
 	varMap["msgsender"] = mgr.config.MyCall
+
 	fmt.Println("forms version: " + varMap["templateversion"])
 
-	formMsg, err := formMessageBuilder {
-		Template: form,
-		FormValues: varMap,
+	formMsg, err := formMessageBuilder{
+		Template:    form,
+		FormValues:  varMap,
 		Interactive: true,
-		IsReply: false,
+		IsReply:     false,
 	}.build()
 
 	if err != nil {
 		log.Printf("Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
-		return MessageForm {}, err
+		return MessageForm{}, err
 	}
 
 	return formMsg, nil
@@ -400,10 +400,10 @@ func (mgr Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, e
 	}
 
 	retVal := FormFolder{
-		Name:      rootFileInfo.Name(),
-		Path:      rootFile.Name(),
-		Forms:     []Form{},
-		Folders:   []FormFolder{},
+		Name:    rootFileInfo.Name(),
+		Path:    rootFile.Name(),
+		Forms:   []Form{},
+		Folders: []FormFolder{},
 	}
 
 	infos, err := rootFile.Readdir(0)
@@ -455,8 +455,8 @@ func (mgr Manager) buildFormFromTxt(txtPath string) (Form, error) {
 	formsPathWithSlash := mgr.config.FormsPath + "/"
 
 	retVal := Form{
-		Name:            strings.TrimSuffix(path.Base(txtPath), ".txt"),
-		TxtFileURI:      strings.TrimPrefix(txtPath, formsPathWithSlash),
+		Name:       strings.TrimSuffix(path.Base(txtPath), ".txt"),
+		TxtFileURI: strings.TrimPrefix(txtPath, formsPathWithSlash),
 	}
 	scanner := bufio.NewScanner(f)
 	baseURI := path.Dir(retVal.TxtFileURI)
@@ -483,7 +483,7 @@ func (mgr Manager) buildFormFromTxt(txtPath string) (Form, error) {
 }
 
 func findFormFromURI(formName string, folder FormFolder) (Form, error) {
-	retVal := Form { Name: "unknown" }
+	retVal := Form{Name: "unknown"}
 	for _, subFolder := range folder.Folders {
 		form, err := findFormFromURI(formName, subFolder)
 		if err == nil {
@@ -561,7 +561,7 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 		l = strings.Replace(l, "http://localhost:8001", formDestUrl, -1)
 		l = strings.Replace(l, "{MsgSender}", mgr.config.MyCall, -1)
 		l = strings.Replace(l, "{Callsign}", mgr.config.MyCall, -1)
-		l = strings.Replace(l, "{ProgramVersion}", "Pat " + mgr.config.AppVersion, -1)
+		l = strings.Replace(l, "{ProgramVersion}", "Pat "+mgr.config.AppVersion, -1)
 		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
 		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
 		l = strings.Replace(l, "{Date}", nowDate, -1)
@@ -619,13 +619,13 @@ func readFileFirstLine(f *os.File) string {
 type formMessageBuilder struct {
 	Interactive bool
 	IsReply     bool
-	Template Form
-	FormValues map[string]string
-	FormsMgr Manager
+	Template    Form
+	FormValues  map[string]string
+	FormsMgr    Manager
 }
 
 //build returns message subject, body, and XML attachment content for the given template and variable map
-func (b formMessageBuilder) build () (MessageForm, error) {
+func (b formMessageBuilder) build() (MessageForm, error) {
 
 	tmplPath := filepath.Join(b.FormsMgr.config.FormsPath, b.Template.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
@@ -691,7 +691,7 @@ func (b formMessageBuilder) build () (MessageForm, error) {
 	return retVal, nil
 }
 
-func (b formMessageBuilder) initFormValues () {
+func (b formMessageBuilder) initFormValues() {
 	if b.IsReply {
 		b.FormValues["msgisreply"] = "True"
 	} else {
@@ -727,7 +727,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat " + b.FormsMgr.config.AppVersion, -1)
+		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion, -1)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
 			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
 			strings.HasPrefix(lineTmpl, "To:") ||
@@ -790,7 +790,7 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 	return result
 }
 
-func (mgr Manager) cleanupOldFormData () {
+func (mgr Manager) cleanupOldFormData() {
 	mgr.postedFormData.Lock()
 	for key, form := range mgr.postedFormData.internalFormDataMap {
 		elapsed := time.Now().Sub(form.Submitted).Hours()

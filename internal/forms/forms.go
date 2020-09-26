@@ -259,7 +259,7 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 	if err := xml.Unmarshal(contentData, &n1); err != nil {
 	  return "", err
 	}
-	
+
 	if n1.XMLName.Local != "RMS_Express_Form" {
 		return "", errors.New("missing RMS_Express_Form tag in form XML")
 	}
@@ -275,13 +275,14 @@ func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, er
 			}
 		}
 	}
-	if formParams["display_form"] == "" {
+
+	switch {
+	case formParams["display_form"] == "":
 		return "", errors.New("missing display_form tag in form XML")
-	}
-	if composereply && formParams["reply_template"] == "" {
+	case composereply && formParams["reply_template"] == "":
 		return "", errors.New("missing reply_template tag in form XML for a reply message")
 	}
-
+	
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
 		return "", err

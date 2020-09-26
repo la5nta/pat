@@ -336,11 +336,11 @@ func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, er
 		return MessageForm{}, err
 	}
 
-	var varMap map[string]string
-	varMap = make(map[string]string)
-	varMap["subjectline"] = subject
-	varMap["templateversion"] = mgr.getFormsVersion()
-	varMap["msgsender"] = mgr.config.MyCall
+	varMap := map[string]string{
+		"subjectline":     subject,
+		"templateversion": mgr.getFormsVersion(),
+		"msgsender":       mgr.config.MyCall,
+	}
 
 	fmt.Println("forms version: " + varMap["templateversion"])
 

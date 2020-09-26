@@ -687,7 +687,6 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 	retVal.AttachmentName = b.FormsMgr.GetXmlAttachmentNameForForm(b.Template, false)
 	retVal.Subject = strings.TrimSpace(retVal.Subject)
 	retVal.Body = strings.TrimSpace(retVal.Body)
-
 	return retVal, nil
 }
 
@@ -764,15 +763,11 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 }
 
 func xmlEscape(s string) string {
-	sEscaped := bytes.NewBuffer(make([]byte, 0))
-	sEscapedStr := ""
-
-	if err := xml.EscapeText(sEscaped, []byte(s)); err != nil {
+	var buf bytes.Buffer
+	if err := xml.EscapeText(&buf, []byte(s)); err != nil {
 		log.Printf("Error trying to escape XML string %s", err)
-	} else {
-		sEscapedStr = sEscaped.String()
 	}
-	return sEscapedStr
+	return buf.String()
 }
 
 func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {

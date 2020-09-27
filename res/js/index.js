@@ -221,6 +221,14 @@ function initComposeModal() {
 }
 
 function initConnectModal() {
+	$('#freqInput').on('focusin focusout', (e) => {
+		// Disable the connect button while the user is editing the frequency value.
+		//   We do this because we really don't want the user to hit the connect
+		//   button until they know that the QSY command succeeded or failed.
+		window.setTimeout(() => {
+			$('#connect_btn').prop('disabled', e.type == 'focusin');
+		}, 300);
+	});
 	$('#freqInput').change(() => {
 		onConnectInputChange();
 		onConnectFreqChange();
@@ -375,18 +383,24 @@ function getConnectURL() {
 }
 
 function onConnectFreqChange() {
+	$('#qsyWarning').empty().attr('hidden', true);
+
+	const freqInput = $('#freqInput');
+	freqInput.css('text-decoration', 'none currentcolor solid');
+
+	const inputGroup = freqInput.parent();
+	['has-error', 'has-success', 'has-warning'].forEach((v) => {
+		inputGroup.removeClass(v);
+	});
+	inputGroup.tooltip('destroy');
+
 	const data = {
 		transport: $('#transportSelect').val(),
-		freq:      new Number($('#freqInput').val()),
+		freq:      new Number(freqInput.val()),
 	};
 	if(data.freq == 0) {
 		return;
 	}
-
-	const inputGroup = $('#freqInput').parent();
-	['has-error', 'has-success', 'has-warning'].forEach((v) => {
-		inputGroup.removeClass(v);
-	});
 
 	console.log("QSY: " + JSON.stringify(data));
 	$.ajax({
@@ -394,12 +408,21 @@ function onConnectFreqChange() {
 		url: "/api/qsy",
 		data: JSON.stringify(data),
 		contentType: "application/json",
-		success: () => { inputGroup.addClass('has-success'); },
+		success: () => {
+			inputGroup.addClass('has-success');
+		},
 		error: (xhr) => {
+			freqInput.css('text-decoration', 'line-through');
 			if(xhr.status == 503) {
 				// The feature is unavailable
+				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip('fixTitle');
 			} else {
+				// An unexpected error occured
+				[inputGroup, $('#qsyWarning')].forEach((e) => {
+					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip('fixTitle');
+				});
 				inputGroup.addClass('has-error');
+				$('#qsyWarning').html('<span class="glyphicon glyphicon-warning-sign" /> QSY failure').attr('hidden', false);
 			}
 		},
 		complete: () => { onConnectInputChange(); }, // This removes freq= from URL in case of failure

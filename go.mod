@@ -14,7 +14,7 @@ require (
 	github.com/harenber/ptc-go/pactor/v2 v2.0.0-20200530161150-3f4e076b41f2
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
-	github.com/la5nta/wl2k-go v0.7.2
+	github.com/la5nta/wl2k-go v0.7.3
 	github.com/mattn/go-runewidth v0.0.3-0.20170510074858-97311d9f7767 // indirect
 	github.com/microcosm-cc/bluemonday v0.0.0-20171222152607-542fd4642604
 	github.com/nfnt/resize v0.0.0-20160724205520-891127d8d1b5

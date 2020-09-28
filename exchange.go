@@ -86,16 +86,27 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	}
 
 	// Handle secure login
-	session.SetSecureLoginHandleFunc(func() (string, error) {
-		if config.SecureLoginPassword != "" {
+	session.SetSecureLoginHandleFunc(func(addr fbb.Address) (string, error) {
+		if addr.Addr == fOptions.MyCall && config.SecureLoginPassword != "" {
 			return config.SecureLoginPassword, nil
 		}
-		resp := <-promptHub.Prompt("password", "Enter secure login password")
+		for _, aux := range config.AuxAddrs {
+			if addr.Addr != aux.Address {
+				continue
+			}
+			switch {
+			case aux.Password != nil:
+				return *aux.Password, nil
+			case config.SecureLoginPassword != "":
+				return config.SecureLoginPassword, nil
+			}
+		}
+		resp := <-promptHub.Prompt("password", "Enter secure login password for "+addr.String())
 		return resp.Value, resp.Err
 	})
 
 	for _, addr := range config.AuxAddrs {
-		session.AddAuxiliaryAddress(fbb.AddressFromString(addr))
+		session.AddAuxiliaryAddress(fbb.AddressFromString(addr.Address))
 	}
 
 	session.IsMaster(master)

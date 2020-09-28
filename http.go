@@ -248,13 +248,11 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		msg.AddFile(fbb.NewFile(f.Filename, p))
 	}
 
-	formInstanceKey, err := r.Cookie("forminstance")
+	cookie, err := r.Cookie("forminstance")
 	if err == nil {
-		formData := formsMgr.GetPostedFormData(formInstanceKey.Value)
-		xml := formData.MsgXml
-		form := formData.TargetForm
-		isReply := formData.IsReply
-		msg.AddFile(fbb.NewFile(formsMgr.GetXmlAttachmentNameForForm(form, isReply), []byte(xml)))
+		formData := formsMgr.GetPostedFormData(cookie.Value)
+		path := formsMgr.GetXmlAttachmentNameForForm(formData.TargetForm, formData.IsReply)
+		msg.AddFile(fbb.NewFile(path, []byte(formData.MsgXml)))
 	}
 
 	// Other fields

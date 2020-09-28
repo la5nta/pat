@@ -77,7 +77,7 @@ type FormData struct {
 	MsgBody    string            `json:"msg_body"`
 	MsgXml     string            `json:"msg_xml"`
 	IsReply    bool              `json:"is_reply"`
-	Submitted  time.Time         `json:submtted`
+	Submitted  time.Time         `json:"submitted"`
 }
 
 type MessageForm struct {

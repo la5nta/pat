@@ -528,9 +528,6 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	// attachments can't call other parts of the API (deny same origin).
 	w.Header().Set("Content-Security-Policy", "sandbox allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts")
 
-	// no-store is needed for displaying and replying to Winlink form-based messages
-	w.Header().Set("Cache-Control", "no-store")
-
 	// Allow different sandboxed attachments to refer to each other.
 	// This can be useful to provide rich HTML content as attachments,
 	// without having to bundle it all up in one big file.
@@ -539,6 +536,11 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
 	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
 	renderToHtml, _ := strconv.ParseBool(r.URL.Query().Get("rendertohtml"))
+
+	if composereply || renderToHtml {
+		// no-store is needed for displaying and replying to Winlink form-based messages
+		w.Header().Set("Cache-Control", "no-store")
+	}
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
 )
@@ -218,7 +220,7 @@ func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request
 	responseText, err := mgr.fillFormTemplate(absPathTemplate, "/api/form?"+r.URL.Query().Encode(), nil, make(map[string]string))
 	if err != nil {
 		http.Error(w, "can't open template "+formPath, http.StatusBadRequest)
-		log.Printf("problem filling form template file %s %s: %s", r.Method, r.URL.Path, "can't open template "+formPath)
+		log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
 		return
 	}
 
@@ -245,12 +247,23 @@ func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 }
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
-func (mgr Manager) RenderForm(contentData []byte, composereply bool) (string, error) {
+func (mgr Manager) RenderForm(contentUnsanitized []byte, composereply bool) (string, error) {
 
 	type Node struct {
 		XMLName xml.Name
 		Content []byte `xml:",innerxml"`
 		Nodes   []Node `xml:",any"`
+	}
+
+	sr := utfbom.SkipOnly(bytes.NewReader(contentUnsanitized))
+
+	contentData, err := ioutil.ReadAll(sr)
+	if err != nil {
+		return "", fmt.Errorf("error reading sanitized form xml: %s", err)
+	}
+
+	if !utf8.Valid(contentData) {
+		log.Println("Warning: unsupported string encoding in form XML, expected utf-8")
 	}
 
 	var n1 Node
@@ -548,6 +561,14 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 	// (e.g. Sonoma county's ICS213_v2.1_SonomaACS_TwoWay_Initial_Viewer.html)
 	f := utfbom.SkipOnly(fUnsanitized)
 
+	sanitizedFileContent, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("error reading file %s", absPathTemplate)
+	}
+	if !utf8.Valid(sanitizedFileContent) {
+		log.Printf("Warning: unsupported string encoding in template %s, expected utf-8", absPathTemplate)
+	}
+
 	retVal := ""
 	now := time.Now()
 	nowDateTime := now.Format("2006-01-02 15:04:05")
@@ -558,7 +579,7 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 	nowTimeUTC := now.UTC().Format("15:04:05Z")
 	udtg := strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
 	for scanner.Scan() {
 		l := scanner.Text()
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)

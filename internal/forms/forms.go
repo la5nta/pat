@@ -25,6 +25,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dimchansky/utfbom"
 )
 
 // Manager manages the forms subsystem
@@ -536,11 +538,15 @@ func (mgr Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
 }
 
 func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
-	f, err := os.Open(absPathTemplate)
+	fUnsanitized, err := os.Open(absPathTemplate)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer fUnsanitized.Close()
+
+	// skipping over UTF-8 byte-ordering mark EFBBEF, some 3rd party templates use it
+	// (e.g. Sonoma county's ICS213_v2.1_SonomaACS_TwoWay_Initial_Viewer.html)
+	f := utfbom.SkipOnly(fUnsanitized)
 
 	retVal := ""
 	now := time.Now()
@@ -555,7 +561,6 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		l := scanner.Text()
-		l = strings.TrimPrefix(l, "\xEF\xBB\xBF") // some templates start with the byte-ordering marker for UTF-8
 		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
 		l = strings.Replace(l, "http://localhost:8001", formDestUrl, -1)

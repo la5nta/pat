@@ -80,3 +80,6 @@
 [submodule "vendor/github.com/tarm/serial"]
 	path = vendor/github.com/tarm/serial
 	url = https://github.com/tarm/serial.git
+[submodule "vendor/github.com/dimchansky/utfbom"]
+	path = vendor/github.com/dimchansky/utfbom
+	url = https://github.com/dimchansky/utfbom.git

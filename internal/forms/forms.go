@@ -364,6 +364,7 @@ func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, er
 		FormValues:  varMap,
 		Interactive: true,
 		IsReply:     false,
+		FormsMgr:    mgr,
 	}.build()
 
 	if err != nil {

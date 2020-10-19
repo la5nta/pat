@@ -1,3 +1,12 @@
+pat (0.10.0) stable; urgency=medium
+
+  * Add support for P4 Dragon modems
+  * Add RMS list viewer in Web GUI's connect modal
+  * Add support for additional connect parameters for pactor
+  * New max length of message attachment filenames (255 characters)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Thu, 08 Sep 2020 19:39:40 +0100
+
 pat (0.9.0) stable; urgency=medium
 
   * Less aggressive websocket timeout

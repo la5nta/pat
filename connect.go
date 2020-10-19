@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/harenber/ptc-go/ptc"
+	"github.com/harenber/ptc-go/pactor/v2"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
@@ -64,7 +64,11 @@ func Connect(connectStr string) (success bool) {
 			return
 		}
 	case "pactor":
-		if err := initPactorModem(); err != nil {
+		pt_cmdinit := ""
+		if val, ok := url.Params["init"]; ok {
+			pt_cmdinit = strings.Join(val, "\n")
+		}
+		if err := initPactorModem(pt_cmdinit); err != nil {
 			log.Println(err)
 			return
 		}
@@ -119,7 +123,7 @@ func Connect(connectStr string) (success bool) {
 		defer revertFreq()
 	}
 	var currFreq Frequency
-	if vfo, ok := VFOForTransport(url.Scheme); ok {
+	if vfo, _, ok, _ := VFOForTransport(url.Scheme); ok {
 		f, _ := vfo.GetFreq()
 		currFreq = Frequency(f)
 	}
@@ -160,40 +164,20 @@ func Connect(connectStr string) (success bool) {
 
 func qsy(method, addr string) (revert func(), err error) {
 	noop := func() {}
-
-	var rigName string
-	switch method {
-	case MethodWinmor:
-		rigName = config.Winmor.Rig
-	case MethodArdop:
-		rigName = config.Ardop.Rig
-	case MethodAX25:
-		rigName = config.AX25.Rig
-	case MethodPactor:
-		rigName = config.Pactor.Rig
-	default:
-		return noop, fmt.Errorf("Not supported with transport '%s'", method)
-	}
-
-	if rigName == "" {
-		return noop, fmt.Errorf("Missing rig reference in config section for %s, don't know which rig to qsy", method)
-	}
-
-	var ok bool
-	rig, ok := rigs[rigName]
-	if !ok {
+	rig, rigName, ok, err := VFOForTransport(method)
+	if err != nil {
+		return noop, err
+	} else if !ok {
 		return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", rigName)
 	}
 
 	log.Printf("QSY %s: %s", method, addr)
-
 	_, oldFreq, err := setFreq(rig, addr)
 	if err != nil {
 		return noop, err
 	}
 
 	time.Sleep(3 * time.Second)
-
 	return func() {
 		time.Sleep(time.Second)
 		log.Printf("QSX %s: %.3f", method, float64(oldFreq)/1e3)
@@ -304,13 +288,12 @@ func initArdopTNC() error {
 	return nil
 }
 
-func initPactorModem() error {
+func initPactorModem(cmdlineinit string) error {
 	if pModem != nil {
 		pModem.Close()
 	}
-
 	var err error
-	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript)
+	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript, cmdlineinit)
 	if err != nil || pModem == nil {
 		return fmt.Errorf("Pactor initialization failed: %s", err)
 	}

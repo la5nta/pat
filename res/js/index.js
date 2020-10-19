@@ -339,18 +339,76 @@ function appendFormFolder(rootId, data) {
 }
 
 function initConnectModal() {
-	$('#freqInput').change(onConnectInputChange);
+	$('#freqInput').change(() => {
+		onConnectInputChange();
+		onConnectFreqChange();
+	});
 	$('#radioOnlyInput').change(onConnectInputChange);
 	$('#addrInput').change(onConnectInputChange);
 	$('#targetInput').change(onConnectInputChange);
+	$('#updateRmslistButton').click((e) => {
+		$(e.target).prop('disabled', true);
+		updateRmslist(true);
+	});
 
-	$('#transportSelect').change(function() {
+	$('#modeSearchSelect').change(updateRmslist);
+	$('#bandSearchSelect').change(updateRmslist);
+
+	$('#transportSelect').change(function(e) {
 		refreshExtraInputGroups();
 		onConnectInputChange();
+		onConnectFreqChange();
+		switch( $(e.target).val() ){
+			case "ardop":
+			case "winmor":
+			case "pactor":
+				$('#modeSearchSelect').val($(e.target).val());
+				break;
+			case "serial-tnc":
+			case "ax25":
+				$('#modeSearchSelect').val("packet");
+				break;
+			default:
+				return;
+		}
+		$('#modeSearchSelect').selectpicker('refresh');
+		updateRmslist();
 	});
 	refreshExtraInputGroups();
 
 	updateConnectAliases();
+	updateRmslist();
+}
+
+function updateRmslist(forceDownload) {
+	let tbody = $('#rmslist tbody');
+	let params = {
+		'mode': $('#modeSearchSelect').val(),
+		'band': $('#bandSearchSelect').val(),
+		'force-download': forceDownload === true,
+	};
+	$.ajax({
+		method: "GET",
+		url: "/api/rmslist",
+		dataType: "json",
+		data: params,
+		success: function(data){
+			tbody.empty();
+			data.forEach((rms) => {
+				let tr = $('<tr>')
+					.append($('<td class="text-left">').text(rms.callsign))
+					.append($('<td class="text-left">').text(rms.distance.toFixed(0) + " km"))
+					.append($('<td class="text-left">').text(rms.modes))
+					.append($('<td class="text-right">').text(rms.dial.desc));
+				tr.click((e) => {
+					tbody.find('.active').removeClass('active');
+					tr.addClass('active');
+					setConnectValues(rms.url);
+				});
+				tbody.append(tr);
+			});
+		},
+	});
 }
 
 function updateConnectAliases() {
@@ -410,7 +468,9 @@ function setConnectValues(url) {
 	}
 	$('#addrInput').val(usri + url.host());
 
+	refreshExtraInputGroups();
 	onConnectInputChange();
+	onConnectFreqChange();
 }
 
 function getConnectURL() {
@@ -418,7 +478,7 @@ function getConnectURL() {
 
 	params = "";
 
-	if($('#freqInput').val()) {
+	if($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
 		params += "&freq=" + $('#freqInput').val();
 	}
 	if($('#radioOnlyInput').is(':checked')) {
@@ -430,6 +490,38 @@ function getConnectURL() {
 	}
 
 	return url;
+}
+
+function onConnectFreqChange() {
+	const data = {
+		transport: $('#transportSelect').val(),
+		freq:      new Number($('#freqInput').val()),
+	};
+	if(data.freq == 0) {
+		return;
+	}
+
+	const inputGroup = $('#freqInput').parent();
+	['has-error', 'has-success', 'has-warning'].forEach((v) => {
+		inputGroup.removeClass(v);
+	});
+
+	console.log("QSY: " + JSON.stringify(data));
+	$.ajax({
+		method: "POST",
+		url: "/api/qsy",
+		data: JSON.stringify(data),
+		contentType: "application/json",
+		success: () => { inputGroup.addClass('has-success'); },
+		error: (xhr) => {
+			if(xhr.status == 503) {
+				// The feature is unavailable
+			} else {
+				inputGroup.addClass('has-error');
+			}
+		},
+		complete: () => { onConnectInputChange(); }, // This removes freq= from URL in case of failure
+	});
 }
 
 function onConnectInputChange() {

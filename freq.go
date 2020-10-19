@@ -5,6 +5,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -49,6 +50,19 @@ func (f Frequency) String() string {
 	return fmt.Sprintf("%d.%06.2f MHz", m, k)
 }
 
+func (f Frequency) MarshalJSON() ([]byte, error) {
+	type obj struct {
+		Hz   json.Number `json:"hz"`
+		KHz  json.Number `json:"khz"`
+		Desc string      `json:"desc"`
+	}
+	return json.Marshal(obj{
+		Hz:   json.Number(fmt.Sprint(int(f))),
+		KHz:  json.Number(fmt.Sprint(f.KHz())),
+		Desc: f.String(),
+	})
+}
+
 func (f Frequency) KHz() float64 { return float64(f) / 1e3 }
 
 func (f Frequency) Dial(mode string) Frequency {
@@ -77,16 +91,25 @@ func (f Frequency) Dial(mode string) Frequency {
 	return f + shift
 }
 
-func VFOForTransport(transport string) (vfo hamlib.VFO, ok bool) {
+func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool, err error) {
+	var rig string
 	switch transport {
 	case MethodWinmor:
-		vfo, ok = rigs[config.Winmor.Rig]
+		rig = config.Winmor.Rig
 	case MethodArdop:
-		vfo, ok = rigs[config.Ardop.Rig]
+		rig = config.Ardop.Rig
 	case MethodAX25:
-		vfo, ok = rigs[config.AX25.Rig]
+		rig = config.AX25.Rig
+	case MethodPactor:
+		rig = config.Pactor.Rig
+	default:
+		return vfo, "", false, fmt.Errorf("Not supported with transport '%s'", transport)
 	}
-	return
+	if rig == "" {
+		return vfo, "", false, fmt.Errorf("Missing rig reference in config section for %s", transport)
+	}
+	vfo, ok = rigs[rig]
+	return vfo, rig, ok, nil
 }
 
 func freq(param string) {
@@ -95,7 +118,7 @@ func freq(param string) {
 		fmt.Println("Need freq method.")
 	}
 
-	rig, ok := VFOForTransport(parts[0])
+	rig, _, ok, _ := VFOForTransport(parts[0])
 	if !ok {
 		log.Printf("Hamlib rig not loaded.")
 		return

@@ -31,20 +31,24 @@ import (
 	"github.com/dimchansky/utfbom"
 )
 
+const fieldValueFalseInXML = "False"
+const txtFileExt = ".txt"
+
 // Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
 // Each form composer instance renders into another browser tab, and has a unique instance cookie.
 // This instance cookie is the key into the map, so that we can keep the values
 // from different form authoring sessions separate from each other.
 type Manager struct {
-	config         FormsConfig
+	config         Config
 	postedFormData struct {
 		sync.RWMutex
 		internalFormDataMap map[string]FormData
 	}
 }
 
-type FormsConfig struct {
+// Config passes config options to the forms package
+type Config struct {
 	FormsPath  string
 	MyCall     string
 	Locator    string
@@ -52,7 +56,7 @@ type FormsConfig struct {
 	LineReader func() string
 }
 
-// Form
+// Form holds information about a Winlink form template
 type Form struct {
 	Name            string `json:"name"`
 	TxtFileURI      string `json:"txt_file_uri"`
@@ -63,7 +67,7 @@ type Form struct {
 	ReplyViewerURI  string `json:"reply_viewer_uri"`
 }
 
-// FolderFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches
+// FormFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches
 type FormFolder struct {
 	Name      string       `json:"name"`
 	Path      string       `json:"path"`
@@ -79,20 +83,21 @@ type FormData struct {
 	Fields     map[string]string `json:"fields"`
 	MsgSubject string            `json:"msg_subject"`
 	MsgBody    string            `json:"msg_body"`
-	MsgXml     string            `json:"msg_xml"`
+	MsgXML     string            `json:"msg_xml"`
 	IsReply    bool              `json:"is_reply"`
 	Submitted  time.Time         `json:"submitted"`
 }
 
+// MessageForm represents a concrete form-based message
 type MessageForm struct {
 	Subject        string
 	Body           string
-	AttachmentXml  string
+	AttachmentXML  string
 	AttachmentName string
 }
 
 // NewManager instantiates the forms manager
-func NewManager(conf FormsConfig) *Manager {
+func NewManager(conf Config) *Manager {
 	retval := &Manager{
 		config: conf,
 	}
@@ -102,7 +107,7 @@ func NewManager(conf FormsConfig) *Manager {
 
 // GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message
-func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request) {
+func (mgr *Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request) {
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -114,7 +119,7 @@ func (mgr Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request
 
 // PostFormDataHandler - When the user is done filling a form, the frontend posts the input fields to this handler,
 // which stores them in a map, so that other browser tabs can read the values back with GetFormDataHandler
-func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
+func (mgr *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10e6); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -171,7 +176,7 @@ func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	formData.MsgSubject = formMsg.Subject
 	formData.MsgBody = formMsg.Body
-	formData.MsgXml = formMsg.AttachmentXml
+	formData.MsgXML = formMsg.AttachmentXML
 	formData.Submitted = time.Now()
 
 	mgr.postedFormData.Lock()
@@ -183,7 +188,7 @@ func (mgr Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetFormDataHandler is the counterpart to PostFormDataHandler. Returns the form field values to the frontend
-func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
+func (mgr *Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -194,7 +199,7 @@ func (mgr Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPostedFormData is similar to GetFormDataHandler, but used when posting the form-based message to the outbox
-func (mgr Manager) GetPostedFormData(key string) FormData {
+func (mgr *Manager) GetPostedFormData(key string) FormData {
 	mgr.postedFormData.RLock()
 	retVal := mgr.postedFormData.internalFormDataMap[key]
 	mgr.postedFormData.RUnlock()
@@ -202,7 +207,7 @@ func (mgr Manager) GetPostedFormData(key string) FormData {
 }
 
 // GetFormTemplateHandler handles the request for viewing a form filled-in with instance values
-func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
+func (mgr *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	formPath := r.URL.Query().Get("formPath")
 	if formPath == "" {
 		http.Error(w, "formPath query param missing", http.StatusBadRequest)
@@ -232,8 +237,8 @@ func (mgr Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// GetXmlAttachmentNameForForm returns the user-visible filename for the message attachment that holds the form instance values
-func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
+// GetXMLAttachmentNameForForm returns the user-visible filename for the message attachment that holds the form instance values
+func (mgr *Manager) GetXMLAttachmentNameForForm(f Form, isReply bool) string {
 	attachmentName := filepath.Base(f.ViewerURI)
 	if isReply {
 		attachmentName = filepath.Base(f.ReplyViewerURI)
@@ -247,7 +252,7 @@ func (mgr Manager) GetXmlAttachmentNameForForm(f Form, isReply bool) string {
 }
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
-func (mgr Manager) RenderForm(contentUnsanitized []byte, composereply bool) (string, error) {
+func (mgr *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (string, error) {
 
 	type Node struct {
 		XMLName xml.Name
@@ -336,7 +341,7 @@ func (mgr Manager) RenderForm(contentUnsanitized []byte, composereply bool) (str
 }
 
 // ComposeForm combines all data needed for the whole form-based message: subject, body, and attachment
-func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, error) {
+func (mgr *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, error) {
 
 	formFolder, err := mgr.buildFormFolder()
 	if err != nil {
@@ -357,7 +362,7 @@ func (mgr Manager) ComposeForm(tmplPath string, subject string) (MessageForm, er
 		"msgsender":       mgr.config.MyCall,
 	}
 
-	fmt.Println("forms version: " + varMap["templateversion"])
+	fmt.Printf("Form '%s', version: %s", form.TxtFileURI, varMap["templateversion"])
 
 	formMsg, err := formMessageBuilder{
 		Template:    form,
@@ -397,19 +402,19 @@ func (f Form) containsName(partialName string) bool {
 		strings.Contains(f.TxtFileURI, partialName)
 }
 
-func (mgr Manager) buildFormFolder() (FormFolder, error) {
+func (mgr *Manager) buildFormFolder() (FormFolder, error) {
 	formFolder, err := mgr.innerRecursiveBuildFormFolder(mgr.config.FormsPath)
 	formFolder.Version = mgr.getFormsVersion()
 	return formFolder, err
 }
 
-func (mgr Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
+func (mgr *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
 	rootFile, err := os.Open(rootPath)
 	if err != nil {
 		return FormFolder{}, err
 	}
 	defer rootFile.Close()
-	rootFileInfo, err := os.Stat(rootPath)
+	rootFileInfo, _ := os.Stat(rootPath)
 
 	if !rootFileInfo.IsDir() {
 		return FormFolder{}, errors.New(rootPath + " is not a directory")
@@ -439,7 +444,7 @@ func (mgr Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, e
 			retVal.FormCount += subfolder.FormCount
 			continue
 		}
-		if filepath.Ext(info.Name()) != ".txt" {
+		if filepath.Ext(info.Name()) != txtFileExt {
 			continue
 		}
 		frm, err := mgr.buildFormFromTxt(path.Join(rootPath, info.Name()))
@@ -461,7 +466,7 @@ func (mgr Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, e
 	return retVal, nil
 }
 
-func (mgr Manager) buildFormFromTxt(txtPath string) (Form, error) {
+func (mgr *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 	f, err := os.Open(txtPath)
 	if err != nil {
 		return Form{}, err
@@ -523,7 +528,7 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 	return retVal, errors.New("form not found")
 }
 
-func (mgr Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
+func (mgr *Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	absPathTemplate := filepath.Join(mgr.config.FormsPath, path.Clean(tmplPath))
 
 	// now deal with cases where the html file name specified in the .txt file, has different caseness than the actual .html file on disk.
@@ -551,7 +556,7 @@ func (mgr Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	return retVal, nil
 }
 
-func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
+func (mgr *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
 	fUnsanitized, err := os.Open(absPathTemplate)
 	if err != nil {
 		return "", err
@@ -583,9 +588,9 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
 	for scanner.Scan() {
 		l := scanner.Text()
-		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestUrl, -1)
+		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestURL, -1)
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
-		l = strings.Replace(l, "http://localhost:8001", formDestUrl, -1)
+		l = strings.Replace(l, "http://localhost:8001", formDestURL, -1)
 		l = strings.Replace(l, "{MsgSender}", mgr.config.MyCall, -1)
 		l = strings.Replace(l, "{Callsign}", mgr.config.MyCall, -1)
 		l = strings.Replace(l, "{ProgramVersion}", "Pat "+mgr.config.AppVersion, -1)
@@ -604,11 +609,11 @@ func (mgr Manager) fillFormTemplate(absPathTemplate string, formDestUrl string, 
 	return retVal, nil
 }
 
-func (mgr Manager) getFormsVersion() string {
+func (mgr *Manager) getFormsVersion() string {
 	// walking up the path to find a version file.
 	// Winlink's Standard_Forms.zip includes it in its root.
 	dir := mgr.config.FormsPath
-	if filepath.Ext(dir) == ".txt" {
+	if filepath.Ext(dir) == txtFileExt {
 		dir = filepath.Dir(dir)
 	}
 
@@ -648,7 +653,7 @@ type formMessageBuilder struct {
 	IsReply     bool
 	Template    Form
 	FormValues  map[string]string
-	FormsMgr    Manager
+	FormsMgr    *Manager
 }
 
 //build returns message subject, body, and XML attachment content for the given template and variable map
@@ -656,7 +661,7 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 
 	tmplPath := filepath.Join(b.FormsMgr.config.FormsPath, b.Template.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
-		tmplPath += ".txt"
+		tmplPath += txtFileExt
 	}
 	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
 		tmplPath = filepath.Join(b.FormsMgr.config.FormsPath, b.Template.ReplyTxtFileURI)
@@ -669,9 +674,9 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 
 	b.initFormValues()
 
-	formVarsAsXml := ""
+	formVarsAsXML := ""
 	for varKey, varVal := range b.FormValues {
-		formVarsAsXml += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(varKey), xmlEscape(varVal), xmlEscape(varKey))
+		formVarsAsXML += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(varKey), xmlEscape(varVal), xmlEscape(varKey))
 	}
 
 	viewer := ""
@@ -687,7 +692,7 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 		replier = filepath.Base(b.Template.ReplyTxtFileURI)
 	}
 
-	retVal.AttachmentXml = fmt.Sprintf(`%s<RMS_Express_Form>
+	retVal.AttachmentXML = fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
     <rms_express_version>%s</rms_express_version>
@@ -710,8 +715,8 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 		b.FormsMgr.config.Locator,
 		viewer,
 		replier,
-		formVarsAsXml)
-	retVal.AttachmentName = b.FormsMgr.GetXmlAttachmentNameForForm(b.Template, false)
+		formVarsAsXML)
+	retVal.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
 	retVal.Subject = strings.TrimSpace(retVal.Subject)
 	retVal.Body = strings.TrimSpace(retVal.Body)
 	return retVal, nil
@@ -732,8 +737,8 @@ func (b formMessageBuilder) initFormValues() {
 	b.FormValues["msgsubject"] = ""
 	b.FormValues["msgbody"] = ""
 	b.FormValues["msgp2p"] = ""
-	b.FormValues["msgisforward"] = "False"
-	b.FormValues["msgisacknowledgement"] = "False"
+	b.FormValues["msgisforward"] = fieldValueFalseInXML
+	b.FormValues["msgisacknowledgement"] = fieldValueFalseInXML
 	b.FormValues["msgseqnum"] = "0"
 }
 
@@ -812,7 +817,7 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 	return result
 }
 
-func (mgr Manager) cleanupOldFormData() {
+func (mgr *Manager) cleanupOldFormData() {
 	mgr.postedFormData.Lock()
 	for key, form := range mgr.postedFormData.internalFormDataMap {
 		elapsed := time.Now().Sub(form.Submitted).Hours()

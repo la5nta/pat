@@ -246,7 +246,7 @@ func composeFormReport(args []string) {
 
 	msg.SetBody(formMsg.Body)
 
-	attachmentFile := fbb.NewFile(formMsg.AttachmentName, []byte(formMsg.AttachmentXml))
+	attachmentFile := fbb.NewFile(formMsg.AttachmentName, []byte(formMsg.AttachmentXML))
 	msg.AddFile(attachmentFile)
 
 	postMessage(msg)

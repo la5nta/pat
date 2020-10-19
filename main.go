@@ -286,7 +286,7 @@ func main() {
 	}
 
 	// init forms subsystem
-	formsMgr = forms.NewManager(forms.FormsConfig{
+	formsMgr = forms.NewManager(forms.Config{
 		FormsPath:  config.FormsPath,
 		MyCall:     fOptions.MyCall,
 		Locator:    config.Locator,

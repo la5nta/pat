@@ -199,13 +199,13 @@
               <span id="connectURLPreview" style="float: left; position: relative; bottom: 5px; color: gray;"></span>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#rmslist-container">Show RMS list</button>
-              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-              <button type="button" class="btn btn-primary" id="connect_btn">Connect</button>
+              <button type="button" class="btn btn-secondary btn-sm mr-auto" data-toggle="collapse" data-target="#rmslist-container">Show RMS list</button>
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary btn-sm" id="connect_btn">Connect</button>
             </div>
             <div class="modal-footer collapse" id="rmslist-container">
               <div class="form-group row">
-                <div class="col-md-4">
+                <div class="col">
                   <select class="selectpicker form-control" data-width="100%" id="modeSearchSelect">
                     <optgroup label="mode">
                       <option value="">(any mode)</option>
@@ -216,7 +216,7 @@
                     </optgroup>
                   </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col">
                   <select class="selectpicker form-control" data-width="100%" id="bandSearchSelect">
                     <optgroup label="band">
                       <!-- Values from freq.go -->
@@ -239,11 +239,11 @@
                     </optgroup>
                   </select>
                 </div>
-                <div class="col-md-4">
-                  <button id="updateRmslistButton" class="btn btn-default btn-link">Update cache</button>
+                <div class="col">
+                  <button id="updateRmslistButton" class="btn btn-default btn-link">Update&nbsp;cache</button>
                 </div>
               </div>
-              <div class="table-responsive table-fixed">
+              <div class="table-responsive table-sm">
                 <table id="rmslist" class="table table-hover table-condensed">
                   <thead>
                     <tr><th>target</th><th>distance</th><th>mode</th><th class="text-right">dial freq</th></tr>

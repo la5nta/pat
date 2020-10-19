@@ -5,6 +5,7 @@ go 1.11
 require (
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
 	github.com/creack/goselect v0.1.1 // indirect
+	github.com/dimchansky/utfbom v1.1.0
 	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gorhill/cronexpr v0.0.0-20161205141322-d520615e531a

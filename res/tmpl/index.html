@@ -1,422 +1,472 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="">
-	<meta name="author" content="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-	<title>{{.AppName}} - Mailbox</title>
+    <title>{{.AppName}} - Mailbox</title>
 
-	<link href="/res/bootstrap-4.4.1-dist/css/bootstrap.min.css" rel="stylesheet">
-	<link href="/res/bootstrap-select.min.css" rel="stylesheet">
-	<link href="/res/bootstrap-tokenfield.min.css" rel="stylesheet">
-	<link href="/res/fontawesome/all.min.css" rel="stylesheet">
-	<link href="/res/site.css" rel="stylesheet">
-</head>
+    <link href="/res/bootstrap-4.4.1-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/res/bootstrap-select.min.css" rel="stylesheet">
+    <link href="/res/bootstrap-tokenfield.min.css" rel="stylesheet">
+    <link href="/res/fontawesome/all.min.css" rel="stylesheet">
+    <link href="/res/site.css" rel="stylesheet">
+  </head>
 
-<body>
-	<!-- Fixed navbar -->
-	<nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light" role="navigation">
-	<div class="container">
-	<div class="navbar-header">
-	<a class="navbar-brand" href="#" data-toggle="modal" data-target="#statusModal"><span id="gui_status_light" class="btn status-light btn-danger"></span> {{.Mycall}}</a>
-	<a class="navbar-text" id="status_text" data-toggle="modal" data-target="#connectModal"></a>
-	<span class="navbar-text">   </span>
-	</div>
-	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-	<span class="navbar-toggler-icon"></span>
-	</button>
-	<div class="collapse navbar-collapse" id="navbarSupportedContent">
-	<ul class="navbar-nav mr-auto nav-tabs">
-	<li class="nav-item"><a class="nav-link active" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="inbox_tab">Inbox</a></li>
-	<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="outbox_tab">Outbox</a></li>
-	<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="sent_tab">Sent</a></li>
-	<li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="archive_tab">Archive</a></li>
-	<li class="nav-item dropdown float-right">
-	<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></a>
-	<div class="dropdown-menu" role="menu">
-	<a class="dropdown-item" href="#" data-toggle="modal" data-target="#connectModal"><span class="fas fa-sync" /> Connect...</a>
-	<div class="dropdown-divider"></div>
-	<a class="dropdown-item" href="#" data-toggle="modal" data-target="#composer"><span class="fas fa-pencil-alt" /> Compose...</a>
-	<a class="dropdown-item" href="#" data-toggle="modal" data-target="#posModal"><span class="fas fa-map-marker-alt" /> Position...</a>
-	<div class="dropdown-divider"></div>
-	<div class="dropdown-header">Other stuff</div>
-	<!--<a class="dropdown-item" href="#">Settings</a>-->
-	<a class="dropdown-item" href="#" data-toggle="modal" data-target="#aboutModal">About {{.AppName}}</a>
-	</div>
-	</li>
-	</ul>
-	</div>
-	</div>
-	</nav>
-	<div class="container mt-5">
-	<div class="row">
-	<div id="navbar_progress" class="col d-none" >
-	<div class="progress">
-	<div class="progress-bar" role="progressbar" style="min-width: 20px; width:0%"></div>
-	</div>
-	</div><!--/.navbar_progress-->
-	</div>
-	<div class="row">
-	<div id="navbar_status" class="col bg-info text-white"></div>
-	</div>
-	</div>
+  <body>
+    <!-- Fixed navbar -->
+    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#" data-toggle="modal" data-target="#statusModal"><span id="gui_status_light" class="btn status-light btn-danger"></span> {{.Mycall}}</a>
+          <a class="navbar-text" id="status_text" data-toggle="modal" data-target="#connectModal"></a>
+          <span class="navbar-text">   </span>
+        </div>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto nav-tabs">
+            <li class="nav-item"><a class="nav-link active" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="inbox_tab">Inbox</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="outbox_tab">Outbox</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="sent_tab">Sent</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" data-toggle="collapse" data-target=".navbar-collapse.show" id="archive_tab">Archive</a></li>
+            <li class="nav-item dropdown float-right">
+              <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></a>
+              <div class="dropdown-menu" role="menu">
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#connectModal"><span class="fas fa-sync" /> Connect...</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#composer"><span class="fas fa-pencil-alt" /> Compose...</a>
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#posModal"><span class="fas fa-map-marker-alt" /> Position...</a>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-header">Other stuff</div>
+                <!--<a class="dropdown-item" href="#">Settings</a>-->
+                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#aboutModal">About {{.AppName}}</a>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container mt-5">
+      <div class="row">
+        <div id="navbar_progress" class="col d-none" >
+          <div class="progress">
+            <div class="progress-bar" role="progressbar" style="min-width: 20px; width:0%"></div>
+          </div>
+        </div><!--/.navbar_progress-->
+      </div>
+      <div class="row">
+        <div id="navbar_status" class="col bg-info text-white"></div>
+      </div>
+    </div>
 
-	<!-- Begin page content -->
-	<div class="container">
+    <!-- Begin page content -->
+    <div class="container">
 
-	<!-- Begin gui status content -->
-	<div class="modal fade modal-narrow" id="statusModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<h5 class="modal-title">Status</h5>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="modal-body">
-	<div id="no_error" class="card card-sm bg-success d-none">
-	<div class="card-body">
-	<h5 class="card-title">No issues</h5>
-	<p class="card-text">No GUI issues detected.</p>
-	</div>
-	</div>
-	<div id="websocket_error" class="card card-sm bg-danger text-white d-none">
-	<div class="card-body">
-	<h5 class="card-title">Websocket</h5>
-	<p class="card-text">A websocket connection to the backend could not be established.<br/>Make sure {{.AppName}} is running and available on the network.</p>
-	</div>
-	</div>
-	<div id="notifications_error" class="card card-sm bg-info text-white d-none">
-	<div class="card-body">
-	<h5 class="card-title">Desktop notifications</h5>
-	<p class="card-text">Desktop notifications are unavailable due to insufficient permissions.</p>
-	</div>
-	</div>
-	<div id="geolocation_error" class="card card-sm bg-info text-white d-none">
-	<div class="card-body">
-	<h5 class="card-title">Geolocation</h5>
-	<p class="card-text">Geolocation for position reporting are unavailable due to insufficient permissions.</p>
-	</div>
-	</div>
-	<div id="webserver_info" class="card card-sm bg-info text-white ignore-status d-none">
-	<div class="card-body">
-	<h5 class="card-title">Web service</h5>
-	<p class="card-text"></p>
-	</div>
-	</div>
-	</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin gui status content -->
+      <div class="modal fade modal-narrow" id="statusModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Status</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+              <div id="no_error" class="card card-sm bg-success d-none">
+                <div class="card-body">
+                  <h5 class="card-title">No issues</h5>
+                  <p class="card-text">No GUI issues detected.</p>
+                </div>
+              </div>
+              <div id="websocket_error" class="card card-sm bg-danger text-white d-none">
+                <div class="card-body">
+                  <h5 class="card-title">Websocket</h5>
+                  <p class="card-text">A websocket connection to the backend could not be established.<br/>Make sure {{.AppName}} is running and available on the network.</p>
+                </div>
+              </div>
+              <div id="notifications_error" class="card card-sm bg-info text-white d-none">
+                <div class="card-body">
+                  <h5 class="card-title">Desktop notifications</h5>
+                  <p class="card-text">Desktop notifications are unavailable due to insufficient permissions.</p>
+                </div>
+              </div>
+              <div id="geolocation_error" class="card card-sm bg-info text-white d-none">
+                <div class="card-body">
+                  <h5 class="card-title">Geolocation</h5>
+                  <p class="card-text">Geolocation for position reporting are unavailable due to insufficient permissions.</p>
+                </div>
+              </div>
+              <div id="webserver_info" class="card card-sm bg-info text-white ignore-status d-none">
+                <div class="card-body">
+                  <h5 class="card-title">Web service</h5>
+                  <p class="card-text"></p>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin prompt modal -->
-	<div class="modal fade modal-narrow" id="promptModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	<h4 class="modal-title" id="promptMessage"></h4>
-	</div>
-	<form onsubmit="return false">
-	<div class="modal-body">
-	<input type="password" id="promptResponseValue" name="response" class="form-control" placeholder="">
-	<input type="hidden" id="promptID" name="id" class="form-control" placeholder="">
-	</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	<input type="submit" value="OK" class="btn btn-primary" onclick="return postPromptResponse()">
-	</div>
-	</form>
-	</div>
-	</div>
-	</div>
+      <!-- Begin prompt modal -->
+      <div class="modal fade modal-narrow" id="promptModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="promptMessage"></h4>
+            </div>
+            <form onsubmit="return false">
+              <div class="modal-body">
+                <input type="password" id="promptResponseValue" name="response" class="form-control" placeholder="">
+                <input type="hidden" id="promptID" name="id" class="form-control" placeholder="">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <input type="submit" value="OK" class="btn btn-primary" onclick="return postPromptResponse()">
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin connect modal -->
-	<div class="modal fade" id="connectModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<h5 class="modal-title">Connect to remote node...</h5>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="modal-body">
-	<form class="form-horizontal" role="form" id="connectForm">
-	<div class="form-group">
-	<div class="form-group row">
-	<div class="col-md-6">
-	<select class="selectpicker form-control" data-width="100%" id="aliasSelect" title="(select alias)">
-	</select>
-	</div>
-	</div>
-	<div class="form-group row">
-	<div class="col-md-6">
-	<select class="selectpicker form-control" data-width="100%" id="transportSelect" title="(select transport)">
-	<optgroup label="transports">
-	<option value="winmor">WINMOR</option>
-	<option value="ax25">AX.25</option>
-	<option value="ardop">ARDOP</option>
-	<option value="serial-tnc">serial-tnc</option>
-	<option value="pactor">Pactor</option>
-	<option value="telnet">telnet</option>
-	</optgroup>
-	</select>
-	</div>
-	<div class="input-group col-md-6">
-	<div class="input-group-prepend"><span class="input-group-text">Target</span></div>
-	<input type="text" class="form-control" id="targetInput" placeholder="N0CALL">
-	</div>
-	</div>
-	<div id="freqInputDiv" class="form-group row">
-	<div class="input-group input-group col-md-8">
-	<div class="input-group-prepend"><span class="input-group-text">Frequency</span></div>
-	<input type="text" class="form-control" id="freqInput" placeholder="0000.00">
-	<div class="input-group-append"><span class="input-group-text">KHz</span></div>
-	</div>
-	</div>
-	<div id="addrInputDiv" class="form-group row">
-	<div class="input-group input-group col-md-12">
-	<div class="input-group-prepend"><span class="input-group-text">Address</span></div>
-	<input type="text" class="form-control" id="addrInput" placeholder="user:pass@host:port">
-	</div>
-	</div>
-	<div class="form-group row" id="checkboxInput">
-	<div  id="radioOnlyInputDiv" class="input-group input-group col-md-6">
-	<div class="input-group-prepend">
-	<div class="input-group-text">
-	<input type="checkbox" id="radioOnlyInput">
-	</div>
-	</div>
-	<input type="text" class="form-control" value="Radio only" readonly>
-	</div>
-	</div>
-	</div>
-	</form>
-	<p id="connectURLPreview" class="float-left"></p>
-	</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-	<button type="button" class="btn btn-primary" id="connect_btn">Connect</button>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin connect modal -->
+      <div class="modal fade" id="connectModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Connect to remote node...</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+              <form class="form-horizontal" role="form" id="connectForm">
+                <div class="form-group">
+                  <div class="form-group row">
+                    <div class="col-md-6">
+                      <select class="selectpicker form-control" data-width="100%" id="aliasSelect" title="(select alias)">
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group row">
+                    <div class="col-md-6">
+                      <select class="selectpicker form-control" data-width="100%" id="transportSelect" title="(select transport)">
+                        <optgroup label="transports">
+                          <option value="ardop">ARDOP</option>
+                          <option value="ax25">AX.25</option>
+                          <option value="pactor">Pactor</option>
+                          <option value="serial-tnc">serial-tnc</option>
+                          <option value="telnet">telnet</option>
+                          <option value="winmor">WINMOR</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                    <div class="input-group col-md-6">
+                      <div class="input-group-prepend"><span class="input-group-text">Target</span></div>
+                      <input type="text" class="form-control" id="targetInput" placeholder="N0CALL">
+                    </div>
+                  </div>
+                  <div id="freqInputDiv" class="form-group row">
+                    <div class="input-group input-group col-md-8">
+                      <div class="input-group-prepend"><span class="input-group-text">Frequency</span></div>
+                      <input type="text" class="form-control" id="freqInput" placeholder="0000.00">
+                      <div class="input-group-append"><span class="input-group-text">KHz</span></div>
+                    </div>
+                  </div>
+                  <div id="addrInputDiv" class="form-group row">
+                    <div class="input-group input-group col-md-12">
+                      <div class="input-group-prepend"><span class="input-group-text">Address</span></div>
+                      <input type="text" class="form-control" id="addrInput" placeholder="user:pass@host:port">
+                    </div>
+                  </div>
+                  <div class="form-group row" id="checkboxInput">
+                    <div  id="radioOnlyInputDiv" class="input-group input-group col-md-6">
+                      <div class="input-group-prepend">
+                        <div class="input-group-text">
+                          <input type="checkbox" id="radioOnlyInput">
+                        </div>
+                      </div>
+                      <input type="text" class="form-control" value="Radio only" readonly>
+                    </div>
+                  </div>
+                </div>
+              </form>
+              <span id="connectURLPreview" style="float: left; position: relative; bottom: 5px; color: gray;"></span>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#rmslist-container">Show RMS list</button>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" id="connect_btn">Connect</button>
+            </div>
+            <div class="modal-footer collapse" id="rmslist-container">
+              <div class="form-group row">
+                <div class="col-md-4">
+                  <select class="selectpicker form-control" data-width="100%" id="modeSearchSelect">
+                    <optgroup label="mode">
+                      <option value="">(any mode)</option>
+                      <option value="ardop" selected>ARDOP</option>
+                      <option value="packet">Packet</option>
+                      <option value="pactor">Pactor</option>
+                      <option value="winmor">WINMOR</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <select class="selectpicker form-control" data-width="100%" id="bandSearchSelect">
+                    <optgroup label="band">
+                      <!-- Values from freq.go -->
+                      <option value="">(any band)</option>
+                      <option value="160m">160m</option>
+                      <option value="80m">80m</option>
+                      <option value="60m">60m</option>
+                      <option value="40m">40m</option>
+                      <option value="30m">30m</option>
+                      <option value="20m">20m</option>
+                      <option value="17m">17m</option>
+                      <option value="15m">15m</option>
+                      <option value="12m">12m</option>
+                      <option value="10m">10m</option>
+                      <option value="6m">6m</option>
+                      <option value="4m">4m</option>
+                      <option value="2m">2m</option>
+                      <option value="1.25m">1.25m</option>
+                      <option value="70cm">70cm</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <button id="updateRmslistButton" class="btn btn-default btn-link">Update cache</button>
+                </div>
+              </div>
+              <div class="table-responsive table-fixed">
+                <table id="rmslist" class="table table-hover table-condensed">
+                  <thead>
+                    <tr><th>target</th><th>distance</th><th>mode</th><th class="text-right">dial freq</th></tr>
+                  </thead>
+                  <tbody></tbody> <!-- This is populated by javascript -->
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin posreport modal -->
-	<div class="modal fade" id="posModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<h5 class="modal-title">Position report</h5>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="modal-body" id="posView">
-	<div class="row mb-3">
-	<div class="input-group input-group-sm col">
-	<div class="input-group-prepend"><span class="input-group-text">Latitude</span></div>
-	<input type="text" id="pos_lat" name="lat" class="form-control" placeholder="60.1234">
-	</div>
-	<div class="input-group input-group-sm col">
-	<div class="input-group-prepend"><span class="input-group-text">Longitude</span></div>
-	<input type="text" id="pos_long" name="long" class="form-control" placeholder="5.0123">
-	</div>
-	</div>
-	<div class="row mb-3">
-	<div class="input-group input-group-sm col">
-	<div class="input-group-prepend"><span class="input-group-text">Comment</span></div>
-	<input type="text" id="pos_comment" name="comment" class="form-control" placeholder="">
-	</div>
-	</div>
-	<input type="hidden" id="pos_ts">
-	<p id="pos_status"></p>
-	</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	<button type="button" class="btn btn-primary" autocomplete="off" id="pos_btn">Post <span class="fas fa-paper-plane"></span></button>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin posreport modal -->
+      <div class="modal fade" id="posModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Position report</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body" id="posView">
+              <div class="row mb-3">
+                <div class="input-group input-group-sm col">
+                  <div class="input-group-prepend"><span class="input-group-text">Latitude</span></div>
+                  <input type="text" id="pos_lat" name="lat" class="form-control" placeholder="60.1234">
+                </div>
+                <div class="input-group input-group-sm col">
+                  <div class="input-group-prepend"><span class="input-group-text">Longitude</span></div>
+                  <input type="text" id="pos_long" name="long" class="form-control" placeholder="5.0123">
+                </div>
+              </div>
+              <div class="row mb-3">
+                <div class="input-group input-group-sm col">
+                  <div class="input-group-prepend"><span class="input-group-text">Comment</span></div>
+                  <input type="text" id="pos_comment" name="comment" class="form-control" placeholder="">
+                </div>
+              </div>
+              <input type="hidden" id="pos_ts">
+              <p id="pos_status"></p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" autocomplete="off" id="pos_btn">Post <span class="fas fa-paper-plane"></span></button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin about modal -->
-	<div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<h5 class="modal-title">About</h5>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="modal-body">
-	<p id="version">{{.AppName}} {{.Version}}</p>
-	<img src="res/images/pat_logo.png" width="35%" class="rounded mx-auto d-block" />
-	</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin about modal -->
+      <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">About</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+              <p id="version">{{.AppName}} {{.Version}}</p>
+              <img src="res/images/pat_logo.png" width="35%" class="rounded mx-auto d-block" />
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Ok</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin composer -->
-	<div class="modal fade" id="composer" tabindex="-1" role="dialog">
-	<div class="modal-dialog" role="document">
-	<div class="modal-content">
-	<div class="modal-header">
-	<h5 class="modal-title" id="composer_subject">New message...</h5>
-	<button type="button" class="close" id="compose_cancel" data-dismiss="modal"><span>&times;</span></button>
-	</div>
-	<div class="modal-body">
-	<form id="composer_form" enctype="multipart/form-data">
-	<div class="input-group input-group-sm">
-	<div class="input-group-prepend"><span class="input-group-text">To</span></div>
-	<input type="text" id="msg_to" name="to" class="form-control" placeholder="N0CALL">
-	</div>
-	<div class="input-group input-group-sm">
-	<div class="input-group-prepend"><span class="input-group-text">Cc</span></div>
-	<input type="text" id="msg_cc" name="cc" class="form-control" placeholder="N0CALL">
-	</div>
-	<div class="input-group input-group-sm">
-	<div class="input-group-prepend"><span class="input-group-text">Subject</span></div>
-	<input type="text" id="msg_subject" name="subject" class="form-control" placeholder="">
-	</div>
-	<div class="input-group input-group-sm mb-3">
-	<div class="input-group-prepend">
-	<div class="input-group-text">
-	<input type="checkbox" id="msg_p2p_only">
-	</div>
-	</div>
-	<input type="text" class="form-control" value="P2P only" readonly>
-	</div>
-	<div class="form-group">
-	<textarea name="body" class="form-control" id="msg_body"></textarea>
-	</div>
-	<div id="composer_actions">
-	<span class="btn btn-secondary btn-file">Attachments <span class="fas fa-paperclip"></span><input id="msg_attachments_input" name="files" type="file" multiple></span>
-	<a id="formsSelectBtn" class="btn btn-secondary" href="#" data-toggle="modal" data-target="#selectForm">Template <span class="fas fa-edit" /></a>
-	<button id="post_btn" type="submit" class="btn btn-primary float-right">Post <span class="fas fa-paper-plane"></span></button>
-	</div>
-	<div class="row">
-	<span id="composer_error" class="col badge badge-pill badge-danger float-right">This is an error</span>
-	</div>
-	</form>
-	</div>
-	<div class="modal-footer primary">
-	<div id="composer_attachments" class="row"></div>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin composer -->
+      <div class="modal fade" id="composer" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="composer_subject">New message...</h5>
+              <button type="button" class="close" id="compose_cancel" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+              <form id="composer_form" enctype="multipart/form-data">
+                <div class="input-group input-group-sm">
+                  <div class="input-group-prepend"><span class="input-group-text">To</span></div>
+                  <input type="text" id="msg_to" name="to" class="form-control" placeholder="N0CALL">
+                </div>
+                <div class="input-group input-group-sm">
+                  <div class="input-group-prepend"><span class="input-group-text">Cc</span></div>
+                  <input type="text" id="msg_cc" name="cc" class="form-control" placeholder="N0CALL">
+                </div>
+                <div class="input-group input-group-sm">
+                  <div class="input-group-prepend"><span class="input-group-text">Subject</span></div>
+                  <input type="text" id="msg_subject" name="subject" class="form-control" placeholder="">
+                </div>
+                <div class="input-group input-group-sm mb-3">
+                  <div class="input-group-prepend">
+                    <div class="input-group-text">
+                      <input type="checkbox" id="msg_p2p_only">
+                    </div>
+                  </div>
+                  <input type="text" class="form-control" value="P2P only" readonly>
+                </div>
+                <div class="form-group">
+                  <textarea name="body" class="form-control" id="msg_body"></textarea>
+                </div>
+                <div id="composer_actions">
+                  <span class="btn btn-secondary btn-file">Attachments <span class="fas fa-paperclip"></span><input id="msg_attachments_input" name="files" type="file" multiple></span>
+                  <a id="formsSelectBtn" class="btn btn-secondary" href="#" data-toggle="modal" data-target="#selectForm">Template <span class="fas fa-edit" /></a>
+                  <button id="post_btn" type="submit" class="btn btn-primary float-right">Post <span class="fas fa-paper-plane"></span></button>
+                </div>
+                <div class="row">
+                  <span id="composer_error" class="col badge badge-pill badge-danger float-right">This is an error</span>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer primary">
+              <div id="composer_attachments" class="row"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin selecting-a-form modal -->
-	<div class="modal fade" id="selectForm" tabindex="-1" role="dialog">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header">
-	<div class="container">
-	<div class="d-flex">
-	<h5 class="modal-title w-100">Select a form...</h5>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="row">
-	<div class="col">
-	<small id="formsRootFolderName">root folder path</small>
-	<small id="formsVersion">(v0.0.0)</small>
-	</div>
-	</div>
-	</div>
-	</div>
-	<div class="modal-body">
-	<div class="row">
-	<div class="col" id="formFolderRoot">
-	</div>
-	</div>
-	<p id="pos_status"></p>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin selecting-a-form modal -->
+      <div class="modal fade" id="selectForm" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div class="container">
+                <div class="d-flex">
+                  <h5 class="modal-title w-100">Select a form...</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <small id="formsRootFolderName">root folder path</small>
+                    <small id="formsVersion">(v0.0.0)</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="col" id="formFolderRoot">
+                </div>
+              </div>
+              <p id="pos_status"></p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin folder -->
-	<div class="table-responsive text-nowrap panel panel-default mt-2" id="folder">
-	<table class="table table-sm table-striped table-condensed table-hover"></table>
-	</div>
+      <!-- Begin folder -->
+      <div class="table-responsive text-nowrap panel panel-default mt-2" id="folder">
+        <table class="table table-sm table-striped table-condensed table-hover"></table>
+      </div>
 
-	<!-- Begin message view -->
-	<div class="modal" id="message_view" tabindex="-1" role="dialog" aria-labelledby="msgViewModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	<div class="modal-content">
-	<div class="modal-header primary">
-	<div class="container">
-	<div class="row">
-	<h5 class="col-9 modal-title" id="subject"></h5>
-	<div class="col-2 btn-group">
-	<button type="button" class="btn btn-link btn-xs dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></button>
-	<ul class="dropdown-menu" role="menu">
-	<li class="dropdown-item"><a href="#" id="reply_btn"><span class="fas fa-reply" /> Reply...</a></li>
-	<li class="dropdown-item"><a href="#" id="forward_btn"><span class="fas fa-share" /> Forward...</a></li>
-	<li class="dropdown-divider"></li>
-	<li class="dropdown-item"><a href="#" id="archive_btn"><span class="fas fa-archive" /> Archive</a></li>
-	<li class="dropdown-item"><a href="#" id="delete_btn"><span class="fas fa-trash-alt" /> Delete</a></li>
-	</ul>
-	</div>
-	<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-	</div>
-	<div class="row">
-	<div id="headers" class="col"></div>
-	</div>
-	</div>
-	</div>
-	<div class="modal-body primary">
-	<div class="msgbody" id="body"></div>
-	</div>
-	<div class="modal-footer primary">
-	<div id="attachments" class="row"></div>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin message view -->
+      <div class="modal" id="message_view" tabindex="-1" role="dialog" aria-labelledby="msgViewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header primary">
+              <div class="container">
+                <div class="row">
+                  <h5 class="col-9 modal-title" id="subject"></h5>
+                  <div class="col-2 btn-group">
+                    <button type="button" class="btn btn-link btn-xs dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></button>
+                    <ul class="dropdown-menu" role="menu">
+                      <li class="dropdown-item"><a href="#" id="reply_btn"><span class="fas fa-reply" /> Reply...</a></li>
+                      <li class="dropdown-item"><a href="#" id="forward_btn"><span class="fas fa-share" /> Forward...</a></li>
+                      <li class="dropdown-divider"></li>
+                      <li class="dropdown-item"><a href="#" id="archive_btn"><span class="fas fa-archive" /> Archive</a></li>
+                      <li class="dropdown-item"><a href="#" id="delete_btn"><span class="fas fa-trash-alt" /> Delete</a></li>
+                    </ul>
+                  </div>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="row">
+                  <div id="headers" class="col"></div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-body primary">
+              <div class="msgbody" id="body"></div>
+            </div>
+            <div class="modal-footer primary">
+              <div id="attachments" class="row"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	<!-- Begin delete confirm modal -->
-	<div class="modal fade" id="confirm_delete" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog modal-sm">
-	<div class="modal-content">
-	<div class="modal-header">Delete message</div>
-	<div class="modal-body">Are you sure you want to delete this message? This action can not be reverted.</div>
-	<div class="modal-footer">
-	<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-	<a class="btn btn-danger btn-ok">Delete</a>
-	</div>
-	</div>
-	</div>
-	</div>
+      <!-- Begin delete confirm modal -->
+      <div class="modal fade" id="confirm_delete" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+          <div class="modal-content">
+            <div class="modal-header">Delete message</div>
+            <div class="modal-body">Are you sure you want to delete this message? This action can not be reverted.</div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <a class="btn btn-danger btn-ok">Delete</a>
+            </div>
+          </div>
+        </div>
+      </div>
 
-	</div>
-	<!-- End page content -->
+    </div>
+    <!-- End page content -->
 
-	<div class="footer">
-	<div class="container"><pre id="console"></pre></div>
-	</div>
+    <div class="footer">
+      <div class="container"><pre id="console"></pre></div>
+    </div>
 
-	<!-- Bootstrap core JavaScript
-	================================================== -->
-	<!-- Placed at the end of the document so the pages load faster -->
-	<script src="/res/js/jquery-3.4.1.min.js"></script>
-	<script src="/res/bootstrap-4.4.1-dist/js/bootstrap.bundle.min.js"></script>
-	<script src="/res/js/bootstrap-select.min.js"></script>
-	<script src="/res/js/bootstrap-tokenfield.min.js"></script>
-	<script src="/res/js/URI.min.js"></script> <!-- github.com/medialize/URI.js  -->
-	<script src="/res/js/index.js"></script>
-	<script language="javascript" type="text/javascript">
-	function init()
-	{
-	var wsURL = (location.protocol == 'https:' ? "wss://" : "ws://") + location.host + "/ws";
-	initFrontend(wsURL);
-	}
-	window.addEventListener("load", init, false);
-	</script>
-</body>
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/res/js/jquery-3.4.1.min.js"></script>
+    <script src="/res/bootstrap-4.4.1-dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/res/js/bootstrap-select.min.js"></script>
+    <script src="/res/js/bootstrap-tokenfield.min.js"></script>
+    <script src="/res/js/URI.min.js"></script> <!-- github.com/medialize/URI.js  -->
+    <script src="/res/js/index.js"></script>
+    <script language="javascript" type="text/javascript">
+    function init()
+    {
+      var wsURL = (location.protocol == 'https:' ? "wss://" : "ws://") + location.host + "/ws";
+      initFrontend(wsURL);
+    }
+    window.addEventListener("load", init, false);
+    </script>
+  </body>
 </html>

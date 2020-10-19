@@ -1,6 +1,6 @@
 <a href="http://getpat.io"><img src="https://raw.githubusercontent.com/la5nta/pat-website/gh-pages/img/logo.png" width="128" ></a>
 
-[![Build Status](https://travis-ci.org/la5nta/pat.svg?branch=master)](https://travis-ci.org/la5nta/pat)
+[![Build Status](https://travis-ci.com/la5nta/pat.svg?branch=master)](https://travis-ci.com/la5nta/pat)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/tstq4suxfdmudl5l/branch/master?svg=true)](https://ci.appveyor.com/project/martinhpedersen/pat)
 [![Go Report Card](https://goreportcard.com/badge/github.com/la5nta/pat)](https://goreportcard.com/report/github.com/la5nta/pat)
 [![Liberapay Patreons](http://img.shields.io/liberapay/patrons/la5nta.svg?logo=liberapay)](https://liberapay.com/la5nta)
@@ -59,7 +59,7 @@ For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 
 ## Copyright/License
 
-Copyright (c) 2014-2017 Martin Hebnes Pedersen LA5NTA
+Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 
 ### Contributors (alphabetical)
 

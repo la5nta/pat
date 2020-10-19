@@ -23,22 +23,34 @@ import (
 	"github.com/pd0mz/go-maidenhead"
 )
 
-type rms struct {
-	callsign string
-	gridsq   string
-	distance float64
-	azimuth  float64
-	modes    string
-	freq     string
-	dial     string
-	url      *url.URL
+type JSONURL struct{ url.URL }
+
+func (url JSONURL) MarshalJSON() ([]byte, error) { return json.Marshal(url.String()) }
+
+type RMS struct {
+	Callsign   string    `json:"callsign"`
+	Gridsquare string    `json:"gridsquare"`
+	Distance   float64   `json:"distance"`
+	Azimuth    float64   `json:"azimuth"`
+	Modes      string    `json:"modes"`
+	Freq       Frequency `json:"freq"`
+	Dial       Frequency `json:"dial"`
+	URL        *JSONURL  `json:"url"`
 }
 
-type byDist []rms
+func (r RMS) IsMode(mode string) bool {
+	return strings.Contains(strings.ToLower(r.Modes), mode)
+}
+
+func (r RMS) IsBand(band string) bool {
+	return bands[band].Contains(r.Freq)
+}
+
+type byDist []RMS
 
 func (r byDist) Len() int           { return len(r) }
 func (r byDist) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r byDist) Less(i, j int) bool { return r[i].distance < r[j].distance }
+func (r byDist) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
 
 func rmsListHandle(args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
@@ -47,6 +59,55 @@ func rmsListHandle(args []string) {
 	forceDownload := set.BoolP("force-download", "d", false, "")
 	byDistance := set.BoolP("sort-distance", "s", false, "")
 	set.Parse(args)
+
+	var query string
+	if len(set.Args()) > 0 {
+		query = strings.ToUpper(set.Args()[0])
+	}
+
+	*mode = strings.ToLower(*mode)
+	rList, err := ReadRMSList(*forceDownload, func(rms RMS) bool {
+		switch {
+		case query != "" && !strings.HasPrefix(rms.Callsign, query):
+			return false
+		case mode != nil && !rms.IsMode(*mode):
+			return false
+		case band != nil && !rms.IsBand(*band):
+			return false
+		default:
+			return true
+		}
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if *byDistance {
+		sort.Sort(byDist(rList))
+	}
+
+	fmtStr := "%-9.9s [%-6.6s] %-6.6s %3.3s %-15.15s %14.14s %14.14s %s\n"
+
+	// Print header
+	fmt.Printf(fmtStr, "callsign", "gridsq", "dist", "Az", "mode(s)", "dial freq", "center freq", "url")
+
+	// Print gateways (separated by blank line)
+	for i := 0; i < len(rList); i++ {
+		r := rList[i]
+		distance := strconv.FormatFloat(r.Distance, 'f', 0, 64)
+		azimuth := strconv.FormatFloat(r.Azimuth, 'f', 0, 64)
+
+		fmt.Printf(fmtStr, r.Callsign, r.Gridsquare, distance, azimuth, r.Modes, r.Dial, r.Freq, r.URL)
+		if i+1 < len(rList) && rList[i].Callsign != rList[i+1].Callsign {
+			fmt.Println("")
+		}
+	}
+}
+
+func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
+	me, err := maidenhead.ParseLocator(config.Locator)
+	if err != nil {
+		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
+	}
 
 	appDir, err := mailbox.DefaultAppDir()
 	if err != nil {
@@ -59,99 +120,45 @@ func rmsListHandle(args []string) {
 	}
 	filePath := path.Join(appDir, fileName+".json") // Should be moved to a tmp-folder, along with logfile.
 
-	var query string
-	if len(set.Args()) > 0 {
-		query = strings.ToUpper(set.Args()[0])
-	}
-
-	file, err := cmsapi.GetGatewayStatusCached(filePath, *forceDownload, config.ServiceCodes...)
+	f, err := cmsapi.GetGatewayStatusCached(filePath, forceDownload, config.ServiceCodes...)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	defer file.Close()
-
+	defer f.Close()
 	var status cmsapi.GatewayStatus
-
-	err = json.NewDecoder(file).Decode(&status)
-	if err != nil {
-		log.Fatal(err)
+	if err = json.NewDecoder(f).Decode(&status); err != nil {
+		return nil, err
 	}
 
-	noLocator := false
-
-	me, err := maidenhead.ParseLocator(config.Locator)
-	if err != nil {
-		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
-		noLocator = true
-	}
-
-	*mode = strings.ToLower(*mode)
-
-	rList := []rms{}
-
-	// Print gateways (separated by blank line)
+	slice := []RMS{}
 	for _, gw := range status.Gateways {
-		switch {
-		case query != "" && !strings.HasPrefix(gw.Callsign, query):
-			continue
-		default:
-		}
-
 		for _, channel := range gw.Channels {
-
-			r := rms{
-				callsign: gw.Callsign,
-				gridsq:   channel.Gridsquare,
-				modes:    channel.SupportedModes,
+			r := RMS{
+				Callsign:   gw.Callsign,
+				Gridsquare: channel.Gridsquare,
+				Modes:      channel.SupportedModes,
+				Freq:       Frequency(channel.Frequency),
+				Dial:       Frequency(channel.Frequency).Dial(channel.SupportedModes),
 			}
-
-			f := Frequency(channel.Frequency)
-			r.dial = f.Dial(channel.SupportedModes).String()
-			r.freq = f.String()
-
-			switch {
-			case mode != nil && !strings.Contains(strings.ToLower(channel.SupportedModes), *mode):
+			if url := toURL(channel, gw.Callsign); url != nil {
+				r.URL = &JSONURL{*url}
+			}
+			hasLocator := me != maidenhead.Point{}
+			if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil && hasLocator {
+				r.Distance = me.Distance(them)
+				r.Azimuth = me.Bearing(them)
+			}
+			if keep := filterFn(r); !keep {
 				continue
-			case !bands[*band].Contains(f):
-				continue
 			}
-			r.distance = float64(0)
-			r.azimuth = float64(0)
-			if !noLocator {
-				if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil {
-					r.distance = me.Distance(them)
-					r.azimuth = me.Bearing(them)
-				}
-			}
-
-			r.url = toURL(channel, gw.Callsign)
-
-			rList = append(rList, r)
+			slice = append(slice, r)
 		}
 	}
-	if *byDistance {
-		sort.Sort(byDist(rList))
-	}
-	fmtStr := "%-9.9s [%-6.6s] %-6.6s %3.3s %-15.15s %14.14s %14.14s %s\n"
-
-	// Print header
-	fmt.Printf(fmtStr, "callsign", "gridsq", "dist", "Az", "mode(s)", "dial freq", "center freq", "url") //TODO: "center frequency" of packet is wrong...
-
-	for i := 0; i < len(rList); i++ {
-		r := rList[i]
-		distance := strconv.FormatFloat(r.distance, 'f', 0, 64)
-		azimuth := strconv.FormatFloat(r.azimuth, 'f', 0, 64)
-
-		fmt.Printf(fmtStr, r.callsign, r.gridsq, distance, azimuth, r.modes, r.dial, r.freq, r.url)
-		if i+1 < len(rList) && rList[i].callsign != rList[i+1].callsign {
-			fmt.Println("")
-		}
-	}
+	return slice, nil
 }
 
 func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
-
 	url, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetcall, freq.KHz()))
 	return url
 }

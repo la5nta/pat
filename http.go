@@ -30,6 +30,9 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+
+	_ "github.com/elazarl/go-bindata-assetfs"
+	_ "github.com/jteeuwen/go-bindata"
 )
 
 // Status represents a status report as sent to the Web GUI
@@ -59,8 +62,10 @@ type Notification struct {
 
 var websocketHub *WSHub
 
-//go:generate go install -v ./vendor/github.com/jteeuwen/go-bindata/go-bindata ./vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-//go:generate go-bindata-assetfs res/...
+//go:generate mkdir -p .build
+//go:generate go build -v -o .build/go-bindata-assetfs github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+//go:generate go build -v -o .build/go-bindata github.com/jteeuwen/go-bindata/go-bindata
+//go:generate sh -c "PATH=\"$PATH:.build/\" go-bindata-assetfs res/..."
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
@@ -86,6 +91,8 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", statusHandler).Methods("GET")
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
+	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
+	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
@@ -360,6 +367,69 @@ func getStatus() Status {
 }
 
 func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
+
+func rmslistHandler(w http.ResponseWriter, req *http.Request) {
+	forceDownload, _ := strconv.ParseBool(req.FormValue("force-download"))
+	band := req.FormValue("band")
+	mode := strings.ToLower(req.FormValue("mode"))
+	prefix := strings.ToUpper(req.FormValue("prefix"))
+
+	list, err := ReadRMSList(forceDownload, func(r RMS) bool {
+		switch {
+		case r.URL == nil:
+			return false
+		case mode != "" && !r.IsMode(mode):
+			return false
+		case band != "" && !r.IsBand(band):
+			return false
+		case prefix != "" && !strings.HasPrefix(r.Callsign, prefix):
+			return false
+		default:
+			return true
+		}
+	})
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sort.Sort(byDist(list))
+	json.NewEncoder(w).Encode(list)
+}
+
+func qsyHandler(w http.ResponseWriter, req *http.Request) {
+	type QSYPayload struct {
+		Transport string      `json:"transport"`
+		Freq      json.Number `json:"freq"`
+	}
+	var payload QSYPayload
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rig, rigName, ok, err := VFOForTransport(payload.Transport)
+	switch {
+	case rigName == "":
+		// Either unsupported mode or no rig configured for this transport
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	case !ok:
+		// A rig is configured, but not loaded properly
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("QSY failed: Hamlib rig '%s' not loaded.", rigName)
+	case err != nil:
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("QSY failed: %v", err)
+	default:
+		if _, _, err := setFreq(rig, string(payload.Freq)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("QSY failed: %v", err)
+			return
+		}
+		json.NewEncoder(w).Encode(payload)
+	}
+}
 
 func positionHandler(w http.ResponseWriter, req *http.Request) {
 	// Throw error if GPSd http endpoint is not enabled

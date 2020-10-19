@@ -7,6 +7,14 @@ body {
   margin-bottom: 130px;
 }
 
+body > .container {
+  padding: 75px 15px 0;
+}
+
+.btn:focus {
+  outline: none !important;
+}
+
 .status-text {
   font-weight: bold;
   font-size: 11px !important;
@@ -289,3 +297,6 @@ input[type=checkbox], input[type=radio]
   margin: 0;
   padding: 0;
 }
+
+.table-fixed          { overflow-y: auto; height: 400px; }
+.table-fixed thead th { position: sticky; top: 0; background: #eee; }

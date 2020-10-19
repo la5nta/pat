@@ -11,4 +11,5 @@ Architecture: amd64 i386 armhf
 Conflicts: wl2k-go, dist
 Replaces: wl2k-go
 Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90)
+Suggests: tmd710-tncsetup
 Description: A portable Winlink client for amateur radio email.

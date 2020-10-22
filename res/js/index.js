@@ -395,7 +395,6 @@ function getConnectURL() {
 	if(params) {
 		url += params.replace("&", "?");
 	}
-alert("DJC getConnectURL() url:" + url);
 	return url;
 }
 
@@ -626,7 +625,6 @@ function closeComposer(clear)
 function connect(evt)
 {
 	urlstr = getConnectURL()
-console.log("DJC connect() urlstr:" + ("/api/connect?url=" + encodeURIComponent(urlstr)));
 	$('#connectModal').modal('hide');
 
 	$.getJSON("/api/connect?url=" + encodeURIComponent(urlstr), function(data){

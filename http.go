@@ -414,7 +414,6 @@ func qsyHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("QSY transport selection failed: %v", err)
 	default:
-		log.Printf("DJC qsyHandler payload.Freq:%v", payload.Freq)
 		if _, _, err := setFreq(rig, string(payload.Freq)); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Printf("QSY frequency change failed: %v", err)
@@ -468,7 +467,6 @@ func DisconnectHandler(w http.ResponseWriter, req *http.Request) {
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 	connectStr := req.FormValue("url")
-	log.Printf("DJC ConnectHandler connectStr:%s", connectStr)
 	nMsgs := mbox.InboxCount()
 
 	if success := Connect(connectStr); !success {

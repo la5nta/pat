@@ -234,6 +234,7 @@ function initConnectModal() {
 		onConnectFreqChange();
 	});
 	$('#radioOnlyInput').change(onConnectInputChange);
+	$('#rigModeInput').change(onConnectInputChange);
 	$('#addrInput').change(onConnectInputChange);
 	$('#targetInput').change(onConnectInputChange);
 	$('#updateRmslistButton').click((e) => {
@@ -340,6 +341,15 @@ function setConnectValues(url) {
 		$('#freqInput').val('');
 	}
 
+	// DJC 
+	if(url.hasQuery("rig_mode")) {
+		$('#rigModeInput').val(query["rig_mode"])
+	}
+	else {
+		$('#rigModeInput').val('');
+	}
+	// end DJC	
+
 	if(url.hasQuery("radio_only")) {
 		$('#radioOnlyInput')[0].checked = query["radio_only"];
 	} else {
@@ -371,6 +381,13 @@ function getConnectURL() {
 	if($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
 		params += "&freq=" + $('#freqInput').val();
 	}
+
+	// DJC
+	if( $('#rigModeInput').val().length != 0 ) {
+		params += "&rig_mode=" + $('#rigModeInput').val();
+	}
+	// DJC end
+
 	if($('#radioOnlyInput').is(':checked')) {
 		params += "&radio_only=true";
 	}
@@ -378,7 +395,7 @@ function getConnectURL() {
 	if(params) {
 		url += params.replace("&", "?");
 	}
-
+alert("DJC getConnectURL() url:" + url);
 	return url;
 }
 
@@ -608,11 +625,11 @@ function closeComposer(clear)
 
 function connect(evt)
 {
-	url = getConnectURL()
-
+	urlstr = getConnectURL()
+console.log("DJC connect() urlstr:" + ("/api/connect?url=" + encodeURIComponent(urlstr)));
 	$('#connectModal').modal('hide');
 
-	$.getJSON("/api/connect?url=" + url, function(data){
+	$.getJSON("/api/connect?url=" + encodeURIComponent(urlstr), function(data){
 		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}

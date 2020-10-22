@@ -24,3 +24,5 @@ require (
 	github.com/stretchr/testify v1.5.1 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 )
+
+replace github.com/la5nta/wl2k-go => ../wl2k-go

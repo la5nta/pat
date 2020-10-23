@@ -393,7 +393,9 @@ func qsyHandler(w http.ResponseWriter, req *http.Request) {
 	type QSYPayload struct {
 		Transport string      `json:"transport"`
 		Freq      json.Number `json:"freq"`
+		RigMode   string      `json:"rigmode"`
 	}
+
 	var payload QSYPayload
 	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -418,6 +420,14 @@ func qsyHandler(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Printf("QSY frequency change failed: %v", err)
 			return
+		}
+		if payload.RigMode != "" {
+			if _, _, err := setRigMode(rig, payload.RigMode, "0"); err != nil {
+				// Do not preserve rigmode as frequency is also not preserved.
+				w.WriteHeader(http.StatusInternalServerError)
+				log.Printf("QSY rig mode change failed %v", err)
+				return
+			}
 		}
 		json.NewEncoder(w).Encode(payload)
 	}

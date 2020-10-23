@@ -233,8 +233,19 @@ function initConnectModal() {
 		onConnectInputChange();
 		onConnectFreqChange();
 	});
+	$('#rigModeInput').on('focusin focusout', (e) => {
+		// Do the same thing for the same reasons as 'freqInput'
+		window.setTimeout(() => {
+			$('#connect_btn').prop('disabled', e.type == 'focusin');
+		}, 300);
+	});
+	$('#rigModeInput').change(() => {
+		$('#rigModeInput').val( $('#rigModeInput').val().toString().toUpperCase())
+		onConnectInputChange();
+		onConnectFreqChange();
+	});
 	$('#radioOnlyInput').change(onConnectInputChange);
-	$('#rigModeInput').change(onConnectInputChange);
+//	$('#rigModeInput').change(onConnectInputChange);
 	$('#addrInput').change(onConnectInputChange);
 	$('#targetInput').change(onConnectInputChange);
 	$('#updateRmslistButton').click((e) => {
@@ -341,14 +352,12 @@ function setConnectValues(url) {
 		$('#freqInput').val('');
 	}
 
-	// DJC 
 	if(url.hasQuery("rig_mode")) {
 		$('#rigModeInput').val(query["rig_mode"])
 	}
 	else {
 		$('#rigModeInput').val('');
 	}
-	// end DJC	
 
 	if(url.hasQuery("radio_only")) {
 		$('#radioOnlyInput')[0].checked = query["radio_only"];
@@ -382,11 +391,9 @@ function getConnectURL() {
 		params += "&freq=" + $('#freqInput').val();
 	}
 
-	// DJC
 	if( $('#rigModeInput').val().length != 0 ) {
-		params += "&rig_mode=" + $('#rigModeInput').val();
+		params += "&rig_mode=" + $('#rigModeInput').val().toString().toUpperCase();
 	}
-	// DJC end
 
 	if($('#radioOnlyInput').is(':checked')) {
 		params += "&radio_only=true";
@@ -404,6 +411,8 @@ function onConnectFreqChange() {
 	const freqInput = $('#freqInput');
 	freqInput.css('text-decoration', 'none currentcolor solid');
 
+	const rigModeInput = $('#rigModeInput');
+
 	const inputGroup = freqInput.parent();
 	['has-error', 'has-success', 'has-warning'].forEach((v) => {
 		inputGroup.removeClass(v);
@@ -413,6 +422,7 @@ function onConnectFreqChange() {
 	const data = {
 		transport: $('#transportSelect').val(),
 		freq:      new Number(freqInput.val()),
+		rigmode:   $('#rigModeInput').val(),
 	};
 	if(data.freq == 0) {
 		return;

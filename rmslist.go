@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"path"
 	"strings"
@@ -146,7 +147,13 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 			hasLocator := me != maidenhead.Point{}
 			if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil && hasLocator {
 				r.Distance = me.Distance(them)
+				if math.IsNaN(r.Distance) {
+					r.Distance = -1
+				}
 				r.Azimuth = me.Bearing(them)
+				if math.IsNaN(r.Azimuth) {
+					r.Azimuth = 0
+				}
 			}
 			if keep := filterFn(r); !keep {
 				continue

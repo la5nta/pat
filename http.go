@@ -394,7 +394,11 @@ func rmslistHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	sort.Sort(byDist(list))
-	json.NewEncoder(w).Encode(list)
+	err = json.NewEncoder(w).Encode(list)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func qsyHandler(w http.ResponseWriter, req *http.Request) {

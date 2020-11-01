@@ -157,9 +157,10 @@ function initStatusModal() {
 	$('.navbar-brand').click(function(e){ $('#statusModal').modal('toggle'); })
 }
 
-function onFormLaunching() {
+function onFormLaunching(target) {
 	$('#selectForm').modal('hide')
 	startPollingFormData()
+	window.open(target)
 }
 
 function startPollingFormData() {
@@ -330,7 +331,7 @@ function appendFormFolder(rootId, data) {
 					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
 					folder.forms.forEach((form) => {
 						var pathEncoded = encodeURIComponent(form.initial_uri)
-						$(`#${cardBodyFormsId}`).append(`<a href="/api/forms?formPath=${pathEncoded}" target="_blank" class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching();">${form.name}</a>`)
+						$(`#${cardBodyFormsId}`).append(`<div class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching('/api/forms?formPath=${pathEncoded}');">${form.name}</div>`)
 					});
 				}
 			}

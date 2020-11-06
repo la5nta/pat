@@ -5,3 +5,5 @@ pat
 .vscode/launch.json
 
 patws.code-workspace
+
+bindata_assetfs.go

@@ -305,7 +305,7 @@ function updateRmslist(forceDownload) {
 				tr.click((e) => {
 					tbody.find('.active').removeClass('active');
 					tr.addClass('active');
-					setConnectValues(rms.url);
+					setConnectValues(rms.url+"&rig_mode=USB");
 				});
 				tbody.append(tr);
 			});
@@ -356,7 +356,7 @@ function setConnectValues(url) {
 		$('#rigModeInput').val(query["rig_mode"])
 	}
 	else {
-		$('#rigModeInput').val('');
+		$('#rigModeInput').val('USB');
 	}
 
 	if(url.hasQuery("radio_only")) {

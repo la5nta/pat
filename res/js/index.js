@@ -436,8 +436,12 @@ function updateConnectAliases() {
 
 function setConnectValues(url) {
 	url=URI(url.toString());
-
-	$('#transportSelect').val(url.protocol());
+	if (url.protocol() == "packet") {
+		$('#transportSelect').val("ax25");
+	}
+	else {
+		$('#transportSelect').val(url.protocol());
+	}
 	$('#transportSelect').selectpicker('refresh');
 	refreshExtraInputGroups();
 

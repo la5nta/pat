@@ -4,7 +4,10 @@
 
 package cfg
 
-import "github.com/la5nta/wl2k-go/transport/ardop"
+import (
+	"github.com/la5nta/wl2k-go/transport/ardop"
+	"time"
+)
 
 const (
 	PlaceholderMycall = "{mycall}"
@@ -83,10 +86,8 @@ type Config struct {
 	// Set to true if you don't want your information sent.
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
 
-	// Path to root of the Winlink Standard_Forms folder.
-	// Unzip after downloading from winlink.org
-	FormsPath string `json:"forms_path"`
-
+	// See FormsConfig
+	Forms FormsConfig `json:"forms"`
 }
 
 type HamlibConfig struct {
@@ -213,6 +214,15 @@ type GPSdConfig struct {
 	Addr string `json:"addr"`
 }
 
+type FormsConfig struct {
+	// Path to root of the Winlink Standard_Forms folder.
+	// Unzip after downloading from winlink.org
+	Path string `json:"path"`
+
+	// Timestamp for the last time Pat checked for updated form templates.
+	LastUpdateCheck time.Time `json:"last_update_check"`
+}
+
 var DefaultConfig Config = Config{
 	MOTD:         []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs:     []string{},
@@ -261,7 +271,8 @@ var DefaultConfig Config = Config{
 	Schedule:       map[string]string{},
 	HamlibRigs:     map[string]HamlibConfig{},
 
-	// Path to root of the unzipped Winlink Standard_Forms folder.
-	FormsPath:      "",
-
+	Forms: FormsConfig{
+		Path:            "",
+		LastUpdateCheck: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+	},
 }

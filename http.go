@@ -66,7 +66,7 @@ var websocketHub *WSHub
 //go:generate mkdir -p .build
 //go:generate go build -v -o .build/go-bindata-assetfs github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go build -v -o .build/go-bindata github.com/jteeuwen/go-bindata/go-bindata
-//go:generate sh -c "PATH=\"$PATH:.build/\" go-bindata-assetfs res/..."
+//go:generate sh -c "PATH=\".build/:$PATH\" go-bindata-assetfs -o bindata_assetfs.go res/..."
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 

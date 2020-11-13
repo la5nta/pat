@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"path"
 	"strings"
@@ -27,15 +28,25 @@ type JSONURL struct{ url.URL }
 
 func (url JSONURL) MarshalJSON() ([]byte, error) { return json.Marshal(url.String()) }
 
+// JSONFloat64 is a float64 which serializes NaN and Inf(+-) as JSON value null
+type JSONFloat64 float64
+
+func (f JSONFloat64) MarshalJSON() ([]byte, error) {
+	if math.IsNaN(float64(f)) || math.IsInf(float64(f), 0) {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(float64(f))
+}
+
 type RMS struct {
-	Callsign   string    `json:"callsign"`
-	Gridsquare string    `json:"gridsquare"`
-	Distance   float64   `json:"distance"`
-	Azimuth    float64   `json:"azimuth"`
-	Modes      string    `json:"modes"`
-	Freq       Frequency `json:"freq"`
-	Dial       Frequency `json:"dial"`
-	URL        *JSONURL  `json:"url"`
+	Callsign   string      `json:"callsign"`
+	Gridsquare string      `json:"gridsquare"`
+	Distance   JSONFloat64 `json:"distance"`
+	Azimuth    JSONFloat64 `json:"azimuth"`
+	Modes      string      `json:"modes"`
+	Freq       Frequency   `json:"freq"`
+	Dial       Frequency   `json:"dial"`
+	URL        *JSONURL    `json:"url"`
 }
 
 func (r RMS) IsMode(mode string) bool {
@@ -93,8 +104,8 @@ func rmsListHandle(args []string) {
 	// Print gateways (separated by blank line)
 	for i := 0; i < len(rList); i++ {
 		r := rList[i]
-		distance := strconv.FormatFloat(r.Distance, 'f', 0, 64)
-		azimuth := strconv.FormatFloat(r.Azimuth, 'f', 0, 64)
+		distance := strconv.FormatFloat(float64(r.Distance), 'f', 0, 64)
+		azimuth := strconv.FormatFloat(float64(r.Azimuth), 'f', 0, 64)
 
 		fmt.Printf(fmtStr, r.Callsign, r.Gridsquare, distance, azimuth, r.Modes, r.Dial, r.Freq, r.URL)
 		if i+1 < len(rList) && rList[i].Callsign != rList[i+1].Callsign {
@@ -145,8 +156,8 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 			}
 			hasLocator := me != maidenhead.Point{}
 			if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil && hasLocator {
-				r.Distance = me.Distance(them)
-				r.Azimuth = me.Bearing(them)
+				r.Distance = JSONFloat64(me.Distance(them))
+				r.Azimuth = JSONFloat64(me.Bearing(them))
 			}
 			if keep := filterFn(r); !keep {
 				continue

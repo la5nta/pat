@@ -7,7 +7,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -87,6 +85,16 @@ var commands = []Command{
 		HandleFunc: func(args []string) {
 			readMail()
 		},
+	},
+	{
+		Str:     "composeform",
+		Aliases: []string{"formPath"},
+		Desc:    "Post form-based report.",
+		Usage:   "[options]",
+		Options: map[string]string{
+			"--template": "path to the form template file. Uses the config file's forms_path as root. Defaults to 'ICS USA Forms/ICS213.txt'",
+		},
+		HandleFunc: composeFormReport,
 	},
 	{
 		Str:     "position",
@@ -526,192 +534,7 @@ func EditorName() string {
 	return "vi"
 }
 
-func composeMessage(replyMsg *fbb.Message) {
-	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
-
-	fmt.Printf(`From [%s]: `, fOptions.MyCall)
-	from := readLine()
-	if from == "" {
-		from = fOptions.MyCall
-	}
-	msg.SetFrom(from)
-
-	fmt.Print(`To`)
-	if replyMsg != nil {
-		fmt.Printf(" [%s]", replyMsg.From())
-
-	}
-	fmt.Printf(": ")
-	to := readLine()
-	if to == "" && replyMsg != nil {
-		msg.AddTo(replyMsg.From().String())
-	} else {
-		for _, addr := range strings.FieldsFunc(to, SplitFunc) {
-			msg.AddTo(addr)
-		}
-	}
-
-	ccCand := make([]fbb.Address, 0)
-	if replyMsg != nil {
-		for _, addr := range append(replyMsg.To(), replyMsg.Cc()...) {
-			if !addr.EqualString(fOptions.MyCall) {
-				ccCand = append(ccCand, addr)
-			}
-		}
-	}
-
-	fmt.Printf("Cc")
-	if replyMsg != nil {
-		fmt.Printf(" %s", ccCand)
-	}
-	fmt.Print(`: `)
-	cc := readLine()
-	if cc == "" && replyMsg != nil {
-		for _, addr := range ccCand {
-			msg.AddCc(addr.String())
-		}
-	} else {
-		for _, addr := range strings.FieldsFunc(cc, SplitFunc) {
-			msg.AddCc(addr)
-		}
-	}
-
-	switch len(msg.Receivers()) {
-	case 1:
-		fmt.Print("P2P only [y/N]: ")
-		ans := readLine()
-		if strings.EqualFold("y", ans) {
-			msg.Header.Set("X-P2POnly", "true")
-		}
-	case 0:
-		fmt.Println("Message must have at least one recipient")
-		os.Exit(1)
-	}
-
-	fmt.Print(`Subject: `)
-	if replyMsg != nil {
-		subject := strings.TrimSpace(strings.TrimPrefix(replyMsg.Subject(), "Re:"))
-		subject = fmt.Sprintf("Re:%s", subject)
-		fmt.Println(subject)
-		msg.SetSubject(subject)
-	} else {
-		msg.SetSubject(readLine())
-	}
-	// A message without subject is not valid, so let's use a sane default
-	if msg.Subject() == "" {
-		msg.SetSubject("<No subject>")
-	}
-
-	// Read body
-	fmt.Printf(`Press ENTER to start composing the message body. `)
-	readLine()
-
-	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
-	if err != nil {
-		log.Fatalf("Unable to prepare temporary file for body: %s", err)
-	}
-
-	if replyMsg != nil {
-		fmt.Fprintf(f, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
-		body, _ := replyMsg.Body()
-		orig := ">" + strings.Replace(
-			strings.TrimSpace(body),
-			"\n",
-			"\n>",
-			-1,
-		) + "\n"
-		f.Write([]byte(orig))
-		f.Sync()
-	}
-
-	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
-	// Close the file before opening the editor.
-	f.Close()
-
-	cmd := exec.Command(EditorName(), f.Name())
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to start body editor: %s", err)
-	}
-
-	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0666)
-	if err != nil {
-		log.Fatalf("Unable to read temporary file from editor: %s", err)
-	}
-
-	var buf bytes.Buffer
-	io.Copy(&buf, f)
-	msg.SetBody(buf.String())
-	f.Close()
-	os.Remove(f.Name())
-
-	// An empty message body is illegal. Let's set a sane default.
-	if msg.BodySize() == 0 {
-		msg.SetBody("<No message body>\n")
-	}
-
-	// END Read body
-
-	fmt.Print("\n")
-
-	for {
-		fmt.Print(`Attachment [empty when done]: `)
-		path := readLine()
-		if path == "" {
-			break
-		}
-
-		file, err := readAttachment(path)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		msg.AddFile(file)
-	}
-	fmt.Println(msg)
-	postMessage(msg)
-}
-
-func readAttachment(path string) (*fbb.File, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	name := filepath.Base(path)
-
-	var resizeImage bool
-	if isImageMediaType(name, "") {
-		fmt.Print("This seems to be an image. Auto resize? [Y/n]: ")
-		ans := readLine()
-		resizeImage = ans == "" || strings.EqualFold("y", ans)
-	}
-
-	var data []byte
-
-	if resizeImage {
-		data, err = convertImage(f)
-		ext := filepath.Ext(name)
-		name = name[:len(name)-len(ext)] + ".jpg"
-	} else {
-		data, err = ioutil.ReadAll(f)
-	}
-
-	return fbb.NewFile(name, data), err
-}
-
 var stdin *bufio.Reader
-
-func readLine() string {
-	if stdin == nil {
-		stdin = bufio.NewReader(os.Stdin)
-	}
-
-	str, _ := stdin.ReadString('\n')
-	return strings.TrimSpace(str)
-}
 
 func posReportHandle(args []string) {
 	var latlon, comment string

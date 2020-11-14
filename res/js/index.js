@@ -282,7 +282,7 @@ function initFormSelect(data){
 			<ul>
 				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
 				<li>Unzip the Standard_Forms archive</li>
-				<li>Use 'pat configure' to point to the template folder. <br /> E.g. on a Mac:<br />"forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> E.g. on an rPi:<br />"forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
+				<li>Use 'pat configure' to point to the template folder. <br /> E.g. <br />on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
 			</ul>
 			`);
 	}

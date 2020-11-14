@@ -22,6 +22,8 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
+const KeepaliveInterval = 4 * time.Minute
+
 // WSConn represent one connection in the WSHub pool
 type WSConn struct {
 	conn *websocket.Conn
@@ -151,6 +153,10 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 
 	for {
 		select {
+		case <-time.After(KeepaliveInterval):
+			c.conn.WriteJSON(struct {
+				Ping bool
+			}{true})
 		case line := <-lines:
 			c.conn.WriteJSON(struct {
 				LogLine string
@@ -231,6 +237,10 @@ func wsReadLoop(c *websocket.Conn) <-chan struct{} {
 			if err != nil {
 				close(quit)
 				return
+			}
+			if _, ok := v["Pong"]; ok {
+				// For Keepalive only. Could use a delayed ping response to detect dead connections in the future.
+				continue
 			}
 			go handleWSMessage(v)
 		}

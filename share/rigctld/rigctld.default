@@ -1,0 +1,12 @@
+# Configuration for rigctld systemd unit file from Pat.
+
+# Radio model number (-m)
+# (run rigctl -l to find yours)
+MODEL=1
+
+# Path to your rig's tty device (-r)
+DEV=/dev/ttyUSB0
+
+# Additional parameters passed to rigctld
+# (this example sets serial baud 9600)
+#EXTRA_OPTS="-s 9600"

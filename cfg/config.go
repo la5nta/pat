@@ -5,13 +5,41 @@
 package cfg
 
 import (
-	"github.com/la5nta/wl2k-go/transport/ardop"
+	"encoding/json"
+	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport/ardop"
 )
 
 const (
 	PlaceholderMycall = "{mycall}"
 )
+
+type AuxAddr struct {
+	Address  string
+	Password *string
+}
+
+func (a AuxAddr) MarshalJSON() ([]byte, error) {
+	if a.Password == nil {
+		return json.Marshal(a.Address)
+	}
+	return json.Marshal(a.Address + ":" + *a.Password)
+}
+
+func (a *AuxAddr) UnmarshalJSON(p []byte) error {
+	var str string
+	if err := json.Unmarshal(p, &str); err != nil {
+		return err
+	}
+	parts := strings.SplitN(str, ":", 2)
+	a.Address = parts[0]
+	if len(parts) > 1 {
+		a.Password = &parts[1]
+	}
+	return nil
+}
 
 type Config struct {
 	// This station's callsign.
@@ -23,7 +51,10 @@ type Config struct {
 	SecureLoginPassword string `json:"secure_login_password"`
 
 	// Auxiliary callsigns to fetch email on behalf of.
-	AuxAddrs []string `json:"auxiliary_addresses"`
+	//
+	// Passwords can optionally be specified by appending :MYPASS (e.g. EMCOMM-1:MyPassw0rd).
+	// If no password is specified, the SecureLoginPassword is used.
+	AuxAddrs []AuxAddr `json:"auxiliary_addresses"`
 
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
@@ -225,7 +256,7 @@ type FormsConfig struct {
 
 var DefaultConfig Config = Config{
 	MOTD:         []string{"Open source Winlink client - getpat.io"},
-	AuxAddrs:     []string{},
+	AuxAddrs:     []AuxAddr{},
 	ServiceCodes: []string{"PUBLIC"},
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k",

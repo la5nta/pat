@@ -86,16 +86,27 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	}
 
 	// Handle secure login
-	session.SetSecureLoginHandleFunc(func() (string, error) {
-		if config.SecureLoginPassword != "" {
+	session.SetSecureLoginHandleFunc(func(addr fbb.Address) (string, error) {
+		if addr.Addr == fOptions.MyCall && config.SecureLoginPassword != "" {
 			return config.SecureLoginPassword, nil
 		}
-		resp := <-promptHub.Prompt("password", "Enter secure login password")
+		for _, aux := range config.AuxAddrs {
+			if addr.Addr != aux.Address {
+				continue
+			}
+			switch {
+			case aux.Password != nil:
+				return *aux.Password, nil
+			case config.SecureLoginPassword != "":
+				return config.SecureLoginPassword, nil
+			}
+		}
+		resp := <-promptHub.Prompt("password", "Enter secure login password for "+addr.String())
 		return resp.Value, resp.Err
 	})
 
 	for _, addr := range config.AuxAddrs {
-		session.AddAuxiliaryAddress(fbb.AddressFromString(addr))
+		session.AddAuxiliaryAddress(fbb.AddressFromString(addr.Address))
 	}
 
 	session.IsMaster(master)
@@ -158,64 +169,66 @@ func handleInterrupt() (stop chan struct{}) {
 		signal.Notify(sig, os.Interrupt)
 		defer func() { signal.Stop(sig); close(sig) }()
 
-		wmDisc := false // So we can DirtyDisconnect on second interrupt
-		adDisc := false // So we can Abort on second interrupt
+		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
 		for {
 			select {
 			case <-stop:
 				return
-			case s := <-sig:
-				if exchangeConn != nil {
-					log.Printf("Got %s, disconnecting...", s)
-					exchangeConn.Close()
-					break
-				}
-				if pModem != nil {
-					log.Println("Disconnecting pactor...")
-					if err := pModem.Close(); err != nil {
-						log.Println(err)
-					}
-					break
-				}
-				if wmTNC != nil && !wmTNC.Idle() {
-					if wmDisc {
-						log.Println("Dirty disconnecting winmor...")
-						wmTNC.DirtyDisconnect()
-						wmDisc = false
-					} else {
-						log.Println("Disconnecting winmor...")
-						wmDisc = true
-						go func() {
-							if err := wmTNC.Disconnect(); err != nil {
-								log.Println(err)
-							} else {
-								wmDisc = false
-							}
-						}()
-					}
-				}
-				if adTNC != nil && !adTNC.Idle() {
-					if adDisc {
-						log.Println("Dirty disconnecting ardop...")
-						adTNC.Abort()
-						adDisc = false
-					} else {
-						log.Println("Disconnecting ardop...")
-						adDisc = true
-						go func() {
-							if err := adTNC.Disconnect(); err != nil {
-								log.Println(err)
-							} else {
-								adDisc = false
-							}
-						}()
-					}
-				}
+			case <-sig:
+				abortActiveConnection(dirtyDisconnectNext)
+				dirtyDisconnectNext = !dirtyDisconnectNext
 			}
 		}
 	}()
 
 	return stop
+}
+
+func abortActiveConnection(dirty bool) (ok bool) {
+	switch {
+	case exchangeConn != nil:
+		log.Println("Got abort signal, disconnecting...")
+		exchangeConn.Close()
+		return true
+	case pModem != nil:
+		log.Println("Disconnecting pactor...")
+		err := pModem.Close()
+		if err != nil {
+			log.Println(err)
+		}
+		return err == nil
+	case wmTNC != nil && !wmTNC.Idle():
+		if dirty {
+			log.Println("Dirty disconnecting winmor...")
+			wmTNC.DirtyDisconnect()
+			return true
+		}
+		log.Println("Disconnecting winmor...")
+		go func() {
+			if err := wmTNC.Disconnect(); err != nil {
+				log.Println(err)
+			}
+		}()
+		return true
+	case adTNC != nil && !adTNC.Idle():
+		if dirty {
+			log.Println("Dirty disconnecting ardop...")
+			adTNC.Abort()
+			return true
+		}
+		log.Println("Disconnecting ardop...")
+		go func() {
+			if err := adTNC.Disconnect(); err != nil {
+				log.Println(err)
+			}
+		}()
+		return true
+	case dialing != nil:
+		log.Printf("Transport %s's dialer can not be aborted at this stage", dialing.Scheme)
+		return false
+	default:
+		return false
+	}
 }
 
 type StatusUpdate int

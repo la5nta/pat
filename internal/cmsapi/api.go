@@ -20,6 +20,7 @@ const (
 	RootURL           = "https://api.winlink.org"
 	PathVersionAdd    = "/version/add"
 	PathGatewayStatus = "/gateway/status.json"
+	PathAccountExists = "/account/exists"
 
 	// Issued December 2017 by the WDT for use with Pat
 	AccessKey = "1880278F11684B358F36845615BD039A"
@@ -57,6 +58,19 @@ func (v VersionAdd) Post() error {
 	}
 
 	return nil
+}
+
+func AccountExists(callsign string) (bool, error) {
+	url := RootURL + PathAccountExists + "?key=" + AccessKey + "&callsign=" + url.QueryEscape(callsign)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	var obj struct{ CallsignExists bool }
+	return obj.CallsignExists, json.NewDecoder(resp.Body).Decode(&obj)
 }
 
 type GatewayStatus struct {

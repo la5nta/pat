@@ -1,0 +1,11 @@
+[Unit]
+Description=Rigcontrol with rigctld
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/rigctld
+ExecStart=/usr/bin/rigctld -m ${MODEL} -r ${DEV} ${EXTRA_OPTS}
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

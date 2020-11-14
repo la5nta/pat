@@ -21,6 +21,12 @@
     <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light" role="navigation">
       <div class="container">
         <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
           <a class="navbar-brand" href="#" data-toggle="modal" data-target="#statusModal"><span id="gui_status_light" class="btn status-light btn-danger"></span> {{.Mycall}}</a>
           <a class="navbar-text" id="status_text" data-toggle="modal" data-target="#connectModal"></a>
           <span class="navbar-text">   </span>
@@ -196,7 +202,8 @@
                   </div>
                 </div>
               </form>
-              <span id="connectURLPreview" style="float: left; position: relative; bottom: 5px; color: gray;"></span>
+              <span id="connectURLPreview" class="text-muted" style="float: left; position: relative; bottom: 5px;"></span>
+              <span id="qsyWarning" class="text-danger" style="float: right; position: relative; bottom: 5px;" hidden></span>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary btn-sm mr-auto" data-toggle="collapse" data-target="#rmslist-container">Show RMS list</button>

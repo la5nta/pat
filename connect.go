@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	wmTNC  *winmor.TNC // Pointer to the WINMOR TNC used by Listen and Connect
-	adTNC  *ardop.TNC  // Pointer to the ARDOP TNC used by Listen and Connect
-	pModem *pactor.Modem
+	dialing *transport.URL // The connect URL currently being dialed (if any)
+	wmTNC   *winmor.TNC    // Pointer to the WINMOR TNC used by Listen and Connect
+	adTNC   *ardop.TNC     // Pointer to the ARDOP TNC used by Listen and Connect
+	pModem  *pactor.Modem
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -139,8 +140,16 @@ func Connect(connectStr string) (success bool) {
 	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.
 	doneHandleInterrupt := handleInterrupt()
 
+	// Signal web gui that we are dialing a connection
+	dialing = url
+	websocketHub.UpdateStatus()
+
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
 	conn, err := transport.DialURL(url)
+
+	// Signal web gui that we are no longer dialing
+	dialing = nil
+	websocketHub.UpdateStatus()
 
 	close(doneHandleInterrupt)
 

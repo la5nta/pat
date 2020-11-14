@@ -340,6 +340,14 @@ function appendFormFolder(rootId, data) {
 }
 
 function initConnectModal() {
+	$('#freqInput').on('focusin focusout', (e) => {
+		// Disable the connect button while the user is editing the frequency value.
+		//   We do this because we really don't want the user to hit the connect
+		//   button until they know that the QSY command succeeded or failed.
+		window.setTimeout(() => {
+			$('#connect_btn').prop('disabled', e.type == 'focusin');
+		}, 300);
+	});
 	$('#freqInput').change(() => {
 		onConnectInputChange();
 		onConnectFreqChange();
@@ -494,18 +502,24 @@ function getConnectURL() {
 }
 
 function onConnectFreqChange() {
+	$('#qsyWarning').empty().attr('hidden', true);
+
+	const freqInput = $('#freqInput');
+	freqInput.css('text-decoration', 'none currentcolor solid');
+
+	const inputGroup = freqInput.parent();
+	['has-error', 'has-success', 'has-warning'].forEach((v) => {
+		inputGroup.removeClass(v);
+	});
+	inputGroup.tooltip('destroy');
+
 	const data = {
 		transport: $('#transportSelect').val(),
-		freq:      new Number($('#freqInput').val()),
+		freq:      new Number(freqInput.val()),
 	};
 	if(data.freq == 0) {
 		return;
 	}
-
-	const inputGroup = $('#freqInput').parent();
-	['has-error', 'has-success', 'has-warning'].forEach((v) => {
-		inputGroup.removeClass(v);
-	});
 
 	console.log("QSY: " + JSON.stringify(data));
 	$.ajax({
@@ -513,12 +527,21 @@ function onConnectFreqChange() {
 		url: "/api/qsy",
 		data: JSON.stringify(data),
 		contentType: "application/json",
-		success: () => { inputGroup.addClass('has-success'); },
+		success: () => {
+			inputGroup.addClass('has-success');
+		},
 		error: (xhr) => {
+			freqInput.css('text-decoration', 'line-through');
 			if(xhr.status == 503) {
 				// The feature is unavailable
+				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip('fixTitle');
 			} else {
+				// An unexpected error occured
+				[inputGroup, $('#qsyWarning')].forEach((e) => {
+					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip('fixTitle');
+				});
 				inputGroup.addClass('has-error');
+				$('#qsyWarning').html('<span class="glyphicon glyphicon-warning-sign" /> QSY failure').attr('hidden', false);
 			}
 		},
 		complete: () => { onConnectInputChange(); }, // This removes freq= from URL in case of failure
@@ -644,14 +667,37 @@ function alert(msg)
 function updateStatus(data)
 {
 	var st = $('#status_text');
-	st.empty();
+	st.empty().off('click')
+		.attr('data-toggle', 'tooltip')
+		.attr('data-placement', 'bottom')
+		.tooltip();
 
-	if(data.connected){
-		st.append("Connected " + data.remote_addr + "");
-	} else if(data.active_listeners.length > 0){
-		st.append("<i>Listening " + data.active_listeners + "</i>");
+	onDisconnect = function() {
+		st.tooltip('hide');
+		disconnect(false, () => {
+			// This will be reset by the next updateStatus when the session is aborted
+			st.empty().append('Disconnecting... ');
+			// Issue dirty disconnect on second click
+			st.off('click').click(() => { st.off('click'); disconnect(true); st.tooltip('hide'); });
+			st.attr('title', 'Click to force disconnect').tooltip('fixTitle').tooltip('show');
+		});
+	};
+	if(data.dialing){
+		st.append('Dialing... ');
+		st.click(onDisconnect);
+		st.attr('title', 'Click to abort').tooltip('fixTitle').tooltip('show');
+	} else if(data.connected){
+		st.append("Connected " + data.remote_addr);
+		st.click(onDisconnect);
+		st.attr('title', 'Click to disconnect').tooltip('fixTitle').tooltip('hide');
 	} else {
-		st.append("<i>Idle</i>");
+		if(data.active_listeners.length > 0){
+			st.append("<i>Listening " + data.active_listeners + "</i>");
+		} else {
+			st.append("<i>Ready</i>");
+		}
+		st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
+		st.click(() => { $('#connectModal').modal('toggle'); });
 	}
 
 	var n = data.http_clients.length;
@@ -690,6 +736,16 @@ function connect(evt)
 	}).fail(function() {
 		alert("Connect failed. See console for detailed information.");
 	});
+}
+
+function disconnect(dirty, successHandler)
+{
+	if(successHandler === undefined) {
+		successHandler = () => {};
+	}
+	$.post("/api/disconnect?dirty=" + dirty, {}, function(response) {
+		successHandler();
+	}, 'json');
 }
 
 function updateGUIStatus()
@@ -743,6 +799,7 @@ function initConsole()
 	if("WebSocket" in window){
 		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
+			console.log("Websocket opened");
 			showGUIStatus(statusDiv.find('#websocket_error'), false);
 			showGUIStatus(statusDiv.find('#webserver_info'), true);
 			$('#console').empty();
@@ -773,10 +830,15 @@ function initConsole()
 			if(msg.PromptAbort) {
 				$('#promptModal').modal('hide');
 			}
+			if(msg.Ping) {
+				ws.send(JSON.stringify({Pong: true}));
+			}
 		};
 		ws.onclose   = function(evt) {
+			console.log("Websocket closed");
 			showGUIStatus(statusDiv.find('#websocket_error'), true)
 			showGUIStatus(statusDiv.find('#webserver_info'), false)
+			$('#status_text').empty();
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
 	} else {

@@ -39,6 +39,7 @@ import (
 type Status struct {
 	ActiveListeners []string `json:"active_listeners"`
 	Connected       bool     `json:"connected"`
+	Dialing         bool     `json:"dialing"`
 	RemoteAddr      string   `json:"remote_addr"`
 	HTTPClients     []string `json:"http_clients"`
 }
@@ -65,7 +66,7 @@ var websocketHub *WSHub
 //go:generate mkdir -p .build
 //go:generate go build -v -o .build/go-bindata-assetfs github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 //go:generate go build -v -o .build/go-bindata github.com/jteeuwen/go-bindata/go-bindata
-//go:generate sh -c "PATH=\"$PATH:.build/\" go-bindata-assetfs res/..."
+//go:generate sh -c "PATH=\".build/:$PATH\" go-bindata-assetfs -o bindata_assetfs.go res/..."
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
@@ -82,6 +83,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler).Methods("POST")
 	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
+	r.HandleFunc("/api/disconnect", DisconnectHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
@@ -349,6 +351,7 @@ func uiHandler(w http.ResponseWriter, r *http.Request) {
 func getStatus() Status {
 	status := Status{
 		ActiveListeners: []string{},
+		Dialing:         dialing != nil,
 		Connected:       exchangeConn != nil,
 		HTTPClients:     websocketHub.ClientAddrs(),
 	}
@@ -467,6 +470,14 @@ func positionHandler(w http.ResponseWriter, req *http.Request) {
 
 	json.NewEncoder(w).Encode(pos)
 	return
+}
+
+func DisconnectHandler(w http.ResponseWriter, req *http.Request) {
+	dirty, _ := strconv.ParseBool(req.FormValue("dirty"))
+	if ok := abortActiveConnection(dirty); !ok {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	json.NewEncoder(w).Encode(struct{}{})
 }
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {

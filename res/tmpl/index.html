@@ -322,7 +322,10 @@
             <div class="modal-footer primary">
               <div id="composer_actions">
                 <div class="input-group pull-right"><button id="post_btn" type="submit" class="btn btn-primary">Post <span class="glyphicon glyphicon-send"></span></button></div>
-                <div class="input-group"><span class="btn btn-default btn-file">Add attachment&hellip; <input id="msg_attachments_input" name="files" type="file" multiple></span></div>
+                <div class="input-group">
+                  <span class="btn btn-default btn-file">Add attachment&hellip; <input id="msg_attachments_input" name="files" type="file" multiple></span>
+		  <a href="#" id="formsSelectBtn" class="btn btn-default" data-toggle="modal" data-target="#selectForm">Template&hellip; <span class="glyphicon glyphicon-edit"></span></a>
+                </div>
               </div>
               <div id="composer_attachments" class="row"></div>
             </div>
@@ -331,6 +334,34 @@
       </form>
       </div>
       <!-- End composer -->
+
+      <!-- Begin selecting-a-form modal -->
+      <div class="modal" id="selectForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div class="container">
+                <div class="d-flex">
+                  <h5 class="modal-title w-100">Select a form...</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <small id="formsRootFolderName">root folder path</small>
+                    <small id="formsVersion">(v0.0.0)</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="col" id="formFolderRoot">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Begin folder -->
       <div class="table-responsive panel panel-default" id="folder">

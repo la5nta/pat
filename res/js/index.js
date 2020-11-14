@@ -2,6 +2,7 @@ var wsURL = "";
 var posId = 0;
 var connectAliases;
 var mycall = "";
+var formsCatalog;
 
 var uploadFiles = new Array();
 var statusPopoverDiv;
@@ -89,6 +90,7 @@ function initFrontend(ws_url)
 		displayFolder("in");
 
 		initNotifications();
+		initForms();
 	});
 }
 
@@ -173,6 +175,53 @@ function initStatusPopover() {
 	$('.navbar-brand').click(function(e){ $('#gui_status_light').popover('toggle'); })
 }
 
+function onFormLaunching(target) {
+	$('#selectForm').modal('hide')
+	startPollingFormData()
+	window.open(target)
+}
+
+function startPollingFormData() {
+	setCookie("forminstance", Math.floor(Math.random() * 1000000000), 1);
+	pollFormData()
+}
+
+function forgetFormData() {
+	window.clearTimeout(pollTimer)
+	deleteCookie("forminstance");
+}
+
+var pollTimer;
+
+function pollFormData() {
+	$.get(
+		'api/form',
+		{},
+		function(data) {
+			console.log(data)
+			if (!$('#composer').hasClass('hidden') && (!data.target_form || !data.target_form.name)) {
+				pollTimer = window.setTimeout(pollFormData, 1000)
+			} else {
+				console.log("done polling")
+				if (!$('#composer').hasClass('hidden') && data.target_form && data.target_form.name) {
+					writeFormDataToComposer(data)
+				}
+			}
+		},
+		'json'
+	)
+}
+
+function writeFormDataToComposer(data) {
+	if (data.target_form) {
+		$('#msg_body').val(data.msg_body)
+		if (data.msg_subject) {
+			// in case of composing a form-based reply we keep the 'Re: ...' subject line
+			$('#msg_subject').val(data.msg_subject)
+		}
+	}
+}
+
 function initComposeModal() {
 	$('#compose_btn').click(function(evt){ $('#composer').modal('toggle'); });
 	var tokenfieldConfig = {
@@ -183,8 +232,13 @@ function initComposeModal() {
 	$('#msg_to').tokenfield(tokenfieldConfig);
 	$('#msg_cc').tokenfield(tokenfieldConfig);
 	$('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
+	$('#composer').on('hidden.bs.modal', forgetFormData);
+
 	$('#composer_error').hide();
 
+	$('#compose_cancel').click(function(evt){
+		closeComposer(true);
+	});
 
 	$('#composer_form').submit(function(e) {
 		var form = $('#composer_form');
@@ -218,6 +272,89 @@ function initComposeModal() {
 		});
 		e.preventDefault();
 	});
+}
+
+function initForms() {
+	$.getJSON("/api/formcatalog")
+		.done(function(data){initFormSelect(data)})
+		.fail(function(data){initFormSelect(null)})
+		;
+}
+
+function initFormSelect(data){
+	formsCatalog = data;
+	if (data
+		&& data.path
+		&& data.path != ""
+		&& data.path != "."
+		&& (data.folders && data.folders.length > 0 || data.forms && data.forms.length > 0)
+	) {
+		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.version+'</a>)</span>');
+		$('#formsRootFolderName').text(data.path);
+		appendFormFolder('formFolderRoot', data);
+	}
+	else {
+		$('#formsRootFolderName').text('missing forms_path in Pat config');
+		$(`#formFolderRoot`).append(`
+			<h6>Form templates not configured correctly</h6>
+			<ul>
+				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
+				<li>Unzip the Standard_Forms archive</li>
+				<li>Use 'pat configure' to point to the template folder. E.g.<br />on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
+			</ul>
+			`);
+	}
+}
+
+function setCookie(cname, cvalue, exdays) {
+  var d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  var expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function deleteCookie(cname) {
+  document.cookie = cname + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+function appendFormFolder(rootId, data) {
+	if (data.folders && data.folders.length > 0 && data.form_count > 0) {
+		var rootAcc = `${rootId}Acc`
+		$(`#${rootId}`).append(`
+			<div class="accordion" id="${rootAcc}">
+			</div>
+			`);
+		data.folders.forEach(function (folder) {
+			if (folder.form_count > 0) {
+				var folderNameId = rootId + folder.name.replace( /\s/g, "_" );
+				var cardBodyId = folderNameId+"Body";
+				var card =
+				`
+				<div class="card">
+					<div class="card-header d-flex">
+						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
+							${folder.name}
+						</button>
+					</div>
+					<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
+						<div class="card-body" id=${cardBodyId}>
+						</div>
+					</div>
+				</div>
+				`
+				$(`#${rootAcc}`).append(card)
+				appendFormFolder(`${cardBodyId}`, folder)
+				if (folder.forms && folder.forms.length > 0){
+					var cardBodyFormsId = `${cardBodyId}Forms`
+					$(`#${cardBodyId}`).append( `<div id="${cardBodyFormsId}" class="list-group"></div>` )
+					folder.forms.forEach((form) => {
+						var pathEncoded = encodeURIComponent(form.initial_uri)
+						$(`#${cardBodyFormsId}`).append(`<div class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching('/api/forms?formPath=${pathEncoded}');">${form.name}</div>`)
+					});
+				}
+			}
+		});
+	}
 }
 
 function initConnectModal() {
@@ -871,12 +1008,23 @@ function displayMessage(elem) {
 		}
 		for(var i = 0; data.Files && i < data.Files.length; i++){
 			var file = data.Files[i];
+			var formName = formXmlToFormName(file.Name);
+			var renderToHtml = "false"
+			if (formName) {
+				renderToHtml = "true"
+			}
+			var attachUrl = msg_url + "/" + file.Name + '?rendertohtml=' + renderToHtml
 
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
 					'<div class="col-xs-6 col-md-3"><a class="thumbnail" target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' + (file.Size/1024).toFixed(2) + 'kB' +
 					'<img src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
 					'</a></div>'
+				);
+			} else if(formName) {
+				attachments.append(
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit" /> ' +
+					formName + '</a></div>'
 				);
 			} else {
 				attachments.append(
@@ -902,7 +1050,10 @@ function displayMessage(elem) {
 			$('#composer').modal('show');
 			$('#msg_body').focus();
 			$('#msg_body')[0].setSelectionRange(0,0);
-			
+
+			//opens browser window for a form-based reply,
+			// or does nothing if this is not a form-based message
+			showReplyForm(msg_url, data);
 		});
 		$('#forward_btn').off('click');
 		$('#forward_btn').click(function(evt){
@@ -939,6 +1090,50 @@ function displayMessage(elem) {
 		}
 		elem.attr('class', 'active');
 	});
+}
+
+function formXmlToFormName(fileName) {
+
+	var match = fileName.match( /^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	match = fileName.match( /^RMS_Express_Form_([\w \.]+)\.xml$/i );
+	if (match){
+		return match[1];
+	}
+
+	return null;
+}
+
+function showReplyForm(orgMsgUrl, msg){
+	for(var i = 0; msg.Files && i < msg.Files.length; i++){
+		var file = msg.Files[i];
+		var formName = formXmlToFormName(file.Name);
+		if (!formName){
+			continue
+		}
+		// retrieve form XML attachment and determine if it specifies a form-based reply
+		var attachUrl = orgMsgUrl + "/" + file.Name
+		$.get(
+			attachUrl + "?rendertohtml=false&composereply=false",
+			{},
+			function(data) {
+				parser = new DOMParser();
+				xmlDoc = parser.parseFromString(data,"text/xml");
+				if (xmlDoc){
+					replyTmpl = xmlDoc.evaluate("/RMS_Express_Form/form_parameters/reply_template", xmlDoc, null, XPathResult.STRING_TYPE, null)
+					if ( replyTmpl && replyTmpl.stringValue ) {
+						window.setTimeout(startPollingFormData, 500)
+						open(attachUrl + "?rendertohtml=true&composereply=true")
+					}
+				}
+			},
+			"text"
+		)
+		return
+	}
 }
 
 function replyCarbonCopyList(msg) {

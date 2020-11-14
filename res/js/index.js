@@ -897,18 +897,23 @@ function displayMessage(elem) {
 			} else {
 				$('#msg_subject').val(data.Subject);
 			}
-			$('#msg_body').val(quoteMsg(data));
+			$('#msg_body').val('\n\n'+quoteMsg(data));
 
 			$('#composer').modal('show');
+			$('#msg_body').focus();
+			$('#msg_body')[0].setSelectionRange(0,0);
+			
 		});
 		$('#forward_btn').off('click');
 		$('#forward_btn').click(function(evt){
 			$('#message_view').modal('hide');
 
+			$('#msg_to').tokenfield('setTokens', '');
 			$('#msg_subject').val("Fw: " +  data.Subject);
 			$('#msg_body').val(quoteMsg(data));
-
+			$('#msg_body')[0].setSelectionRange(0,0);
 			$('#composer').modal('show');
+			$('#msg_to-tokenfield').focus();
 		});
 		$('#delete_btn').off('click');
 		$('#delete_btn').click(function(evt){

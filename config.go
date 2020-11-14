@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/la5nta/pat/cfg"
 )
@@ -44,6 +46,10 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 	if config.GPSdAddrLegacy != "" {
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
+
+	// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
+	config.FormsPath = filepath.Clean(config.FormsPath)
+	config.FormsPath = strings.Replace(config.FormsPath, "\\", "/", -1)
 
 	return config, nil
 }

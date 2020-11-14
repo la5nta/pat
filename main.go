@@ -30,6 +30,7 @@ import (
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
 )
 
@@ -147,6 +148,7 @@ var (
 	mbox         *mailbox.DirHandler // The mailbox
 	listenHub    *ListenerHub
 	promptHub    *PromptHub
+	formsMgr     *forms.Manager
 
 	appDir string
 )
@@ -274,6 +276,15 @@ func main() {
 	if fOptions.Listen == "" && len(config.Listen) > 0 {
 		fOptions.Listen = strings.Join(config.Listen, ",")
 	}
+
+	// init forms subsystem
+	formsMgr = forms.NewManager(forms.Config{
+		FormsPath:  config.FormsPath,
+		MyCall:     fOptions.MyCall,
+		Locator:    config.Locator,
+		AppVersion: versionStringShort(),
+		LineReader: readLine,
+	})
 
 	// Make sure we clean up on exit, closing any open resources etc.
 	defer cleanup()
@@ -792,5 +803,9 @@ func postMessage(msg *fbb.Message) {
 }
 
 func versionString() string {
-	return fmt.Sprintf("v%s (%s) %s/%s - %s", Version, GitRev, runtime.GOOS, runtime.GOARCH, runtime.Version())
+	return fmt.Sprintf("%s %s/%s - %s", versionStringShort(), runtime.GOOS, runtime.GOARCH, runtime.Version())
+}
+
+func versionStringShort() string {
+	return fmt.Sprintf("v%s (%s)", Version, GitRev)
 }

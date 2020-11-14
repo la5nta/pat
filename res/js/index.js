@@ -282,7 +282,7 @@ function initFormSelect(data){
 			<ul>
 				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
 				<li>Unzip the Standard_Forms archive</li>
-				<li>Use 'pat configure' to point to the template folder. <br /> E.g. <br />on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
+				<li>Use 'pat configure' to point to the template folder. E.g.<br />on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
 			</ul>
 			`);
 	}
@@ -541,7 +541,7 @@ function onConnectFreqChange() {
 					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip('fixTitle');
 				});
 				inputGroup.addClass('has-error');
-				$('#qsyWarning').html('<span class="glyphicon glyphicon-warning-sign" /> QSY failure').attr('hidden', false);
+				$('#qsyWarning').html('<span class="fas fa-exclamation-triangle" /> QSY failure').attr('hidden', false);
 			}
 		},
 		complete: () => { onConnectInputChange(); }, // This removes freq= from URL in case of failure
@@ -912,7 +912,7 @@ function displayFolder(dir) {
 			//TODO: Cleanup (Sorry about this...)
 			var html = '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
 			if(msg.Files.length > 0){
-				html += '<span class="glyphicon glyphicon-paperclip"></span>';
+				html += '<span class="fas fa-paperclip"></span>';
 			}
 			html += '</td><td>' + htmlEscape(msg.Subject) + "</td><td>";
 			if( !is_from && !msg.To ){
@@ -925,7 +925,7 @@ function displayFolder(dir) {
 				html += msg.To[0].Addr + "...";
 			}
 			html += '</td>'
-			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : '') + '</td>')
+			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="far fa-check-circle"></span>' : '') + '</td>')
 			html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)

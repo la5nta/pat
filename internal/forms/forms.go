@@ -105,7 +105,7 @@ func NewManager(conf Config) *Manager {
 	return retval
 }
 
-// GetFormsCatalogHandler reads all forms from config.Forms.Path and writes them in the http response as a JSON object graph
+// GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message
 func (m *Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request) {
 	formFolder, err := m.buildFormFolder()

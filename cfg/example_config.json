@@ -52,8 +52,5 @@
     "use_server_time": false,
     "addr": "localhost:2947"
   },
-  "forms": {
-    "path": "/home/pi/.wl2k/Standard_Forms",
-    "last_update_check": "2020-01-01T00:00:00Z"
-  }
+  "forms_path": ""
 }

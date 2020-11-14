@@ -72,6 +72,7 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 * LA4TTA - Erlend Grimseid
 * LA5NTA - Martin Hebnes Pedersen
 * W6IPA  - JC Martin
+* VE7GNU - Doug Collinge
 
 ## Thanks to
 

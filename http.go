@@ -79,6 +79,10 @@ func ListenAndServe(addr string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
+	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalogHandler).Methods("GET")
+	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler).Methods("POST")
+	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
+	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
 	r.HandleFunc("/api/disconnect", DisconnectHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
@@ -251,6 +255,13 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msg.AddFile(fbb.NewFile(f.Filename, p))
+	}
+
+	cookie, err := r.Cookie("forminstance")
+	if err == nil {
+		formData := formsMgr.GetPostedFormData(cookie.Value)
+		path := formsMgr.GetXMLAttachmentNameForForm(formData.TargetForm, formData.IsReply)
+		msg.AddFile(fbb.NewFile(path, []byte(formData.MsgXML)))
 	}
 
 	// Other fields
@@ -608,6 +619,13 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "null")
 
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
+	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
+	renderToHtml, _ := strconv.ParseBool(r.URL.Query().Get("rendertohtml"))
+
+	if composereply || renderToHtml {
+		// no-store is needed for displaying and replying to Winlink form-based messages
+		w.Header().Set("Cache-Control", "no-store")
+	}
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
@@ -626,7 +644,20 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		found = true
-		http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+
+		if !renderToHtml {
+			http.ServeContent(w, r, f.Name(), msg.Date(), bytes.NewReader(f.Data()))
+			return
+		}
+
+		formRendered, err := formsMgr.RenderForm(f.Data(), composereply)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(w, r, f.Name()+".html", msg.Date(), bytes.NewReader([]byte(formRendered)))
 	}
 
 	if !found {

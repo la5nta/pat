@@ -534,11 +534,11 @@ function onConnectFreqChange() {
 			freqInput.css('text-decoration', 'line-through');
 			if(xhr.status == 503) {
 				// The feature is unavailable
-				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip('fixTitle');
+				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip();
 			} else {
 				// An unexpected error occured
 				[inputGroup, $('#qsyWarning')].forEach((e) => {
-					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip('fixTitle');
+					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip();
 				});
 				inputGroup.addClass('has-error');
 				$('#qsyWarning').html('<span class="fas fa-exclamation-triangle" /> QSY failure').attr('hidden', false);
@@ -679,24 +679,24 @@ function updateStatus(data)
 			st.empty().append('Disconnecting... ');
 			// Issue dirty disconnect on second click
 			st.off('click').click(() => { st.off('click'); disconnect(true); st.tooltip('hide'); });
-			st.attr('title', 'Click to force disconnect').tooltip('fixTitle').tooltip('show');
+			st.attr('title', 'Click to force disconnect').tooltip().tooltip('show');
 		});
 	};
 	if(data.dialing){
 		st.append('Dialing... ');
 		st.click(onDisconnect);
-		st.attr('title', 'Click to abort').tooltip('fixTitle').tooltip('show');
+		st.attr('title', 'Click to abort').tooltip().tooltip('show');
 	} else if(data.connected){
 		st.append("Connected " + data.remote_addr);
 		st.click(onDisconnect);
-		st.attr('title', 'Click to disconnect').tooltip('fixTitle').tooltip('hide');
+		st.attr('title', 'Click to disconnect').tooltip().tooltip('hide');
 	} else {
 		if(data.active_listeners.length > 0){
 			st.append("<i>Listening " + data.active_listeners + "</i>");
 		} else {
 			st.append("<i>Ready</i>");
 		}
-		st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
+		st.attr('title', 'Click to connect').tooltip().tooltip('hide');
 		st.click(() => { $('#connectModal').modal('toggle'); });
 	}
 

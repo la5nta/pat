@@ -279,9 +279,9 @@ function updateRmslist(forceDownload) {
 			data.forEach((rms) => {
 				let tr = $('<tr>')
 					.append($('<td class="text-left">').text(rms.callsign))
-					.append($('<td class="text-left">').text(rms.distance.toFixed(0) + " km"))
+					.append($('<td class="text-right">').text( ('\u00A0'.repeat(10) + (rms.distance.toFixed(0)) + ' km').substr(-10)  ))
 					.append($('<td class="text-left">').text(rms.modes))
-					.append($('<td class="text-right">').text(rms.dial.desc));
+					.append($('<td class="text-right">').text( ('\u00A0'.repeat(10) + rms.dial.desc).substr(-20) ));
 				tr.click((e) => {
 					tbody.find('.active').removeClass('active');
 					tr.addClass('active');

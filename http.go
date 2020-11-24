@@ -108,7 +108,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(config.ConnectAliases)
+	json.NewEncoder(w).Encode(config.AllAliases)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {

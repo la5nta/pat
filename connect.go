@@ -44,6 +44,12 @@ func Connect(connectStr string) (success bool) {
 		return false
 	} else if aliased, ok := config.ConnectAliases[connectStr]; ok {
 		return Connect(aliased)
+	} else {
+		for _, sub := range config.UnsortedAliases {
+			if sub[0] == connectStr {
+				return Connect(sub[1])
+			}
+		}
 	}
 
 	url, err := transport.ParseURL(connectStr)

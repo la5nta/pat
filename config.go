@@ -46,6 +46,9 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
 
+	config.AllAliases.ConnectAliases = &config.ConnectAliases
+	config.AllAliases.UnsortedAliases = &config.UnsortedAliases
+	
 	return config, nil
 }
 

@@ -77,6 +77,13 @@ type Config struct {
 	// Any occurrence of the substring "{mycall}" will be replaced with user's callsign.
 	ConnectAliases map[string]string `json:"connect_aliases"`
 
+	UnsortedAliases [][]string `json:"unsorted_aliases"` 
+
+	AllAliases struct {
+		ConnectAliases *map[string]string `json:"connect_aliases"`
+		UnsortedAliases *[][]string `json:"unsorted_aliases"`
+	} `json:"all_aliases"`
+	
 	// Methods to listen for incoming P2P connections by default.
 	//
 	// Example: ["ax25", "winmor", "telnet", "ardop"]

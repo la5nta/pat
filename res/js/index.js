@@ -303,12 +303,40 @@ function updateRmslist(forceDownload) {
 
 function updateConnectAliases() {
 	$.getJSON("/api/connect_aliases", function(data){
-		connectAliases = data;
+		allAliases = data;
+		connectAliases = allAliases["connect_aliases"]
+		unsortedAliases = allAliases["unsorted_aliases"]
+
 
 		var select = $('#aliasSelect');
-		Object.keys(data).forEach(function (key) {
-			select.append('<option>' + key + '</option>');
-		});
+
+		if (unsortedAliases) {
+			unsortedAliases.forEach((val, i, arr) => {
+				select.append('<option>' + val[0] + '</option>');
+			});
+		}
+
+		if (connectAliases) {
+			$.each(connectAliases, function (key, val) {
+				select.append('<option>' + key + '</option>');
+			});
+		}
+
+		// Now we add the unsorted entries to the map so they will
+		// be found when the key is selected.
+		if (unsortedAliases) {
+			unsortedAliases.forEach((val, i, arr) => {
+				connectAliases[val[0]] = val[1];
+			});
+		}
+
+		// $.each( data, function( key, val ) {
+		// 	select.append('<option>' + key + '</option>');
+		// });
+
+		// Object.keys(data).forEach(function (key) {
+		// 	select.append('<option>' + key + '</option>');
+		// });
 
 		select.change(function() {
 			$('#aliasSelect option:selected').each(function() {

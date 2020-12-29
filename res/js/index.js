@@ -4,7 +4,8 @@ var connectAliases;
 var mycall = "";
 var formsCatalog;
 
-var statusDiv;
+var uploadFiles = new Array();
+var statusPopoverDiv;
 var statusPos = $('#pos_status');
 
 function initFrontend(ws_url)
@@ -12,8 +13,7 @@ function initFrontend(ws_url)
 	wsURL = ws_url;
 
 	$( document ).ready(function() {
-
-		initStatusModal();
+		initStatusPopover()
 
 		// Setup actions
 		$('#connect_btn').click(connect);
@@ -36,15 +36,19 @@ function initFrontend(ws_url)
 		$('#outbox_tab').click(function(evt){ displayFolder("out") });
 		$('#sent_tab').click(function(evt){ displayFolder("sent") });
 		$('#archive_tab').click(function(evt){ displayFolder("archive") });
-		$('.navbar a').click(function(e) {
+		$('.navbar li').click(function(e) {
+			$('.navbar li.active').removeClass('active');
 			var $this = $(this);
-			if (!$this.hasClass('dropdown-toggle')) {
-				$('.navbar a.active').removeClass('active');
-				if (!$this.hasClass('active')) {
-					$this.addClass('active');
-				}
+			if (!$this.hasClass('active')) {
+				$this.addClass('active');
 			}
 			e.preventDefault();
+		});
+
+		$('.nav :not(.dropdown) a').on('click', function(){
+    		if($('.navbar-toggle').css('display') !='none'){
+				$(".navbar-toggle").trigger( "click" );
+			}
 		});
 
 		$('#posModal').on('shown.bs.modal', function (e) {
@@ -90,18 +94,19 @@ function initFrontend(ws_url)
 	});
 }
 
-function initNotifications() {
+function initNotifications()
+{
 	if( !isNotificationsSupported() ){
-		statusDiv.find('#notifications_error').find('.card-text').html('Not supported by this browser.');
+		statusPopoverDiv.find('#notifications_error').find('.panel-body').html('Not supported by this browser.');
 		return
 	}
 	Notification.requestPermission(function(permission) {
 		if( permission === "granted" ){
-			showGUIStatus(statusDiv.find('#notifications_error'), false)
+			showGUIStatus(statusPopoverDiv.find('#notifications_error'), false)
 		} else if (isInsecureOrigin()) {
 			// There is no way of knowing for sure if the permission was denied by the user
 			// or prohibited because of insecure origin (Chrome). This is just a lucky guess.
-			appendInsecureOriginWarning(statusDiv.find('#notifications_error'))
+			appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'))
 		}
 	});
 }
@@ -135,26 +140,39 @@ function updateProgress(p) {
 		if( p.subject ){
 			text += " - " + htmlEscape(p.subject)
 		}
-		$('#navbar_progress .progress-bar').css("width", percent + "%").text(text + " " + percent + "%");
+		$('#navbar_progress .progress-text').text(text);
+		$('#navbar_progress .progress-bar').css("width", percent + "%").text(percent + "%");
 	}
 
-	if( !$('#navbar_progress').hasClass("d-none") && p.done ){
+	if( $('#navbar_progress').is(':visible') && p.done ){
 		window.setTimeout(function() {
 			if (!cancelCloseTimer) {
-				$('#navbar_progress').addClass("d-none");
+				$('#navbar_progress').fadeOut(500);
 			}
 		}, 3000);
 	} else if( (p.receiving || p.sending) && !p.done ){
-		$('#navbar_progress').removeClass("d-none");
+		$('#navbar_progress').show();
 	}
 }
 
-function initStatusModal() {
-	statusDiv = $('#statusModal');
+function initStatusPopover() {
+	statusPopoverDiv = $('#status_popover_content');
 	showGUIStatus($('#websocket_error'), true);
 	showGUIStatus($('#notifications_error'), true);
+	$('#gui_status_light').popover({
+		placement: 'bottom',
+		content: statusPopoverDiv,
+		html: true,
+	});
 
-	$('.navbar-brand').click(function(e){ $('#statusModal').modal('toggle'); })
+	// Hack to force popover to grab it's content div
+	$('#gui_status_light').popover('show');
+	$('#gui_status_light').popover('hide');
+	statusPopoverDiv.show();
+
+	// Bind click on navbar-brand
+	$('#gui_status_light').unbind()
+	$('.navbar-brand').click(function(e){ $('#gui_status_light').popover('toggle'); })
 }
 
 function onFormLaunching(target) {
@@ -180,12 +198,12 @@ function pollFormData() {
 		'api/form',
 		{},
 		function(data) {
-//			console.log(data)
-			if ($('#composer').hasClass('show') && (!data.target_form || !data.target_form.name)) {
+			console.log(data)
+			if (!$('#composer').hasClass('hidden') && (!data.target_form || !data.target_form.name)) {
 				pollTimer = window.setTimeout(pollFormData, 1000)
 			} else {
-//				console.log("done polling")
-				if ($('#composer').hasClass('show') && data.target_form && data.target_form.name) {
+				console.log("done polling")
+				if (!$('#composer').hasClass('hidden') && data.target_form && data.target_form.name) {
 					writeFormDataToComposer(data)
 				}
 			}
@@ -426,7 +444,7 @@ function updateConnectAliases() {
 
 		var select = $('#aliasSelect');
 		Object.keys(data).forEach(function (key) {
-			select.append(new Option(key));
+			select.append('<option>' + key + '</option>');
 		});
 
 		select.change(function() {
@@ -534,14 +552,14 @@ function onConnectFreqChange() {
 			freqInput.css('text-decoration', 'line-through');
 			if(xhr.status == 503) {
 				// The feature is unavailable
-				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip();
+				inputGroup.attr('data-toggle', 'tooltip').attr('title', 'Rigcontrol is not configured for the selected transport. Set radio frequency manually.').tooltip('fixTitle');
 			} else {
 				// An unexpected error occured
 				[inputGroup, $('#qsyWarning')].forEach((e) => {
-					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip();
+					e.attr('data-toggle', 'tooltip').attr('title', 'Could not set radio frequency. See log output for more details and/or set the frequency manually.').tooltip('fixTitle');
 				});
 				inputGroup.addClass('has-error');
-				$('#qsyWarning').html('<span class="fas fa-exclamation-triangle" /> QSY failure').attr('hidden', false);
+				$('#qsyWarning').html('<span class="glyphicon glyphicon-warning-sign" /> QSY failure').attr('hidden', false);
 			}
 		},
 		complete: () => { onConnectInputChange(); }, // This removes freq= from URL in case of failure
@@ -574,9 +592,9 @@ function refreshExtraInputGroups() {
 
 function handleGeolocationError(error) {
 	if(error.message.search("insecure origin") > 0 || isInsecureOrigin()) {
-		appendInsecureOriginWarning(statusDiv.find('#geolocation_error'))
+		appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'))
 	}
-	showGUIStatus(statusDiv.find('#geolocation_error'), true)
+	showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true)
 	statusPos.html("Geolocation unavailable.");
 }
 
@@ -621,25 +639,25 @@ function postPosition() {
 function previewAttachmentFiles() {
 	var files = $(this).get(0).files;
 	attachments = $('#composer_attachments');
-	attachments.empty();
 	for (var i = 0; i < files.length; i++) {
 		file = files.item(i);
+
+		uploadFiles[uploadFiles.length] = file;
 
 		if(isImageSuffix(file.name)){
 			var reader = new FileReader();
 			reader.onload = function(e) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
-					(file.size/1024).toFixed(2) + 'kB' +
-					'<img class="img-fluid img-thumbnail" src="'+ e.target.result + '" alt="' + file.name + '">' +
+					'<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+					'<img src="'+ e.target.result + '" alt="' + file.name + '">' +
 					'</a></div>'
 				);
 			}
 			reader.readAsDataURL(file);
 		} else {
 			attachments.append(
-				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
-				file.name + '<br />(' + (file.size/1024).toFixed(2) + 'kB)' +
+				'<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+				file.name + '<br />(' + file.size + ' bytes)' +
 				'</a></div>'
 			);
 		}
@@ -657,10 +675,10 @@ function notify(data)
 
 function alert(msg)
 {
-	var div = $('#navbar_status');
-	div.empty();
-	div.append('<span class="navbar-text status-text">' + msg + '</span>');
-	div.show();
+    var div = $('#navbar_status');
+    div.empty();
+    div.append('<span class="navbar-text status-text">' + msg + '</p>');
+    div.show();
 	window.setTimeout(function() { div.fadeOut(500); }, 5000);
 }
 
@@ -679,29 +697,30 @@ function updateStatus(data)
 			st.empty().append('Disconnecting... ');
 			// Issue dirty disconnect on second click
 			st.off('click').click(() => { st.off('click'); disconnect(true); st.tooltip('hide'); });
-			st.attr('title', 'Click to force disconnect').tooltip().tooltip('show');
+			st.attr('title', 'Click to force disconnect').tooltip('fixTitle').tooltip('show');
 		});
 	};
+
 	if(data.dialing){
 		st.append('Dialing... ');
 		st.click(onDisconnect);
-		st.attr('title', 'Click to abort').tooltip().tooltip('show');
+		st.attr('title', 'Click to abort').tooltip('fixTitle').tooltip('show');
 	} else if(data.connected){
 		st.append("Connected " + data.remote_addr);
 		st.click(onDisconnect);
-		st.attr('title', 'Click to disconnect').tooltip().tooltip('hide');
+		st.attr('title', 'Click to disconnect').tooltip('fixTitle').tooltip('hide');
 	} else {
 		if(data.active_listeners.length > 0){
 			st.append("<i>Listening " + data.active_listeners + "</i>");
 		} else {
 			st.append("<i>Ready</i>");
 		}
-		st.attr('title', 'Click to connect').tooltip().tooltip('hide');
+		st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
 		st.click(() => { $('#connectModal').modal('toggle'); });
 	}
 
 	var n = data.http_clients.length;
-	statusDiv.find('#webserver_info').find('.card-text').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
+	statusPopoverDiv.find('#webserver_info').find('.panel-body').html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
 function closeComposer(clear)
@@ -727,13 +746,14 @@ function closeComposer(clear)
 function connect(evt)
 {
 	url = getConnectURL()
+
 	$('#connectModal').modal('hide');
 
 	$.getJSON("/api/connect?url=" + url, function(data){
 		if( data.NumReceived == 0 ){
 			window.setTimeout(function() { alert("No new messages."); }, 1000);
 		}
-	}).fail(function() {
+	}).error(function() {
 		alert("Connect failed. See console for detailed information.");
 	});
 }
@@ -751,22 +771,22 @@ function disconnect(dirty, successHandler)
 function updateGUIStatus()
 {
 	var color = "success";
-	statusDiv.find('.bg-info').not('.d-none').not('.ignore-status').each(function(i) {
+	statusPopoverDiv.find('.panel-info').not('.hidden').not('.ignore-status').each(function(i) {
 		color = "info";
 	});
-	statusDiv.find('.bg-warning').not('.d-none').not('.ignore-status').each(function(i) {
+	statusPopoverDiv.find('.panel-warning').not('.hidden').not('.ignore-status').each(function(i) {
 		color = "warning";
 	});
-	statusDiv.find('.bg-danger').not('.d-none').not('.ignore-status').each(function(i) {
+	statusPopoverDiv.find('.panel-danger').not('.hidden').not('.ignore-status').each(function(i) {
 		color = "danger";
 	});
 	$('#gui_status_light').removeClass (function (index, className) {
 		return (className.match (/(^|\s)btn-\S+/g) || []).join(' ');
 	}).addClass('btn-' + color);
 	if(color == "success") {
-		statusDiv.find('#no_error').removeClass('d-none');
+		statusPopoverDiv.find('#no_error').show();
 	} else {
-		statusDiv.find('#no_error').addClass('d-none');
+		statusPopoverDiv.find('#no_error').hide();
 	}
 }
 
@@ -781,14 +801,14 @@ function isInsecureOrigin()
 
 function appendInsecureOriginWarning(e)
 {
-	e.removeClass('bg-info').addClass('bg-warning')
-	e.find('.card-text').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
+	e.removeClass('panel-info').addClass('panel-warning')
+	e.find('.panel-body').append('<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>')
 	updateGUIStatus()
 }
 
 function showGUIStatus(e, show)
 {
-	show ? e.removeClass('d-none') : e.addClass('d-none');
+	show ? e.removeClass('hidden') : e.addClass('hidden');
 	updateGUIStatus();
 }
 
@@ -800,8 +820,8 @@ function initConsole()
 		ws = new WebSocket(wsURL);
 		ws.onopen    = function(evt) {
 			console.log("Websocket opened");
-			showGUIStatus(statusDiv.find('#websocket_error'), false);
-			showGUIStatus(statusDiv.find('#webserver_info'), true);
+			showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
+			showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
 			$('#console').empty();
 		};
 		ws.onmessage = function(evt) {
@@ -836,8 +856,8 @@ function initConsole()
 		};
 		ws.onclose   = function(evt) {
 			console.log("Websocket closed");
-			showGUIStatus(statusDiv.find('#websocket_error'), true)
-			showGUIStatus(statusDiv.find('#webserver_info'), false)
+			showGUIStatus(statusPopoverDiv.find('#websocket_error'), true)
+			showGUIStatus(statusPopoverDiv.find('#webserver_info'), false)
 			$('#status_text').empty();
 			window.setTimeout(function() { initConsole(); }, 1000);
 		};
@@ -912,7 +932,7 @@ function displayFolder(dir) {
 			//TODO: Cleanup (Sorry about this...)
 			var html = '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
 			if(msg.Files.length > 0){
-				html += '<span class="fas fa-paperclip"></span>';
+				html += '<span class="glyphicon glyphicon-paperclip" />';
 			}
 			html += '</td><td>' + htmlEscape(msg.Subject) + "</td><td>";
 			if( !is_from && !msg.To ){
@@ -925,7 +945,7 @@ function displayFolder(dir) {
 				html += msg.To[0].Addr + "...";
 			}
 			html += '</td>'
-			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="far fa-check-circle"></span>' : '') + '</td>')
+			html += (is_from ? '' : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>')
 			html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
 			var elem = $(html)
@@ -997,20 +1017,19 @@ function displayMessage(elem) {
 
 			if(isImageSuffix(file.Name)) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
-					(file.Size/1024).toFixed(2) + 'kB' +
-					'<img class="img-fluid img-thumbnail" src="' + attachUrl + '" alt="' + file.Name + '">' +
+					'<div class="col-xs-6 col-md-3"><a class="thumbnail" target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' + (file.Size/1024).toFixed(2) + 'kB' +
+					'<img src="' + msg_url + "/" + file.Name + '" alt="' + file.Name + '">' +
 					'</a></div>'
 				);
 			} else if(formName) {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-edit"></span> ' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit" /> ' +
 					formName + '</a></div>'
 				);
 			} else {
 				attachments.append(
-					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + attachUrl + '" class="btn btn-light btn-sm"><span class="fas fa-paperclip"></span> ' +
-					file.Name + '<br />(' + (file.Size/1024).toFixed(2) + 'kB)' +
+					'<div class="col-xs-6 col-md-3"><a target="_blank" href="' + msg_url + "/" + file.Name + '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+					file.Name + '<br />(' + file.Size + ' bytes)' +
 					'</a></div>'
 				);
 			}

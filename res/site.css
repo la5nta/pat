@@ -8,7 +8,7 @@ body {
 }
 
 body > .container {
-  padding: 0 15px 0;
+  padding: 75px 15px 0;
 }
 
 .btn:focus {
@@ -35,6 +35,16 @@ body > .container {
   }
 }
 
+.progress-text {
+  padding-top: 3px;
+  font-size: 11px !important;
+  color: #555555;
+  white-space: nowrap;
+  overflow: hidden;
+  display: block;
+  text-overflow: ellipsis;
+}
+
 .navbar > .container {
   margin-bottom: -10px;
 }
@@ -55,17 +65,17 @@ body > .container {
   padding-bottom: 3px;
 }
 
-.card-sm {
+.panel-sm {
   margin-bottom: 6px;
 }
 
-.card-sm > .card-title {
+.panel-sm > .panel-heading {
   font-weight: bold;
   font-size: 14px;
   padding: 5px 10px;
 }
 
-.card-sm > .card-text {
+.panel-sm > .panel-body {
   font-size: 12px;
   line-height: 1.4;
   padding: 10px;
@@ -153,7 +163,7 @@ body > .container {
 }
 
 #msg_body {
-  min-height: 50px;
+  min-height: 150px;
   white-space: pre-wrap;
 }
 
@@ -170,7 +180,7 @@ body > .container {
     white-space: pre-wrap;
   }
   #msg_body {
-    min-height: 200px;
+    min-height: 400px;
     max-height: 600px;
     overflow-y: auto!important;
     white-space: pre-wrap;

@@ -195,8 +195,10 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 * (1024 ^ 2)) // 10Mb
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	m := r.MultipartForm
 

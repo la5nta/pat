@@ -8,9 +8,9 @@ if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
 GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
 
-# Go 1.10 or later is required
+# Go 1.16 or later is required
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
-[ "$GO_POINT_VERSION" -lt "10" ] && echo "Go 1.10 or later required" && exit 1;
+[ "$GO_POINT_VERSION" -lt "16" ] && echo "Go 1.16 or later required" && exit 1;
 
 AX25VERSION="0.0.12-rc4"
 AX25DIST="libax25-${AX25VERSION}"

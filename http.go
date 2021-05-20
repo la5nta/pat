@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -30,10 +31,10 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
-
-	_ "github.com/elazarl/go-bindata-assetfs"
-	_ "github.com/jteeuwen/go-bindata"
 )
+
+//go:embed res
+var staticContent embed.FS
 
 // Status represents a status report as sent to the Web GUI
 type Status struct {
@@ -63,10 +64,6 @@ type Notification struct {
 
 var websocketHub *WSHub
 
-//go:generate mkdir -p .build
-//go:generate go build -v -o .build/go-bindata-assetfs github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-//go:generate go build -v -o .build/go-bindata github.com/jteeuwen/go-bindata/go-bindata
-//go:generate sh -c "PATH=\".build/:$PATH\" go-bindata-assetfs -o bindata_assetfs.go res/..."
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (%s)...", addr)
 
@@ -96,7 +93,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	http.Handle("/", r)
-	http.Handle("/res/", http.StripPrefix("/res/", http.FileServer(assetFS())))
+	http.Handle("/res/", http.FileServer(http.FS(staticContent)))
 
 	websocketHub = NewWSHub()
 
@@ -318,7 +315,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uiHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset(path.Join("res", "tmpl", "index.html"))
+	data, err := staticContent.ReadFile(path.Join("res", "tmpl", "index.html"))
 	if err != nil {
 		log.Fatal(err)
 	}

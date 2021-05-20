@@ -1,17 +1,15 @@
 module github.com/la5nta/pat
 
-go 1.11
+go 1.16
 
 require (
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
-	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/harenber/ptc-go/pactor/v2 v2.0.0-20201106165819-10108cccf409
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
-	github.com/jteeuwen/go-bindata v3.0.8-0.20151023091102-a0ff2567cfb7+incompatible
 	github.com/la5nta/wl2k-go v0.7.3
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.4

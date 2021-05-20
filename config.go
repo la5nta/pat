@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -68,11 +67,11 @@ func replaceDeprecatedCMSHostname(path string, data []byte) ([]byte, error) {
 	if err != nil {
 		return data, err
 	}
-	return data, ioutil.WriteFile(path, data, stat.Mode())
+	return data, os.WriteFile(path, data, stat.Mode())
 }
 
 func ReadConfig(path string) (config cfg.Config, err error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
@@ -102,5 +101,5 @@ func WriteConfig(config cfg.Config, filePath string) error {
 	// Ensure path dir is available
 	os.Mkdir(path.Dir(filePath), os.ModePerm|os.ModeDir)
 
-	return ioutil.WriteFile(filePath, b, 0600)
+	return os.WriteFile(filePath, b, 0600)
 }

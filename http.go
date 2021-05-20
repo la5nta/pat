@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -222,7 +222,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		p, err := ioutil.ReadAll(file)
+		p, err := io.ReadAll(file)
 		file.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

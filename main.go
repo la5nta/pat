@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -489,7 +488,7 @@ func extractMessageHandle(args []string) {
 	} else {
 		fmt.Println(msg)
 		for _, f := range msg.Files() {
-			if err := ioutil.WriteFile(f.Name(), f.Data(), 0664); err != nil {
+			if err := os.WriteFile(f.Name(), f.Data(), 0664); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -595,7 +594,7 @@ func composeMessage(replyMsg *fbb.Message) {
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	readLine()
 
-	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
+	f, err := os.CreateTemp("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
 	if err != nil {
 		log.Fatalf("Unable to prepare temporary file for body: %s", err)
 	}
@@ -685,7 +684,7 @@ func readAttachment(path string) (*fbb.File, error) {
 		ext := filepath.Ext(name)
 		name = name[:len(name)-len(ext)] + ".jpg"
 	} else {
-		data, err = ioutil.ReadAll(f)
+		data, err = io.ReadAll(f)
 	}
 
 	return fbb.NewFile(name, data), err

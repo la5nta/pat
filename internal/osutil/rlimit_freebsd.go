@@ -1,4 +1,4 @@
-// +build !windows,!freebsd
+// +build freebsd
 
 package osutil
 
@@ -13,12 +13,12 @@ func RaiseOpenFileLimit(max uint64) error {
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
 		return fmt.Errorf("Could not get current limit: %v", err)
 	}
-	if limit.Cur >= limit.Max || limit.Cur >= max {
+	if limit.Cur >= limit.Max || limit.Cur >= int64(max) {
 		return nil
 	}
 	limit.Cur = limit.Max
-	if limit.Cur > max {
-		limit.Cur = max
+	if limit.Cur > int64(max) {
+		limit.Cur = int64(max)
 	}
 	return syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit)
 }

@@ -148,20 +148,18 @@ func GetGatewayStatusCached(cacheFile string, forceDownload bool, serviceCodes .
 		}
 	}
 
-	file, err := os.Create(cacheFile)
-	if err != nil {
-		return nil, err
-	}
-
 	log.Println("Downloading latest gateway status information...")
 	fresh, err := GetGatewayStatus("", 48, serviceCodes...)
 	if err != nil {
 		return nil, err
 	}
 
+	file, err := os.Create(cacheFile)
+	if err != nil {
+		return nil, err
+	}
 	_, err = io.Copy(file, fresh)
 	file.Seek(0, 0)
-
 	if err == nil {
 		log.Println("download succeeded.")
 	}

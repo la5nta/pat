@@ -64,6 +64,11 @@ type Notification struct {
 	Body  string `json:"body"`
 }
 
+type HttpError struct {
+	error
+	StatusCode int
+}
+
 var websocketHub *WSHub
 
 func ListenAndServe(addr string) error {
@@ -208,9 +213,14 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		files := r.MultipartForm.File["files"]
 		for _, f := range files {
-			err = attachFile(w, f, msg)
-			if err != nil {
-				return
+			err := attachFile(f, msg)
+			switch err := err.(type) {
+			case nil:
+				// No problem
+			case HttpError:
+				http.Error(w, err.Error(), err.StatusCode)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
 	}
@@ -265,7 +275,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
 }
 
-func attachFile(w http.ResponseWriter, f *multipart.FileHeader, msg *fbb.Message) error {
+func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	// For some unknown reason, we receive this empty unnamed file when no
 	// attachment is provided. Prior to Go 1.10, this was filtered by
 	// multipart.Reader.
@@ -274,21 +284,18 @@ func attachFile(w http.ResponseWriter, f *multipart.FileHeader, msg *fbb.Message
 	}
 
 	if f.Filename == "" {
-		err := errors.New("Missing attachment name")
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
+		err := errors.New("missing attachment name")
+		return HttpError{err, http.StatusBadRequest}
 	}
 	file, err := f.Open()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
+		return HttpError{err, http.StatusInternalServerError}
 	}
 
 	p, err := io.ReadAll(file)
 	file.Close()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
+		return HttpError{err, http.StatusInternalServerError}
 	}
 
 	if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
@@ -306,8 +313,7 @@ func attachFile(w http.ResponseWriter, f *multipart.FileHeader, msg *fbb.Message
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
+		return HttpError{err, http.StatusInternalServerError}
 	}
 	msg.AddFile(fbb.NewFile(f.Filename, p))
 	return nil

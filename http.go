@@ -200,77 +200,77 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	m := r.MultipartForm
-
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	// files
-	files := m.File["files"]
-	for _, f := range files {
-		// For some unknown reason, we receive this empty unnamed file when no
-		// attachment is provided. Prior to Go 1.10, this was filtered by
-		// multipart.Reader.
-		if isEmptyFormFile(f) {
-			continue
-		}
-
-		if f.Filename == "" {
-			http.Error(w, "Missing attachment name", http.StatusBadRequest)
-			return
-		}
-		file, err := f.Open()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		p, err := io.ReadAll(file)
-		file.Close()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
-			log.Printf("Auto converting '%s' [%s]...", f.Filename, f.Header.Get("Content-Type"))
-
-			if converted, err := convertImage(bytes.NewReader(p)); err != nil {
-				log.Printf("Error converting image: %s", err)
-			} else {
-				log.Printf("Done converting '%s'.", f.Filename)
-
-				ext := path.Ext(f.Filename)
-				f.Filename = f.Filename[:len(f.Filename)-len(ext)] + ".jpg"
-				p = converted
+	if r.MultipartForm != nil {
+		files := r.MultipartForm.File["files"]
+		for _, f := range files {
+			// For some unknown reason, we receive this empty unnamed file when no
+			// attachment is provided. Prior to Go 1.10, this was filtered by
+			// multipart.Reader.
+			if isEmptyFormFile(f) {
+				continue
 			}
-		}
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			if f.Filename == "" {
+				http.Error(w, "Missing attachment name", http.StatusBadRequest)
+				return
+			}
+			file, err := f.Open()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			p, err := io.ReadAll(file)
+			file.Close()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
+				log.Printf("Auto converting '%s' [%s]...", f.Filename, f.Header.Get("Content-Type"))
+
+				if converted, err := convertImage(bytes.NewReader(p)); err != nil {
+					log.Printf("Error converting image: %s", err)
+				} else {
+					log.Printf("Done converting '%s'.", f.Filename)
+
+					ext := path.Ext(f.Filename)
+					f.Filename = f.Filename[:len(f.Filename)-len(ext)] + ".jpg"
+					p = converted
+				}
+			}
+
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			msg.AddFile(fbb.NewFile(f.Filename, p))
 		}
-		msg.AddFile(fbb.NewFile(f.Filename, p))
 	}
 
 	// Other fields
-	if v := m.Value["to"]; len(v) == 1 {
+	if v := r.Form["to"]; len(v) == 1 {
 		addrs := strings.FieldsFunc(v[0], SplitFunc)
 		msg.AddTo(addrs...)
 	}
-	if v := m.Value["cc"]; len(v) == 1 {
+	if v := r.Form["cc"]; len(v) == 1 {
 		addrs := strings.FieldsFunc(v[0], SplitFunc)
 		msg.AddCc(addrs...)
 	}
-	if v := m.Value["subject"]; len(v) == 1 {
+	if v := r.Form["subject"]; len(v) == 1 {
 		msg.SetSubject(v[0])
 	}
-	if v := m.Value["body"]; len(v) == 1 {
+	if v := r.Form["body"]; len(v) == 1 {
 		msg.SetBody(v[0])
 	}
-	if v := m.Value["p2ponly"]; len(v) == 1 && v[0] != "" {
+	if v := r.Form["p2ponly"]; len(v) == 1 && v[0] != "" {
 		msg.Header.Set("X-P2POnly", "true")
 	}
-	if v := m.Value["date"]; len(v) == 1 {
+	if v := r.Form["date"]; len(v) == 1 {
 		t, err := time.Parse(time.RFC3339, v[0])
 		if err != nil {
 			log.Printf("Unable to parse message date: %s", err)

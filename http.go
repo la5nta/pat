@@ -64,7 +64,7 @@ type Notification struct {
 	Body  string `json:"body"`
 }
 
-type HttpError struct {
+type HTTPError struct {
 	error
 	StatusCode int
 }
@@ -217,7 +217,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			switch err := err.(type) {
 			case nil:
 				// No problem
-			case HttpError:
+			case HTTPError:
 				http.Error(w, err.Error(), err.StatusCode)
 			default:
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -285,17 +285,17 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 
 	if f.Filename == "" {
 		err := errors.New("missing attachment name")
-		return HttpError{err, http.StatusBadRequest}
+		return HTTPError{err, http.StatusBadRequest}
 	}
 	file, err := f.Open()
 	if err != nil {
-		return HttpError{err, http.StatusInternalServerError}
+		return HTTPError{err, http.StatusInternalServerError}
 	}
 
 	p, err := io.ReadAll(file)
 	file.Close()
 	if err != nil {
-		return HttpError{err, http.StatusInternalServerError}
+		return HTTPError{err, http.StatusInternalServerError}
 	}
 
 	if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
@@ -313,7 +313,7 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	}
 
 	if err != nil {
-		return HttpError{err, http.StatusInternalServerError}
+		return HTTPError{err, http.StatusInternalServerError}
 	}
 	msg.AddFile(fbb.NewFile(f.Filename, p))
 	return nil

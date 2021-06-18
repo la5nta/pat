@@ -246,36 +246,42 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// UpdateFormTemplatesHandler handles searching for and installing the latest version of the form templates.
+// UpdateFormTemplatesHandler handles API calls to update form templates.
 func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Request) {
-	newestVersion, downloadLink, err := m.getLatestFormsInfo()
+	response, err := m.UpdateFormTemplates()
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		return
 	}
+	jsn, _ := json.Marshal(response)
+	_, _ = w.Write(jsn)
+}
+
+// UpdateFormTemplates handles searching for and installing the latest version of the form templates.
+func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
+	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
+	newestVersion, downloadLink, err := m.getLatestFormsInfo()
+	if err != nil {
+		return UpdateResponse{}, err
+	}
 	if !m.isNewerVersion(newestVersion) {
-		response, _ := json.Marshal(UpdateResponse{
+		log.Printf("Latest forms version is %v; nothing to do", newestVersion)
+		return UpdateResponse{
 			NewestVersion: newestVersion,
 			Action:        "none",
-		})
-		_, _ = w.Write(response)
-		return
+		}, nil
 	}
 
 	err = m.downloadAndUnzipForms(downloadLink)
 	if err != nil {
-		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
-		return
+		return UpdateResponse{}, err
 	}
-	log.Print("Finished forms update")
+	log.Printf("Finished forms update to %v", newestVersion)
 	// TODO: re-init forms manager
-
-	resp := UpdateResponse{
+	return UpdateResponse{
 		NewestVersion: newestVersion,
 		Action:        "update",
-	}
-	json, _ := json.Marshal(resp)
-	_, _ = w.Write(json)
+	}, nil
 }
 
 func (m *Manager) getLatestFormsInfo() (string, string, error) {

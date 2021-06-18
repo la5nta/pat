@@ -87,6 +87,7 @@ func ListenAndServe(addr string) error {
 	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler).Methods("POST")
 	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
+	r.HandleFunc("/api/formsUpdate", formsMgr.UpdateFormTemplatesHandler).Methods("POST")
 	r.HandleFunc("/api/disconnect", DisconnectHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")

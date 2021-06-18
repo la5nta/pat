@@ -4,8 +4,15 @@
 
 package main
 
-import "unicode"
+import (
+	"fmt"
+	"runtime"
+	"unicode"
+)
 
 func SplitFunc(c rune) bool {
 	return unicode.IsSpace(c) || c == ',' || c == ';'
 }
+
+var PatUserAgent = fmt.Sprintf("%v/%v (%v) %v (%v; %v)",
+	AppName, Version, GitRev, runtime.Version(), runtime.GOOS, runtime.GOARCH)

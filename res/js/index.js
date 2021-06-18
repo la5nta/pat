@@ -290,6 +290,7 @@ function initFormSelect(data){
 		&& (data.folders && data.folders.length > 0 || data.forms && data.forms.length > 0)
 	) {
 		$('#formsVersion').html('<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">'+data.version+'</a>)</span>');
+		$('#updateFormsVersion').html(data.version);
 		$('#formsRootFolderName').text(data.path);
 		appendFormFolder('formFolderRoot', data);
 	}
@@ -304,6 +305,31 @@ function initFormSelect(data){
 			</ul>
 			`);
 	}
+}
+
+function updateForms() {
+	$('#updateFormsResponse').text("")
+	$('#updateFormsError').text("")
+	$.ajax({
+		method: "POST",
+		url: "/api/formsUpdate",
+		success: msg => {
+			$('#updateFormsError').text("")
+			let response = JSON.parse(msg);
+			switch (response.action) {
+				case "none":
+					$('#updateFormsResponse').text("You already have the latest forms version")
+					break;
+				case "update":
+					$('#updateFormsResponse').text("Updated forms to " + response.newestVersion)
+					break;
+			}
+		},
+		error: err => {
+			$('#updateFormsResponse').text("")
+			$('#updateFormsError').text(err.responseText)
+		},
+	});
 }
 
 function setCookie(cname, cvalue, exdays) {

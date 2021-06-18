@@ -125,6 +125,13 @@ var commands = []Command{
 		HandleFunc: rmsListHandle,
 	},
 	{
+		Str:  "updateforms",
+		Desc: "Download the latest form templates from winlink.org.",
+		HandleFunc: func(args []string) {
+			_, _ = formsMgr.UpdateFormTemplates()
+		},
+	},
+	{
 		Str:        "configure",
 		Desc:       "Open configuration file for editing.",
 		HandleFunc: configureHandle,
@@ -289,7 +296,7 @@ func main() {
 		MyCall:     fOptions.MyCall,
 		Locator:    config.Locator,
 		AppVersion: versionStringShort(),
-		UserAgent: PatUserAgent,
+		UserAgent:  PatUserAgent,
 		LineReader: readLine,
 	})
 

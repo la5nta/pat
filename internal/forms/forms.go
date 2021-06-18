@@ -7,6 +7,7 @@
 package forms
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"encoding/json"
@@ -33,6 +34,7 @@ import (
 
 const fieldValueFalseInXML = "False"
 const txtFileExt = ".txt"
+const formsVersionInfoUrl = "http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
 
 // Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
@@ -54,6 +56,7 @@ type Config struct {
 	Locator    string
 	AppVersion string
 	LineReader func() string
+	UserAgent  string
 }
 
 // Form holds information about a Winlink form template
@@ -94,6 +97,12 @@ type MessageForm struct {
 	Body           string
 	AttachmentXML  string
 	AttachmentName string
+}
+
+// UpdateResponse is the API response format for the upgrade forms endpoint
+type UpdateResponse struct {
+	NewestVersion string `json:"newestVersion"`
+	Action        string `json:"action"`
 }
 
 // NewManager instantiates the forms manager
@@ -235,6 +244,176 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		log.Printf("can't write form into response %s %s: %s", r.Method, r.URL.Path, err)
 		return
 	}
+}
+
+// UpdateFormTemplatesHandler handles searching for and installing the latest version of the form templates.
+func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Request) {
+	newestVersion, downloadLink, err := m.getLatestFormsInfo()
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+		return
+	}
+	if !m.isNewerVersion(newestVersion) {
+		response, _ := json.Marshal(UpdateResponse{
+			NewestVersion: newestVersion,
+			Action:        "none",
+		})
+		_, _ = w.Write(response)
+		return
+	}
+
+	err = m.downloadAndUnzipForms(downloadLink)
+	if err != nil {
+		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+		return
+	}
+	log.Print("Finished forms update")
+	// TODO: re-init forms manager
+
+	resp := UpdateResponse{
+		NewestVersion: newestVersion,
+		Action:        "update",
+	}
+	json, _ := json.Marshal(resp)
+	_, _ = w.Write(json)
+}
+
+func (m *Manager) getLatestFormsInfo() (string, string, error) {
+	client := http.Client{Timeout: 10 * time.Second}
+	req, _ := http.NewRequest("GET", formsVersionInfoUrl, nil)
+	req.Header.Set("User-Agent", m.config.UserAgent)
+	versionResp, err := client.Do(req)
+	if err != nil || versionResp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("can't fetch winlink forms version page: %v", err)
+		log.Print(err)
+		return "", "", err
+	}
+	bodyBytes, err := ioutil.ReadAll(versionResp.Body)
+	if err != nil {
+		err := fmt.Errorf("can't read winlink forms version page: %v", err)
+		log.Print(err)
+		return "", "", err
+	}
+	bodyString := string(bodyBytes)
+
+	// Scrape for the version and download link
+	versionRe := regexp.MustCompile(`Standard_Forms - Version (\d+\.\d+\.\d+(\.\d+)?)`)
+	downloadRe := regexp.MustCompile(`https:\/\/1drv.ms\/u\/([a-zA-Z0-9-_!]+)\?e=([a-zA-Z0-9-_]+)`)
+	versionMatches := versionRe.FindStringSubmatch(bodyString)
+	downloadMatches := downloadRe.FindStringSubmatch(bodyString)
+	if versionMatches == nil || len(versionMatches) < 2 || downloadMatches == nil || len(downloadMatches) < 3 {
+		err := errors.New("can't scrape the version info page, HTML structure may have changed")
+		log.Print(err)
+		return "", "", err
+	}
+	newestVersion := versionMatches[1]
+	docId := downloadMatches[1]
+	auth := downloadMatches[2]
+	downloadLink := "https://api.onedrive.com/v1.0/shares/" + docId + "/root/content?e=" + auth
+	return newestVersion, downloadLink, nil
+}
+
+func (m *Manager) downloadAndUnzipForms(downloadLink string) error {
+	log.Printf("Updating forms via %v", downloadLink)
+	client := http.Client{Timeout: 30 * time.Second}
+	req, _ := http.NewRequest("GET", downloadLink, nil)
+	req.Header.Set("User-Agent", m.config.UserAgent)
+	downloadResp, err := client.Do(req)
+	if err != nil {
+		err := fmt.Errorf("can't download update ZIP: %v", err)
+		log.Print(err)
+		return err
+	}
+	filename := "Standard_Forms.zip"
+	dispo := downloadResp.Header.Get("Content-Disposition")
+	if dispo != "" && strings.Contains(dispo, "filename=") {
+		fileRe := regexp.MustCompile(`filename="(.*)"`)
+		filename = fileRe.FindStringSubmatch(dispo)[1]
+	}
+	dir, _ := ioutil.TempDir("", "pat")
+	defer os.RemoveAll(dir)
+	zipBytes, _ := ioutil.ReadAll(downloadResp.Body)
+	zipFilePath := path.Join(dir, filename)
+	err = ioutil.WriteFile(zipFilePath, zipBytes, 0600)
+	if err != nil {
+		err := fmt.Errorf("can't write update ZIP: %v", err)
+		log.Print(err)
+		return err
+	}
+
+	unzipDir := m.config.FormsPath
+	err = unzip(zipFilePath, unzipDir)
+	if err != nil {
+		err := fmt.Errorf("can't unzip forms update: %v", err)
+		log.Print(err)
+		return err
+	}
+	return nil
+}
+
+func unzip(src, dest string) error {
+	// https://stackoverflow.com/a/24792688/587091
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	os.MkdirAll(dest, 0755)
+
+	// Closure to address file descriptors issue with all the deferred .Close() methods
+	extractAndWriteFile := func(f *zip.File) error {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := rc.Close(); err != nil {
+				panic(err)
+			}
+		}()
+
+		path := filepath.Join(dest, f.Name)
+
+		// Check for ZipSlip (Directory traversal)
+		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", path)
+		}
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(path, f.Mode())
+		} else {
+			os.MkdirAll(filepath.Dir(path), f.Mode())
+			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					panic(err)
+				}
+			}()
+
+			_, err = io.Copy(f, rc)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, f := range r.File {
+		err := extractAndWriteFile(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetXMLAttachmentNameForForm returns the user-visible filename for the message attachment that holds the form instance values
@@ -827,4 +1006,24 @@ func (m *Manager) cleanupOldFormData() {
 		}
 	}
 	m.postedFormData.Unlock()
+}
+
+func (m *Manager) isNewerVersion(newestVersion string) bool {
+	currentVersion := m.getFormsVersion()
+	cv := strings.Split(currentVersion, ".")
+	nv := strings.Split(newestVersion, ".")
+	for i := 0; i < 4; i++ {
+		var cp int64 = 0
+		if len(cv) > i {
+			cp, _ = strconv.ParseInt(cv[i], 10, 16)
+		}
+		var np int64 = 0
+		if len(nv) > i {
+			np, _ = strconv.ParseInt(nv[i], 10, 16)
+		}
+		if cp < np {
+			return true
+		}
+	}
+	return false
 }

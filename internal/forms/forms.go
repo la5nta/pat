@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +33,7 @@ import (
 
 const fieldValueFalseInXML = "False"
 const txtFileExt = ".txt"
-const formsVersionInfoUrl = "http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
+const formsVersionInfoUrl = "https://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
 
 // Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
@@ -104,6 +103,8 @@ type UpdateResponse struct {
 	NewestVersion string `json:"newestVersion"`
 	Action        string `json:"action"`
 }
+
+var client = httpClient{http.Client{Timeout: 10 * time.Second}}
 
 // NewManager instantiates the forms manager
 func NewManager(conf Config) *Manager {
@@ -285,21 +286,15 @@ func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
 }
 
 func (m *Manager) getLatestFormsInfo() (string, string, error) {
-	client := http.Client{Timeout: 10 * time.Second}
-	req, _ := http.NewRequest("GET", formsVersionInfoUrl, nil)
-	req.Header.Set("User-Agent", m.config.UserAgent)
-	versionResp, err := client.Do(req)
-	if err != nil || versionResp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("can't fetch winlink forms version page: %v", err)
-		log.Print(err)
-		return "", "", err
+	resp, err := client.Get(m, formsVersionInfoUrl)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("can't fetch winlink forms version page: %w", err)
 	}
-	bodyBytes, err := ioutil.ReadAll(versionResp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		err := fmt.Errorf("can't read winlink forms version page: %v", err)
-		log.Print(err)
-		return "", "", err
+		return "", "", fmt.Errorf("can't read winlink forms version page: %w", err)
 	}
+	defer resp.Body.Close()
 	bodyString := string(bodyBytes)
 
 	// Scrape for the version and download link
@@ -308,9 +303,7 @@ func (m *Manager) getLatestFormsInfo() (string, string, error) {
 	versionMatches := versionRe.FindStringSubmatch(bodyString)
 	downloadMatches := downloadRe.FindStringSubmatch(bodyString)
 	if versionMatches == nil || len(versionMatches) < 2 || downloadMatches == nil || len(downloadMatches) < 3 {
-		err := errors.New("can't scrape the version info page, HTML structure may have changed")
-		log.Print(err)
-		return "", "", err
+		return "", "", errors.New("can't scrape the version info page, HTML structure may have changed")
 	}
 	newestVersion := versionMatches[1]
 	docId := downloadMatches[1]
@@ -321,38 +314,30 @@ func (m *Manager) getLatestFormsInfo() (string, string, error) {
 
 func (m *Manager) downloadAndUnzipForms(downloadLink string) error {
 	log.Printf("Updating forms via %v", downloadLink)
-	client := http.Client{Timeout: 30 * time.Second}
-	req, _ := http.NewRequest("GET", downloadLink, nil)
-	req.Header.Set("User-Agent", m.config.UserAgent)
-	downloadResp, err := client.Do(req)
+	resp, err := client.Get(m, downloadLink)
 	if err != nil {
-		err := fmt.Errorf("can't download update ZIP: %v", err)
-		log.Print(err)
-		return err
+		return fmt.Errorf("can't download update ZIP: %w", err)
 	}
 	filename := "Standard_Forms.zip"
-	dispo := downloadResp.Header.Get("Content-Disposition")
+	dispo := resp.Header.Get("Content-Disposition")
 	if dispo != "" && strings.Contains(dispo, "filename=") {
 		fileRe := regexp.MustCompile(`filename="(.*)"`)
 		filename = fileRe.FindStringSubmatch(dispo)[1]
 	}
-	dir, _ := ioutil.TempDir("", "pat")
+	dir := os.TempDir()
 	defer os.RemoveAll(dir)
-	zipBytes, _ := ioutil.ReadAll(downloadResp.Body)
+	zipBytes, _ := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	zipFilePath := path.Join(dir, filename)
-	err = ioutil.WriteFile(zipFilePath, zipBytes, 0600)
+	err = os.WriteFile(zipFilePath, zipBytes, 0600)
 	if err != nil {
-		err := fmt.Errorf("can't write update ZIP: %v", err)
-		log.Print(err)
-		return err
+		return fmt.Errorf("can't write update ZIP: %w", err)
 	}
 
 	unzipDir := m.config.FormsPath
 	err = unzip(zipFilePath, unzipDir)
 	if err != nil {
-		err := fmt.Errorf("can't unzip forms update: %v", err)
-		log.Print(err)
-		return err
+		return fmt.Errorf("can't unzip forms update: %w", err)
 	}
 	return nil
 }
@@ -363,11 +348,7 @@ func unzip(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			panic(err)
-		}
-	}()
+	defer r.Close()
 
 	os.MkdirAll(dest, 0755)
 
@@ -377,11 +358,7 @@ func unzip(src, dest string) error {
 		if err != nil {
 			return err
 		}
-		defer func() {
-			if err := rc.Close(); err != nil {
-				panic(err)
-			}
-		}()
+		defer rc.Close()
 
 		path := filepath.Join(dest, f.Name)
 
@@ -398,11 +375,7 @@ func unzip(src, dest string) error {
 			if err != nil {
 				return err
 			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					panic(err)
-				}
-			}()
+			defer f.Close()
 
 			_, err = io.Copy(f, rc)
 			if err != nil {
@@ -447,7 +420,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (stri
 
 	sr := utfbom.SkipOnly(bytes.NewReader(contentUnsanitized))
 
-	contentData, err := ioutil.ReadAll(sr)
+	contentData, err := io.ReadAll(sr)
 	if err != nil {
 		return "", fmt.Errorf("error reading sanitized form xml: %s", err)
 	}
@@ -752,7 +725,7 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 	// (e.g. Sonoma county's ICS213_v2.1_SonomaACS_TwoWay_Initial_Viewer.html)
 	f := utfbom.SkipOnly(fUnsanitized)
 
-	sanitizedFileContent, err := ioutil.ReadAll(f)
+	sanitizedFileContent, err := io.ReadAll(f)
 	if err != nil {
 		return "", fmt.Errorf("error reading file %s", absPathTemplate)
 	}
@@ -1032,4 +1005,15 @@ func (m *Manager) isNewerVersion(newestVersion string) bool {
 		}
 	}
 	return false
+}
+
+type httpClient struct{ http.Client }
+
+func (c httpClient) Get(m *Manager, url string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", m.config.UserAgent)
+	return c.Do(req)
 }

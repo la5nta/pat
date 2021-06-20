@@ -313,7 +313,7 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	if isImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
 		log.Printf("Auto converting '%s' [%s]...", f.Filename, f.Header.Get("Content-Type"))
 
-		if converted, err := convertImage(bytes.NewReader(p)); err != nil {
+		if converted, err := convertImage(p); err != nil {
 			log.Printf("Error converting image: %s", err)
 		} else {
 			log.Printf("Done converting '%s'.", f.Filename)

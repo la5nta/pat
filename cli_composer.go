@@ -193,12 +193,11 @@ func readAttachment(path string) (*fbb.File, error) {
 
 	var data []byte
 
+	data, err = ioutil.ReadAll(f)
 	if resizeImage {
-		data, err = convertImage(f)
+		data, err = convertImage(data)
 		ext := filepath.Ext(name)
 		name = name[:len(name)-len(ext)] + ".jpg"
-	} else {
-		data, err = ioutil.ReadAll(f)
 	}
 
 	return fbb.NewFile(name, data), err

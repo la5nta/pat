@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"image"
 	"image/jpeg"
-	"io"
 	"mime"
 	"path"
 	"strings"
@@ -31,8 +30,8 @@ func isImageMediaType(filename, contentType string) bool {
 	return strings.HasPrefix(mediaType, "image/")
 }
 
-func convertImage(r io.Reader) ([]byte, error) {
-	img, _, err := image.Decode(r)
+func convertImage(orig []byte) ([]byte, error) {
+	img, _, err := image.Decode(bytes.NewReader(orig))
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +43,11 @@ func convertImage(r io.Reader) ([]byte, error) {
 
 	// Re-encode as low quality jpeg
 	var buf bytes.Buffer
-	err = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 40})
-	return buf.Bytes(), err
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 40}); err != nil {
+		return orig, err
+	}
+	if buf.Len() >= len(orig) {
+		return orig, nil
+	}
+	return buf.Bytes(), nil
 }

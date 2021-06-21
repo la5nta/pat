@@ -128,7 +128,9 @@ var commands = []Command{
 		Str:  "updateforms",
 		Desc: "Download the latest form templates from winlink.org.",
 		HandleFunc: func(args []string) {
-			_, _ = formsMgr.UpdateFormTemplates()
+			if _, err := formsMgr.UpdateFormTemplates(); err != nil {
+				log.Printf("%v", err)
+			}
 		},
 	},
 	{

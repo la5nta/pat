@@ -260,6 +260,12 @@ func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Requ
 
 // UpdateFormTemplates handles searching for and installing the latest version of the form templates.
 func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
+	if m.config.FormsPath == "" || m.config.FormsPath == "." {
+		return UpdateResponse{}, fmt.Errorf("forms_path isn't configured")
+	}
+	if _, err := os.Stat(m.config.FormsPath); err != nil {
+		return UpdateResponse{}, fmt.Errorf("forms_path [%s] doesn't exist", m.config.FormsPath)
+	}
 	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
 	newestVersion, downloadLink, err := m.getLatestFormsInfo()
 	if err != nil {
@@ -1015,5 +1021,6 @@ func (c httpClient) Get(m *Manager, url string) (*http.Response, error) {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", m.config.UserAgent)
+	req.Header.Set("Cache-Control", "no-cache")
 	return c.Do(req)
 }

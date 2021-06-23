@@ -108,6 +108,7 @@ var client = httpClient{http.Client{Timeout: 10 * time.Second}}
 
 // NewManager instantiates the forms manager
 func NewManager(conf Config) *Manager {
+	_ = os.MkdirAll(conf.FormsPath, 0755)
 	retval := &Manager{
 		config: conf,
 	}

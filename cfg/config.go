@@ -6,6 +6,8 @@ package cfg
 
 import (
 	"encoding/json"
+	"github.com/la5nta/wl2k-go/mailbox"
+	"path"
 	"strings"
 
 	"github.com/la5nta/wl2k-go/transport/ardop"
@@ -294,5 +296,10 @@ var DefaultConfig Config = Config{
 	HamlibRigs:     map[string]HamlibConfig{},
 
 	// Path to root of the unzipped Winlink Standard_Forms folder.
-	FormsPath: "",
+	FormsPath: path.Join(defaultAppDir(), "Standard_Forms"),
+}
+
+func defaultAppDir() string {
+	dir, _ := mailbox.DefaultAppDir()
+	return dir
 }

@@ -6,10 +6,10 @@ package cfg
 
 import (
 	"encoding/json"
-	"github.com/la5nta/wl2k-go/mailbox"
 	"path"
 	"strings"
 
+	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 )
 

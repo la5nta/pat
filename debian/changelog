@@ -1,3 +1,22 @@
+pat (0.11.0) stable; urgency=medium
+
+  * Add support for Winlink HTML Forms
+  * Add support for individual passords for auxiliary addresses
+  * Add ability to abort ongoing dialing/connection in Web GUI
+  * Add systemd unit file for rigctld
+  * Improve version reporing to Winlink API
+  * Improve websocket handling
+  * Improve visibility of QSY errors in Web GUI
+  * Improve 'reply' and 'forward' functionality in Web GUI
+  * Fix issue with azimuth calculation when distance is zero
+  * Fix incorrect transport URI scheme for packet nodes
+  * Fix build on FreeBSD and macOS.
+  * Avoid truncating rmslist cache on refresh failure
+  * Avoid recompressing images where the resulting file size increases
+  * Require Go 1.16 or later
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Wed, 30 Jun 2021 21:13:40 +0100
+
 pat (0.10.0) stable; urgency=medium
 
   * Add support for P4 Dragon modems

@@ -6,7 +6,7 @@ clone_folder: c:\gopath\src\github.com\la5nta\pat
 environment:
   global:
     GOPATH: C:\gopath
-    GOVERSION: "1.16.2"
+    GOVERSION: "1.16.5"
     MSYS_PATH: C:\MinGW\msys\1.0
 install:
   - set PATH=C:\go\bin;%MSYS_PATH%\bin;C:\MinGW\bin;%PATH%

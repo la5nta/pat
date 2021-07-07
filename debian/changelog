@@ -1,3 +1,25 @@
+pat (0.11.0) stable; urgency=medium
+
+ * Add form templates
+   - Compose from either GUI or CLI
+   - Render received forms
+   - Update forms online
+ * Add Passwords for auxiliary addresses
+ * Add GUI button for aborting connect/session
+ * Add systemd unit file for rigctld
+ * Add check for account existence in the Winlink system prior to the version
+   report API call
+ * Improve usability of message 'reply' and 'forward' buttons
+ * Fix: Don't recompress small images
+ * Fix: Wrong transport URI for AX.25 nodes in RMS list
+ * Fix: If any RMS had distance 0, RMS list failed to populated
+ * Fix: Parse non-multipart forms
+ * Fix: rlimit related build failure on FreeBSD 12
+ * Fix: Build error on MacOS with undefined unix.SYS_IOCTL
+ * Fix: migrate from go-bindata-assetfs to embed
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Wed, 07 Jul 2021 16:19:31 -0600
+
 pat (0.10.0) stable; urgency=medium
 
   * Add support for P4 Dragon modems

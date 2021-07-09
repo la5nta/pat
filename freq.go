@@ -46,7 +46,6 @@ type Frequency int // Hz
 func (f Frequency) String() string {
 	m := f / 1e6
 	k := (float64(f) - float64(m)*1e6) / 1e3
-
 	return fmt.Sprintf("%d.%06.2f MHz", m, k)
 }
 

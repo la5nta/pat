@@ -352,7 +352,7 @@ function appendFormFolder(rootId, data) {
 			`);
 		data.folders.forEach(function (folder) {
 			if (folder.form_count > 0) {
-				var folderNameId = rootId + folder.name.replace( /\s/g, "_" );
+				var folderNameId = rootId + folder.name.replace( /\s/g, "_" ).replace(/&/g, "and");
 				var cardBodyId = folderNameId+"Body";
 				var card =
 				`

@@ -652,11 +652,15 @@ func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 		case strings.HasPrefix(l, "Form:"):
 			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
 			fileNames := strings.Split(trimmed, ",")
-			if fileNames != nil && len(fileNames) >= 2 {
+			if len(fileNames) >= 2 {
 				initial := strings.TrimSpace(fileNames[0])
 				viewer := strings.TrimSpace(fileNames[1])
 				retVal.InitialURI = path.Join(baseURI, initial)
 				retVal.ViewerURI = path.Join(baseURI, viewer)
+			} else {
+				view := strings.TrimSpace(fileNames[0])
+				retVal.InitialURI = path.Join(baseURI, view)
+				retVal.ViewerURI = path.Join(baseURI, view)
 			}
 		case strings.HasPrefix(l, "ReplyTemplate:"):
 			retVal.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))

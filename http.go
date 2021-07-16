@@ -72,7 +72,7 @@ type HTTPError struct {
 var websocketHub *WSHub
 
 func ListenAndServe(addr string) error {
-	log.Printf("Starting HTTP service (%s)...", addr)
+	log.Printf("Starting HTTP service (http://%s)...", addr)
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?

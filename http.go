@@ -76,7 +76,7 @@ func ListenAndServe(addr string) error {
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
 		// TODO: maybe make a popup showing the warning ont the web UI?
-		fmt.Fprintf(logWriter, "\nWARNING: You have enable GPSd HTTP endpoint (enable_http). You might expose"+
+		_, _ = fmt.Fprintf(logWriter, "\nWARNING: You have enable GPSd HTTP endpoint (enable_http). You might expose"+
 			"\n         your current position to anyone who has access to the Pat web interface!\n\n")
 	}
 
@@ -116,8 +116,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/ui", http.StatusFound)
 }
 
-func connectAliasesHandler(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(config.ConnectAliases)
+func connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {
+	_ = json.NewEncoder(w).Encode(config.ConnectAliases)
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +149,7 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	r.Body.Close()
+	_ = r.Body.Close()
 
 	if pos.Date.IsZero() {
 		pos.Date = time.Now()
@@ -161,7 +161,7 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, "Position update posted")
+		_, _ = fmt.Fprintln(w, "Position update posted")
 	}
 }
 
@@ -200,7 +200,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Could not move message:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	} else {
-		json.NewEncoder(w).Encode("OK")
+		_ = json.NewEncoder(w).Encode("OK")
 	}
 }
 
@@ -233,8 +233,8 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("forminstance")
 	if err == nil {
 		formData := formsMgr.GetPostedFormData(cookie.Value)
-		path := formsMgr.GetXMLAttachmentNameForForm(formData.TargetForm, formData.IsReply)
-		msg.AddFile(fbb.NewFile(path, []byte(formData.MsgXML)))
+		name := formsMgr.GetXMLAttachmentNameForForm(formData.TargetForm, formData.IsReply)
+		msg.AddFile(fbb.NewFile(name, []byte(formData.MsgXML)))
 	}
 
 	// Other fields
@@ -250,7 +250,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		msg.SetSubject(v[0])
 	}
 	if v := r.Form["body"]; len(v) == 1 {
-		msg.SetBody(v[0])
+		_ = msg.SetBody(v[0])
 	}
 	if v := r.Form["p2ponly"]; len(v) == 1 && v[0] != "" {
 		msg.Header.Set("X-P2POnly", "true")
@@ -283,8 +283,8 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	var buf bytes.Buffer
-	msg.Write(&buf)
-	fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
+	_ = msg.Write(&buf)
+	_, _ = fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
 }
 
 func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
@@ -305,7 +305,7 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	}
 
 	p, err := io.ReadAll(file)
-	file.Close()
+	_ = file.Close()
 	if err != nil {
 		return HTTPError{err, http.StatusInternalServerError}
 	}
@@ -324,9 +324,6 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 		}
 	}
 
-	if err != nil {
-		return HTTPError{err, http.StatusInternalServerError}
-	}
 	msg.AddFile(fbb.NewFile(f.Filename, p))
 	return nil
 }
@@ -341,11 +338,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	conn.WriteJSON(struct{ MyCall string }{fOptions.MyCall})
+	_ = conn.WriteJSON(struct{ MyCall string }{fOptions.MyCall})
 	websocketHub.Handle(conn)
 }
 
-func uiHandler(w http.ResponseWriter, r *http.Request) {
+func uiHandler(w http.ResponseWriter, _ *http.Request) {
 	data, err := staticContent.ReadFile(path.Join("res", "tmpl", "index.html"))
 	if err != nil {
 		log.Fatal(err)
@@ -386,7 +383,9 @@ func getStatus() Status {
 	return status
 }
 
-func statusHandler(w http.ResponseWriter, req *http.Request) { json.NewEncoder(w).Encode(getStatus()) }
+func statusHandler(w http.ResponseWriter, _ *http.Request) {
+	_ = json.NewEncoder(w).Encode(getStatus())
+}
 
 func rmslistHandler(w http.ResponseWriter, req *http.Request) {
 	forceDownload, _ := strconv.ParseBool(req.FormValue("force-download"))
@@ -451,7 +450,7 @@ func qsyHandler(w http.ResponseWriter, req *http.Request) {
 			log.Printf("QSY failed: %v", err)
 			return
 		}
-		json.NewEncoder(w).Encode(payload)
+		_ = json.NewEncoder(w).Encode(payload)
 	}
 }
 
@@ -485,8 +484,7 @@ func positionHandler(w http.ResponseWriter, req *http.Request) {
 		pos.Time = time.Now()
 	}
 
-	json.NewEncoder(w).Encode(pos)
-	return
+	_ = json.NewEncoder(w).Encode(pos)
 }
 
 func DisconnectHandler(w http.ResponseWriter, req *http.Request) {
@@ -494,7 +492,7 @@ func DisconnectHandler(w http.ResponseWriter, req *http.Request) {
 	if ok := abortActiveConnection(dirty); !ok {
 		w.WriteHeader(http.StatusBadRequest)
 	}
-	json.NewEncoder(w).Encode(struct{}{})
+	_ = json.NewEncoder(w).Encode(struct{}{})
 }
 
 func ConnectHandler(w http.ResponseWriter, req *http.Request) {
@@ -506,7 +504,7 @@ func ConnectHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "Session failure", http.StatusInternalServerError)
 	}
 
-	json.NewEncoder(w).Encode(struct {
+	_ = json.NewEncoder(w).Encode(struct {
 		NumReceived int
 	}{
 		mbox.InboxCount() - nMsgs,
@@ -544,8 +542,7 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 	for i, msg := range messages {
 		jsonSlice[i] = JSONMessage{Message: msg}
 	}
-	json.NewEncoder(w).Encode(jsonSlice)
-	return
+	_ = json.NewEncoder(w).Encode(jsonSlice)
 }
 
 type JSONMessage struct {
@@ -590,14 +587,14 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
-	path := filepath.Clean(filepath.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
-	if err := isInPath(mbox.MBoxPath, path); err != nil {
+	file := filepath.Clean(filepath.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
+	if err := isInPath(mbox.MBoxPath, file); err != nil {
 		log.Println("Malicious source path in move:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := os.Remove(path)
+	err := os.Remove(file)
 	if os.IsNotExist(err) {
 		http.NotFound(w, r)
 		return
@@ -605,7 +602,7 @@ func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	json.NewEncoder(w).Encode("OK")
+	_ = json.NewEncoder(w).Encode("OK")
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
@@ -621,7 +618,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(JSONMessage{msg, true})
+	_ = json.NewEncoder(w).Encode(JSONMessage{msg, true})
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -688,7 +685,7 @@ func toHTML(body []byte) []byte {
 	buf := bytes.NewBuffer(body)
 	var out bytes.Buffer
 
-	fmt.Fprint(&out, "<p>")
+	_, _ = fmt.Fprint(&out, "<p>")
 
 	scanner := bufio.NewScanner(buf)
 
@@ -696,17 +693,17 @@ func toHTML(body []byte) []byte {
 	for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) == 0 {
-			fmt.Fprint(&out, "</p><p>")
+			_, _ = fmt.Fprint(&out, "</p><p>")
 			continue
 		}
 
 		depth := blockquoteDepth(line)
 		for depth != blockquote {
 			if depth > blockquote {
-				fmt.Fprintf(&out, "</p><blockquote><p>")
+				_, _ = fmt.Fprintf(&out, "</p><blockquote><p>")
 				blockquote++
 			} else {
-				fmt.Fprintf(&out, "</p></blockquote><p>")
+				_, _ = fmt.Fprintf(&out, "</p></blockquote><p>")
 				blockquote--
 			}
 		}
@@ -715,14 +712,14 @@ func toHTML(body []byte) []byte {
 		line = htmlEncode(line)
 		line = linkify(line)
 
-		fmt.Fprint(&out, line+"\n")
+		_, _ = fmt.Fprint(&out, line+"\n")
 	}
 
 	for ; blockquote > 0; blockquote-- {
-		fmt.Fprintf(&out, "</p></blockquote>")
+		_, _ = fmt.Fprintf(&out, "</p></blockquote>")
 	}
 
-	fmt.Fprint(&out, "</p>")
+	_, _ = fmt.Fprint(&out, "</p>")
 	return out.Bytes()
 }
 

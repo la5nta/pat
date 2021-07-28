@@ -26,6 +26,7 @@ import (
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
 )
@@ -232,6 +233,9 @@ func init() {
 
 func main() {
 	cmd, args := parseFlags(os.Args)
+
+	debug.Printf("Version: %s", versionString())
+	debug.Printf("Command: %s %v", cmd.Str, args)
 
 	// Skip initialization for some commands
 	switch cmd.Str {

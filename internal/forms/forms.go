@@ -125,7 +125,7 @@ func (m *Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 		return
 	}
-	json.NewEncoder(w).Encode(formFolder)
+	_ = json.NewEncoder(w).Encode(formFolder)
 }
 
 // PostFormDataHandler - When the user is done filling a form, the frontend posts the input fields to this handler,
@@ -142,7 +142,7 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
+	composeReply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
 
 	formFolder, err := m.buildFormFolder()
 	if err != nil {
@@ -165,7 +165,7 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	formData := FormData{
-		IsReply:    composereply,
+		IsReply:    composeReply,
 		TargetForm: form,
 		Fields:     make(map[string]string),
 	}
@@ -177,7 +177,7 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		Template:    form,
 		FormValues:  formData.Fields,
 		Interactive: false,
-		IsReply:     composereply,
+		IsReply:     composeReply,
 		FormsMgr:    m,
 	}.build()
 
@@ -195,7 +195,7 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 	m.postedFormData.Unlock()
 
 	m.cleanupOldFormData()
-	io.WriteString(w, "<script>window.close()</script>")
+	_, _ = io.WriteString(w, "<script>window.close()</script>")
 }
 
 // GetFormDataHandler is the counterpart to PostFormDataHandler. Returns the form field values to the frontend
@@ -206,7 +206,7 @@ func (m *Manager) GetFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("missing cookie %s %s", formInstanceKey, r.URL)
 		return
 	}
-	json.NewEncoder(w).Encode(m.GetPostedFormData(formInstanceKey.Value))
+	_ = json.NewEncoder(w).Encode(m.GetPostedFormData(formInstanceKey.Value))
 }
 
 // GetPostedFormData is similar to GetFormDataHandler, but used when posting the form-based message to the outbox
@@ -306,7 +306,7 @@ func (m *Manager) getLatestFormsInfo() (string, string, error) {
 
 	// Scrape for the version and download link
 	versionRe := regexp.MustCompile(`Standard_Forms - Version (\d+\.\d+\.\d+(\.\d+)?)`)
-	downloadRe := regexp.MustCompile(`https:\/\/1drv.ms\/u\/([a-zA-Z0-9-_!]+)\?e=([a-zA-Z0-9-_]+)`)
+	downloadRe := regexp.MustCompile(`https://1drv.ms/u/([a-zA-Z0-9-_!]+)\?e=([a-zA-Z0-9-_]+)`)
 	versionMatches := versionRe.FindStringSubmatch(bodyString)
 	downloadMatches := downloadRe.FindStringSubmatch(bodyString)
 	if versionMatches == nil || len(versionMatches) < 2 || downloadMatches == nil || len(downloadMatches) < 3 {
@@ -357,7 +357,7 @@ func unzip(src, dest string) error {
 	}
 	defer r.Close()
 
-	os.MkdirAll(dest, 0755)
+	_ = os.MkdirAll(dest, 0755)
 
 	// Closure to address file descriptors issue with all the deferred .Close() methods
 	extractAndWriteFile := func(f *zip.File) error {
@@ -367,18 +367,18 @@ func unzip(src, dest string) error {
 		}
 		defer rc.Close()
 
-		path := filepath.Join(dest, f.Name)
+		p := filepath.Join(dest, f.Name)
 
 		// Check for ZipSlip (Directory traversal)
-		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", path)
+		if !strings.HasPrefix(p, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", p)
 		}
 
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.Mode())
+			_ = os.MkdirAll(p, f.Mode())
 		} else {
-			os.MkdirAll(filepath.Dir(path), f.Mode())
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			_ = os.MkdirAll(filepath.Dir(p), f.Mode())
+			f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			if err != nil {
 				return err
 			}
@@ -417,7 +417,7 @@ func (m *Manager) GetXMLAttachmentNameForForm(f Form, isReply bool) string {
 }
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
-func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (string, error) {
+func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (string, error) {
 
 	type Node struct {
 		XMLName xml.Name
@@ -463,7 +463,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (stri
 	switch {
 	case formParams["display_form"] == "":
 		return "", errors.New("missing display_form tag in form XML")
-	case composereply && formParams["reply_template"] == "":
+	case composeReply && formParams["reply_template"] == "":
 		return "", errors.New("missing reply_template tag in form XML for a reply message")
 	}
 
@@ -473,7 +473,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (stri
 	}
 
 	formToLoad := formParams["display_form"]
-	if composereply {
+	if composeReply {
 		// we're authoring a reply
 		formToLoad = formParams["reply_template"]
 	}
@@ -485,7 +485,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (stri
 
 	var formRelPath string
 	switch {
-	case composereply:
+	case composeReply:
 		// authoring a form reply
 		formRelPath = form.ReplyInitialURI
 	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
@@ -501,7 +501,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composereply bool) (stri
 		return "", err
 	}
 
-	retVal, err := m.fillFormTemplate(absPathTemplate, "/api/form?composereply=true&formPath="+formRelPath, regexp.MustCompile(`\{var\s+(\w+)\s*\}`), formVars)
+	retVal, err := m.fillFormTemplate(absPathTemplate, "/api/form?composereply=true&formPath="+formRelPath, regexp.MustCompile(`{var\s+(\w+)\s*}`), formVars)
 	return retVal, err
 }
 
@@ -596,7 +596,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 	if err != nil {
 		return retVal, err
 	}
-	rootFile.Close()
+	_ = rootFile.Close()
 
 	formCnt := 0
 	for _, info := range infos {
@@ -716,7 +716,7 @@ func (m *Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
 
 	var retVal string
 	for _, name := range fileNames {
-		if strings.ToLower(filepath.Base(tmplPath)) == strings.ToLower(name) {
+		if strings.EqualFold(filepath.Base(tmplPath), name) {
 			retVal = filepath.Join(absPathTemplateFolder, name)
 			break
 		}
@@ -936,7 +936,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		}
 		if b.Interactive {
 			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
-			fmt.Println(string(lineTmpl))
+			fmt.Println(lineTmpl)
 			for i := range matches {
 				varName := matches[i][1]
 				varNameLower := strings.ToLower(varName)
@@ -989,7 +989,7 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 func (m *Manager) cleanupOldFormData() {
 	m.postedFormData.Lock()
 	for key, form := range m.postedFormData.internalFormDataMap {
-		elapsed := time.Now().Sub(form.Submitted).Hours()
+		elapsed := time.Since(form.Submitted).Hours()
 		if elapsed > 24 {
 			log.Println("deleting old FormData after", elapsed, "hrs")
 			delete(m.postedFormData.internalFormDataMap, key)

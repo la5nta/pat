@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"mime/multipart"
 	"net"
@@ -35,8 +36,9 @@ import (
 	"github.com/la5nta/wl2k-go/mailbox"
 )
 
-//go:embed res
-var staticContent embed.FS
+//go:embed web/res/**
+var embeddedFS embed.FS
+var staticContent fs.FS
 
 // Status represents a status report as sent to the Web GUI
 type Status struct {
@@ -70,6 +72,14 @@ type HTTPError struct {
 }
 
 var websocketHub *WSHub
+
+func init() {
+	var err error
+	staticContent, err = fs.Sub(embeddedFS, "web")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func ListenAndServe(addr string) error {
 	log.Printf("Starting HTTP service (http://%s)...", addr)
@@ -343,7 +353,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uiHandler(w http.ResponseWriter, _ *http.Request) {
-	data, err := staticContent.ReadFile(path.Join("res", "tmpl", "index.html"))
+	data, err := fs.ReadFile(staticContent, path.Join("res", "tmpl", "index.html"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "prettier": "^2.3.2"
+  },
+  "scripts": {
+    "format": "npx prettier -w res/tmpl/index.html res/js/index.js res/site.css"
+  }
+}

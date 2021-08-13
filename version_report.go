@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"time"
 
+	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/la5nta/pat/internal/directories"
 )
 
 func accountExistsCached(callsign string) (bool, error) {
@@ -21,7 +23,9 @@ func accountExistsCached(callsign string) (bool, error) {
 		AccountExists bool
 	}
 
-	f, err := os.OpenFile(path.Join(appDir, fmt.Sprintf(".cached_account_check_%s.json", callsign)), os.O_RDWR|os.O_CREATE, 0600)
+	fileName := fmt.Sprintf(".cached_account_check_%s.json", callsign)
+	filePath := filepath.Join(directories.StateDir(), fileName)
+	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return false, err
 	}
@@ -50,7 +54,8 @@ func accountExistsCached(callsign string) (bool, error) {
 
 func postVersionUpdate() error {
 	var lastUpdated time.Time
-	file, err := os.OpenFile(path.Join(appDir, "last_version_report.json"), os.O_RDWR|os.O_CREATE, 0600)
+	filePath := filepath.Join(directories.StateDir(), "last_version_report.json")
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
@@ -69,9 +74,9 @@ func postVersionUpdate() error {
 
 	v := cmsapi.VersionAdd{
 		Callsign: fOptions.MyCall,
-		Program:  AppName,
-		Version:  Version,
-		Comments: fmt.Sprintf("%s - %s/%s", GitRev, runtime.GOOS, runtime.GOARCH),
+		Program:  buildinfo.AppName,
+		Version:  buildinfo.Version,
+		Comments: fmt.Sprintf("%s - %s/%s", buildinfo.GitRev, runtime.GOOS, runtime.GOARCH),
 	}
 
 	if err := v.Post(); err != nil {

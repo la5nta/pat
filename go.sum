@@ -1,3 +1,5 @@
+github.com/adrg/xdg v0.3.3 h1:s/tV7MdqQnzB1nKY8aqHvAMD+uCiuEDzVB5HLRY849U=
+github.com/adrg/xdg v0.3.3/go.mod h1:61xAR2VZcggl2St4O9ohF5qCKe08+JDmE4VNzPFQvOQ=
 github.com/albenik/go-serial/v2 v2.1.0/go.mod h1:vEf+oJLIr+/ZoyTm39C5EjCeCwmkiuY4zsX7pqQ0wHk=
 github.com/albenik/go-serial/v2 v2.3.0 h1:3/PiNDdOI55JZ02ARpr8us2Az8W9lihdKNxKv+IvcuY=
 github.com/albenik/go-serial/v2 v2.3.0/go.mod h1:JUrQKdczCMB0FlXt2rlJJ8zbfFzmjTIAkLPyyVfr5ho=

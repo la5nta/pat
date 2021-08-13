@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/la5nta/pat/internal/buildinfo"
+
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/spf13/pflag"
 )
@@ -35,7 +37,6 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	fmt.Print(`To`)
 	if replyMsg != nil {
 		fmt.Printf(" [%s]", replyMsg.From())
-
 	}
 	fmt.Printf(": ")
 	to := readLine()
@@ -108,7 +109,7 @@ func composeMessage(replyMsg *fbb.Message) {
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	readLine()
 
-	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", AppName, time.Now().Unix())))
+	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", buildinfo.AppName, time.Now().Unix())))
 	if err != nil {
 		log.Fatalf("Unable to prepare temporary file for body: %s", err)
 	}
@@ -136,7 +137,7 @@ func composeMessage(replyMsg *fbb.Message) {
 		log.Fatalf("Unable to start body editor: %s", err)
 	}
 
-	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0666)
+	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0o666)
 	if err != nil {
 		log.Fatalf("Unable to read temporary file from editor: %s", err)
 	}

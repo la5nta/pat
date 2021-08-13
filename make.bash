@@ -6,7 +6,7 @@ export GO111MODULE=on
 if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
 
 GITREV=$(git rev-parse --short HEAD)
-VERSION=$(grep Version VERSION.go|cut -d '"' -f2)
+VERSION=$(grep "Version =" internal/buildinfo/VERSION.go|cut -d '"' -f2)
 
 # Go 1.16 or later is required
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
@@ -51,7 +51,7 @@ go test -tags "$TAGS" ./... github.com/la5nta/wl2k-go/...
 echo
 
 echo "Building Pat v$VERSION..."
-go build -tags "$TAGS" -ldflags "-X \"main.GitRev=$GITREV\"" $(go list .)
+go build -tags "$TAGS" -ldflags "-X \"github.com/la5nta/pat/internal/buildinfo.GitRev=$GITREV\"" $(go list .)
 
 # Build macOS pkg (amd64)
 if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then

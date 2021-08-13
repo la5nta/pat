@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/la5nta/pat/internal/buildinfo"
+
 	"github.com/la5nta/wl2k-go/fbb"
 )
 
@@ -77,8 +79,8 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	)
 
 	session.SetUserAgent(fbb.UserAgent{
-		Name:    AppName,
-		Version: Version,
+		Name:    buildinfo.AppName,
+		Version: buildinfo.Version,
 	})
 
 	if len(config.MOTD) > 0 {

@@ -26,14 +26,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/la5nta/pat/internal/buildinfo"
+	"github.com/la5nta/pat/internal/gpsd"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/microcosm-cc/bluemonday"
-
-	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 //go:embed web/res/**
@@ -358,13 +359,13 @@ func uiHandler(w http.ResponseWriter, _ *http.Request) {
 		log.Fatal(err)
 	}
 
-	t := template.New("index.html") //create a new template
+	t := template.New("index.html") // create a new template
 	t, err = t.Parse(string(data))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tmplData := struct{ AppName, Version, Mycall string }{AppName, versionString(), fOptions.MyCall}
+	tmplData := struct{ AppName, Version, Mycall string }{buildinfo.AppName, buildinfo.VersionString(), fOptions.MyCall}
 
 	err = t.Execute(w, tmplData)
 	if err != nil {
@@ -561,7 +562,6 @@ type JSONMessage struct {
 }
 
 func (m JSONMessage) MarshalJSON() ([]byte, error) {
-
 	msg := struct {
 		MID      string
 		Date     time.Time

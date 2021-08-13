@@ -12,23 +12,24 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/spf13/pflag"
+	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/buildinfo"
+	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/directories"
+	"github.com/la5nta/pat/internal/forms"
+	"github.com/la5nta/pat/internal/gpsd"
 
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
-
-	"github.com/la5nta/pat/cfg"
-	"github.com/la5nta/pat/internal/debug"
-	"github.com/la5nta/pat/internal/forms"
-	"github.com/la5nta/pat/internal/gpsd"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -143,7 +144,8 @@ var commands = []Command{
 		Str:  "version",
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
-			fmt.Printf("%s %s\n", AppName, versionString())
+			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
+			directories.PrintDirectories()
 		},
 	},
 	{
@@ -165,8 +167,6 @@ var (
 	listenHub    *ListenerHub
 	promptHub    *PromptHub
 	formsMgr     *forms.Manager
-
-	appDir string
 )
 
 var fOptions struct {
@@ -186,7 +186,7 @@ var fOptions struct {
 func optionsSet() *pflag.FlagSet {
 	set := pflag.NewFlagSet("options", pflag.ExitOnError)
 
-	defaultMBox, _ := mailbox.DefaultMailboxPath()
+	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
 
 	set.StringVar(&fOptions.MyCall, `mycall`, ``, `Your callsign (winlink user).`)
 	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).")
@@ -198,6 +198,7 @@ func optionsSet() *pflag.FlagSet {
 	set.BoolVarP(&fOptions.RadioOnly, `radio-only`, "", false, `Radio Only mode (Winlink Hybrid RMS only).`)
 	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Useful to improve s/n-ratio at remote winmor station)`)
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
+	debug.Printf("Mailbox dir is '%s'", fOptions.MailboxPath)
 
 	return set
 }
@@ -206,18 +207,15 @@ func init() {
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
 
-	var err error
-	appDir, err = mailbox.DefaultAppDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fOptions.ConfigPath = path.Join(appDir, "config.json")
-	fOptions.LogPath = path.Join(appDir, strings.ToLower(AppName+".log"))
-	fOptions.EventLogPath = path.Join(appDir, "eventlog.json")
+	directories.MigrateLegacyDataDir()
+	fOptions.ConfigPath = filepath.Join(directories.ConfigDir(), "config.json")
+	debug.Printf("Config file is '%s'", fOptions.ConfigPath)
+	fOptions.LogPath = filepath.Join(directories.StateDir(), strings.ToLower(buildinfo.AppName+".log"))
+	fOptions.EventLogPath = filepath.Join(directories.StateDir(), "eventlog.json")
+	debug.Printf("Log files dir is '%s'", directories.StateDir())
 
 	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", AppName)
+		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", buildinfo.AppName)
 		fmt.Fprintf(os.Stderr, "Usage:\n  %s [options] command [arguments]\n", os.Args[0])
 
 		fmt.Fprintln(os.Stderr, "\nCommands:")
@@ -234,7 +232,7 @@ func init() {
 func main() {
 	cmd, args := parseFlags(os.Args)
 
-	debug.Printf("Version: %s", versionString())
+	debug.Printf("Version: %s", buildinfo.VersionString())
 	debug.Printf("Command: %s %v", cmd.Str, args)
 
 	// Skip initialization for some commands
@@ -301,8 +299,8 @@ func main() {
 		FormsPath:  config.FormsPath,
 		MyCall:     fOptions.MyCall,
 		Locator:    config.Locator,
-		AppVersion: versionStringShort(),
-		UserAgent:  PatUserAgent,
+		AppVersion: buildinfo.VersionStringShort(),
+		UserAgent:  buildinfo.UserAgent(),
 		LineReader: readLine,
 	})
 
@@ -451,7 +449,7 @@ func cleanup() {
 
 func loadMBox() {
 	mbox = mailbox.NewDirHandler(
-		path.Join(fOptions.MailboxPath, fOptions.MyCall),
+		filepath.Join(fOptions.MailboxPath, fOptions.MyCall),
 		fOptions.SendOnly,
 	)
 
@@ -520,7 +518,7 @@ func extractMessageHandle(args []string) {
 	} else {
 		fmt.Println(msg)
 		for _, f := range msg.Files() {
-			if err := os.WriteFile(f.Name(), f.Data(), 0664); err != nil {
+			if err := os.WriteFile(f.Name(), f.Data(), 0o664); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -582,7 +580,7 @@ func posReportHandle(args []string) {
 
 		conn.Watch(true)
 
-		log.Println("Waiting for position from GPSd...") //TODO: Spinning bar?
+		log.Println("Waiting for position from GPSd...") // TODO: Spinning bar?
 		pos, err := conn.NextPos()
 		if err != nil {
 			log.Fatalf("GPSd: %s", err)
@@ -633,12 +631,4 @@ func postMessage(msg *fbb.Message) {
 		log.Fatal(err)
 	}
 	fmt.Println("Message posted")
-}
-
-func versionString() string {
-	return fmt.Sprintf("%s %s/%s - %s", versionStringShort(), runtime.GOOS, runtime.GOARCH, runtime.Version())
-}
-
-func versionStringShort() string {
-	return fmt.Sprintf("v%s (%s)", Version, GitRev)
 }

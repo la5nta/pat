@@ -1,12 +1,12 @@
-var wsURL = '';
-var posId = 0;
-var connectAliases;
-var mycall = '';
-var formsCatalog;
+let wsURL = '';
+let posId = 0;
+let connectAliases;
+let mycall = '';
+let formsCatalog;
 
-var uploadFiles = new Array();
-var statusPopoverDiv;
-var statusPos = $('#pos_status');
+const uploadFiles = new Array();
+let statusPopoverDiv;
+const statusPos = $('#pos_status');
 
 function initFrontend(ws_url) {
   wsURL = ws_url;
@@ -45,7 +45,7 @@ function initFrontend(ws_url) {
     });
     $('.navbar li').click(function (e) {
       $('.navbar li.active').removeClass('active');
-      var $this = $(this);
+      const $this = $(this);
       if (!$this.hasClass('active')) {
         $this.addClass('active');
       }
@@ -76,7 +76,7 @@ function initFrontend(ws_url) {
 
           if (navigator.geolocation) {
             statusPos.html('<strong>Waiting for position (geolocation)...</strong>');
-            var options = { enableHighAccuracy: true, maximumAge: 0 };
+            const options = { enableHighAccuracy: true, maximumAge: 0 };
             posId = navigator.geolocation.watchPosition(
               updatePositionGeolocation,
               handleGeolocationError,
@@ -139,15 +139,15 @@ function isNotificationsSupported() {
   return true;
 }
 
-var cancelCloseTimer = false;
+let cancelCloseTimer = false;
 
 function updateProgress(p) {
   cancelCloseTimer = !p.done;
 
   if (p.receiving || p.sending) {
-    percent = Math.ceil((p.bytes_transferred * 100) / p.bytes_total);
-    op = p.receiving ? 'Receiving' : 'Sending';
-    text = op + ' ' + p.mid + ' (' + p.bytes_total + ' bytes)';
+    const percent = Math.ceil((p.bytes_transferred * 100) / p.bytes_total);
+    const op = p.receiving ? 'Receiving' : 'Sending';
+    let text = op + ' ' + p.mid + ' (' + p.bytes_total + ' bytes)';
     if (p.subject) {
       text += ' - ' + htmlEscape(p.subject);
     }
@@ -206,7 +206,7 @@ function forgetFormData() {
   deleteCookie('forminstance');
 }
 
-var pollTimer;
+let pollTimer;
 
 function pollFormData() {
   $.get(
@@ -241,7 +241,7 @@ function initComposeModal() {
   $('#compose_btn').click(function (evt) {
     $('#composer').modal('toggle');
   });
-  var tokenfieldConfig = {
+  const tokenfieldConfig = {
     delimiter: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)
     inputType: 'email',
     createTokensOnBlur: true,
@@ -258,8 +258,8 @@ function initComposeModal() {
   });
 
   $('#composer_form').submit(function (e) {
-    var form = $('#composer_form');
-    var d = new Date().toJSON();
+    const form = $('#composer_form');
+    const d = new Date().toJSON();
     $('#msg_form_date').remove();
     form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '" />');
 
@@ -357,9 +357,9 @@ function updateForms() {
 }
 
 function setCookie(cname, cvalue, exdays) {
-  var d = new Date();
+  const d = new Date();
   d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
-  var expires = 'expires=' + d.toUTCString();
+  const expires = 'expires=' + d.toUTCString();
   document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/';
 }
 
@@ -369,16 +369,16 @@ function deleteCookie(cname) {
 
 function appendFormFolder(rootId, data) {
   if (data.folders && data.folders.length > 0 && data.form_count > 0) {
-    var rootAcc = `${rootId}Acc`;
+    const rootAcc = `${rootId}Acc`;
     $(`#${rootId}`).append(`
 			<div class="accordion" id="${rootAcc}">
 			</div>
 			`);
     data.folders.forEach(function (folder) {
       if (folder.form_count > 0) {
-        var folderNameId = rootId + folder.name.replace(/\s/g, '_').replace(/&/g, 'and');
-        var cardBodyId = folderNameId + 'Body';
-        var card = `
+        const folderNameId = rootId + folder.name.replace(/\s/g, '_').replace(/&/g, 'and');
+        const cardBodyId = folderNameId + 'Body';
+        const card = `
 				<div class="card">
 					<div class="card-header d-flex">
 						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
@@ -394,10 +394,10 @@ function appendFormFolder(rootId, data) {
         $(`#${rootAcc}`).append(card);
         appendFormFolder(`${cardBodyId}`, folder);
         if (folder.forms && folder.forms.length > 0) {
-          var cardBodyFormsId = `${cardBodyId}Forms`;
+          const cardBodyFormsId = `${cardBodyId}Forms`;
           $(`#${cardBodyId}`).append(`<div id="${cardBodyFormsId}" class="list-group"></div>`);
           folder.forms.forEach((form) => {
-            var pathEncoded = encodeURIComponent(form.initial_uri);
+            const pathEncoded = encodeURIComponent(form.initial_uri);
             $(`#${cardBodyFormsId}`).append(
               `<div class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching('/api/forms?formPath=${pathEncoded}');">${form.name}</div>`
             );
@@ -493,15 +493,15 @@ function updateConnectAliases() {
   $.getJSON('/api/connect_aliases', function (data) {
     connectAliases = data;
 
-    var select = $('#aliasSelect');
+    const select = $('#aliasSelect');
     Object.keys(data).forEach(function (key) {
       select.append('<option>' + key + '</option>');
     });
 
     select.change(function () {
       $('#aliasSelect option:selected').each(function () {
-        var alias = $(this).text();
-        var url = connectAliases[$(this).text()];
+        const alias = $(this).text();
+        const url = connectAliases[$(this).text()];
         setConnectValues(url);
         select.val('');
         select.selectpicker('refresh');
@@ -520,7 +520,7 @@ function setConnectValues(url) {
 
   $('#targetInput').val(url.path().substr(1));
 
-  var query = url.search(true);
+  const query = url.search(true);
 
   if (url.hasQuery('freq')) {
     $('#freqInput').val(query['freq']);
@@ -534,7 +534,7 @@ function setConnectValues(url) {
     $('#radioOnlyInput')[0].checked = false;
   }
 
-  var usri = '';
+  let usri = '';
   if (url.username()) {
     usri += url.username();
   }
@@ -552,10 +552,10 @@ function setConnectValues(url) {
 }
 
 function getConnectURL() {
-  var url =
+  let url =
     $('#transportSelect').val() + '://' + $('#addrInput').val() + '/' + $('#targetInput').val();
 
-  params = '';
+  let params = '';
 
   if ($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
     params += '&freq=' + $('#freqInput').val();
@@ -638,7 +638,7 @@ function onConnectInputChange() {
 }
 
 function refreshExtraInputGroups() {
-  var transport = $('#transportSelect').val();
+  const transport = $('#transportSelect').val();
   if (transport == 'telnet') {
     $('#freqInputDiv').hide();
     $('#freqInput').val('');
@@ -666,7 +666,7 @@ function handleGeolocationError(error) {
 }
 
 function updatePositionGeolocation(pos) {
-  var d = new Date(pos.timestamp);
+  const d = new Date(pos.timestamp);
   statusPos.html('Last position update ' + dateFormat(d) + '...');
   $('#pos_lat').val(pos.coords.latitude);
   $('#pos_long').val(pos.coords.longitude);
@@ -674,7 +674,7 @@ function updatePositionGeolocation(pos) {
 }
 
 function updatePositionGPS(pos) {
-  var d = new Date(pos.Time);
+  const d = new Date(pos.Time);
   statusPos.html('Last position update ' + dateFormat(d) + '...');
   $('#pos_lat').val(pos.Lat);
   $('#pos_long').val(pos.Lon);
@@ -682,7 +682,7 @@ function updatePositionGPS(pos) {
 }
 
 function postPosition() {
-  var pos = {
+  const pos = {
     lat: parseFloat($('#pos_lat').val()),
     lon: parseFloat($('#pos_long').val()),
     comment: $('#pos_comment').val(),
@@ -704,15 +704,15 @@ function postPosition() {
 }
 
 function previewAttachmentFiles() {
-  var files = $(this).get(0).files;
-  attachments = $('#composer_attachments');
-  for (var i = 0; i < files.length; i++) {
-    file = files.item(i);
+  const files = $(this).get(0).files;
+  let attachments = $('#composer_attachments');
+  for (let i = 0; i < files.length; i++) {
+    let file = files.item(i);
 
     uploadFiles[uploadFiles.length] = file;
 
     if (isImageSuffix(file.name)) {
-      var reader = new FileReader();
+      const reader = new FileReader();
       reader.onload = function (e) {
         attachments.append(
           '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
@@ -739,15 +739,15 @@ function previewAttachmentFiles() {
 }
 
 function notify(data) {
-  var options = {
+  const options = {
     body: data.body,
     icon: '/res/images/pat_logo.png',
   };
-  var n = new Notification(data.title, options);
+  const n = new Notification(data.title, options);
 }
 
 function alert(msg) {
-  var div = $('#navbar_status');
+  const div = $('#navbar_status');
   div.empty();
   div.append('<span class="navbar-text status-text">' + msg + '</p>');
   div.show();
@@ -757,10 +757,10 @@ function alert(msg) {
 }
 
 function updateStatus(data) {
-  var st = $('#status_text');
+  const st = $('#status_text');
   st.empty().off('click').attr('data-toggle', 'tooltip').attr('data-placement', 'bottom').tooltip();
 
-  onDisconnect = function () {
+  const onDisconnect = function () {
     st.tooltip('hide');
     disconnect(false, () => {
       // This will be reset by the next updateStatus when the session is aborted
@@ -795,7 +795,7 @@ function updateStatus(data) {
     });
   }
 
-  var n = data.http_clients.length;
+  const n = data.http_clients.length;
   statusPopoverDiv
     .find('#webserver_info')
     .find('.panel-body')
@@ -815,14 +815,14 @@ function closeComposer(clear) {
     $('#composer_attachments').empty();
 
     // Attachment input field
-    var attachments = $('#msg_attachments_input');
+    let attachments = $('#msg_attachments_input');
     attachments.replaceWith((attachments = attachments.clone(true)));
   }
   $('#composer').modal('hide');
 }
 
 function connect(evt) {
-  url = getConnectURL();
+  const url = getConnectURL();
 
   $('#connectModal').modal('hide');
 
@@ -852,7 +852,7 @@ function disconnect(dirty, successHandler) {
 }
 
 function updateGUIStatus() {
-  var color = 'success';
+  let color = 'success';
   statusPopoverDiv
     .find('.panel-info')
     .not('.hidden')
@@ -915,7 +915,7 @@ function showGUIStatus(e, show) {
   updateGUIStatus();
 }
 
-var ws;
+let ws;
 
 function initConsole() {
   if ('WebSocket' in window) {
@@ -927,7 +927,7 @@ function initConsole() {
       $('#console').empty();
     };
     ws.onmessage = function (evt) {
-      var msg = JSON.parse(evt.data);
+      const msg = JSON.parse(evt.data);
       if (msg.MyCall) {
         mycall = msg.MyCall;
       }
@@ -967,7 +967,7 @@ function initConsole() {
     };
   } else {
     // The browser doesn't support WebSocket
-    wsError = true;
+    let wsError = true;
     alert('Websocket not supported by your browser, please upgrade your browser.');
   }
 }
@@ -987,8 +987,8 @@ function processPromptQuery(p) {
 }
 
 function postPromptResponse() {
-  var id = $('#promptID').val();
-  var value = $('#promptResponseValue').val();
+  const id = $('#promptID').val();
+  const value = $('#promptResponseValue').val();
   $('#promptModal').modal('hide');
   ws.send(
     JSON.stringify({
@@ -1001,7 +1001,7 @@ function postPromptResponse() {
 }
 
 function updateConsole(msg) {
-  var pre = $('#console');
+  const pre = $('#console');
   pre.append('<span class="terminal">' + msg + '</span>');
   pre.scrollTop(pre.prop('scrollHeight'));
 }
@@ -1015,14 +1015,14 @@ const comparer = (idx, asc) => (a, b) =>
     getCellValue(asc ? b : a, idx)
   );
 
-var currentFolder;
+let currentFolder;
 
 function displayFolder(dir) {
   currentFolder = dir;
 
-  var is_from = dir == 'in' || dir == 'archive';
+  const is_from = dir == 'in' || dir == 'archive';
 
-  var table = $('#folder table');
+  const table = $('#folder table');
   table.empty();
   table.append(
     '<thead><tr><th></th><th>Subject</th>' +
@@ -1033,14 +1033,14 @@ function displayFolder(dir) {
       '<th>Date</th><th>Message ID</th></tr></thead><tbody></tbody>'
   );
 
-  var tbody = $('#folder table tbody');
+  const tbody = $('#folder table tbody');
 
   $.getJSON('/api/mailbox/' + dir, function (data) {
-    for (var i = 0; i < data.length; i++) {
-      var msg = data[i];
+    for (let i = 0; i < data.length; i++) {
+      const msg = data[i];
 
       //TODO: Cleanup (Sorry about this...)
-      var html =
+      let html =
         '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
       if (msg.Files.length > 0) {
         html += '<span class="glyphicon glyphicon-paperclip" />';
@@ -1061,7 +1061,7 @@ function displayFolder(dir) {
         : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>';
       html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
-      var elem = $(html);
+      const elem = $(html);
       tbody.append(elem);
       elem.click(function (evt) {
         displayMessage($(this));
@@ -1086,19 +1086,19 @@ function displayFolder(dir) {
 }
 
 function displayMessage(elem) {
-  var mid = elem.attr('ID');
-  var msg_url = '/api/mailbox/' + currentFolder + '/' + mid;
+  const mid = elem.attr('ID');
+  const msg_url = '/api/mailbox/' + currentFolder + '/' + mid;
 
   $.getJSON(msg_url, function (data) {
     elem.attr('class', 'info');
 
-    var view = $('#message_view');
+    const view = $('#message_view');
     view.find('#subject').text(data.Subject);
     view.find('#headers').empty();
     view.find('#headers').append('Date: ' + data.Date + '<br />');
     view.find('#headers').append('From: ' + data.From.Addr + '<br />');
     view.find('#headers').append('To: ');
-    for (var i = 0; data.To && i < data.To.length; i++) {
+    for (let i = 0; data.To && i < data.To.length; i++) {
       view
         .find('#headers')
         .append('<el>' + data.To[i].Addr + '</el>' + (data.To.length - 1 > i ? ', ' : ''));
@@ -1109,7 +1109,7 @@ function displayMessage(elem) {
 
     if (data.Cc) {
       view.find('#headers').append('<br />Cc: ');
-      for (var i = 0; i < data.Cc.length; i++) {
+      for (let i = 0; i < data.Cc.length; i++) {
         view
           .find('#headers')
           .append('<el>' + data.Cc[i].Addr + '</el>' + (data.Cc.length - 1 > i ? ', ' : ''));
@@ -1118,21 +1118,21 @@ function displayMessage(elem) {
 
     view.find('#body').html(data.BodyHTML);
 
-    var attachments = view.find('#attachments');
+    const attachments = view.find('#attachments');
     attachments.empty();
     if (!data.Files) {
       attachments.hide();
     } else {
       attachments.show();
     }
-    for (var i = 0; data.Files && i < data.Files.length; i++) {
-      var file = data.Files[i];
-      var formName = formXmlToFormName(file.Name);
-      var renderToHtml = 'false';
+    for (let i = 0; data.Files && i < data.Files.length; i++) {
+      const file = data.Files[i];
+      const formName = formXmlToFormName(file.Name);
+      let renderToHtml = 'false';
       if (formName) {
         renderToHtml = 'true';
       }
-      var attachUrl = msg_url + '/' + file.Name + '?rendertohtml=' + renderToHtml;
+      const attachUrl = msg_url + '/' + file.Name + '?rendertohtml=' + renderToHtml;
 
       if (isImageSuffix(file.Name)) {
         attachments.append(
@@ -1225,7 +1225,7 @@ function displayMessage(elem) {
 
     view.show();
     $('#message_view').modal('show');
-    mbox = currentFolder;
+    let mbox = currentFolder;
     if (!data.Read) {
       window.setTimeout(function () {
         setRead(mbox, data.MID);
@@ -1236,7 +1236,7 @@ function displayMessage(elem) {
 }
 
 function formXmlToFormName(fileName) {
-  var match = fileName.match(/^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i);
+  let match = fileName.match(/^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i);
   if (match) {
     return match[1];
   }
@@ -1250,22 +1250,22 @@ function formXmlToFormName(fileName) {
 }
 
 function showReplyForm(orgMsgUrl, msg) {
-  for (var i = 0; msg.Files && i < msg.Files.length; i++) {
-    var file = msg.Files[i];
-    var formName = formXmlToFormName(file.Name);
+  for (let i = 0; msg.Files && i < msg.Files.length; i++) {
+    const file = msg.Files[i];
+    const formName = formXmlToFormName(file.Name);
     if (!formName) {
       continue;
     }
     // retrieve form XML attachment and determine if it specifies a form-based reply
-    var attachUrl = orgMsgUrl + '/' + file.Name;
+    const attachUrl = orgMsgUrl + '/' + file.Name;
     $.get(
       attachUrl + '?rendertohtml=false&composereply=false',
       {},
       function (data) {
-        parser = new DOMParser();
-        xmlDoc = parser.parseFromString(data, 'text/xml');
+        let parser = new DOMParser();
+        let xmlDoc = parser.parseFromString(data, 'text/xml');
         if (xmlDoc) {
-          replyTmpl = xmlDoc.evaluate(
+          let replyTmpl = xmlDoc.evaluate(
             '/RMS_Express_Form/form_parameters/reply_template',
             xmlDoc,
             null,
@@ -1285,15 +1285,15 @@ function showReplyForm(orgMsgUrl, msg) {
 }
 
 function replyCarbonCopyList(msg) {
-  var addrs = msg.To;
+  let addrs = msg.To;
   if (msg.Cc != null && msg.Cc.length > 0) {
     addrs = addrs.concat(msg.Cc);
   }
-  var seen = {};
+  const seen = {};
   seen[mycall] = true;
   seen[msg.From.Addr] = true;
-  var strings = [];
-  for (var i = 0; i < addrs.length; i++) {
+  const strings = [];
+  for (let i = 0; i < addrs.length; i++) {
     if (seen[addrs[i].Addr]) {
       continue;
     }
@@ -1304,10 +1304,10 @@ function replyCarbonCopyList(msg) {
 }
 
 function quoteMsg(data) {
-  var output = '--- ' + data.Date + ' ' + data.From.Addr + ' wrote: ---\n';
+  let output = '--- ' + data.Date + ' ' + data.From.Addr + ' wrote: ---\n';
 
-  var lines = data.Body.split('\n');
-  for (var i = 0; i < lines.length; i++) {
+  const lines = data.Body.split('\n');
+  for (let i = 0; i < lines.length; i++) {
     output += '>' + lines[i] + '\n';
   }
   return output;
@@ -1337,7 +1337,7 @@ function archiveMessage(box, mid) {
 function deleteMessage(box, mid) {
   $('#confirm_delete').on('click', '.btn-ok', function (e) {
     $('#message_view').modal('hide');
-    var $modalDiv = $(e.delegateTarget);
+    const $modalDiv = $(e.delegateTarget);
     $.ajax('/api/mailbox/' + box + '/' + mid, {
       type: 'DELETE',
       success: function (resp) {
@@ -1354,7 +1354,7 @@ function deleteMessage(box, mid) {
 }
 
 function setRead(box, mid) {
-  var data = { read: true };
+  const data = { read: true };
 
   $.ajax('/api/mailbox/' + box + '/' + mid + '/read', {
     data: JSON.stringify(data),
@@ -1372,15 +1372,15 @@ function isImageSuffix(name) {
 }
 
 function dateFormat(previous) {
-  var current = new Date();
+  const current = new Date();
 
-  var msPerMinute = 60 * 1000;
-  var msPerHour = msPerMinute * 60;
-  var msPerDay = msPerHour * 24;
-  var msPerMonth = msPerDay * 30;
-  var msPerYear = msPerDay * 365;
+  const msPerMinute = 60 * 1000;
+  const msPerHour = msPerMinute * 60;
+  const msPerDay = msPerHour * 24;
+  const msPerMonth = msPerDay * 30;
+  const msPerYear = msPerDay * 365;
 
-  var elapsed = current - previous;
+  const elapsed = current - previous;
 
   if (elapsed < msPerDay) {
     return (

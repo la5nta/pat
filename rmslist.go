@@ -10,18 +10,17 @@ import (
 	"log"
 	"math"
 	"net/url"
-	"path"
-	"strings"
-
-	"github.com/spf13/pflag"
-
-	"github.com/la5nta/wl2k-go/mailbox"
-
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/directories"
+
 	"github.com/pd0mz/go-maidenhead"
+	"github.com/spf13/pflag"
 )
 
 type JSONURL struct{ url.URL }
@@ -120,16 +119,13 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
 	}
 
-	appDir, err := mailbox.DefaultAppDir()
-	if err != nil {
-		log.Fatal(err)
-	}
 	fileName := "rmslist"
 	isDefaultServiceCode := len(config.ServiceCodes) == 1 && config.ServiceCodes[0] == "PUBLIC"
 	if !isDefaultServiceCode {
 		fileName += "-" + strings.Join(config.ServiceCodes, "-")
 	}
-	filePath := path.Join(appDir, fileName+".json") // Should be moved to a tmp-folder, along with logfile.
+	filePath := filepath.Join(directories.DataDir(), fileName+".json")
+	debug.Printf("RMS list file is %s", filePath)
 
 	f, err := cmsapi.GetGatewayStatusCached(filePath, forceDownload, config.ServiceCodes...)
 	if err != nil {

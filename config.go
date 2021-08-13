@@ -14,12 +14,14 @@ import (
 	"strings"
 
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/directories"
 )
 
-func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error) {
-	config, err = ReadConfig(path)
+func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err error) {
+	config, err = ReadConfig(cfgPath)
 	if os.IsNotExist(err) {
-		return fallback, WriteConfig(fallback, path)
+		return fallback, WriteConfig(fallback, cfgPath)
 	} else if err != nil {
 		return config, err
 	}
@@ -42,18 +44,19 @@ func LoadConfig(path string, fallback cfg.Config) (config cfg.Config, err error)
 		config.Pactor = cfg.DefaultConfig.Pactor
 	}
 
-	//TODO: Remove after some release cycles (2019-09-29)
+	// TODO: Remove after some release cycles (2019-09-29)
 	if config.GPSdAddrLegacy != "" {
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
 
 	if config.FormsPath == "" {
-		config.FormsPath = cfg.DefaultConfig.FormsPath
+		config.FormsPath = filepath.Join(directories.DataDir(), "Standard_Forms")
 	} else {
 		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 		config.FormsPath = filepath.Clean(config.FormsPath)
 		config.FormsPath = strings.Replace(config.FormsPath, "\\", "/", -1)
 	}
+	debug.Printf("Forms dir is '%s'", config.FormsPath)
 
 	return config, nil
 }
@@ -86,7 +89,7 @@ func ReadConfig(path string) (config cfg.Config, err error) {
 		return
 	}
 
-	//TODO: Remove after some release cycles (2017-11-09)
+	// TODO: Remove after some release cycles (2017-11-09)
 	data, err = replaceDeprecatedCMSHostname(path, data)
 	if err != nil {
 		fmt.Println("Failed to rewrite deprecated CMS hostname:", err)
@@ -111,5 +114,5 @@ func WriteConfig(config cfg.Config, filePath string) error {
 	// Ensure path dir is available
 	os.Mkdir(path.Dir(filePath), os.ModePerm|os.ModeDir)
 
-	return os.WriteFile(filePath, b, 0600)
+	return os.WriteFile(filePath, b, 0o600)
 }

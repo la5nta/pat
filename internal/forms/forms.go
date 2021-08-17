@@ -31,9 +31,11 @@ import (
 	"github.com/dimchansky/utfbom"
 )
 
-const fieldValueFalseInXML = "False"
-const txtFileExt = ".txt"
-const formsVersionInfoUrl = "https://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
+const (
+	fieldValueFalseInXML = "False"
+	txtFileExt           = ".txt"
+	formsVersionInfoURL  = "https://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
+)
 
 // Manager manages the forms subsystem
 // When the web frontend POSTs the form template data, this map holds the POST'ed data.
@@ -108,7 +110,7 @@ var client = httpClient{http.Client{Timeout: 10 * time.Second}}
 
 // NewManager instantiates the forms manager
 func NewManager(conf Config) *Manager {
-	_ = os.MkdirAll(conf.FormsPath, 0755)
+	_ = os.MkdirAll(conf.FormsPath, 0o755)
 	retval := &Manager{
 		config: conf,
 	}
@@ -180,7 +182,6 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		IsReply:     composeReply,
 		FormsMgr:    m,
 	}.build()
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
@@ -293,7 +294,7 @@ func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
 }
 
 func (m *Manager) getLatestFormsInfo() (string, string, error) {
-	resp, err := client.Get(m, formsVersionInfoUrl)
+	resp, err := client.Get(m, formsVersionInfoURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("can't fetch winlink forms version page: %w", err)
 	}
@@ -313,9 +314,9 @@ func (m *Manager) getLatestFormsInfo() (string, string, error) {
 		return "", "", errors.New("can't scrape the version info page, HTML structure may have changed")
 	}
 	newestVersion := versionMatches[1]
-	docId := downloadMatches[1]
+	docID := downloadMatches[1]
 	auth := downloadMatches[2]
-	downloadLink := "https://api.onedrive.com/v1.0/shares/" + docId + "/root/content?e=" + auth
+	downloadLink := "https://api.onedrive.com/v1.0/shares/" + docID + "/root/content?e=" + auth
 	return newestVersion, downloadLink, nil
 }
 
@@ -336,7 +337,7 @@ func (m *Manager) downloadAndUnzipForms(downloadLink string) error {
 	zipBytes, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	zipFilePath := path.Join(dir, filename)
-	err = os.WriteFile(zipFilePath, zipBytes, 0600)
+	err = os.WriteFile(zipFilePath, zipBytes, 0o600)
 	if err != nil {
 		return fmt.Errorf("can't write update ZIP: %w", err)
 	}
@@ -357,7 +358,7 @@ func unzip(src, dest string) error {
 	}
 	defer r.Close()
 
-	_ = os.MkdirAll(dest, 0755)
+	_ = os.MkdirAll(dest, 0o755)
 
 	// Closure to address file descriptors issue with all the deferred .Close() methods
 	extractAndWriteFile := func(f *zip.File) error {
@@ -418,7 +419,6 @@ func (m *Manager) GetXMLAttachmentNameForForm(f Form, isReply bool) string {
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
 func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (string, error) {
-
 	type Node struct {
 		XMLName xml.Name
 		Content []byte `xml:",innerxml"`
@@ -429,7 +429,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (stri
 
 	contentData, err := io.ReadAll(sr)
 	if err != nil {
-		return "", fmt.Errorf("error reading sanitized form xml: %s", err)
+		return "", fmt.Errorf("error reading sanitized form xml: %w", err)
 	}
 
 	if !utf8.Valid(contentData) {
@@ -489,7 +489,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (stri
 		// authoring a form reply
 		formRelPath = form.ReplyInitialURI
 	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
-		//viewing a form reply
+		// viewing a form reply
 		formRelPath = form.ReplyViewerURI
 	default:
 		// viewing a form
@@ -507,7 +507,6 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (stri
 
 // ComposeForm combines all data needed for the whole form-based message: subject, body, and attachment
 func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, error) {
-
 	formFolder, err := m.buildFormFolder()
 	if err != nil {
 		log.Printf("can't build form folder tree %s", err)
@@ -536,7 +535,6 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 		IsReply:     false,
 		FormsMgr:    m,
 	}.build()
-
 	if err != nil {
 		log.Printf("Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
 		return MessageForm{}, err
@@ -757,19 +755,19 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
 	for scanner.Scan() {
 		l := scanner.Text()
-		l = strings.Replace(l, "http://{FormServer}:{FormPort}", formDestURL, -1)
+		l = strings.ReplaceAll(l, "http://{FormServer}:{FormPort}", formDestURL)
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
-		l = strings.Replace(l, "http://localhost:8001", formDestURL, -1)
-		l = strings.Replace(l, "{MsgSender}", m.config.MyCall, -1)
-		l = strings.Replace(l, "{Callsign}", m.config.MyCall, -1)
-		l = strings.Replace(l, "{ProgramVersion}", "Pat "+m.config.AppVersion, -1)
-		l = strings.Replace(l, "{DateTime}", nowDateTime, -1)
-		l = strings.Replace(l, "{UDateTime}", nowDateTimeUTC, -1)
-		l = strings.Replace(l, "{Date}", nowDate, -1)
-		l = strings.Replace(l, "{UDate}", nowDateUTC, -1)
-		l = strings.Replace(l, "{UDTG}", udtg, -1)
-		l = strings.Replace(l, "{Time}", nowTime, -1)
-		l = strings.Replace(l, "{UTime}", nowTimeUTC, -1)
+		l = strings.ReplaceAll(l, "http://localhost:8001", formDestURL)
+		l = strings.ReplaceAll(l, "{MsgSender}", m.config.MyCall)
+		l = strings.ReplaceAll(l, "{Callsign}", m.config.MyCall)
+		l = strings.ReplaceAll(l, "{ProgramVersion}", "Pat "+m.config.AppVersion)
+		l = strings.ReplaceAll(l, "{DateTime}", nowDateTime)
+		l = strings.ReplaceAll(l, "{UDateTime}", nowDateTimeUTC)
+		l = strings.ReplaceAll(l, "{Date}", nowDate)
+		l = strings.ReplaceAll(l, "{UDate}", nowDateUTC)
+		l = strings.ReplaceAll(l, "{UDTG}", udtg)
+		l = strings.ReplaceAll(l, "{Time}", nowTime)
+		l = strings.ReplaceAll(l, "{UTime}", nowTimeUTC)
 		if placeholderRegEx != nil {
 			l = fillPlaceholders(l, placeholderRegEx, formVars)
 		}
@@ -797,13 +795,13 @@ func (m *Manager) getFormsVersion() string {
 			}
 			continue
 		}
-		defer f.Close()
 		// found and opened the version file
 		verFile = f
 		break
 	}
 
 	if verFile != nil {
+		defer verFile.Close()
 		return readFileFirstLine(verFile)
 	}
 	return "unknown"
@@ -825,9 +823,8 @@ type formMessageBuilder struct {
 	FormsMgr    *Manager
 }
 
-//build returns message subject, body, and XML attachment content for the given template and variable map
+// build returns message subject, body, and XML attachment content for the given template and variable map
 func (b formMessageBuilder) build() (MessageForm, error) {
-
 	tmplPath := filepath.Join(b.FormsMgr.config.FormsPath, b.Template.TxtFileURI)
 	if filepath.Ext(tmplPath) == "" {
 		tmplPath += txtFileExt
@@ -912,7 +909,6 @@ func (b formMessageBuilder) initFormValues() {
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
-
 	infile, err := os.Open(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
@@ -926,8 +922,8 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		lineTmpl = strings.Replace(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall, -1)
-		lineTmpl = strings.Replace(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion, -1)
+		lineTmpl = strings.ReplaceAll(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall)
+		lineTmpl = strings.ReplaceAll(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion)
 		if strings.HasPrefix(lineTmpl, "Form:") ||
 			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
 			strings.HasPrefix(lineTmpl, "To:") ||
@@ -980,7 +976,7 @@ func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) str
 	for _, match := range matches {
 		value, ok := values[strings.ToLower(match[1])]
 		if ok {
-			result = strings.Replace(result, match[0], value, -1)
+			result = strings.ReplaceAll(result, match[0], value)
 		}
 	}
 	return result
@@ -1003,11 +999,11 @@ func (m *Manager) isNewerVersion(newestVersion string) bool {
 	cv := strings.Split(currentVersion, ".")
 	nv := strings.Split(newestVersion, ".")
 	for i := 0; i < 4; i++ {
-		var cp int64 = 0
+		var cp int64
 		if len(cv) > i {
 			cp, _ = strconv.ParseInt(cv[i], 10, 16)
 		}
-		var np int64 = 0
+		var np int64
 		if len(nv) > i {
 			np, _ = strconv.ParseInt(nv[i], 10, 16)
 		}

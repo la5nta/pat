@@ -20,9 +20,9 @@ const (
 	Mode3D
 )
 
-var ErrUnsupportedProtocolVersion = errors.New("Unsupported protocol version")
+var ErrUnsupportedProtocolVersion = errors.New("unsupported protocol version")
 
-// Objects implementing the Positioner interface provides geographic positioning data.
+// Positioner implementations provide geographic positioning data.
 //
 // This is particularly useful for testing if an object returned by Next can be used to determine the device position.
 type Positioner interface {
@@ -30,7 +30,7 @@ type Positioner interface {
 	HasFix() bool
 }
 
-// Position holds geopgraphic positioning data.
+// Position holds geographic positioning data.
 type Position struct {
 	Lat, Lon float64   // Latitude/longitude in degrees. +/- signifies north/south.
 	Alt      float64   // Altitude in meters.
@@ -65,7 +65,7 @@ func Dial(addr string) (*Conn, error) {
 	err = json.NewDecoder(c.rd).Decode(&c.Version)
 	if err != nil || c.Version.Release == "" {
 		tcpConn.Close()
-		return nil, errors.New("Unexpected server response")
+		return nil, errors.New("unexpected server response")
 	}
 
 	if c.Version.ProtoMajor < 3 {
@@ -158,8 +158,8 @@ func (c *Conn) next() (interface{}, error) {
 }
 
 var (
-	ErrTimeout          = errors.New("Timeout")
-	ErrWatchModeEnabled = errors.New("Operation not available while in watch mode")
+	ErrTimeout          = errors.New("timeout")
+	ErrWatchModeEnabled = errors.New("operation not available while in watch mode")
 )
 
 // NextPos returns the next reported position.
@@ -179,7 +179,8 @@ func (c *Conn) NextPosTimeout(timeout time.Duration) (Position, error) {
 
 	for {
 		obj, err := c.Next()
-		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		var netErr net.Error
+		if ok := errors.As(err, &netErr); ok && netErr.Timeout() {
 			return Position{}, ErrTimeout
 		} else if err != nil {
 			return Position{}, err
@@ -229,7 +230,7 @@ func (c *Conn) send(s string, params ...interface{}) error {
 }
 
 func errUnexpected(err error) error {
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		err = io.ErrUnexpectedEOF
 	}
 	return err

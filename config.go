@@ -54,7 +54,7 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	} else {
 		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 		config.FormsPath = filepath.Clean(config.FormsPath)
-		config.FormsPath = strings.Replace(config.FormsPath, "\\", "/", -1)
+		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
 	}
 	debug.Printf("Forms dir is '%s'", config.FormsPath)
 
@@ -69,7 +69,7 @@ func replaceDeprecatedCMSHostname(path string, data []byte) ([]byte, error) {
 		return data, nil
 	}
 
-	data = bytes.Replace(data, []byte(o), []byte(n), -1)
+	data = bytes.ReplaceAll(data, []byte(o), []byte(n))
 
 	f, err := os.Open(path)
 	if err != nil {

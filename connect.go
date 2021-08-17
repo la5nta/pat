@@ -65,11 +65,11 @@ func Connect(connectStr string) (success bool) {
 			return
 		}
 	case "pactor":
-		pt_cmdinit := ""
+		ptCmdInit := ""
 		if val, ok := url.Params["init"]; ok {
-			pt_cmdinit = strings.Join(val, "\n")
+			ptCmdInit = strings.Join(val, "\n")
 		}
-		if err := initPactorModem(pt_cmdinit); err != nil {
+		if err := initPactorModem(ptCmdInit); err != nil {
 			log.Println(err)
 			return
 		}
@@ -83,9 +83,9 @@ func Connect(connectStr string) (success bool) {
 	// Set default host interface address
 	if url.Host == "" {
 		switch url.Scheme {
-		case "ax25":
+		case MethodAX25:
 			url.Host = config.AX25.Port
-		case "serial-tnc":
+		case MethodSerialTNC:
 			url.Host = config.SerialTNC.Path
 			if config.SerialTNC.Baudrate > 0 {
 				url.Params.Set("hbaud", fmt.Sprint(config.SerialTNC.Baudrate))
@@ -177,7 +177,7 @@ func qsy(method, addr string) (revert func(), err error) {
 	if err != nil {
 		return noop, err
 	} else if !ok {
-		return noop, fmt.Errorf("Hamlib rig '%s' not loaded.", rigName)
+		return noop, fmt.Errorf("hamlib rig '%s' not loaded", rigName)
 	}
 
 	log.Printf("QSY %s: %s", method, addr)
@@ -221,7 +221,7 @@ func initWinmorTNC() error {
 	var err error
 	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
 	if err != nil {
-		return fmt.Errorf("WINMOR TNC initialization failed: %s", err)
+		return fmt.Errorf("WINMOR TNC initialization failed: %w", err)
 	}
 
 	if config.Winmor.DriveLevel != 0 {
@@ -244,7 +244,7 @@ func initWinmorTNC() error {
 
 	rig, ok := rigs[config.Winmor.Rig]
 	if !ok {
-		return fmt.Errorf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Winmor.Rig)
+		return fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", config.Winmor.Rig)
 	}
 	wmTNC.SetPTT(rig)
 
@@ -263,17 +263,17 @@ func initArdopTNC() error {
 	var err error
 	adTNC, err = ardop.OpenTCP(config.Ardop.Addr, fOptions.MyCall, config.Locator)
 	if err != nil {
-		return fmt.Errorf("ARDOP TNC initialization failed: %s", err)
+		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
 	}
 
 	if !config.Ardop.ARQBandwidth.IsZero() {
 		if err := adTNC.SetARQBandwidth(config.Ardop.ARQBandwidth); err != nil {
-			return fmt.Errorf("Unable to set ARQ bandwidth for ardop TNC: %s", err)
+			return fmt.Errorf("unable to set ARQ bandwidth for ardop TNC: %w", err)
 		}
 	}
 
 	if err := adTNC.SetCWID(config.Ardop.CWID); err != nil {
-		return fmt.Errorf("Unable to configure CWID for ardop TNC: %s", err)
+		return fmt.Errorf("unable to configure CWID for ardop TNC: %w", err)
 	}
 
 	if v, err := adTNC.Version(); err != nil {
@@ -290,7 +290,7 @@ func initArdopTNC() error {
 
 	rig, ok := rigs[config.Ardop.Rig]
 	if !ok {
-		return fmt.Errorf("Unable to set PTT rig '%s': Not defined or not loaded.", config.Ardop.Rig)
+		return fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", config.Ardop.Rig)
 	}
 
 	adTNC.SetPTT(rig)
@@ -304,7 +304,7 @@ func initPactorModem(cmdlineinit string) error {
 	var err error
 	pModem, err = pactor.OpenModem(config.Pactor.Path, config.Pactor.Baudrate, fOptions.MyCall, config.Pactor.InitScript, cmdlineinit)
 	if err != nil || pModem == nil {
-		return fmt.Errorf("Pactor initialization failed: %s", err)
+		return fmt.Errorf("pactor initialization failed: %w", err)
 	}
 
 	transport.RegisterDialer("pactor", pModem)

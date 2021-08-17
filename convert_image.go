@@ -7,13 +7,12 @@ package main
 import (
 	"bytes"
 	"image"
+	_ "image/gif"
 	"image/jpeg"
+	_ "image/png"
 	"mime"
 	"path"
 	"strings"
-
-	_ "image/gif"
-	_ "image/png"
 
 	"github.com/nfnt/resize"
 )

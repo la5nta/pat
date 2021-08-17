@@ -17,7 +17,7 @@ type EventLogger struct {
 }
 
 func NewEventLogger(path string) (*EventLogger, error) {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o666)
 	return &EventLogger{file, json.NewEncoder(file)}, err
 }
 

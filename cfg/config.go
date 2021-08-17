@@ -245,7 +245,7 @@ type GPSdConfig struct {
 	Addr string `json:"addr"`
 }
 
-var DefaultConfig Config = Config{
+var DefaultConfig = Config{
 	MOTD:         []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs:     []AuxAddr{},
 	ServiceCodes: []string{"PUBLIC"},

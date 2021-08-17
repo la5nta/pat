@@ -287,7 +287,7 @@ func main() {
 
 	// Replace placeholders in connect aliases
 	for k, v := range config.ConnectAliases {
-		config.ConnectAliases[k] = strings.Replace(v, cfg.PlaceholderMycall, fOptions.MyCall, -1)
+		config.ConnectAliases[k] = strings.ReplaceAll(v, cfg.PlaceholderMycall, fOptions.MyCall)
 	}
 
 	if fOptions.Listen == "" && len(config.Listen) > 0 {
@@ -462,20 +462,20 @@ func loadMBox() {
 func loadHamlibRigs() map[string]hamlib.VFO {
 	rigs := make(map[string]hamlib.VFO, len(config.HamlibRigs))
 
-	for name, cfg := range config.HamlibRigs {
-		if cfg.Address == "" {
+	for name, conf := range config.HamlibRigs {
+		if conf.Address == "" {
 			log.Printf("Missing address-field for rig '%s', skipping.", name)
 			continue
 		}
 
-		rig, err := hamlib.Open(cfg.Network, cfg.Address)
+		rig, err := hamlib.Open(conf.Network, conf.Address)
 		if err != nil {
 			log.Printf("Initialization hamlib rig %s failed: %s.", name, err)
 			continue
 		}
 
 		var vfo hamlib.VFO
-		switch strings.ToUpper(cfg.VFO) {
+		switch strings.ToUpper(conf.VFO) {
 		case "A", "VFOA":
 			vfo, err = rig.VFOA()
 		case "B", "VFOB":
@@ -483,7 +483,7 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 		case "":
 			vfo = rig.CurrentVFO()
 		default:
-			log.Printf("Cannot load rig '%s': Unrecognized VFO identifier '%s'", name, cfg.VFO)
+			log.Printf("Cannot load rig '%s': Unrecognized VFO identifier '%s'", name, conf.VFO)
 			continue
 		}
 

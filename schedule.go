@@ -5,9 +5,10 @@
 package main
 
 import (
-	"github.com/gorhill/cronexpr"
 	"log"
 	"time"
+
+	"github.com/gorhill/cronexpr"
 )
 
 type Job struct {

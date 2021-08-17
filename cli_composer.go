@@ -117,11 +117,10 @@ func composeMessage(replyMsg *fbb.Message) {
 	if replyMsg != nil {
 		fmt.Fprintf(f, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
 		body, _ := replyMsg.Body()
-		orig := ">" + strings.Replace(
+		orig := ">" + strings.ReplaceAll(
 			strings.TrimSpace(body),
 			"\n",
 			"\n>",
-			-1,
 		) + "\n"
 		f.Write([]byte(orig))
 		f.Sync()

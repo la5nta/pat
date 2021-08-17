@@ -126,7 +126,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	stop := handleInterrupt()
 	defer close(stop)
 
-	startTs := time.Now()
+	start := time.Now()
 
 	stats, err := session.Exchange(conn)
 	if fbb.IsLoginFailure(err) {
@@ -150,7 +150,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 		"local_addr":          conn.LocalAddr().String(),
 		"sent":                stats.Sent,
 		"received":            stats.Received,
-		"start":               startTs.Unix(),
+		"start":               start.Unix(),
 		"end":                 time.Now().Unix(),
 		"success":             err == nil,
 	}

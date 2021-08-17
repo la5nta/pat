@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var ErrNoCmd = fmt.Errorf("No CMD")
+var ErrNoCmd = fmt.Errorf("no cmd")
 
 type Command struct {
 	Str        string

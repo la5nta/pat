@@ -167,7 +167,7 @@ func handleInterrupt() (stop chan struct{}) {
 	stop = make(chan struct{})
 
 	go func() {
-		sig := make(chan os.Signal)
+		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, os.Interrupt)
 		defer func() { signal.Stop(sig); close(sig) }()
 

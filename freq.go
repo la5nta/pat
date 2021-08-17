@@ -103,10 +103,10 @@ func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool,
 	case MethodPactor:
 		rig = config.Pactor.Rig
 	default:
-		return vfo, "", false, fmt.Errorf("Not supported with transport '%s'", transport)
+		return vfo, "", false, fmt.Errorf("not supported with transport '%s'", transport)
 	}
 	if rig == "" {
-		return vfo, "", false, fmt.Errorf("Missing rig reference in config section for %s", transport)
+		return vfo, "", false, fmt.Errorf("missing rig reference in config section for %s", transport)
 	}
 	vfo, ok = rigs[rig]
 	return vfo, rig, ok, nil
@@ -141,7 +141,7 @@ func freq(param string) {
 func setFreq(rig hamlib.VFO, freq string) (newFreq, oldFreq int, err error) {
 	oldFreq, err = rig.GetFreq()
 	if err != nil {
-		return 0, 0, fmt.Errorf("Unable to get rig frequency: %s", err)
+		return 0, 0, fmt.Errorf("unable to get rig frequency: %w", err)
 	}
 
 	f, err := strconv.ParseFloat(freq, 64)

@@ -45,11 +45,9 @@ params:
 `
 )
 
-var (
-	ExamplePosition = `
+var ExamplePosition = `
   position -c "QRV 145.500MHz"       Send position and comment with coordinates retrieved from GPSd.
   position --latlon 59.123,005.123   Send position 59.123N 005.123E.
   position --latlon 40.704,-73.945   Send position 40.704N 073.945W.
   position --latlon -10.123,-60.123  Send position 10.123S 060.123W.
 `
-)

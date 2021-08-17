@@ -36,13 +36,13 @@ func NewPromptHub() *PromptHub { p := new(PromptHub); go p.loop(); return p }
 func (p *PromptHub) OmitTerminal(t bool) { p.omitTerminal = t }
 
 func (p *PromptHub) loop() {
-	p.c = make(chan *Prompt, 0)
-	p.rc = make(chan PromptResponse, 0)
+	p.c = make(chan *Prompt)
+	p.rc = make(chan PromptResponse)
 	for prompt := range p.c {
 		timeout := time.After(prompt.Deadline.Sub(time.Now()))
 		select {
 		case <-timeout:
-			prompt.resp <- PromptResponse{ID: prompt.ID, Err: fmt.Errorf("Deadline reached")}
+			prompt.resp <- PromptResponse{ID: prompt.ID, Err: fmt.Errorf("deadline reached")}
 			close(prompt.cancel)
 		case resp := <-p.rc:
 			if resp.ID != prompt.ID {

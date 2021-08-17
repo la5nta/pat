@@ -39,6 +39,7 @@ import (
 
 //go:embed web/res/**
 var embeddedFS embed.FS
+
 var staticContent fs.FS
 
 // Status represents a status report as sent to the Web GUI
@@ -746,8 +747,8 @@ func blockquoteDepth(str string) (n int) {
 
 // htmlEncode encodes html characters
 func htmlEncode(str string) string {
-	str = strings.Replace(str, ">", "&gt;", -1)
-	str = strings.Replace(str, "<", "&lt;", -1)
+	str = strings.ReplaceAll(str, ">", "&gt;")
+	str = strings.ReplaceAll(str, "<", "&lt;")
 	return str
 }
 

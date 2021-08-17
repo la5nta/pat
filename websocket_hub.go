@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -59,7 +60,7 @@ func (w *WSHub) WriteJSON(v interface{}) {
 	}
 
 	w.mu.Lock()
-	for c, _ := range w.pool {
+	for c := range w.pool {
 		select {
 		case c.out <- v:
 		case <-time.After(3 * time.Second):
@@ -78,7 +79,7 @@ func (w *WSHub) ClientAddrs() []string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	addrs := make([]string, 0, len(w.pool))
-	for c, _ := range w.pool {
+	for c := range w.pool {
 		addrs = append(addrs, c.conn.RemoteAddr().String())
 	}
 	return addrs
@@ -171,8 +172,8 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 			c.conn.Close()
 			w.mu.Lock()
 			delete(w.pool, c)
-			defer w.UpdateStatus()
 			w.mu.Unlock()
+			w.UpdateStatus()
 			return
 		}
 	}
@@ -201,7 +202,7 @@ func tailFile(path string) (<-chan []byte, chan<- struct{}, error) {
 		rd := bufio.NewReader(file)
 		for {
 			data, _, err := rd.ReadLine()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				time.Sleep(time.Millisecond * 100)
 				continue
 			}
@@ -215,7 +216,7 @@ func tailFile(path string) (<-chan []byte, chan<- struct{}, error) {
 		}
 	}()
 
-	return (<-chan []byte)(lines), (chan<- struct{})(done), nil
+	return lines, done, nil
 }
 
 func handleWSMessage(v map[string]json.RawMessage) {

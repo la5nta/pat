@@ -112,8 +112,8 @@ func printMsg(w io.Writer, msg *fbb.Message) {
 }
 
 func printMailboxes(w io.Writer) {
-	for i, mailbox := range mailboxes {
-		fmt.Fprintf(w, "%d:%s\t", i, mailbox)
+	for i, mbox := range mailboxes {
+		fmt.Fprintf(w, "%d:%s\t", i, mbox)
 	}
 }
 
@@ -125,7 +125,7 @@ func printMessages(w io.Writer, msgs []*fbb.Message) {
 			to = msg.To()[0].Addr
 		}
 		if len(msg.To()) > 1 {
-			to = to + ", ..."
+			to += ", ..."
 		}
 
 		var flags string

@@ -22,7 +22,7 @@ const (
 	PathGatewayStatus = "/gateway/status.json"
 	PathAccountExists = "/account/exists"
 
-	// Issued December 2017 by the WDT for use with Pat
+	// AccessKey issued December 2017 by the WDT for use with Pat
 	AccessKey = "1880278F11684B358F36845615BD039A"
 )
 
@@ -37,8 +37,8 @@ func (v VersionAdd) Post() error {
 	b, _ := json.Marshal(v)
 	buf := bytes.NewBuffer(b)
 
-	url := RootURL + PathVersionAdd + "?key=" + AccessKey
-	req, _ := http.NewRequest("POST", url, buf)
+	versionURL := RootURL + PathVersionAdd + "?key=" + AccessKey
+	req, _ := http.NewRequest("POST", versionURL, buf)
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("accept", "application/json")
 
@@ -61,8 +61,8 @@ func (v VersionAdd) Post() error {
 }
 
 func AccountExists(callsign string) (bool, error) {
-	url := RootURL + PathAccountExists + "?key=" + AccessKey + "&callsign=" + url.QueryEscape(callsign)
-	req, _ := http.NewRequest("GET", url, nil)
+	accountURL := RootURL + PathAccountExists + "?key=" + AccessKey + "&callsign=" + url.QueryEscape(callsign)
+	req, _ := http.NewRequest("GET", accountURL, nil)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -134,7 +134,7 @@ func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io
 	case err != nil:
 		return nil, err
 	case resp.StatusCode != http.StatusOK:
-		return nil, fmt.Errorf("Unexpected http status '%s'.", resp.Status)
+		return nil, fmt.Errorf("unexpected http status '%v'", resp.Status)
 	}
 
 	return resp.Body, err

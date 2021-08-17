@@ -79,7 +79,7 @@ type Device struct {
 	Parity   string `json:"parity"`
 	StopBits int    `json:"stopbits"`
 
-	//Activated time.Time `json:"activated,omitempty"` (Must parse as fractional epoch time)
+	// Activated time.Time `json:"activated,omitempty"` (Must parse as fractional epoch time)
 }
 
 type watch struct {

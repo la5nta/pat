@@ -11,7 +11,7 @@ import (
 func RaiseOpenFileLimit(max uint64) error {
 	var limit syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
-		return fmt.Errorf("Could not get current limit: %v", err)
+		return fmt.Errorf("could not get current limit: %w", err)
 	}
 	if limit.Cur >= limit.Max || limit.Cur >= max {
 		return nil

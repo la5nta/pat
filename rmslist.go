@@ -137,7 +137,7 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 		return nil, err
 	}
 
-	slice := []RMS{}
+	var slice []RMS
 	for _, gw := range status.Gateways {
 		for _, channel := range gw.Channels {
 			r := RMS{
@@ -147,8 +147,8 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 				Freq:       Frequency(channel.Frequency),
 				Dial:       Frequency(channel.Frequency).Dial(channel.SupportedModes),
 			}
-			if url := toURL(channel, gw.Callsign); url != nil {
-				r.URL = &JSONURL{*url}
+			if chURL := toURL(channel, gw.Callsign); chURL != nil {
+				r.URL = &JSONURL{*chURL}
 			}
 			hasLocator := me != maidenhead.Point{}
 			if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil && hasLocator {
@@ -166,8 +166,8 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 
 func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
-	url, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetcall, freq.KHz()))
-	return url
+	chURL, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetcall, freq.KHz()))
+	return chURL
 }
 
 var transports = []string{"winmor", "ax25", "pactor", "ardop"}

@@ -115,8 +115,12 @@ func (w *WSHub) watchMBox() {
 	for {
 		select {
 		// Filesystem events
-		case <-fsWatcher.Events:
-			drainEvents(fsWatcher)
+		case e := <-fsWatcher.Events:
+			if e.Op == fsnotify.Chmod {
+				continue
+			}
+			// Make sure we don't send many of these events over a short period.
+			drainUntilSilence(fsWatcher, 100*time.Millisecond)
 			websocketHub.WriteJSON(struct {
 				UpdateMailbox bool
 			}{true})
@@ -179,11 +183,18 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 	}
 }
 
-func drainEvents(w *fsnotify.Watcher) {
+// drainEvents reads from w.Events and blocks until the channel has been silent for at least 50 ms.
+func drainUntilSilence(w *fsnotify.Watcher, silenceDur time.Duration) {
+	timer := time.NewTimer(silenceDur)
+	defer timer.Stop()
 	for {
 		select {
 		case <-w.Events:
-		default:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timer.Reset(silenceDur)
+		case <-timer.C:
 			return
 		}
 	}

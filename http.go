@@ -40,7 +40,7 @@ import (
 //go:embed web/res/**
 var embeddedFS embed.FS
 
-var staticContent fs.FS
+var ErrNotFound = HTTPError{errors.New("Not found"), http.StatusNotFound}
 
 // Status represents a status report as sent to the Web GUI
 type Status struct {
@@ -73,14 +73,29 @@ type HTTPError struct {
 	StatusCode int
 }
 
+type JSONHandlerFunc func(w http.ResponseWriter, req *http.Request) (interface{}, error)
+
+func (h JSONHandlerFunc) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	resp, err := h(w, req)
+	if resp == nil && err == nil {
+		return
+	}
+	switch err := err.(type) {
+	case nil:
+		_ = json.NewEncoder(w).Encode(resp)
+	case HTTPError:
+		http.Error(w, err.Error(), err.StatusCode)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 var websocketHub *WSHub
 
-func init() {
-	var err error
-	staticContent, err = fs.Sub(embeddedFS, "web")
-	if err != nil {
-		panic(err)
-	}
+type Router struct{ *mux.Router }
+
+func (r Router) HandleJSON(path string, h JSONHandlerFunc) *mux.Route {
+	return r.Handle(path, h)
 }
 
 func ListenAndServe(addr string) error {
@@ -92,74 +107,82 @@ func ListenAndServe(addr string) error {
 			"\n         your current position to anyone who has access to the Pat web interface!\n\n")
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
-	r.HandleFunc("/api/connect", ConnectHandler)
+	websocketHub = NewWSHub()
+
+	r := Router{mux.NewRouter()}
+
+	// API endpoints
+	r.HandleJSON("/api/connect_aliases", connectAliasesHandler).Methods("GET")
+	r.HandleJSON("/api/connect", ConnectHandler)
 	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalogHandler).Methods("GET")
 	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler).Methods("POST")
 	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
 	r.HandleFunc("/api/formsUpdate", formsMgr.UpdateFormTemplatesHandler).Methods("POST")
-	r.HandleFunc("/api/disconnect", DisconnectHandler)
-	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")
-	r.HandleFunc("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
-	r.HandleFunc("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
+	r.HandleJSON("/api/disconnect", DisconnectHandler)
+	r.HandleJSON("/api/mailbox/{box}", mailboxHandler).Methods("GET")
+	r.HandleJSON("/api/mailbox/{box}/{mid}", messageHandler).Methods("GET")
+	r.HandleJSON("/api/mailbox/{box}/{mid}", messageDeleteHandler).Methods("DELETE")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", attachmentHandler).Methods("GET")
-	r.HandleFunc("/api/mailbox/{box}/{mid}/read", readHandler).Methods("POST")
-	r.HandleFunc("/api/mailbox/{box}", postMessageHandler).Methods("POST")
-	r.HandleFunc("/api/posreport", postPositionHandler).Methods("POST")
-	r.HandleFunc("/api/status", statusHandler).Methods("GET")
-	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
-	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
-	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
+	r.HandleJSON("/api/mailbox/{box}/{mid}/read", readHandler).Methods("POST")
+	r.HandleJSON("/api/mailbox/{box}", postMessageHandler).Methods("POST")
+	r.HandleJSON("/api/posreport", postPositionHandler).Methods("POST")
+	r.HandleJSON("/api/status", statusHandler).Methods("GET")
+	r.HandleJSON("/api/current_gps_position", positionHandler).Methods("GET")
+	r.HandleJSON("/api/qsy", qsyHandler).Methods("POST")
+	r.HandleJSON("/api/rmslist", rmslistHandler).Methods("GET")
+
+	// Websocket handler
 	r.HandleFunc("/ws", wsHandler)
-	r.HandleFunc("/ui", uiHandler).Methods("GET")
-	r.HandleFunc("/", rootHandler).Methods("GET")
 
-	http.Handle("/", r)
-	http.Handle("/res/", http.FileServer(http.FS(staticContent)))
+	// Web GUI assets
+	{
+		staticContent, err := fs.Sub(embeddedFS, "web")
+		if err != nil {
+			return err
+		}
+		r.HandleFunc("/ui", uiHandler(staticContent)).Methods("GET")
+		r.PathPrefix("/res/").Handler(http.FileServer(http.FS(staticContent)))
+		r.Handle("/", http.RedirectHandler("/ui", http.StatusFound))
+	}
 
-	websocketHub = NewWSHub()
-
-	return http.ListenAndServe(addr, nil)
+	server := http.Server{
+		Addr:    addr,
+		Handler: r,
+	}
+	return server.ListenAndServe()
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ui", http.StatusFound)
+func connectAliasesHandler(_ http.ResponseWriter, _ *http.Request) (interface{}, error) {
+	return config.ConnectAliases, nil
 }
 
-func connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {
-	_ = json.NewEncoder(w).Encode(config.ConnectAliases)
-}
-
-func readHandler(w http.ResponseWriter, r *http.Request) {
+func readHandler(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct{ Read bool }
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-		return
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	if err := mailbox.SetUnread(msg, !data.Read); err != nil {
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
+	return nil, nil
 }
 
-func postPositionHandler(w http.ResponseWriter, r *http.Request) {
+func postPositionHandler(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var pos catalog.PosReport
 
 	if err := json.NewDecoder(r.Body).Decode(&pos); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 	_ = r.Body.Close()
 
@@ -171,10 +194,10 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	msg := pos.Message(fOptions.MyCall)
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		_, _ = fmt.Fprintln(w, "Position update posted")
+		return nil, err
 	}
+	_, _ = fmt.Fprintln(w, "Position update posted")
+	return nil, nil
 }
 
 func isInPath(base string, path string) error {
@@ -182,17 +205,15 @@ func isInPath(base string, path string) error {
 	return err
 }
 
-func postMessageHandler(w http.ResponseWriter, r *http.Request) {
+func postMessageHandler(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	box := mux.Vars(r)["box"]
 	if box == "out" {
-		postOutboundMessageHandler(w, r)
-		return
+		return postOutboundMessageHandler(w, r)
 	}
 
 	srcPath := r.Header.Get("X-Pat-SourcePath")
 	if srcPath == "" {
-		http.Error(w, "Not implemented", http.StatusNotImplemented)
-		return
+		return nil, HTTPError{errors.New("not implemented"), http.StatusNotImplemented}
 	}
 
 	srcPath = strings.TrimPrefix(srcPath, "/api/mailbox/")
@@ -201,27 +222,24 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// Check that we don't escape our mailbox path
 	srcPath = filepath.Clean(srcPath)
 	if err := isInPath(mbox.MBoxPath, srcPath); err != nil {
-		log.Println("Malicious source path in move:", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		err = fmt.Errorf("malicious source path in move: %w", err)
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	targetPath := filepath.Join(mbox.MBoxPath, box, filepath.Base(srcPath))
 
 	if err := os.Rename(srcPath, targetPath); err != nil {
-		log.Println("Could not move message:", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	} else {
-		_ = json.NewEncoder(w).Encode("OK")
+		err = fmt.Errorf("failed to move message: %w", err)
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
+	return "OK", nil
 }
 
-func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
+func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	err := r.ParseMultipartForm(10 * (1024 ^ 2)) // 10Mb
 	if err != nil {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return nil, err
 		}
 	}
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
@@ -270,33 +288,32 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if v := r.Form["date"]; len(v) == 1 {
 		t, err := time.Parse(time.RFC3339, v[0])
 		if err != nil {
-			log.Printf("Unable to parse message date: %s", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			err = fmt.Errorf("unable to parse message date: %w", err)
+			log.Println(err)
+			return nil, HTTPError{err, http.StatusBadRequest}
 		}
 		msg.SetDate(t)
 	} else {
-		log.Printf("Missing date value")
-		http.Error(w, "Missing date value", http.StatusBadRequest)
-		return
+		err := errors.New("missing date value")
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	if err := msg.Validate(); err != nil {
-		http.Error(w, "Validation error: "+err.Error(), http.StatusBadRequest)
-		return
+		err = fmt.Errorf("validation error: %w", err)
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	// Post to outbox
 	if err := mbox.AddOut(msg); err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	var buf bytes.Buffer
 	_ = msg.Write(&buf)
 	_, _ = fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
+	return nil, nil
 }
 
 func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
@@ -354,23 +371,25 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	websocketHub.Handle(conn)
 }
 
-func uiHandler(w http.ResponseWriter, _ *http.Request) {
-	data, err := fs.ReadFile(staticContent, path.Join("res", "tmpl", "index.html"))
-	if err != nil {
-		log.Fatal(err)
-	}
+func uiHandler(staticContent fs.FS) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		data, err := fs.ReadFile(staticContent, path.Join("res", "tmpl", "index.html"))
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	t := template.New("index.html") // create a new template
-	t, err = t.Parse(string(data))
-	if err != nil {
-		log.Fatal(err)
-	}
+		t := template.New("index.html") // create a new template
+		t, err = t.Parse(string(data))
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	tmplData := struct{ AppName, Version, Mycall string }{buildinfo.AppName, buildinfo.VersionString(), fOptions.MyCall}
+		tmplData := struct{ AppName, Version, Mycall string }{buildinfo.AppName, buildinfo.VersionString(), fOptions.MyCall}
 
-	err = t.Execute(w, tmplData)
-	if err != nil {
-		log.Fatal(err)
+		err = t.Execute(w, tmplData)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -395,11 +414,11 @@ func getStatus() Status {
 	return status
 }
 
-func statusHandler(w http.ResponseWriter, _ *http.Request) {
-	_ = json.NewEncoder(w).Encode(getStatus())
+func statusHandler(_ http.ResponseWriter, _ *http.Request) (interface{}, error) {
+	return getStatus(), nil
 }
 
-func rmslistHandler(w http.ResponseWriter, req *http.Request) {
+func rmslistHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	forceDownload, _ := strconv.ParseBool(req.FormValue("force-download"))
 	band := req.FormValue("band")
 	mode := strings.ToLower(req.FormValue("mode"))
@@ -421,56 +440,51 @@ func rmslistHandler(w http.ResponseWriter, req *http.Request) {
 	})
 	if err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 	sort.Sort(byDist(list))
-	err = json.NewEncoder(w).Encode(list)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return list, nil
 }
 
-func qsyHandler(w http.ResponseWriter, req *http.Request) {
+func qsyHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	type QSYPayload struct {
 		Transport string      `json:"transport"`
 		Freq      json.Number `json:"freq"`
 	}
 	var payload QSYPayload
 	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	rig, rigName, ok, err := VFOForTransport(payload.Transport)
 	switch {
 	case rigName == "":
 		// Either unsupported mode or no rig configured for this transport
-		w.WriteHeader(http.StatusServiceUnavailable)
-		return
+		err := errors.New("unsupported mode / no rig configured for this transport")
+		return nil, HTTPError{err, http.StatusServiceUnavailable}
 	case !ok:
 		// A rig is configured, but not loaded properly
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("QSY failed: Hamlib rig '%s' not loaded.", rigName)
+		err := fmt.Errorf("QSY failed: hamlib rig '%s' not loaded", rigName)
+		log.Println(err)
+		return nil, err
 	case err != nil:
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("QSY failed: %v", err)
+		err = fmt.Errorf("QSY failed: %w", err)
+		log.Println(err)
+		return nil, err
 	default:
 		if _, _, err := setFreq(rig, string(payload.Freq)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Printf("QSY failed: %v", err)
-			return
+			err = fmt.Errorf("QSY failed: %w", err)
+			log.Println(err)
+			return nil, err
 		}
-		_ = json.NewEncoder(w).Encode(payload)
+		return payload, nil
 	}
 }
 
-func positionHandler(w http.ResponseWriter, req *http.Request) {
+func positionHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// Throw error if GPSd http endpoint is not enabled
 	if !config.GPSd.EnableHTTP || config.GPSd.Addr == "" {
-		http.Error(w, "GPSd not enabled or address not set in config file", http.StatusInternalServerError)
-		return
+		return nil, errors.New("GPSd not enabled or address not set in config file")
 	}
 
 	host, _, _ := net.SplitHostPort(req.RemoteAddr)
@@ -479,8 +493,7 @@ func positionHandler(w http.ResponseWriter, req *http.Request) {
 	conn, err := gpsd.Dial(config.GPSd.Addr)
 	if err != nil {
 		// do not pass error message to response as GPSd address might be leaked
-		http.Error(w, "GPSd Dial failed", http.StatusInternalServerError)
-		return
+		return nil, errors.New("GPSd Dial failed")
 	}
 	defer conn.Close()
 
@@ -488,42 +501,41 @@ func positionHandler(w http.ResponseWriter, req *http.Request) {
 
 	pos, err := conn.NextPosTimeout(5 * time.Second)
 	if err != nil {
-		http.Error(w, "GPSd get next position failed: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("GPSd get next position failed: %w", err)
 	}
 
 	if config.GPSd.UseServerTime {
 		pos.Time = time.Now()
 	}
 
-	_ = json.NewEncoder(w).Encode(pos)
+	return pos, nil
 }
 
-func DisconnectHandler(w http.ResponseWriter, req *http.Request) {
+func DisconnectHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	dirty, _ := strconv.ParseBool(req.FormValue("dirty"))
 	if ok := abortActiveConnection(dirty); !ok {
-		w.WriteHeader(http.StatusBadRequest)
+		return nil, HTTPError{errors.New("Not available"), http.StatusBadRequest}
 	}
-	_ = json.NewEncoder(w).Encode(struct{}{})
+	return struct{}{}, nil
 }
 
-func ConnectHandler(w http.ResponseWriter, req *http.Request) {
+func ConnectHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	connectStr := req.FormValue("url")
 
 	nMsgs := mbox.InboxCount()
 
 	if success := Connect(connectStr); !success {
-		http.Error(w, "Session failure", http.StatusInternalServerError)
+		return nil, errors.New("Session failure")
 	}
 
-	_ = json.NewEncoder(w).Encode(struct {
+	return struct {
 		NumReceived int
 	}{
 		mbox.InboxCount() - nMsgs,
-	})
+	}, nil
 }
 
-func mailboxHandler(w http.ResponseWriter, r *http.Request) {
+func mailboxHandler(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	box := mux.Vars(r)["box"]
 
 	var messages []*fbb.Message
@@ -539,13 +551,12 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 	case "archive":
 		messages, err = mbox.Archive()
 	default:
-		http.NotFound(w, r)
-		return
+		return nil, ErrNotFound
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println(err)
+		return nil, err
 	}
 
 	sort.Sort(sort.Reverse(fbb.ByDate(messages)))
@@ -554,7 +565,7 @@ func mailboxHandler(w http.ResponseWriter, r *http.Request) {
 	for i, msg := range messages {
 		jsonSlice[i] = JSONMessage{Message: msg}
 	}
-	_ = json.NewEncoder(w).Encode(jsonSlice)
+	return jsonSlice, nil
 }
 
 type JSONMessage struct {
@@ -595,41 +606,37 @@ func (m JSONMessage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(msg)
 }
 
-func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func messageDeleteHandler(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
 	file := filepath.Clean(filepath.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if err := isInPath(mbox.MBoxPath, file); err != nil {
 		log.Println("Malicious source path in move:", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, HTTPError{err, http.StatusBadRequest}
 	}
 
 	err := os.Remove(file)
 	if os.IsNotExist(err) {
-		http.NotFound(w, r)
-		return
+		return nil, ErrNotFound
 	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
 
-	_ = json.NewEncoder(w).Encode("OK")
+	return "OK", nil
 }
 
-func messageHandler(w http.ResponseWriter, r *http.Request) {
+func messageHandler(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
 	msg, err := mailbox.OpenMessage(path.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
 	if os.IsNotExist(err) {
-		http.NotFound(w, r)
-		return
+		return nil, ErrNotFound
 	} else if err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
-	_ = json.NewEncoder(w).Encode(JSONMessage{msg, true})
+	return JSONMessage{msg, true}, nil
 }
 
 func attachmentHandler(w http.ResponseWriter, r *http.Request) {

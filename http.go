@@ -184,7 +184,6 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) (interface{}, e
 	if err := json.NewDecoder(r.Body).Decode(&pos); err != nil {
 		return nil, HTTPError{err, http.StatusBadRequest}
 	}
-	_ = r.Body.Close()
 
 	if pos.Date.IsZero() {
 		pos.Date = time.Now()

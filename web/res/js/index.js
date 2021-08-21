@@ -11,7 +11,7 @@ const statusPos = $('#pos_status');
 function initFrontend(ws_url) {
   wsURL = ws_url;
 
-  $(document).ready(function () {
+  $(function () {
     initStatusPopover();
 
     // Setup actions
@@ -261,7 +261,7 @@ function initComposeModal() {
     const form = $('#composer_form');
     const d = new Date().toJSON();
     $('#msg_form_date').remove();
-    form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '" />');
+    form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '">');
 
     // Set some defaults that makes the message pass validation (as Winlink Express does)
     if ($('#msg_body').val().length == 0) {
@@ -325,7 +325,9 @@ function initFormSelect(data) {
 			<ul>
 				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
 				<li>Unzip the Standard_Forms archive</li>
-				<li>Use 'pat configure' to point to the template folder. E.g.<br />on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"<br /> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
+				<li>Use 'pat configure' to point to the template folder. E.g.
+				    <br>on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"
+				    <br> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
 			</ul>
 			`);
   }
@@ -623,7 +625,7 @@ function onConnectFreqChange() {
         });
         inputGroup.addClass('has-error');
         $('#qsyWarning')
-          .html('<span class="glyphicon glyphicon-warning-sign" /> QSY failure')
+          .html('<span class="glyphicon glyphicon-warning-sign"></span> QSY failure')
           .attr('hidden', false);
       }
     },
@@ -715,7 +717,7 @@ function previewAttachmentFiles() {
       const reader = new FileReader();
       reader.onload = function (e) {
         attachments.append(
-          '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+          '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
             '<img src="' +
             e.target.result +
             '" alt="' +
@@ -727,9 +729,9 @@ function previewAttachmentFiles() {
       reader.readAsDataURL(file);
     } else {
       attachments.append(
-        '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+        '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
           file.name +
-          '<br />(' +
+          '<br>(' +
           file.size +
           ' bytes)' +
           '</a></div>'
@@ -1043,7 +1045,7 @@ function displayFolder(dir) {
       let html =
         '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
       if (msg.Files.length > 0) {
-        html += '<span class="glyphicon glyphicon-paperclip" />';
+        html += '<span class="glyphicon glyphicon-paperclip"></span>';
       }
       html += '</td><td>' + htmlEscape(msg.Subject) + '</td><td>';
       if (!is_from && !msg.To) {
@@ -1058,7 +1060,7 @@ function displayFolder(dir) {
       html += '</td>';
       html += is_from
         ? ''
-        : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok" />' : '') + '</td>';
+        : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : '') + '</td>';
       html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
 
       const elem = $(html);
@@ -1095,8 +1097,8 @@ function displayMessage(elem) {
     const view = $('#message_view');
     view.find('#subject').text(data.Subject);
     view.find('#headers').empty();
-    view.find('#headers').append('Date: ' + data.Date + '<br />');
-    view.find('#headers').append('From: ' + data.From.Addr + '<br />');
+    view.find('#headers').append('Date: ' + data.Date + '<br>');
+    view.find('#headers').append('From: ' + data.From.Addr + '<br>');
     view.find('#headers').append('To: ');
     for (let i = 0; data.To && i < data.To.length; i++) {
       view
@@ -1108,7 +1110,7 @@ function displayMessage(elem) {
     }
 
     if (data.Cc) {
-      view.find('#headers').append('<br />Cc: ');
+      view.find('#headers').append('<br>Cc: ');
       for (let i = 0; i < data.Cc.length; i++) {
         view
           .find('#headers')
@@ -1140,7 +1142,7 @@ function displayMessage(elem) {
             msg_url +
             '/' +
             file.Name +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
             (file.Size / 1024).toFixed(2) +
             'kB' +
             '<img src="' +
@@ -1156,7 +1158,7 @@ function displayMessage(elem) {
         attachments.append(
           '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
             attachUrl +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit" /> ' +
+            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit"></span> ' +
             formName +
             '</a></div>'
         );
@@ -1166,9 +1168,9 @@ function displayMessage(elem) {
             msg_url +
             '/' +
             file.Name +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip" /> ' +
+            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
             file.Name +
-            '<br />(' +
+            '<br>(' +
             file.Size +
             ' bytes)' +
             '</a></div>'
@@ -1314,7 +1316,7 @@ function quoteMsg(data) {
 }
 
 function htmlEscape(str) {
-  return $('<div/>').text(str).html();
+  return $('<div></div>').text(str).html();
 }
 
 function archiveMessage(box, mid) {

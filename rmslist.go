@@ -50,6 +50,12 @@ type RMS struct {
 }
 
 func (r RMS) IsMode(mode string) bool {
+	if mode == MethodVaraFM {
+		return strings.HasPrefix(r.Modes, "VARA FM")
+	}
+	if mode == MethodVaraHF {
+		return strings.HasPrefix(r.Modes, "VARA") && !strings.HasPrefix(r.Modes, "VARA FM")
+	}
 	return strings.Contains(strings.ToLower(r.Modes), mode)
 }
 
@@ -138,7 +144,7 @@ func ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS)
 		return nil, err
 	}
 
-	var slice []RMS
+	var slice = []RMS{}
 	for _, gw := range status.Gateways {
 		for _, channel := range gw.Channels {
 			r := RMS{
@@ -168,18 +174,41 @@ func ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS)
 func toURL(gc cmsapi.GatewayChannel, targetCall string) *url.URL {
 	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
 	chURL, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetCall, freq.KHz()))
-	modeF := strings.Fields(gc.SupportedModes)
-	if modeF[0] == "ARDOP" {
-		v := chURL.Query()
-		if len(modeF) > 1 {
-			v.Set("bw", modeF[1]+"MAX")
-		}
-		chURL.RawQuery = v.Encode()
-	}
+	addBandwidth(gc, chURL)
 	return chURL
 }
 
-var transports = []string{MethodAX25, MethodPactor, MethodArdop}
+func addBandwidth(gc cmsapi.GatewayChannel, chURL *url.URL) {
+	bw := ""
+	modeF := strings.Fields(gc.SupportedModes)
+	if modeF[0] == "ARDOP" {
+		if len(modeF) > 1 {
+			bw = modeF[1] + "MAX"
+		}
+	} else if modeF[0] == "VARA" {
+		if len(modeF) > 1 && modeF[1] == "FM" {
+			// VARA FM should not set bandwidth in connect URL or sent over the command port,
+			// it's set in the VARA Setup dialog
+			bw = ""
+		} else {
+			// VARA HF may be 500, 2750, or none which is implicitly 2300
+			if len(modeF) > 1 {
+				if len(modeF) > 1 {
+					bw = modeF[1]
+				}
+			} else {
+				bw = "2300"
+			}
+		}
+	}
+	if bw != "" {
+		v := chURL.Query()
+		v.Set("bw", bw)
+		chURL.RawQuery = v.Encode()
+	}
+}
+
+var transports = []string{MethodAX25, MethodPactor, MethodArdop, MethodVaraFM, MethodVaraHF}
 
 func toTransport(gc cmsapi.GatewayChannel) string {
 	modes := strings.ToLower(gc.SupportedModes)
@@ -187,6 +216,12 @@ func toTransport(gc cmsapi.GatewayChannel) string {
 		if strings.Contains(modes, "packet") {
 			// bug(maritnhpedersen): We really don't know which transport to use here. It could be serial-tnc or ax25, but ax25 is most likely.
 			return MethodAX25
+		}
+		if strings.HasPrefix(modes, "vara fm") {
+			return MethodVaraFM
+		}
+		if strings.HasPrefix(modes, "vara") {
+			return MethodVaraHF
 		}
 		if strings.Contains(modes, transport) {
 			return transport

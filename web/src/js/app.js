@@ -445,6 +445,8 @@ function initConnectModal() {
     switch ($(e.target).val()) {
       case 'ardop':
       case 'pactor':
+      case 'varafm':
+      case 'varahf':
         $('#modeSearchSelect').val($(e.target).val());
         break;
       case 'serial-tnc':
@@ -672,6 +674,7 @@ function refreshExtraInputGroups() {
       $('#addrInputDiv').show();
       break;
     case 'ardop':
+    case 'varahf':
       $('#addrInputDiv').hide();
       $('#addrInput').val('');
       $('#freqInputDiv').show();

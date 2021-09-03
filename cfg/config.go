@@ -90,6 +90,8 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
+	VaraHF    VaraConfig      `json:"varahf"`     // See VaraConfig.
+	VaraFM    VaraConfig      `json:"varafm"`     // See VaraConfig.
 
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:"gpsd"`
@@ -156,6 +158,26 @@ type ArdopConfig struct {
 
 	// Send FSK CW ID after an ID frame.
 	CWID bool `json:"cwid_enabled"`
+}
+
+type VaraConfig struct {
+	// Network host of the VARA modem (defaults to localhost).
+	Host string `json:"host"`
+
+	// Network port of the VARA modem command channel (defaults to 8300).
+	CmdPort int `json:"cmdPort"`
+
+	// Network port of the VARA modem data channel (defaults to 8301).
+	DataPort int `json:"dataPort"`
+
+	// Default/listen bandwidth (HF: 500/2300/2750 Hz).
+	Bandwidth int `json:"bandwidth"`
+
+	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	Rig string `json:"rig"`
+
+	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	PTTControl bool `json:"ptt_ctrl"`
 }
 
 type PactorConfig struct {
@@ -273,6 +295,17 @@ var DefaultConfig = Config{
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",
 		Password:   "",
+	},
+	VaraHF: VaraConfig{
+		Host:      "localhost",
+		CmdPort:   8300,
+		DataPort:  8301,
+		Bandwidth: 2300,
+	},
+	VaraFM: VaraConfig{
+		Host:     "localhost",
+		CmdPort:  8300,
+		DataPort: 8301,
 	},
 	GPSd: GPSdConfig{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)

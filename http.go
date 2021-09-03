@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"html/template"
 	"io"
 	"io/fs"
@@ -40,6 +41,7 @@ import (
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/n8jja/Pat-Vara/vara"
 )
 
 //go:embed web/dist/**
@@ -463,6 +465,8 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 		fallthrough
 	case MethodTelnet:
 		fallthrough
+	case MethodVaraFM:
+		fallthrough
 	case MethodSerialTNC:
 		// bandwidth not supported, return empty list
 	case MethodArdop:
@@ -471,6 +475,11 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		if bw := config.Ardop.ARQBandwidth; !bw.IsZero() {
 			resp.Default = bw.String()
+		}
+	case MethodVaraHF:
+		resp.Bandwidths = vara.Bandwidths()
+		if bw := config.VaraHF.Bandwidth; bw != 0 {
+			resp.Default = fmt.Sprintf("%d", bw)
 		}
 	default:
 		http.Error(w, "mode not recognized", http.StatusBadRequest)

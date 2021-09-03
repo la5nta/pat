@@ -68,15 +68,16 @@ func (f Frequency) KHz() float64 { return float64(f) / 1e3 }
 func (f Frequency) Dial(mode string) Frequency {
 	mode = strings.ToLower(mode)
 
-	// Try to detect FM modes
-	// (ARDOP on FM is reported as `ARDOP 2000 FM`)
-	if strings.HasSuffix(mode, "fm") {
+	// Try to detect FM modes, e.g. `ARDOP 2000 FM` and `VARA FM WIDE`
+	if strings.Contains(mode, "fm") {
 		return f
 	}
 
 	offsets := map[string]Frequency{
 		MethodPactor: 1500,
 		MethodArdop:  1500,
+		// varahf doesn't appear in RMS list from WDT
+		"vara": 1500,
 	}
 
 	var shift Frequency
@@ -99,6 +100,10 @@ func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool,
 		rig = config.AX25.Rig
 	case MethodPactor:
 		rig = config.Pactor.Rig
+	case MethodVaraHF:
+		rig = config.VaraHF.Rig
+	case MethodVaraFM:
+		rig = config.VaraFM.Rig
 	default:
 		return vfo, "", false, fmt.Errorf("not supported with transport '%s'", transport)
 	}

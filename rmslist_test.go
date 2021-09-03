@@ -108,6 +108,62 @@ func Test_toURL(t *testing.T) {
 			},
 			want: parseUrl("ax25:///N3HYM-10?freq=7099.4"),
 		},
+		{
+			name: "vara hf 500",
+			args: args{
+				channel: cmsapi.GatewayChannel{
+					Frequency:      7064000,
+					SupportedModes: "VARA 500",
+				},
+				targetCall: "W0VG",
+			},
+			want: parseUrl("varahf:///W0VG?bw=500&freq=7062.5"),
+		},
+		{
+			name: "vara hf unspec",
+			args: args{
+				channel: cmsapi.GatewayChannel{
+					Frequency:      7103000,
+					SupportedModes: "VARA",
+				},
+				targetCall: "W0VG",
+			},
+			want: parseUrl("varahf:///W0VG?bw=2300&freq=7101.5"),
+		},
+		{
+			name: "vara hf 2750",
+			args: args{
+				channel: cmsapi.GatewayChannel{
+					Frequency:      3597900,
+					SupportedModes: "VARA 2750",
+				},
+				targetCall: "W1EO",
+			},
+			want: parseUrl("varahf:///W1EO?bw=2750&freq=3596.4"),
+		},
+		{
+			name: "vara fm narrow",
+			args: args{
+				channel: cmsapi.GatewayChannel{
+					Frequency:      145070000,
+					SupportedModes: "VARA FM",
+				},
+				targetCall: "W0TQ",
+			},
+			// vara transport adapter will default to narrow
+			want: parseUrl("varafm:///W0TQ?freq=145070"),
+		},
+		{
+			name: "vara fm wide",
+			args: args{
+				channel: cmsapi.GatewayChannel{
+					Frequency:      145510000,
+					SupportedModes: "VARA FM WIDE",
+				},
+				targetCall: "W1AW-10",
+			},
+			want: parseUrl("varafm:///W1AW-10?freq=145510"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

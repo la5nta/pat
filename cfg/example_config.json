@@ -39,6 +39,21 @@
     "listen_addr": ":8774",
     "password": ""
   },
+  "varafm": {
+    "host": "localhost",
+    "cmdPort": 8302,
+    "dataPort": 8303,
+    "rig": "ft897",
+    "ptt_ctrl": true
+  },
+  "varahf": {
+    "host": "localhost",
+    "cmdPort": 8300,
+    "dataPort": 8301,
+    "bandwidth": 2300,
+    "rig": "ft897",
+    "ptt_ctrl": true
+  },
   "schedule": {
     "*/30 * * * *": "connect offgrid"
   },

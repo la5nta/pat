@@ -376,7 +376,7 @@ func unzip(src, dest string) error {
 		}
 
 		if f.FileInfo().IsDir() {
-			_ = os.MkdirAll(p, f.Mode())
+			_ = os.MkdirAll(p, 0755)
 		} else {
 			_ = os.MkdirAll(filepath.Dir(p), 0755)
 			f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())

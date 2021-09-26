@@ -88,7 +88,7 @@ func (l *Listener) listenLoop() {
 			b.BeaconStart()
 		}
 
-		// Run the accept loop until an error occures
+		// Run the accept loop until an error occurs
 		if err := l.acceptLoop(); err != nil {
 			log.Printf("Accept %s failed: %s", l.t.Name(), err)
 		}

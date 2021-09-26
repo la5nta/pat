@@ -18,7 +18,7 @@ To keep the issue tracker nice and tidy, we ask for the following:
     - Operating system and architecture.
     - What you expected to happen.
     - What actually happened (including full stack trace and/or error message).
-  - Issues should not be closed until they are either discarded or deployed. This means that code changing issues shold not be closed until the changes have been merged to the master branch.
+  - Issues should not be closed until they are either discarded or deployed. This means that code changing issues should not be closed until the changes have been merged to the master branch.
 
 ## Code Contribution Guideline
 
@@ -36,10 +36,10 @@ To make the process as seamless as possible, we ask for the following:
 
 New releases of Pat is done by these steps:
 
-1. All issues targeted by the next release is moved into a milestone with the corresponding version name.
+1. All issues targeted by the next release are moved into a milestone with the corresponding version name.
 2. A release/*-branch is prepared and VERSION.go is updated.
 3. A pull request to *master* is opened.
 4. The release-branch is built and tested on *all targeted platforms*.
 5. If all status checks (Travis CI) passes, the release-branch is merged into *master* and tagged.
 6. Issues in the targeted milestone is either closed or moved to another milestone. The milestone is closed.
-7. The various binary packages is built and uploaded to [releases/](https://github.com/la5nta/Pat/releases).
+7. The various binary packages are built and uploaded to [releases/](https://github.com/la5nta/Pat/releases).

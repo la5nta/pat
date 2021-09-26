@@ -11,7 +11,7 @@ Pat is a cross platform Winlink client with basic messaging capabilities.
 
 It is the primary sandbox/prototype application for the [wl2k-go](https://github.com/la5nta/wl2k-go) project, and provides both a command line interface and a responsive (mobile-friendly) web interface.
 
-It is mainly developed for Linux, but are also known to run on OS X, Windows and Android.
+It is mainly developed for Linux, but is also known to run on OS X, Windows and Android.
 
 #### Features
 * Message composer/reader (basic mailbox functionality).

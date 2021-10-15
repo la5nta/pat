@@ -92,7 +92,7 @@ var commands = []Command{
 		Desc:    "Post form-based report.",
 		Usage:   "[options]",
 		Options: map[string]string{
-			"--template": "path to the form template file. Uses the config file's forms_path as root. Defaults to 'ICS USA Forms/ICS213.txt'",
+			"--template": "path to the form template file. Uses the --forms directory as root. Defaults to 'ICS USA Forms/ICS213.txt'",
 		},
 		HandleFunc: composeFormReport,
 	},
@@ -181,24 +181,29 @@ var fOptions struct {
 	ConfigPath   string
 	LogPath      string
 	EventLogPath string
+	FormsPath    string
 }
 
 func optionsSet() *pflag.FlagSet {
 	set := pflag.NewFlagSet("options", pflag.ExitOnError)
 
-	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
-
-	set.StringVar(&fOptions.MyCall, `mycall`, ``, `Your callsign (winlink user).`)
+	set.StringVar(&fOptions.MyCall, "mycall", "", "Your callsign (winlink user).")
 	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).")
-	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory")
-	set.StringVar(&fOptions.ConfigPath, "config", fOptions.ConfigPath, "Path to config file")
-	set.StringVar(&fOptions.LogPath, "log", fOptions.LogPath, "Path to log file. The file is truncated on each startup.")
-	set.StringVar(&fOptions.EventLogPath, "event-log", fOptions.EventLogPath, "Path to event log file.")
-	set.BoolVarP(&fOptions.SendOnly, `send-only`, "s", false, `Download inbound messages later, send only.`)
-	set.BoolVarP(&fOptions.RadioOnly, `radio-only`, "", false, `Radio Only mode (Winlink Hybrid RMS only).`)
-	set.BoolVarP(&fOptions.Robust, `robust`, "r", false, `Use robust modes only. (Useful to improve s/n-ratio at remote winmor station)`)
+	set.BoolVarP(&fOptions.SendOnly, "send-only", "s", false, "Download inbound messages later, send only.")
+	set.BoolVarP(&fOptions.RadioOnly, "radio-only", "", false, "Radio Only mode (Winlink Hybrid RMS only).")
+	set.BoolVarP(&fOptions.Robust, "robust", "r", false, "Use robust modes only (useful to improve s/n-ratio at remote winmor station).")
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
-	debug.Printf("Mailbox dir is '%s'", fOptions.MailboxPath)
+
+	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
+	defaultFormsPath := filepath.Join(directories.DataDir(), "Standard_Forms")
+	defaultConfigPath := filepath.Join(directories.ConfigDir(), "config.json")
+	defaultLogPath := filepath.Join(directories.StateDir(), strings.ToLower(buildinfo.AppName+".log"))
+	defaultEventLogPath := filepath.Join(directories.StateDir(), "eventlog.json")
+	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory.")
+	set.StringVar(&fOptions.FormsPath, "forms", defaultFormsPath, "Path to forms directory.")
+	set.StringVar(&fOptions.ConfigPath, "config", defaultConfigPath, "Path to config file.")
+	set.StringVar(&fOptions.LogPath, "log", defaultLogPath, "Path to log file. The file is truncated on each startup.")
+	set.StringVar(&fOptions.EventLogPath, "event-log", defaultEventLogPath, "Path to event log file.")
 
 	return set
 }
@@ -206,13 +211,6 @@ func optionsSet() *pflag.FlagSet {
 func init() {
 	listenHub = NewListenerHub()
 	promptHub = NewPromptHub()
-
-	directories.MigrateLegacyDataDir()
-	fOptions.ConfigPath = filepath.Join(directories.ConfigDir(), "config.json")
-	debug.Printf("Config file is '%s'", fOptions.ConfigPath)
-	fOptions.LogPath = filepath.Join(directories.StateDir(), strings.ToLower(buildinfo.AppName+".log"))
-	fOptions.EventLogPath = filepath.Join(directories.StateDir(), "eventlog.json")
-	debug.Printf("Log files dir is '%s'", directories.StateDir())
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s is a client for the Winlink 2000 Network.\n\n", buildinfo.AppName)
@@ -234,6 +232,18 @@ func main() {
 
 	debug.Printf("Version: %s", buildinfo.VersionString())
 	debug.Printf("Command: %s %v", cmd.Str, args)
+
+	fOptions.MailboxPath = filepath.Clean(fOptions.MailboxPath)
+	fOptions.FormsPath = filepath.Clean(fOptions.FormsPath)
+	fOptions.ConfigPath = filepath.Clean(fOptions.ConfigPath)
+	fOptions.LogPath = filepath.Clean(fOptions.LogPath)
+	fOptions.EventLogPath = filepath.Clean(fOptions.EventLogPath)
+	debug.Printf("Mailbox dir is\t'%s'", fOptions.MailboxPath)
+	debug.Printf("Forms dir is\t'%s'", fOptions.FormsPath)
+	debug.Printf("Config file is\t'%s'", fOptions.ConfigPath)
+	debug.Printf("Log file is \t'%s'", fOptions.LogPath)
+	debug.Printf("Event log file is\t'%s'", fOptions.EventLogPath)
+	directories.MigrateLegacyDataDir()
 
 	// Skip initialization for some commands
 	switch cmd.Str {
@@ -296,7 +306,7 @@ func main() {
 
 	// init forms subsystem
 	formsMgr = forms.NewManager(forms.Config{
-		FormsPath:  config.FormsPath,
+		FormsPath:  fOptions.FormsPath,
 		MyCall:     fOptions.MyCall,
 		Locator:    config.Locator,
 		AppVersion: buildinfo.VersionStringShort(),

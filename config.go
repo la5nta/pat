@@ -10,12 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/la5nta/pat/cfg"
-	"github.com/la5nta/pat/internal/debug"
-	"github.com/la5nta/pat/internal/directories"
 )
 
 func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err error) {
@@ -48,15 +44,6 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	if config.GPSdAddrLegacy != "" {
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
-
-	if config.FormsPath == "" {
-		config.FormsPath = filepath.Join(directories.DataDir(), "Standard_Forms")
-	} else {
-		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
-		config.FormsPath = filepath.Clean(config.FormsPath)
-		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
-	}
-	debug.Printf("Forms dir is '%s'", config.FormsPath)
 
 	return config, nil
 }

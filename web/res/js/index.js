@@ -306,8 +306,6 @@ function initFormSelect(data) {
   if (
     data &&
     data.path &&
-    data.path != '' &&
-    data.path != '.' &&
     ((data.folders && data.folders.length > 0) || (data.forms && data.forms.length > 0))
   ) {
     $('#formsVersion').html(
@@ -319,16 +317,10 @@ function initFormSelect(data) {
     $('#formsRootFolderName').text(data.path);
     appendFormFolder('formFolderRoot', data);
   } else {
-    $('#formsRootFolderName').text('missing forms_path in Pat config');
+    $('#formsRootFolderName').text('missing form templates');
     $(`#formFolderRoot`).append(`
-			<h6>Form templates not configured correctly</h6>
-			<ul>
-				<li>Download templates from <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">Winlink.org</a></li>
-				<li>Unzip the Standard_Forms archive</li>
-				<li>Use 'pat configure' to point to the template folder. E.g.
-				    <br>on a Mac: "forms_path": "/Users/walter/.wl2k/Standard_Forms"
-				    <br> on an Raspberry Pi: "forms_path": "/home/pi/.wl2k/Standard_Forms"</li>
-			</ul>
+			<h6>Form templates not downloaded</h6>
+			Use Action → Update Form Templates to download now
 			`);
   }
 }

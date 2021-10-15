@@ -115,10 +115,6 @@ type Config struct {
 	//
 	// Set to true if you don't want your information sent.
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
-
-	// Path to root of the Winlink Standard_Forms folder.
-	// Unzip after downloading from winlink.org
-	FormsPath string `json:"forms_path"`
 }
 
 type HamlibConfig struct {
@@ -292,7 +288,4 @@ var DefaultConfig = Config{
 	GPSdAddrLegacy: "",
 	Schedule:       map[string]string{},
 	HamlibRigs:     map[string]HamlibConfig{},
-
-	// Path to root of the unzipped Winlink Standard_Forms folder.
-	FormsPath: "",
 }

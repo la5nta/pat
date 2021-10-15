@@ -262,11 +262,10 @@ func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Requ
 
 // UpdateFormTemplates handles searching for and installing the latest version of the form templates.
 func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
-	if m.config.FormsPath == "" || m.config.FormsPath == "." {
-		return UpdateResponse{}, fmt.Errorf("forms_path isn't configured")
-	}
 	if _, err := os.Stat(m.config.FormsPath); err != nil {
-		return UpdateResponse{}, fmt.Errorf("forms_path [%s] doesn't exist", m.config.FormsPath)
+		if err := os.MkdirAll(m.config.FormsPath, 0o755); err != nil {
+			return UpdateResponse{}, fmt.Errorf("can't write to forms dir [%s]", m.config.FormsPath)
+		}
 	}
 	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
 	newestVersion, downloadLink, err := m.getLatestFormsInfo()
@@ -536,7 +535,7 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 		FormsMgr:    m,
 	}.build()
 	if err != nil {
-		log.Printf("Could not open form file '%s'.\nRun 'pat configure' and verify that 'forms_path' is set up and the files exist.\n", tmplPath)
+		log.Printf("Could not open form file '%s'", tmplPath)
 		return MessageForm{}, err
 	}
 

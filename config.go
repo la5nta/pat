@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/la5nta/pat/cfg"
 )
@@ -43,6 +45,13 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	// TODO: Remove after some release cycles (2019-09-29)
 	if config.GPSdAddrLegacy != "" {
 		config.GPSd.Addr = config.GPSdAddrLegacy
+	}
+
+	// TODO: config FormsPath is deprecated in favor of --forms flag
+	if config.FormsPath != "" {
+		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
+		config.FormsPath = filepath.Clean(config.FormsPath)
+		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
 	}
 
 	return config, nil

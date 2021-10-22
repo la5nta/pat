@@ -264,7 +264,7 @@ func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Requ
 func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
 	if _, err := os.Stat(m.config.FormsPath); err != nil {
 		if err := os.MkdirAll(m.config.FormsPath, 0o755); err != nil {
-			return UpdateResponse{}, fmt.Errorf("can't write to forms dir [%s]", m.config.FormsPath)
+			return UpdateResponse{}, fmt.Errorf("can't write to forms dir [%w]", err)
 		}
 	}
 	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
@@ -535,7 +535,8 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 		FormsMgr:    m,
 	}.build()
 	if err != nil {
-		log.Printf("Could not open form file '%s'", tmplPath)
+		err = fmt.Errorf("could not open form file: %w", err)
+		log.Print(err)
 		return MessageForm{}, err
 	}
 

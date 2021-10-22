@@ -266,6 +266,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to load/write config: %s", err)
 	}
+	maybeUpdateFormsDir(os.Args)
 
 	// Initialize logger
 	f, err := os.Create(fOptions.LogPath)
@@ -345,6 +346,20 @@ func main() {
 
 	// Start command execution
 	cmd.HandleFunc(args)
+}
+
+func maybeUpdateFormsDir(args []string) {
+	// Backward compatability for config file forms_path
+	formsFlagExplicitlyUsed := false
+	for i := 0; i < len(args); i++ {
+		if strings.HasPrefix(args[i], "--forms") {
+			formsFlagExplicitlyUsed = true
+		}
+	}
+	if !formsFlagExplicitlyUsed && config.FormsPath != "" {
+		debug.Printf("Updating forms dir based on config file: %v", config.FormsPath)
+		fOptions.FormsPath = config.FormsPath
+	}
 }
 
 func configureHandle(args []string) {

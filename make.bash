@@ -47,7 +47,11 @@ echo -e "Downloading Go dependencies..."
 go mod download
 
 echo "Running tests..."
-go test -tags "$TAGS" ./... github.com/la5nta/wl2k-go/...
+if [[ "$SKIP_TESTS" == "1" ]]; then
+	echo "Skipping."
+else
+	go test -tags "$TAGS" ./... github.com/la5nta/wl2k-go/...
+fi
 echo
 
 echo "Building Pat v$VERSION..."

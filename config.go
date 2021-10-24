@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,7 +49,12 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	}
 
 	// TODO: config FormsPath is deprecated in favor of --forms flag
-	if config.FormsPath != "" {
+	homeDir, _ := os.UserHomeDir()
+	formsOldDefault := filepath.Join(homeDir, ".wl2k", "Standard_Forms")
+	if config.FormsPath == formsOldDefault {
+		config.FormsPath = ""
+	} else {
+		log.Println("Using deprecated configuration option 'forms_path'. Please use --forms flag instead.")
 		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 		config.FormsPath = filepath.Clean(config.FormsPath)
 		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")

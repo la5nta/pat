@@ -66,6 +66,11 @@ func PrintDirectories() {
 }
 
 func MigrateLegacyDataDir() {
+	if f, err := os.Stat(ConfigDir()); err != nil && f.IsDir() {
+		debug.Printf("new config directory %s already exists, we have already migrated", ConfigDir())
+		return
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)

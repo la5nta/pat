@@ -170,14 +170,14 @@ func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	return chURL
 }
 
-var transports = []string{"winmor", "ax25", "pactor", "ardop"}
+var transports = []string{MethodWinmor, MethodAX25, MethodPactor, MethodArdop}
 
 func toTransport(gc cmsapi.GatewayChannel) string {
 	modes := strings.ToLower(gc.SupportedModes)
 	for _, transport := range transports {
 		if strings.Contains(modes, "packet") {
 			// bug(maritnhpedersen): We really don't know which transport to use here. It could be serial-tnc or ax25, but ax25 is most likely.
-			return "ax25"
+			return MethodAX25
 		}
 		if strings.Contains(modes, transport) {
 			return transport

@@ -75,9 +75,9 @@ func (f Frequency) Dial(mode string) Frequency {
 	}
 
 	offsets := map[string]Frequency{
-		"winmor": 1500,
-		"pactor": 1500,
-		"ardop":  1500,
+		MethodWinmor: 1500,
+		MethodPactor: 1500,
+		MethodArdop:  1500,
 	}
 
 	var shift Frequency

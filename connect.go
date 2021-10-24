@@ -54,17 +54,17 @@ func Connect(connectStr string) (success bool) {
 
 	// Init TNCs
 	switch url.Scheme {
-	case "ardop":
+	case MethodArdop:
 		if err := initArdopTNC(); err != nil {
 			log.Println(err)
 			return
 		}
-	case "winmor":
+	case MethodWinmor:
 		if err := initWinmorTNC(); err != nil {
 			log.Println(err)
 			return
 		}
-	case "pactor":
+	case MethodPactor:
 		ptCmdInit := ""
 		if val, ok := url.Params["init"]; ok {
 			ptCmdInit = strings.Join(val, "\n")
@@ -105,7 +105,7 @@ func Connect(connectStr string) (success bool) {
 		}
 
 		switch url.Scheme {
-		case "ax25", "serial-tnc":
+		case MethodAX25, MethodSerialTNC:
 			log.Printf("Radio-Only is not available for %s", url.Scheme)
 			return
 		default:
@@ -131,9 +131,9 @@ func Connect(connectStr string) (success bool) {
 
 	// Wait for a clear channel
 	switch url.Scheme {
-	case "ardop":
+	case MethodArdop:
 		waitBusy(adTNC)
-	case "winmor":
+	case MethodWinmor:
 		waitBusy(wmTNC)
 	}
 
@@ -236,7 +236,7 @@ func initWinmorTNC() error {
 		log.Printf("WINMOR TNC v%s initialized", v)
 	}
 
-	transport.RegisterDialer("winmor", wmTNC)
+	transport.RegisterDialer(MethodWinmor, wmTNC)
 
 	if !config.Winmor.PTTControl {
 		return nil
@@ -282,7 +282,7 @@ func initArdopTNC() error {
 		log.Printf("ARDOP TNC (%s) initialized", v)
 	}
 
-	transport.RegisterDialer("ardop", adTNC)
+	transport.RegisterDialer(MethodArdop, adTNC)
 
 	if !config.Ardop.PTTControl {
 		return nil
@@ -307,7 +307,7 @@ func initPactorModem(cmdlineinit string) error {
 		return fmt.Errorf("pactor initialization failed: %w", err)
 	}
 
-	transport.RegisterDialer("pactor", pModem)
+	transport.RegisterDialer(MethodPactor, pModem)
 
 	return nil
 }

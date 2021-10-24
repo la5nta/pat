@@ -51,9 +51,11 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	// TODO: config FormsPath is deprecated in favor of --forms flag
 	homeDir, _ := os.UserHomeDir()
 	formsOldDefault := filepath.Join(homeDir, ".wl2k", "Standard_Forms")
+	// Ignore the old default config value
 	if config.FormsPath == formsOldDefault {
 		config.FormsPath = ""
-	} else {
+	}
+	if config.FormsPath != "" {
 		log.Println("Using deprecated configuration option 'forms_path'. Please use --forms flag instead.")
 		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
 		config.FormsPath = filepath.Clean(config.FormsPath)

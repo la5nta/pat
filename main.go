@@ -145,7 +145,6 @@ var commands = []Command{
 		Desc: "Print the application version",
 		HandleFunc: func(args []string) {
 			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
-			directories.PrintDirectories()
 		},
 	},
 	{

@@ -2,7 +2,6 @@ package directories
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,18 +49,6 @@ func initDir(dir *string, basePath string, methodName string) {
 		if err != nil {
 			log.Fatalf("unable to create or open %s %s: %v", methodName, *dir, err)
 		}
-	}
-}
-
-func PrintDirectories() {
-	data := DataDir()
-	cfg := ConfigDir()
-	state := StateDir()
-
-	fmt.Printf("Config directory: \t%s\n", cfg)
-	if data != cfg || state != cfg {
-		fmt.Printf("Mailbox directory:\t%s\n", data)
-		fmt.Printf("Logs directory:   \t%s\n", state)
 	}
 }
 

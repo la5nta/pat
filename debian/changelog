@@ -1,3 +1,18 @@
+pat (0.12.0) stable; urgency=medium
+
+  * Follow the XDG Base Directory Specification
+  * Add support for sending in precedence order
+  * Add new serial-tnc baudrate configuration options
+  * Fix bug in forms parsing leading to missing forms
+  * Fix permissions issue when updating forms
+  * Fix FBB protocol handshake issue
+  * Improve fsnotify handling for mailbox events
+  * More descriptive error on premature disconnect
+  * Add basic debug logging capabilities
+  * Various dependency updates and refactoring
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 31 Oct 2021 17:28:02 +0100
+
 pat (0.11.0) stable; urgency=medium
 
   * Add support for Winlink HTML Forms

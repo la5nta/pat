@@ -23,7 +23,8 @@
   },
   "serial-tnc": {
     "path": "/dev/ttyUSB0",
-    "baudrate": 9600,
+    "hbaud": 1200,
+    "serial_baud": 9600,
     "type": "Kenwood"
   },
   "winmor": {

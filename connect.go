@@ -87,8 +87,11 @@ func Connect(connectStr string) (success bool) {
 			url.Host = config.AX25.Port
 		case MethodSerialTNC:
 			url.Host = config.SerialTNC.Path
-			if config.SerialTNC.Baudrate > 0 {
-				url.Params.Set("hbaud", fmt.Sprint(config.SerialTNC.Baudrate))
+			if hbaud := config.SerialTNC.HBaud; hbaud > 0 {
+				url.Params.Set("hbaud", fmt.Sprint(hbaud))
+			}
+			if sbaud := config.SerialTNC.SerialBaud; sbaud > 0 {
+				url.Params.Set("serial_baud", fmt.Sprint(sbaud))
 			}
 		}
 	}

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/debug"
 )
 
 func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err error) {
@@ -62,6 +63,12 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
 	}
 
+	// Compatibility for the old baudrate field for serial-tnc
+	if v := config.SerialTNC.BaudrateLegacy; v != 0 && config.SerialTNC.HBaud == 0 {
+		debug.Printf("Legacy serial_tnc.baudrate config detected (%d). Translating to serial_tnc.hbaud.", v)
+		config.SerialTNC.HBaud = v
+		config.SerialTNC.BaudrateLegacy = 0
+	}
 	return config, nil
 }
 

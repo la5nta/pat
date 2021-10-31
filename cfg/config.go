@@ -204,8 +204,15 @@ type SerialTNCConfig struct {
 	// Serial port (e.g. /dev/ttyUSB0 or COM1).
 	Path string `json:"path"`
 
-	// Baudrate for the serial port (e.g. 57600).
-	Baudrate int `json:"baudrate"`
+	// SerialBaud is the serial port's baudrate (e.g. 57600).
+	SerialBaud int `json:"serial_baud"`
+
+	// HBaud is the the packet connection's baudrate (1200 or 9600).
+	HBaud int `json:"hbaud"`
+
+	// Baudrate of the packet connection.
+	// Deprecated: Use HBaud instead.
+	BaudrateLegacy int `json:"baudrate,omitempty"`
 
 	// Type of TNC (currently only 'kenwood').
 	Type string `json:"type"`
@@ -265,9 +272,10 @@ var DefaultConfig = Config{
 		},
 	},
 	SerialTNC: SerialTNCConfig{
-		Path:     "/dev/ttyUSB0",
-		Baudrate: 9600,
-		Type:     "Kenwood",
+		Path:       "/dev/ttyUSB0",
+		SerialBaud: 9600,
+		HBaud:      1200,
+		Type:       "Kenwood",
 	},
 	Winmor: WinmorConfig{
 		Addr:             "localhost:8500",

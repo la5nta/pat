@@ -19,6 +19,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 
+	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/osutil"
 	"github.com/la5nta/wl2k-go/mailbox"
 )
@@ -134,6 +135,7 @@ func (w *WSHub) watchMBox() {
 //
 // It will block until the client either stops responding or closes the connection.
 func (w *WSHub) Handle(conn *websocket.Conn) {
+	debug.Printf("ws[%s] subscribed", conn.RemoteAddr())
 	c := &WSConn{
 		conn: conn,
 		out:  make(chan interface{}, 1),
@@ -149,35 +151,47 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 
 	quit := wsReadLoop(conn)
 
+	// Disconnect and remove client when this handler returns.
+	defer func() {
+		debug.Printf("ws[%s] unsubscribing...", conn.RemoteAddr())
+		c.conn.Close()
+		w.mu.Lock()
+		delete(w.pool, c)
+		w.mu.Unlock()
+		w.UpdateStatus()
+		debug.Printf("ws[%s] unsubscribed", conn.RemoteAddr())
+	}()
+
 	lines, done, err := tailFile(fOptions.LogPath)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	defer close(done)
-
 	for {
+		var err error
+		c.conn.SetWriteDeadline(time.Time{})
 		select {
 		case <-time.After(KeepaliveInterval):
-			c.conn.WriteJSON(struct {
+			debug.Printf("ws[%s] ping", conn.RemoteAddr())
+			c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			err = c.conn.WriteJSON(struct {
 				Ping bool
 			}{true})
 		case line := <-lines:
-			c.conn.WriteJSON(struct {
+			c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			err = c.conn.WriteJSON(struct {
 				LogLine string
 			}{string(line)})
 		case v := <-c.out:
-			err := c.conn.WriteJSON(v)
-			if err != nil {
-				log.Println(err)
-			}
+			c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			err = c.conn.WriteJSON(v)
 		case <-quit:
-			// The read loop failed/disconnected. Remove from hub.
-			c.conn.Close()
-			w.mu.Lock()
-			delete(w.pool, c)
-			w.mu.Unlock()
-			w.UpdateStatus()
+			// The read loop failed/disconnected. Abort.
+			return
+		}
+		if err != nil {
+			debug.Printf("ws[%s] write error: %v", conn.RemoteAddr(), err)
 			return
 		}
 	}
@@ -245,13 +259,17 @@ func wsReadLoop(c *websocket.Conn) <-chan struct{} {
 	go func() {
 		for {
 			v := map[string]json.RawMessage{}
+			// We should at least get a ping response once per KeepaliveInterval.
+			c.SetReadDeadline(time.Now().Add(KeepaliveInterval + 10*time.Second))
 			err := c.ReadJSON(&v)
 			if err != nil {
+				debug.Printf("ws[%s] read error: %v", c.RemoteAddr(), err)
 				close(quit)
 				return
 			}
 			if _, ok := v["Pong"]; ok {
-				// For Keepalive only. Could use a delayed ping response to detect dead connections in the future.
+				// That's the Ping response.
+				debug.Printf("ws[%s] pong", c.RemoteAddr())
 				continue
 			}
 			go handleWSMessage(v)

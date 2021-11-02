@@ -168,11 +168,13 @@ func (w *WSHub) Handle(conn *websocket.Conn) {
 		return
 	}
 	defer close(done)
+	ticker := time.NewTicker(KeepaliveInterval)
+	defer ticker.Stop()
 	for {
 		var err error
 		c.conn.SetWriteDeadline(time.Time{})
 		select {
-		case <-time.After(KeepaliveInterval):
+		case <-ticker.C:
 			debug.Printf("ws[%s] ping", conn.RemoteAddr())
 			c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			err = c.conn.WriteJSON(struct {

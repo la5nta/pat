@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/harenber/ptc-go/pactor/v2 v2.0.0-20201106165819-10108cccf409
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
-	github.com/la5nta/wl2k-go v0.8.0
+	github.com/la5nta/wl2k-go v0.9.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.16
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646

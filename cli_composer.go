@@ -102,7 +102,78 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	return msg
 }
 
-func composeMessage(replyMsg *fbb.Message) {
+func composeMessage(args []string) {
+	set := pflag.NewFlagSet("compose", pflag.ExitOnError)
+	subject := set.StringP("subject", "s", "", "")
+	attachments := set.StringArrayP("attachment", "a", nil, "")
+	ccs := set.StringArrayP("cc", "c", nil, "")
+	set.Parse(args)
+	recipients := set.Args() // Call after Parse()
+
+	// Check if any args are set. If so, go non-interactive
+	// Otherwise, interactive
+	if (len(*subject) + len(*attachments) + len(*ccs) + len(recipients)) > 0 {
+		noninteractiveComposeMessage(*subject, *attachments, *ccs, recipients)
+	} else {
+		interactiveComposeMessage(nil)
+	}
+
+}
+
+func noninteractiveComposeMessage(subject string, attachments []string,
+	ccs []string, recipients []string) {
+	// We have to verify the args here. Follow the same pattern as main()
+	// We'll allow a missing recipient if CC is present (or vice versa)
+	if len(recipients)+len(ccs) <= 0 {
+		fmt.Fprint(os.Stderr, "ERROR: Missing recipients in non-interactive mode!\n")
+		os.Exit(1)
+	}
+
+	// Subject is optional. Print a mailx style warning
+	if subject == "" {
+		fmt.Fprint(os.Stderr, "Warning: missing subject; hope that's OK\n")
+	}
+
+	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
+	msg.SetFrom(fOptions.MyCall)
+	for _, to := range recipients {
+		msg.AddTo(to)
+	}
+	for _, cc := range ccs {
+		msg.AddCc(cc)
+	}
+
+	msg.SetSubject(subject)
+
+	// Handle Attachments. Since we're not interactive, treat errors as fatal so the user can fix
+	for _, filename := range attachments {
+		file, err := readAttachment(filename)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err.Error()+"\nAborting! (Message not posted)\n")
+			os.Exit(1)
+		}
+		msg.AddFile(file)
+	}
+
+	// Read the message body from stdin
+	body, _ := ioutil.ReadAll(os.Stdin)
+	if string(body) == "" {
+		// Yeah, I've spent way too much time using mail(1)
+		fmt.Fprint(os.Stderr, "Null message body; hope that's ok\n")
+	}
+
+	msg.SetBody(string(body))
+
+	postMessage(msg)
+}
+
+// This is currently an alias for interactiveComposeMessage but keeping as a seperate
+// call path for the future
+func composeReplyMessage(replyMsg *fbb.Message) {
+	interactiveComposeMessage(replyMsg)
+}
+
+func interactiveComposeMessage(replyMsg *fbb.Message) {
 	msg := composeMessageHeader(replyMsg)
 
 	// Read body

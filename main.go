@@ -73,11 +73,19 @@ var commands = []Command{
 		LongLived:  true,
 	},
 	{
-		Str:  "compose",
-		Desc: "Compose a new message.",
-		HandleFunc: func(args []string) {
-			composeMessage(nil)
+		Str: "compose",
+		Desc: "Compose a new message.\n" +
+			"\tIf no options are passed, composes interactively.\n" +
+			"\tIf options are passed, reads message from stdin similar to mail(1).",
+		Usage: "[options]",
+		Options: map[string]string{
+			"--callsign, -r":    "Callsign to send from. Default reads from config",
+			"--subject, -s":     "Subject",
+			"--attachment , -a": "Attachment path (may be repeated)",
+			"--cc, -c":          "CC Address(es) (may be repeated)",
+			"":                  "Recipient address (may be repeated)",
 		},
+		HandleFunc: composeMessage,
 	},
 	{
 		Str:  "read",

@@ -76,7 +76,7 @@ func readMail() {
 			fmt.Fprintf(w, "Reply (ctrl+c to quit) [y/N]: ")
 			ans := readLine()
 			if strings.EqualFold(ans, "y") {
-				composeMessage(msgs[msgIdx])
+				composeReplyMessage(msgs[msgIdx])
 			}
 		}
 	}

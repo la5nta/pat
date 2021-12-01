@@ -142,10 +142,15 @@ var commands = []Command{
 	},
 	{
 		Str:  "version",
-		Desc: "Print the application version",
+		Desc: "Print the application version.",
 		HandleFunc: func(args []string) {
 			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
 		},
+	},
+	{
+		Str:        "env",
+		Desc:       "List environment variables.",
+		HandleFunc: envHandle,
 	},
 	{
 		Str:  "help",

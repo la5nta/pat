@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -325,25 +326,19 @@ func (m *Manager) downloadAndUnzipForms(downloadLink string) error {
 	if err != nil {
 		return fmt.Errorf("can't download update ZIP: %w", err)
 	}
-	filename := "Standard_Forms.zip"
-	dispo := resp.Header.Get("Content-Disposition")
-	if dispo != "" && strings.Contains(dispo, "filename=") {
-		fileRe := regexp.MustCompile(`filename="(.*)"`)
-		filename = fileRe.FindStringSubmatch(dispo)[1]
-	}
-	dir := os.TempDir()
-	defer os.RemoveAll(dir)
-	zipBytes, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
-	zipFilePath := path.Join(dir, filename)
-	err = os.WriteFile(zipFilePath, zipBytes, 0o600)
+	f, err := ioutil.TempFile(os.TempDir(), "pat")
 	if err != nil {
+		return fmt.Errorf("can't create temp file for download: %w", err)
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
+	if _, err := io.Copy(f, resp.Body); err != nil {
 		return fmt.Errorf("can't write update ZIP: %w", err)
 	}
 
 	unzipDir := m.config.FormsPath
-	err = unzip(zipFilePath, unzipDir)
-	if err != nil {
+	if err := unzip(f.Name(), unzipDir); err != nil {
 		return fmt.Errorf("can't unzip forms update: %w", err)
 	}
 	return nil

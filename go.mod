@@ -10,7 +10,7 @@ require (
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/harenber/ptc-go/pactor/v2 v2.0.0-20201106165819-10108cccf409
+	github.com/harenber/ptc-go/v2 v2.2.2 // indirect
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/la5nta/wl2k-go v0.9.0
 	github.com/mattn/go-runewidth v0.0.13 // indirect

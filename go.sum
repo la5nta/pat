@@ -28,6 +28,8 @@ github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0U
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/harenber/ptc-go/pactor/v2 v2.0.0-20201106165819-10108cccf409 h1:Va25I5bG8jDIUTb1v7QeTyAche5OYJO0DNOzuaeF2Bo=
 github.com/harenber/ptc-go/pactor/v2 v2.0.0-20201106165819-10108cccf409/go.mod h1:1p9A439gQra1BVOgxNR7it6L4ED+Ab1qKbhQY2HmTkg=
+github.com/harenber/ptc-go/v2 v2.2.2 h1:b6+QwjtdV2bDvhFgM5tksNMx5zN/Ml9inldF7msS0Zw=
+github.com/harenber/ptc-go/v2 v2.2.2/go.mod h1:SDIy4XqnUq6YYPcLLjDTfbLPf1/Z82ho1VPkPGVXSTo=
 github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6 h1:IIVxLyDUYErC950b8kecjoqDet8P5S4lcVRUOM6rdkU=
 github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6/go.mod h1:JslaLRrzGsOKJgFEPBP65Whn+rdwDQSk0I0MCRFe2Zw=
 github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c h1:aY2hhxLhjEAbfXOx2nRJxCXezC6CO2V/yN+OCr1srtk=

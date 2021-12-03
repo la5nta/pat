@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/harenber/ptc-go/pactor/v2"
+	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"

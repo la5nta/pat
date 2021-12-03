@@ -18,6 +18,7 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -195,7 +196,7 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	srcPath = strings.TrimPrefix(srcPath, "/api/mailbox/")
+	srcPath, _ = url.PathUnescape(strings.TrimPrefix(srcPath, "/api/mailbox/"))
 	srcPath = filepath.Join(mbox.MBoxPath, srcPath+mailbox.Ext)
 
 	// Check that we don't escape our mailbox path

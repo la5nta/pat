@@ -1081,7 +1081,7 @@ function displayFolder(dir) {
 
 function displayMessage(elem) {
   const mid = elem.attr('ID');
-  const msg_url = '/api/mailbox/' + currentFolder + '/' + mid;
+  const msg_url = buildMessagePath(currentFolder, mid);
 
   $.getJSON(msg_url, function (data) {
     elem.attr('class', 'info');
@@ -1314,7 +1314,7 @@ function htmlEscape(str) {
 function archiveMessage(box, mid) {
   $.ajax('/api/mailbox/archive', {
     headers: {
-      'X-Pat-SourcePath': '/api/mailbox/' + box + '/' + mid,
+      'X-Pat-SourcePath': buildMessagePath(box, mid),
     },
     contentType: 'application/json',
     type: 'POST',
@@ -1332,7 +1332,7 @@ function deleteMessage(box, mid) {
   $('#confirm_delete').on('click', '.btn-ok', function (e) {
     $('#message_view').modal('hide');
     const $modalDiv = $(e.delegateTarget);
-    $.ajax('/api/mailbox/' + box + '/' + mid, {
+    $.ajax(buildMessagePath(box, mid), {
       type: 'DELETE',
       success: function (resp) {
         $modalDiv.modal('hide');
@@ -1350,7 +1350,7 @@ function deleteMessage(box, mid) {
 function setRead(box, mid) {
   const data = { read: true };
 
-  $.ajax('/api/mailbox/' + box + '/' + mid + '/read', {
+  $.ajax(buildMessagePath(box, mid) + '/read', {
     data: JSON.stringify(data),
     contentType: 'application/json',
     type: 'POST',
@@ -1391,4 +1391,8 @@ function dateFormat(previous) {
   } else {
     return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
   }
+}
+
+function buildMessagePath(folder, mid) {
+  return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
 }

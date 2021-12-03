@@ -108,7 +108,16 @@ func composeMessage(args []string) {
 	attachments := set.StringArrayP("attachment", "a", nil, "")
 	ccs := set.StringArrayP("cc", "c", nil, "")
 	set.Parse(args)
-	recipients := set.Args() // Call after Parse()
+
+	// Remaining args are recipients
+	recipients := []string{}
+	for _, r := range set.Args() {
+		// Filter out empty args (this actually happens)
+		if strings.TrimSpace(r) == "" {
+			continue
+		}
+		recipients = append(recipients, r)
+	}
 
 	// Check if any args are set. If so, go non-interactive
 	// Otherwise, interactive
@@ -117,7 +126,6 @@ func composeMessage(args []string) {
 	} else {
 		interactiveComposeMessage(nil)
 	}
-
 }
 
 func noninteractiveComposeMessage(subject string, attachments []string,

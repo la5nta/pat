@@ -35,7 +35,7 @@ import (
 const (
 	fieldValueFalseInXML = "False"
 	txtFileExt           = ".txt"
-	formsVersionInfoURL  = "https://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016"
+	formsVersionInfoURL  = "https://api.getpat.io/v1/forms/standard-templates/latest"
 )
 
 // Manager manages the forms subsystem
@@ -269,55 +269,47 @@ func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
 		}
 	}
 	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
-	newestVersion, downloadLink, err := m.getLatestFormsInfo()
+	latest, err := m.getLatestFormsInfo()
 	if err != nil {
 		return UpdateResponse{}, err
 	}
-	if !m.isNewerVersion(newestVersion) {
-		log.Printf("Latest forms version is %v; nothing to do", newestVersion)
+	if !m.isNewerVersion(latest.Version) {
+		log.Printf("Latest forms version is %v; nothing to do", latest.Version)
 		return UpdateResponse{
-			NewestVersion: newestVersion,
+			NewestVersion: latest.Version,
 			Action:        "none",
 		}, nil
 	}
 
-	err = m.downloadAndUnzipForms(downloadLink)
+	err = m.downloadAndUnzipForms(latest.ArchiveURL)
 	if err != nil {
 		return UpdateResponse{}, err
 	}
-	log.Printf("Finished forms update to %v", newestVersion)
+	log.Printf("Finished forms update to %v", latest.Version)
 	// TODO: re-init forms manager
 	return UpdateResponse{
-		NewestVersion: newestVersion,
+		NewestVersion: latest.Version,
 		Action:        "update",
 	}, nil
 }
 
-func (m *Manager) getLatestFormsInfo() (string, string, error) {
+type formsInfo struct {
+	Version    string `json:"version"`
+	ArchiveURL string `json:"archive_url"`
+}
+
+func (m *Manager) getLatestFormsInfo() (*formsInfo, error) {
 	resp, err := client.Get(m, formsVersionInfoURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("can't fetch winlink forms version page: %w", err)
-	}
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", fmt.Errorf("can't read winlink forms version page: %w", err)
+		return nil, fmt.Errorf("can't fetch winlink forms version page: %w", err)
 	}
 	defer resp.Body.Close()
-	bodyString := string(bodyBytes)
 
-	// Scrape for the version and download link
-	versionRe := regexp.MustCompile(`Standard_Forms - Version (\d+\.\d+\.\d+(\.\d+)?)`)
-	downloadRe := regexp.MustCompile(`https://1drv.ms/u/([a-zA-Z0-9-_!]+)\?e=([a-zA-Z0-9-_]+)`)
-	versionMatches := versionRe.FindStringSubmatch(bodyString)
-	downloadMatches := downloadRe.FindStringSubmatch(bodyString)
-	if versionMatches == nil || len(versionMatches) < 2 || downloadMatches == nil || len(downloadMatches) < 3 {
-		return "", "", errors.New("can't scrape the version info page, HTML structure may have changed")
+	var v formsInfo
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		return nil, err
 	}
-	newestVersion := versionMatches[1]
-	docID := downloadMatches[1]
-	auth := downloadMatches[2]
-	downloadLink := "https://api.onedrive.com/v1.0/shares/" + docID + "/root/content?e=" + auth
-	return newestVersion, downloadLink, nil
+	return &v, nil
 }
 
 func (m *Manager) downloadAndUnzipForms(downloadLink string) error {

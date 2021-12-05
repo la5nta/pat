@@ -165,7 +165,7 @@ func noninteractiveComposeMessage(subject string, attachments []string,
 
 	// Read the message body from stdin
 	body, _ := ioutil.ReadAll(os.Stdin)
-	if string(body) == "" {
+	if len(body) == 0 {
 		// Yeah, I've spent way too much time using mail(1)
 		fmt.Fprint(os.Stderr, "Null message body; hope that's ok\n")
 	}

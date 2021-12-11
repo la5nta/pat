@@ -8,7 +8,7 @@ const (
 	// AppName is the friendly name of the app.
 	AppName = "Pat"
 	// Version is the app's SemVer.
-	Version = "0.12.0"
+	Version = "0.12.1"
 )
 
 // GitRev is the git commit hash that the binary was built at.

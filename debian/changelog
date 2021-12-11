@@ -1,3 +1,16 @@
+pat (0.12.1) stable; urgency=medium
+
+  * Add support for configurable telnet dial timeout (for Iridium GO users)
+  * Add support for scriptable message composition
+  * Add CLI command `env` for retrieving related environment variables (for scripting)
+  * More reliable Forms updates by using a new API for retrieving latest version and archive URL
+  * Improve websocket handling
+  * Fix bug in Forms update procedure that would delete the OS temp directory in rare cases
+  * Fix bug with pactor serial communication on macOS (Darwin)
+  * Fix bug with Web GUI and Message IDs containing the hash (`#`) symbol
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 11 Dec 2021 15:14:22 +0100
+
 pat (0.12.0) stable; urgency=medium
 
   * Follow the XDG Base Directory Specification

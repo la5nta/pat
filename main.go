@@ -73,11 +73,11 @@ var commands = []Command{
 		LongLived:  true,
 	},
 	{
-		Str: "compose",
-		Desc: "Compose a new message.\n" +
+		Str:  "compose",
+		Desc: "Compose a new message.",
+		Usage: "[options]\n" +
 			"\tIf no options are passed, composes interactively.\n" +
 			"\tIf options are passed, reads message from stdin similar to mail(1).",
-		Usage: "[options]",
 		Options: map[string]string{
 			"--callsign, -r":    "Callsign to send from. Default reads from config",
 			"--subject, -s":     "Subject",

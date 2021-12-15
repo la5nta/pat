@@ -79,7 +79,7 @@ var commands = []Command{
 			"\tIf no options are passed, composes interactively.\n" +
 			"\tIf options are passed, reads message from stdin similar to mail(1).",
 		Options: map[string]string{
-			"--callsign, -r":    "Callsign to send from. Default reads from config",
+			"--from, -r":        "Address to send from. Default is your call from config or --mycall, but can be specified to use tactical addresses.",
 			"--subject, -s":     "Subject",
 			"--attachment , -a": "Attachment path (may be repeated)",
 			"--cc, -c":          "CC Address(es) (may be repeated)",

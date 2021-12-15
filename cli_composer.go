@@ -104,6 +104,8 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 
 func composeMessage(args []string) {
 	set := pflag.NewFlagSet("compose", pflag.ExitOnError)
+	// From default is --mycall but it can be overriden with -r
+	from := set.StringP("from", "r", fOptions.MyCall, "")
 	subject := set.StringP("subject", "s", "", "")
 	attachments := set.StringArrayP("attachment", "a", nil, "")
 	ccs := set.StringArrayP("cc", "c", nil, "")
@@ -122,13 +124,13 @@ func composeMessage(args []string) {
 	// Check if any args are set. If so, go non-interactive
 	// Otherwise, interactive
 	if (len(*subject) + len(*attachments) + len(*ccs) + len(recipients)) > 0 {
-		noninteractiveComposeMessage(*subject, *attachments, *ccs, recipients)
+		noninteractiveComposeMessage(*from, *subject, *attachments, *ccs, recipients)
 	} else {
 		interactiveComposeMessage(nil)
 	}
 }
 
-func noninteractiveComposeMessage(subject string, attachments []string,
+func noninteractiveComposeMessage(from string, subject string, attachments []string,
 	ccs []string, recipients []string) {
 	// We have to verify the args here. Follow the same pattern as main()
 	// We'll allow a missing recipient if CC is present (or vice versa)
@@ -143,7 +145,7 @@ func noninteractiveComposeMessage(subject string, attachments []string,
 	}
 
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
-	msg.SetFrom(fOptions.MyCall)
+	msg.SetFrom(from)
 	for _, to := range recipients {
 		msg.AddTo(to)
 	}

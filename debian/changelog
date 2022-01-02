@@ -32,7 +32,7 @@ pat (0.11.0) stable; urgency=medium
   * Add support for individual passords for auxiliary addresses
   * Add ability to abort ongoing dialing/connection in Web GUI
   * Add systemd unit file for rigctld
-  * Improve version reporing to Winlink API
+  * Improve version reporting to Winlink API
   * Improve websocket handling
   * Improve visibility of QSY errors in Web GUI
   * Improve 'reply' and 'forward' functionality in Web GUI
@@ -175,7 +175,7 @@ pat (0.2.1) stable; urgency=medium
 pat (0.2.0) stable; urgency=medium
 
   * Support Radio only - Winlink Hybrid Network (https://github.com/la5nta/pat/issues/44)
-  * Swich to Go port of lzhuf (https://github.com/la5nta/pat/issues/50)
+  * Switch to Go port of lzhuf (https://github.com/la5nta/pat/issues/50)
   * Linux ax25 scripts: Add method for custom TNC initialization (https://github.com/la5nta/pat/issues/53)
   * Fix ardop PTT rigcontrol (https://github.com/la5nta/pat/issues/58)
   * Minor bug fixes and improvements in the web GUI

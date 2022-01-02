@@ -175,7 +175,7 @@ func noninteractiveComposeMessage(subject string, attachments []string,
 	postMessage(msg)
 }
 
-// This is currently an alias for interactiveComposeMessage but keeping as a seperate
+// This is currently an alias for interactiveComposeMessage but keeping as a separate
 // call path for the future
 func composeReplyMessage(replyMsg *fbb.Message) {
 	interactiveComposeMessage(replyMsg)

@@ -361,7 +361,7 @@ func main() {
 }
 
 func maybeUpdateFormsDir(args []string) {
-	// Backward compatability for config file forms_path
+	// Backward compatibility for config file forms_path
 	formsFlagExplicitlyUsed := false
 	for i := 0; i < len(args); i++ {
 		if strings.HasPrefix(args[i], "--forms") {

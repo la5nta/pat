@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -23,14 +24,14 @@ import (
 
 var mailboxes = []string{"in", "out", "sent", "archive"}
 
-func readMail() {
+func readMail(ctx context.Context) {
 	w := os.Stdout
 
 	for {
 		// Query user for mailbox to list
 		printMailboxes(w)
 		fmt.Fprintf(w, "\nChoose mailbox [n]: ")
-		mailboxIdx, ok := readInt()
+		mailboxIdx, ok := readInt(ctx)
 		if !ok {
 			break
 		} else if mailboxIdx+1 > len(mailboxes) {
@@ -54,7 +55,7 @@ func readMail() {
 
 			// Query user for message to print
 			fmt.Fprintf(w, "Choose message [n]: ")
-			msgIdx, ok := readInt()
+			msgIdx, ok := readInt(ctx)
 			if !ok {
 				break
 			} else if msgIdx+1 > len(msgs) {
@@ -82,14 +83,19 @@ func readMail() {
 	}
 }
 
-func readInt() (int, bool) {
-	str := readLine()
-	if str == "" {
+func readInt(ctx context.Context) (int, bool) {
+	cs := make(chan string, 1)
+	go func() { cs <- readLine() }()
+	select {
+	case <-ctx.Done():
 		return 0, false
+	case str := <-cs:
+		if str == "" {
+			return 0, false
+		}
+		i, _ := strconv.Atoi(str)
+		return i, true
 	}
-
-	i, _ := strconv.Atoi(str)
-	return i, true
 }
 
 type PrettyAddrSlice []fbb.Address

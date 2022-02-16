@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -62,7 +63,7 @@ func (r byDist) Len() int           { return len(r) }
 func (r byDist) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r byDist) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
 
-func rmsListHandle(args []string) {
+func rmsListHandle(ctx context.Context, args []string) {
 	set := pflag.NewFlagSet("rmslist", pflag.ExitOnError)
 	mode := set.StringP("mode", "m", "", "")
 	band := set.StringP("band", "b", "", "")
@@ -76,7 +77,7 @@ func rmsListHandle(args []string) {
 	}
 
 	*mode = strings.ToLower(*mode)
-	rList, err := ReadRMSList(*forceDownload, func(rms RMS) bool {
+	rList, err := ReadRMSList(ctx, *forceDownload, func(rms RMS) bool {
 		switch {
 		case query != "" && !strings.HasPrefix(rms.Callsign, query):
 			return false
@@ -113,7 +114,7 @@ func rmsListHandle(args []string) {
 	}
 }
 
-func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
+func ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
 	me, err := maidenhead.ParseLocator(config.Locator)
 	if err != nil {
 		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
@@ -127,7 +128,7 @@ func ReadRMSList(forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS,
 	filePath := filepath.Join(directories.DataDir(), fileName+".json")
 	debug.Printf("RMS list file is %s", filePath)
 
-	f, err := cmsapi.GetGatewayStatusCached(filePath, forceDownload, config.ServiceCodes...)
+	f, err := cmsapi.GetGatewayStatusCached(ctx, filePath, forceDownload, config.ServiceCodes...)
 	if err != nil {
 		return nil, err
 	}

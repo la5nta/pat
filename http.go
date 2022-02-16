@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -84,7 +85,7 @@ func init() {
 	}
 }
 
-func ListenAndServe(addr string) error {
+func ListenAndServe(ctx context.Context, addr string) error {
 	log.Printf("Starting HTTP service (http://%s)...", addr)
 
 	if host, _, _ := net.SplitHostPort(addr); host == "" && config.GPSd.EnableHTTP {
@@ -122,7 +123,21 @@ func ListenAndServe(addr string) error {
 
 	websocketHub = NewWSHub()
 
-	return http.ListenAndServe(addr, nil)
+	srv := http.Server{Addr: addr}
+	errs := make(chan error, 1)
+	go func() {
+		errs <- srv.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Println("Shutting down HTTP server...")
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		srv.Shutdown(ctx)
+		return nil
+	case err := <-errs:
+		return err
+	}
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -406,7 +421,7 @@ func rmslistHandler(w http.ResponseWriter, req *http.Request) {
 	mode := strings.ToLower(req.FormValue("mode"))
 	prefix := strings.ToUpper(req.FormValue("prefix"))
 
-	list, err := ReadRMSList(forceDownload, func(r RMS) bool {
+	list, err := ReadRMSList(req.Context(), forceDownload, func(r RMS) bool {
 		switch {
 		case r.URL == nil:
 			return false

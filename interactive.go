@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -17,24 +18,32 @@ import (
 	"github.com/peterh/liner"
 )
 
-func Interactive() {
+func Interactive(ctx context.Context) {
 	line := liner.NewLiner()
 	defer line.Close()
 
-	for {
-		str, _ := line.Prompt(getPrompt())
-		if str == "" {
-			continue
-		}
-		line.AppendHistory(str)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			str, _ := line.Prompt(getPrompt())
+			if str == "" {
+				continue
+			}
+			line.AppendHistory(str)
 
-		if str[0] == '#' {
-			continue
-		}
+			if str[0] == '#' {
+				continue
+			}
 
-		if quit := execCmd(str); quit {
-			break
+			if quit := execCmd(str); quit {
+				break
+			}
 		}
+	}()
+	select {
+	case <-ctx.Done():
+	case <-done:
 	}
 }
 

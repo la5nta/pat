@@ -8,6 +8,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -102,7 +103,7 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	return msg
 }
 
-func composeMessage(args []string) {
+func composeMessage(ctx context.Context, args []string) {
 	set := pflag.NewFlagSet("compose", pflag.ExitOnError)
 	// From default is --mycall but it can be overriden with -r
 	from := set.StringP("from", "r", fOptions.MyCall, "")
@@ -295,7 +296,7 @@ func readLine() string {
 	return strings.TrimSpace(str)
 }
 
-func composeFormReport(args []string) {
+func composeFormReport(ctx context.Context, args []string) {
 	var tmplPathArg string
 
 	set := pflag.NewFlagSet("form", pflag.ExitOnError)

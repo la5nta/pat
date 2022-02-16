@@ -140,9 +140,6 @@ func Connect(connectStr string) (success bool) {
 		waitBusy(wmTNC)
 	}
 
-	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.
-	doneHandleInterrupt := handleInterrupt()
-
 	// Signal web gui that we are dialing a connection
 	dialing = url
 	websocketHub.UpdateStatus()
@@ -153,8 +150,6 @@ func Connect(connectStr string) (success bool) {
 	// Signal web gui that we are no longer dialing
 	dialing = nil
 	websocketHub.UpdateStatus()
-
-	close(doneHandleInterrupt)
 
 	eventLog.LogConn("connect "+connectStr, currFreq, conn, err)
 

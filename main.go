@@ -6,12 +6,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -90,8 +92,8 @@ var commands = []Command{
 	{
 		Str:  "read",
 		Desc: "Read messages.",
-		HandleFunc: func(args []string) {
-			readMail()
+		HandleFunc: func(ctx context.Context, args []string) {
+			readMail(ctx)
 		},
 	},
 	{
@@ -137,8 +139,8 @@ var commands = []Command{
 	{
 		Str:  "updateforms",
 		Desc: "Download the latest form templates from winlink.org.",
-		HandleFunc: func(args []string) {
-			if _, err := formsMgr.UpdateFormTemplates(); err != nil {
+		HandleFunc: func(ctx context.Context, args []string) {
+			if _, err := formsMgr.UpdateFormTemplates(ctx); err != nil {
 				log.Printf("%v", err)
 			}
 		},
@@ -151,7 +153,7 @@ var commands = []Command{
 	{
 		Str:  "version",
 		Desc: "Print the application version.",
-		HandleFunc: func(args []string) {
+		HandleFunc: func(_ context.Context, args []string) {
 			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
 		},
 	},
@@ -257,13 +259,33 @@ func main() {
 	debug.Printf("Event log file is\t'%s'", fOptions.EventLogPath)
 	directories.MigrateLegacyDataDir()
 
+	// Graceful shutdown by cancelling background context on interrupt.
+	//
+	// If we have an active connection, cancel that instead.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
+		for {
+			<-sig
+			if ok := abortActiveConnection(dirtyDisconnectNext); ok {
+				dirtyDisconnectNext = !dirtyDisconnectNext
+			} else {
+				break
+			}
+		}
+		cancel()
+	}()
+
 	// Skip initialization for some commands
 	switch cmd.Str {
 	case "help":
 		helpHandle(args)
 		return
 	case "configure", "version":
-		cmd.HandleFunc(args)
+		cmd.HandleFunc(ctx, args)
 		return
 	}
 
@@ -357,7 +379,7 @@ func main() {
 	}
 
 	// Start command execution
-	cmd.HandleFunc(args)
+	cmd.HandleFunc(ctx, args)
 }
 
 func maybeUpdateFormsDir(args []string) {
@@ -374,7 +396,7 @@ func maybeUpdateFormsDir(args []string) {
 	}
 }
 
-func configureHandle(args []string) {
+func configureHandle(ctx context.Context, args []string) {
 	// Ensure config file has been written
 	_, err := ReadConfig(fOptions.ConfigPath)
 	if os.IsNotExist(err) {
@@ -384,14 +406,14 @@ func configureHandle(args []string) {
 		}
 	}
 
-	cmd := exec.Command(EditorName(), fOptions.ConfigPath)
+	cmd := exec.CommandContext(ctx, EditorName(), fOptions.ConfigPath)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("Unable to start editor: %s", err)
 	}
 }
 
-func InteractiveHandle(args []string) {
+func InteractiveHandle(ctx context.Context, args []string) {
 	var http string
 	set := pflag.NewFlagSet("interactive", pflag.ExitOnError)
 	set.StringVar(&http, "http", "", "HTTP listen address")
@@ -399,20 +421,22 @@ func InteractiveHandle(args []string) {
 	set.Parse(args)
 
 	if http == "" {
-		Interactive()
+		Interactive(ctx)
 		return
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	go func() {
-		if err := ListenAndServe(http); err != nil {
+		if err := ListenAndServe(ctx, http); err != nil {
 			log.Println(err)
 		}
 	}()
 	time.Sleep(time.Second)
-	Interactive()
+	Interactive(ctx)
 }
 
-func httpHandle(args []string) {
+func httpHandle(ctx context.Context, args []string) {
 	addr := config.HTTPAddr
 	if addr == "" {
 		addr = ":8080" // For backwards compatibility (remove in future)
@@ -429,12 +453,12 @@ func httpHandle(args []string) {
 
 	promptHub.OmitTerminal(true)
 
-	if err := ListenAndServe(addr); err != nil {
-		log.Fatal(err)
+	if err := ListenAndServe(ctx, addr); err != nil {
+		log.Println(err)
 	}
 }
 
-func connectHandle(args []string) {
+func connectHandle(_ context.Context, args []string) {
 	if args[0] == "" {
 		fmt.Println("Missing argument, try 'connect help'.")
 	}
@@ -461,26 +485,26 @@ func helpHandle(args []string) {
 }
 
 func cleanup() {
-	listenHub.Close()
+	debug.Printf("Starting cleanup")
+	defer debug.Printf("Cleanup done")
 
+	abortActiveConnection(false)
+	listenHub.Close()
 	if wmTNC != nil {
 		if err := wmTNC.Close(); err != nil {
 			log.Fatalf("Failure to close winmor TNC: %s", err)
 		}
 	}
-
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)
 		}
 	}
-
 	if pModem != nil {
 		if err := pModem.Close(); err != nil {
 			log.Fatalf("Failure to close pactor modem: %s", err)
 		}
 	}
-
 	eventLog.Close()
 }
 
@@ -541,7 +565,7 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 	return rigs
 }
 
-func extractMessageHandle(args []string) {
+func extractMessageHandle(_ context.Context, args []string) {
 	if len(args) == 0 || args[0] == "" {
 		panic("TODO: usage")
 	}
@@ -581,7 +605,7 @@ func EditorName() string {
 	return "vi"
 }
 
-func posReportHandle(args []string) {
+func posReportHandle(ctx context.Context, args []string) {
 	var latlon, comment string
 
 	set := pflag.NewFlagSet("position", pflag.ExitOnError)
@@ -614,15 +638,28 @@ func posReportHandle(args []string) {
 			log.Fatalf("GPSd daemon: %s", err)
 		}
 		defer conn.Close()
-
 		conn.Watch(true)
 
-		log.Println("Waiting for position from GPSd...") // TODO: Spinning bar?
-		pos, err := conn.NextPos()
-		if err != nil {
-			log.Fatalf("GPSd: %s", err)
-		}
+		posChan := make(chan gpsd.Position)
+		go func() {
+			defer close(posChan)
+			pos, err := conn.NextPos()
+			if err != nil {
+				log.Printf("GPSd: %s", err)
+				return
+			}
+			posChan <- pos
+		}()
 
+		log.Println("Waiting for position from GPSd...") // TODO: Spinning bar?
+		var pos gpsd.Position
+		select {
+		case p := <-posChan:
+			pos = p
+		case <-ctx.Done():
+			log.Println("Cancelled")
+			return
+		}
 		report.Lat = &pos.Lat
 		report.Lon = &pos.Lon
 		if config.GPSd.UseServerTime {

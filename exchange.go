@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"strings"
 	"time"
 
@@ -122,10 +121,6 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 
 	log.Printf("Connected to %s (%s)", conn.RemoteAddr(), conn.RemoteAddr().Network())
 
-	// Close connection on os.Interrupt
-	stop := handleInterrupt()
-	defer close(stop)
-
 	start := time.Now()
 
 	stats, err := session.Exchange(conn)
@@ -161,29 +156,6 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 	eventLog.Log("exchange", event)
 
 	return err
-}
-
-func handleInterrupt() (stop chan struct{}) {
-	stop = make(chan struct{})
-
-	go func() {
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt)
-		defer func() { signal.Stop(sig); close(sig) }()
-
-		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
-		for {
-			select {
-			case <-stop:
-				return
-			case <-sig:
-				abortActiveConnection(dirtyDisconnectNext)
-				dirtyDisconnectNext = !dirtyDisconnectNext
-			}
-		}
-	}()
-
-	return stop
 }
 
 func abortActiveConnection(dirty bool) (ok bool) {
@@ -227,7 +199,7 @@ func abortActiveConnection(dirty bool) (ok bool) {
 		return true
 	case dialing != nil:
 		log.Printf("Transport %s's dialer can not be aborted at this stage", dialing.Scheme)
-		return false
+		return true
 	default:
 		return false
 	}

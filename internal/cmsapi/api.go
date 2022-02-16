@@ -6,6 +6,7 @@ package cmsapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -110,7 +112,7 @@ type RFC1123Time struct{ time.Time }
 // mode can be any of [packet, pactor, winmor, robustpacket, allhf or anyall]. Empty is AnyAll.
 // historyHours is the number of hours of history to include (maximum: 48). If < 1, then API default is used.
 // serviceCodes defaults to "PUBLIC".
-func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io.ReadCloser, error) {
+func GetGatewayStatus(ctx context.Context, mode string, historyHours int, serviceCodes ...string) (io.ReadCloser, error) {
 	switch {
 	case mode == "":
 		mode = "AnyAll"
@@ -129,7 +131,12 @@ func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io
 		params.Add("ServiceCodes", str)
 	}
 
-	resp, err := http.PostForm(RootURL+PathGatewayStatus, params)
+	req, err := http.NewRequestWithContext(ctx, "POST", RootURL+PathGatewayStatus, strings.NewReader(params.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
 	switch {
 	case err != nil:
 		return nil, err
@@ -140,7 +147,7 @@ func GetGatewayStatus(mode string, historyHours int, serviceCodes ...string) (io
 	return resp.Body, err
 }
 
-func GetGatewayStatusCached(cacheFile string, forceDownload bool, serviceCodes ...string) (io.ReadCloser, error) {
+func GetGatewayStatusCached(ctx context.Context, cacheFile string, forceDownload bool, serviceCodes ...string) (io.ReadCloser, error) {
 	if !forceDownload {
 		file, err := os.Open(cacheFile)
 		if err == nil {
@@ -149,7 +156,7 @@ func GetGatewayStatusCached(cacheFile string, forceDownload bool, serviceCodes .
 	}
 
 	log.Println("Downloading latest gateway status information...")
-	fresh, err := GetGatewayStatus("", 48, serviceCodes...)
+	fresh, err := GetGatewayStatus(ctx, "", 48, serviceCodes...)
 	if err != nil {
 		return nil, err
 	}

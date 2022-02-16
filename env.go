@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"github.com/la5nta/pat/internal/buildinfo"
 )
 
-func envHandle(_ []string) {
+func envHandle(_ context.Context, _ []string) {
 	writeEnvAll(os.Stdout)
 }
 

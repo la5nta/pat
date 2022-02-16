@@ -10,6 +10,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -251,8 +252,8 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 }
 
 // UpdateFormTemplatesHandler handles API calls to update form templates.
-func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Request) {
-	response, err := m.UpdateFormTemplates()
+func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, r *http.Request) {
+	response, err := m.UpdateFormTemplates(r.Context())
 	if err != nil {
 		http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
 		return
@@ -262,14 +263,14 @@ func (m *Manager) UpdateFormTemplatesHandler(w http.ResponseWriter, _ *http.Requ
 }
 
 // UpdateFormTemplates handles searching for and installing the latest version of the form templates.
-func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
+func (m *Manager) UpdateFormTemplates(ctx context.Context) (UpdateResponse, error) {
 	if _, err := os.Stat(m.config.FormsPath); err != nil {
 		if err := os.MkdirAll(m.config.FormsPath, 0o755); err != nil {
 			return UpdateResponse{}, fmt.Errorf("can't write to forms dir [%w]", err)
 		}
 	}
 	log.Printf("Updating form templates; current version is %v", m.getFormsVersion())
-	latest, err := m.getLatestFormsInfo()
+	latest, err := m.getLatestFormsInfo(ctx)
 	if err != nil {
 		return UpdateResponse{}, err
 	}
@@ -281,7 +282,7 @@ func (m *Manager) UpdateFormTemplates() (UpdateResponse, error) {
 		}, nil
 	}
 
-	err = m.downloadAndUnzipForms(latest.ArchiveURL)
+	err = m.downloadAndUnzipForms(ctx, latest.ArchiveURL)
 	if err != nil {
 		return UpdateResponse{}, err
 	}
@@ -298,8 +299,8 @@ type formsInfo struct {
 	ArchiveURL string `json:"archive_url"`
 }
 
-func (m *Manager) getLatestFormsInfo() (*formsInfo, error) {
-	resp, err := client.Get(m, formsVersionInfoURL)
+func (m *Manager) getLatestFormsInfo(ctx context.Context) (*formsInfo, error) {
+	resp, err := client.Get(ctx, m.config.UserAgent, formsVersionInfoURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("can't fetch winlink forms version page: %w", err)
 	}
@@ -312,9 +313,9 @@ func (m *Manager) getLatestFormsInfo() (*formsInfo, error) {
 	return &v, nil
 }
 
-func (m *Manager) downloadAndUnzipForms(downloadLink string) error {
+func (m *Manager) downloadAndUnzipForms(ctx context.Context, downloadLink string) error {
 	log.Printf("Updating forms via %v", downloadLink)
-	resp, err := client.Get(m, downloadLink)
+	resp, err := client.Get(ctx, m.config.UserAgent, downloadLink)
 	if err != nil {
 		return fmt.Errorf("can't download update ZIP: %w", err)
 	}
@@ -997,12 +998,12 @@ func (m *Manager) isNewerVersion(newestVersion string) bool {
 
 type httpClient struct{ http.Client }
 
-func (c httpClient) Get(m *Manager, url string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
+func (c httpClient) Get(ctx context.Context, userAgent, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", m.config.UserAgent)
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Cache-Control", "no-cache")
 	return c.Do(req)
 }

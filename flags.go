@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -18,7 +19,7 @@ type Command struct {
 	Str        string
 	Aliases    []string
 	Desc       string
-	HandleFunc func(args []string)
+	HandleFunc func(ctx context.Context, args []string)
 	Usage      string
 	Options    map[string]string
 	Example    string

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -81,29 +80,6 @@ func (p *PromptHub) Prompt(kind, message string) <-chan PromptResponse {
 	}
 
 	return prompt.resp
-}
-
-type ReadAborter struct {
-	*os.File
-	abort chan struct{}
-}
-
-func (r ReadAborter) Read(p []byte) (int, error) {
-	tick := time.Tick(100 * time.Millisecond)
-	for {
-		select {
-		case <-r.abort:
-			return 0, io.EOF
-		case <-tick:
-			stat, err := r.Stat()
-			if err != nil {
-				panic(err)
-			}
-			if stat.Size() > 0 {
-				return r.File.Read(p)
-			}
-		}
-	}
 }
 
 func (p *PromptHub) promptTerminal(prompt Prompt) {

@@ -132,7 +132,8 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	select {
 	case <-ctx.Done():
 		log.Println("Shutting down HTTP server...")
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
 		srv.Shutdown(ctx)
 		return nil
 	case err := <-errs:

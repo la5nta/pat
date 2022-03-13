@@ -18,6 +18,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path"
@@ -31,6 +32,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/dimchansky/utfbom"
+	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/gpsd"
+	"github.com/pd0mz/go-maidenhead"
 )
 
 const (
@@ -60,6 +65,7 @@ type Config struct {
 	AppVersion string
 	LineReader func() string
 	UserAgent  string
+	GPSd       cfg.GPSdConfig
 }
 
 // Form holds information about a Winlink form template
@@ -705,6 +711,99 @@ func (m *Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
 	return retVal, nil
 }
 
+// gpsPos returns the current GPS Position
+func (m *Manager) gpsPos() (gpsd.Position, error) {
+	addr := m.config.GPSd.Addr
+	if addr == "" {
+		return gpsd.Position{}, errors.New("GPSd: not configured.")
+	}
+	if !m.config.GPSd.AllowForms {
+		return gpsd.Position{}, errors.New("GPSd: allow_forms is disabled. GPS position will not be available in form templates.")
+	}
+
+	conn, err := gpsd.Dial(addr)
+	if err != nil {
+		log.Printf("GPSd daemon: %s", err)
+		return gpsd.Position{}, err
+	}
+
+	defer conn.Close()
+
+	conn.Watch(true)
+
+	log.Println("Waiting for position from GPSd...")
+	// TODO: make the GPSd timeout configurable
+	return conn.NextPosTimeout(3 * time.Second)
+}
+
+type gpsStyle int
+
+const (
+	// documentation: https://www.winlink.org/sites/default/files/RMSE_FORMS/insertion_tags.zip
+	signedDecimal gpsStyle = iota // 41.1234 -73.4567
+	decimal                       // 46.3795N 121.5835W
+	degreeMinute                  // 46-22.77N 121-35.01W
+)
+
+func gpsFmt(style gpsStyle, pos gpsd.Position) string {
+	var (
+		northing   string
+		easting    string
+		latDegrees int
+		latMinutes float64
+		lonDegrees int
+		lonMinutes float64
+	)
+
+	noPos := gpsd.Position{}
+	if pos == noPos {
+		return "(Not available)"
+	}
+	switch style {
+	case degreeMinute:
+		{
+			latDegrees = int(math.Trunc(math.Abs(pos.Lat)))
+			latMinutes = (math.Abs(pos.Lat) - float64(latDegrees)) * 60
+			lonDegrees = int(math.Trunc(math.Abs(pos.Lon)))
+			lonMinutes = (math.Abs(pos.Lon) - float64(lonDegrees)) * 60
+		}
+		fallthrough
+	case decimal:
+		{
+			if pos.Lat >= 0 {
+				northing = "N"
+			} else {
+				northing = "S"
+			}
+			if pos.Lon >= 0 {
+				easting = "E"
+			} else {
+				easting = "W"
+			}
+		}
+	}
+
+	switch style {
+	case signedDecimal:
+		return fmt.Sprintf("%.4f %.4f", pos.Lat, pos.Lon)
+	case decimal:
+		return fmt.Sprintf("%.4f%s %.4f%s", math.Abs(pos.Lat), northing, math.Abs(pos.Lon), easting)
+	case degreeMinute:
+		return fmt.Sprintf("%02d-%05.2f%s %03d-%05.2f%s", latDegrees, latMinutes, northing, lonDegrees, lonMinutes, easting)
+	default:
+		return "(Not available)"
+	}
+}
+
+func posToGridSquare(pos gpsd.Position) string {
+	point := maidenhead.NewPoint(pos.Lat, pos.Lon)
+	gridsquare, err := point.GridSquare()
+	if err != nil {
+		return ""
+	}
+	return gridsquare
+}
+
 func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
 	fUnsanitized, err := os.Open(absPathTemplate)
 	if err != nil {
@@ -733,6 +832,15 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 	nowDateUTC := now.UTC().Format("2006-01-02Z")
 	nowTimeUTC := now.UTC().Format("15:04:05Z")
 	udtg := strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
+	nowPos, err := m.gpsPos()
+	var validPos string
+	if err != nil {
+		validPos = "NO"
+		debug.Printf(fmt.Sprint(err))
+	} else {
+		validPos = "YES"
+		debug.Printf("GPSd position: %s", gpsFmt(signedDecimal, nowPos))
+	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
 	for scanner.Scan() {
@@ -750,6 +858,17 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 		l = strings.ReplaceAll(l, "{UDTG}", udtg)
 		l = strings.ReplaceAll(l, "{Time}", nowTime)
 		l = strings.ReplaceAll(l, "{UTime}", nowTimeUTC)
+		l = strings.ReplaceAll(l, "{GPS}", gpsFmt(degreeMinute, nowPos))
+		l = strings.ReplaceAll(l, "{GPS_DECIMAL}", gpsFmt(decimal, nowPos))
+		l = strings.ReplaceAll(l, "{GPS_SIGNED_DECIMAL}", gpsFmt(signedDecimal, nowPos))
+		// Lots of undocumented tags found in the Winlink check in form.
+		// Note also various ways of capitalizing. Perhaps best to do case insenstive string replacements....
+		l = strings.ReplaceAll(l, "{Latitude}", fmt.Sprintf("%.4f", nowPos.Lat))
+		l = strings.ReplaceAll(l, "{latitude}", fmt.Sprintf("%.4f", nowPos.Lat))
+		l = strings.ReplaceAll(l, "{Longitude}", fmt.Sprintf("%.4f", nowPos.Lon))
+		l = strings.ReplaceAll(l, "{longitude}", fmt.Sprintf("%.4f", nowPos.Lon))
+		l = strings.ReplaceAll(l, "{GridSquare}", posToGridSquare(nowPos))
+		l = strings.ReplaceAll(l, "{GPSValid}", fmt.Sprintf("%s ", validPos))
 		if placeholderRegEx != nil {
 			l = fillPlaceholders(l, placeholderRegEx, formVars)
 		}

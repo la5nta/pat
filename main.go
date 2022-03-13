@@ -346,6 +346,7 @@ func main() {
 		AppVersion: buildinfo.VersionStringShort(),
 		UserAgent:  buildinfo.UserAgent(),
 		LineReader: readLine,
+		GPSd:       config.GPSd,
 	})
 
 	// Make sure we clean up on exit, closing any open resources etc.

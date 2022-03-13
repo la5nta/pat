@@ -226,11 +226,15 @@ type GPSdConfig struct {
 	// Caution: Your GPS position will be accessible to any network device able to access Pat's HTTP interface.
 	EnableHTTP bool `json:"enable_http"`
 
-	// Use server time instead of timestamp provided by GPSd (e.g for older GPS
-	// device with week roll-over issue)
+	// Allow Winlink forms to use GPSd for aquiring your position.
+	//
+	// Caution: Your current GPS position will be automatically injected, without your explicit consent, into forms requesting such information.
+	AllowForms bool `json:"allow_forms"`
+
+	// Use server time instead of timestamp provided by GPSd (e.g for older GPS device with week roll-over issue).
 	UseServerTime bool `json:"use_server_time"`
 
-	// Address and port of GPSd server (e.g. localhost:2947)
+	// Address and port of GPSd server (e.g. localhost:2947).
 	Addr string `json:"addr"`
 }
 
@@ -272,6 +276,7 @@ var DefaultConfig = Config{
 	},
 	GPSd: GPSdConfig{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)
+		AllowForms:    false, // Default to false to help protect location privacy of unknowing users
 		UseServerTime: false,
 		Addr:          "localhost:2947", // Default listen address for GPSd
 	},

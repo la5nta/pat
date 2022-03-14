@@ -425,6 +425,7 @@ function initConnectModal() {
     onConnectInputChange();
     onConnectFreqChange();
   });
+  $('#bandwidthInput').change(onConnectInputChange);
   $('#radioOnlyInput').change(onConnectInputChange);
   $('#addrInput').change(onConnectInputChange);
   $('#targetInput').change(onConnectInputChange);
@@ -531,6 +532,12 @@ function setConnectValues(url) {
     $('#freqInput').val('');
   }
 
+  if (url.hasQuery('bw')) {
+    $('#bandwidthInput').val(query['bw']).change();
+  } else {
+    $('#bandwidthInput').val('').change();
+  }
+
   if (url.hasQuery('radio_only')) {
     $('#radioOnlyInput')[0].checked = query['radio_only'];
   } else {
@@ -563,6 +570,9 @@ function getConnectURL() {
   if ($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
     params += '&freq=' + $('#freqInput').val();
   }
+  if ($('#bandwidthInput').val()) {
+    params += '&bw=' + $('#bandwidthInput').val();
+  }
   if ($('#radioOnlyInput').is(':checked')) {
     params += '&radio_only=true';
   }
@@ -586,9 +596,13 @@ function onConnectFreqChange() {
   });
   inputGroup.tooltip('destroy');
 
+  const bandwidthInput = $('#bandwidthInput');
+  bandwidthInput.css('text-decoration', 'none currentcolor solid');
+
   const data = {
     transport: $('#transportSelect').val(),
     freq: new Number(freqInput.val()),
+    bandwidth: new Number(bandwidthInput.val()),
   };
   if (data.freq == 0) {
     return;
@@ -642,14 +656,27 @@ function onConnectInputChange() {
 
 function refreshExtraInputGroups() {
   const transport = $('#transportSelect').val();
-  if (transport == 'telnet') {
-    $('#freqInputDiv').hide();
-    $('#freqInput').val('');
-    $('#addrInputDiv').show();
-  } else {
-    $('#addrInputDiv').hide();
-    $('#addrInput').val('');
-    $('#freqInputDiv').show();
+  populateBandwidths(transport);
+  switch (transport) {
+    case 'telnet':
+      $('#freqInputDiv').hide();
+      $('#freqInput').val('');
+      $('#bandwidthInputDiv').hide();
+      $('#bandwidthInput').val('');
+      $('#addrInputDiv').show();
+      break;
+    case 'ardop':
+      $('#addrInputDiv').hide();
+      $('#addrInput').val('');
+      $('#freqInputDiv').show();
+      $('#bandwidthInputDiv').show();
+      break;
+    default:
+      $('#addrInputDiv').hide();
+      $('#addrInput').val('');
+      $('#bandwidthInputDiv').hide();
+      $('#bandwidthInput').val('');
+      $('#freqInputDiv').show();
   }
 
   if (transport == 'ax25' || transport == 'serial-tnc') {
@@ -658,6 +685,24 @@ function refreshExtraInputGroups() {
   } else {
     $('#radioOnlyInputDiv').show();
   }
+}
+
+function populateBandwidths(transport) {
+  const select = $('#bandwidthInput');
+  $.ajax({
+    method: 'GET',
+    url: `/api/bandwidths?mode=${transport}`,
+    dataType: 'json',
+    success: function (data) {
+      const beforeVal = select.val();
+      select.empty();
+      data.bandwidths.forEach((bw) => {
+        select.append(`<option value="${bw}">${bw}</option>`);
+      });
+      select.val(beforeVal).change();
+      select.selectpicker('refresh');
+    },
+  });
 }
 
 function handleGeolocationError(error) {
@@ -825,7 +870,7 @@ function closeComposer(clear) {
 }
 
 function connect(evt) {
-  const url = getConnectURL();
+  const url = encodeURIComponent(getConnectURL());
 
   $('#connectModal').modal('hide');
 

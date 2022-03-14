@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/la5nta/wl2k-go/transport/ardop"
 	"html/template"
 	"io"
 	"io/fs"
@@ -98,6 +99,7 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/api/bandwidths", bandwidthsHandler).Methods("GET")
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
 	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalogHandler).Methods("GET")
@@ -443,6 +445,33 @@ func getStatus() Status {
 
 func statusHandler(w http.ResponseWriter, _ *http.Request) {
 	_ = json.NewEncoder(w).Encode(getStatus())
+}
+
+func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
+	type BandwidthResponse struct {
+		Mode       string   `json:"mode"`
+		Bandwidths []string `json:"bandwidths"`
+	}
+	mode := strings.ToLower(req.FormValue("mode"))
+	var resp = BandwidthResponse{Mode: mode, Bandwidths: []string{}}
+	switch mode {
+	case MethodPactor:
+		fallthrough
+	case MethodAX25:
+		fallthrough
+	case MethodTelnet:
+		fallthrough
+	case MethodSerialTNC:
+		// bandwidth not supported, return empty list
+	case MethodArdop:
+		for _, bw := range ardop.Bandwidths() {
+			resp.Bandwidths = append(resp.Bandwidths, bw.String())
+		}
+	default:
+		http.Error(w, "mode not recognized", http.StatusBadRequest)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func rmslistHandler(w http.ResponseWriter, req *http.Request) {

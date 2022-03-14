@@ -165,9 +165,17 @@ func ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS)
 	return slice, nil
 }
 
-func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
+func toURL(gc cmsapi.GatewayChannel, targetCall string) *url.URL {
 	freq := Frequency(gc.Frequency).Dial(gc.SupportedModes)
-	chURL, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetcall, freq.KHz()))
+	chURL, _ := url.Parse(fmt.Sprintf("%s:///%s?freq=%v", toTransport(gc), targetCall, freq.KHz()))
+	modeF := strings.Fields(gc.SupportedModes)
+	if modeF[0] == "ARDOP" {
+		v := chURL.Query()
+		if len(modeF) > 1 {
+			v.Set("bw", modeF[1]+"MAX")
+		}
+		chURL.RawQuery = v.Encode()
+	}
 	return chURL
 }
 

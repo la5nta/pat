@@ -320,7 +320,7 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	// For some unknown reason, we receive this empty unnamed file when no
 	// attachment is provided. Prior to Go 1.10, this was filtered by
 	// multipart.Reader.
-	if isEmptyFormFile(f) {
+	if f.Size == 0 && f.Filename == "" {
 		return nil
 	}
 

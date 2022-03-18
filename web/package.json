@@ -1,8 +1,65 @@
 {
-  "devDependencies": {
-    "prettier": "^2.3.2"
+  "name": "pat",
+  "version": "0.12.1",
+  "private": true,
+  "description": "Pat is a cross platform Winlink client with basic messaging capabilities.",
+  "author": "martinhpedersen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/la5nta/pat.git"
   },
+  "engines": {
+    "node": "14",
+    "npm": "6"
+  },
+  "bugs": {
+    "url": "https://github.com/la5nta/pat/issues"
+  },
+  "homepage": "https://getpat.io/",
+  "keywords": [
+    "pat",
+    "winlink",
+    "windows",
+    "mac",
+    "linux",
+    "ax25",
+    "pactor",
+    "ardop"
+  ],
   "scripts": {
-    "format": "npx prettier -w res/tmpl/index.html res/js/index.js res/site.css"
+    "build": "webpack --mode=development --progress --hide-modules",
+    "clear": "del-cli dist",
+    "format": "prettier -w **",
+    "production": "webpack --mode=production --progress --hide-modules --devtool=source-maps",
+    "postinstall": "rm -rf node_modules/bootstrap-tokenfield/node_modules",
+    "start": "webpack-dev-server --open --mode=development",
+    "watch": "webpack --mode=development --watch"
+  },
+  "dependencies": {
+    "bootstrap": "3.2.0",
+    "bootstrap-select": "1.7.5",
+    "bootstrap-tokenfield": "0.12.0",
+    "jquery": "3.6.0",
+    "urijs": "1.19.10"
+  },
+  "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^5.1.2",
+    "css-loader": "^2.1.1",
+    "del-cli": "^3.0.1",
+    "image-webpack-loader": "^5.1.0",
+    "imagemin-webpack-plugin": "^2.4.2",
+    "mini-css-extract-plugin": "^0.7.0",
+    "node-sass": "^4.14.1",
+    "optimize-css-assets-webpack-plugin": "^5.0.4",
+    "prettier": "^2.5.1",
+    "sass-loader": "^7.3.1",
+    "style-loader": "^0.23.1",
+    "svg-url-loader": "^2.3.3",
+    "terser-webpack-plugin": "^4.2.3",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
   }
 }

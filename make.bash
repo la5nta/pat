@@ -20,8 +20,14 @@ function install_libax25 {
 	[[ -f "${AX25DIST}" ]] || curl -LSsf "${AX25DIST_URL}" | tar zx
 	cd "${AX25DIST}/" && ./configure --prefix=/ && make && cd ../../
 }
+function build_web {
+	cd web
+	npm install
+	npm run production
+}
 
 [[ "$1" == "libax25" ]] && install_libax25 && exit 0;
+[[ "$1" == "web" ]] && build_web && exit 0;
 
 # Link against libax25 (statically) on Linux
 if [[ "$OS" == "linux"* ]]; then

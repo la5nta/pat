@@ -1,7 +1,12 @@
+@import '~bootstrap/dist/css/bootstrap.min.css';
+@import '~bootstrap-select/dist/css/bootstrap-select.min.css';
+@import '~bootstrap-tokenfield/dist/css/bootstrap-tokenfield.min.css';
+
 html {
   position: relative;
   min-height: 100%;
 }
+
 body {
   /* Margin bottom by footer height */
   margin-bottom: 130px;
@@ -119,6 +124,7 @@ body > .container {
   display: none;
   font-size: 80%;
 }
+
 .modal-header .btn-group {
   margin-right: 5px;
   margin-top: -5px;
@@ -216,6 +222,7 @@ body > .container {
   width: 100%;
   height: 120px;
 }
+
 #console {
   height: 120px;
   overflow-y: auto;
@@ -224,6 +231,7 @@ body > .container {
   line-height: 0.5em;
   padding: 3px;
 }
+
 #console .terminal {
   font-size: 0.6em;
 }
@@ -276,6 +284,7 @@ body > .container {
   position: relative;
   overflow: hidden;
 }
+
 .btn-file input[type='file'] {
   position: absolute;
   top: 0;
@@ -314,6 +323,7 @@ input[type='radio'] {
   overflow-y: auto;
   height: 400px;
 }
+
 .table-fixed thead th {
   position: sticky;
   top: 0;

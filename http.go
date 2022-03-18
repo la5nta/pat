@@ -39,7 +39,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-//go:embed web/res/**
+//go:embed web/dist/**
 var embeddedFS embed.FS
 
 var staticContent fs.FS
@@ -119,7 +119,7 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	http.Handle("/", r)
-	http.Handle("/res/", http.FileServer(http.FS(staticContent)))
+	http.Handle("/dist/", http.FileServer(http.FS(staticContent)))
 
 	websocketHub = NewWSHub()
 
@@ -372,7 +372,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func uiHandler(w http.ResponseWriter, _ *http.Request) {
-	data, err := fs.ReadFile(staticContent, path.Join("res", "tmpl", "index.html"))
+	data, err := fs.ReadFile(staticContent, path.Join("dist", "index.html"))
 	if err != nil {
 		log.Fatal(err)
 	}

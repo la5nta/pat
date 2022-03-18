@@ -1,3 +1,9 @@
+import 'jquery';
+import 'bootstrap/dist/js/bootstrap';
+import 'bootstrap-select';
+import 'bootstrap-tokenfield';
+import URI from 'urijs';
+
 let wsURL = '';
 let posId = 0;
 let connectAliases;
@@ -8,8 +14,8 @@ const uploadFiles = new Array();
 let statusPopoverDiv;
 const statusPos = $('#pos_status');
 
-function initFrontend(ws_url) {
-  wsURL = ws_url;
+$(document).ready(function () {
+  wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
 
   $(function () {
     initStatusPopover();
@@ -95,6 +101,8 @@ function initFrontend(ws_url) {
       }
     });
 
+    $('#updateFormsButton').click(updateForms);
+
     initConnectModal();
 
     initConsole();
@@ -103,7 +111,7 @@ function initFrontend(ws_url) {
     initNotifications();
     initForms();
   });
-}
+});
 
 function initNotifications() {
   if (!isNotificationsSupported()) {
@@ -976,6 +984,7 @@ function processPromptQuery(p) {
   $('#promptID').val(p.id);
   $('#promptResponseValue').val('');
   $('#promptMessage').text(p.message);
+  $('#promptOkButton').click(postPromptResponse);
   $('#promptModal').modal('show');
 }
 

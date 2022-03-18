@@ -171,19 +171,6 @@ func abortActiveConnection(dirty bool) (ok bool) {
 			log.Println(err)
 		}
 		return err == nil
-	case wmTNC != nil && !wmTNC.Idle():
-		if dirty {
-			log.Println("Dirty disconnecting winmor...")
-			wmTNC.DirtyDisconnect()
-			return true
-		}
-		log.Println("Disconnecting winmor...")
-		go func() {
-			if err := wmTNC.Disconnect(); err != nil {
-				log.Println(err)
-			}
-		}()
-		return true
 	case adTNC != nil && !adTNC.Idle():
 		if dirty {
 			log.Println("Dirty disconnecting ardop...")

@@ -14,7 +14,6 @@ import (
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
-	"github.com/la5nta/wl2k-go/transport/winmor"
 
 	// Register other dialers
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
@@ -23,7 +22,6 @@ import (
 
 var (
 	dialing *transport.URL // The connect URL currently being dialed (if any)
-	wmTNC   *winmor.TNC    // Pointer to the WINMOR TNC used by Listen and Connect
 	adTNC   *ardop.TNC     // Pointer to the ARDOP TNC used by Listen and Connect
 	pModem  *pactor.Modem
 )
@@ -56,11 +54,6 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case MethodArdop:
 		if err := initArdopTNC(); err != nil {
-			log.Println(err)
-			return
-		}
-	case MethodWinmor:
-		if err := initWinmorTNC(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -136,8 +129,6 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case MethodArdop:
 		waitBusy(adTNC)
-	case MethodWinmor:
-		waitBusy(wmTNC)
 	}
 
 	// Signal web gui that we are dialing a connection
@@ -205,48 +196,6 @@ func waitBusy(b transport.BusyChannelChecker) {
 		}
 		time.Sleep(300 * time.Millisecond)
 	}
-}
-
-func initWinmorTNC() error {
-	if wmTNC != nil && wmTNC.Ping() == nil {
-		return nil
-	}
-
-	if wmTNC != nil {
-		wmTNC.Close()
-	}
-
-	var err error
-	wmTNC, err = winmor.Open(config.Winmor.Addr, fOptions.MyCall, config.Locator)
-	if err != nil {
-		return fmt.Errorf("WINMOR TNC initialization failed: %w", err)
-	}
-
-	if config.Winmor.DriveLevel != 0 {
-		if err := wmTNC.SetDriveLevel(config.Winmor.DriveLevel); err != nil {
-			log.Println("Failed to set WINMOR drive level:", err)
-		}
-	}
-
-	if v, err := wmTNC.Version(); err != nil {
-		return fmt.Errorf("WINMOR TNC initialization failed: %s", err)
-	} else {
-		log.Printf("WINMOR TNC v%s initialized", v)
-	}
-
-	transport.RegisterDialer(MethodWinmor, wmTNC)
-
-	if !config.Winmor.PTTControl {
-		return nil
-	}
-
-	rig, ok := rigs[config.Winmor.Rig]
-	if !ok {
-		return fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", config.Winmor.Rig)
-	}
-	wmTNC.SetPTT(rig)
-
-	return nil
 }
 
 func initArdopTNC() error {

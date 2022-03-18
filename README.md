@@ -17,12 +17,12 @@ It is mainly developed for Linux, but is also known to run on OS X, Windows and 
 * Message composer/reader (basic mailbox functionality).
 * Auto-shrink image attachments.
 * Post position reports with location from local GPS, browser location or manual entry.
-* Rig control (using hamlib) for winmor PTT and QSY.
+* Rig control (using hamlib).
 * CRON-like syntax for execution of scheduled commands (e.g. QSY or connect).
 * Built in http-server with web interface (mobile friendly).
 * Git style command line interface.
 * Listen for P2P connections using multiple modes concurrently.
-* AX.25, telnet, WINMOR and ARDOP support.
+* AX.25, telnet, PACTOR and ARDOP support.
 * Experimental gzip message compression (See "Gzip experiment" below).
 
 ##### Example

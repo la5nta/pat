@@ -75,7 +75,6 @@ func (f Frequency) Dial(mode string) Frequency {
 	}
 
 	offsets := map[string]Frequency{
-		MethodWinmor: 1500,
 		MethodPactor: 1500,
 		MethodArdop:  1500,
 	}
@@ -94,8 +93,6 @@ func (f Frequency) Dial(mode string) Frequency {
 func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool, err error) {
 	var rig string
 	switch transport {
-	case MethodWinmor:
-		rig = config.Winmor.Rig
 	case MethodArdop:
 		rig = config.Ardop.Rig
 	case MethodAX25:

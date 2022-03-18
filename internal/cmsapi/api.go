@@ -109,7 +109,7 @@ type RFC1123Time struct{ time.Time }
 
 // GetGatewayStatus fetches the gateway status list returned by GatewayStatusUrl
 //
-// mode can be any of [packet, pactor, winmor, robustpacket, allhf or anyall]. Empty is AnyAll.
+// mode can be any of [packet, pactor, robustpacket, allhf or anyall]. Empty is AnyAll.
 // historyHours is the number of hours of history to include (maximum: 48). If < 1, then API default is used.
 // serviceCodes defaults to "PUBLIC".
 func GetGatewayStatus(ctx context.Context, mode string, historyHours int, serviceCodes ...string) (io.ReadCloser, error) {

@@ -8,7 +8,6 @@ var (
 	UsageConnect = `'alias' or 'transport://[host][/digi]/targetcall[?params...]'
 
 transport:
-  winmor:     WINMOR TNC
   ardop:      ARDOP TNC
   ax25:       AX.25 (Linux only)
   telnet:     TCP/IP
@@ -28,7 +27,7 @@ path:
    multiple hops (e.g. AX.25), they are separated by '/'.
 
 params:
-  ?freq=        Sets QSY frequency (winmor, ardop and ax25 only)
+  ?freq=        Sets QSY frequency (ardop and ax25 only)
   ?host=        Overrides the host part of the path. Useful for serial-tnc to specify e.g. /dev/ttyS0.
 `
 	ExampleConnect = `
@@ -36,8 +35,6 @@ params:
   connect ax25:///LA1B-10            Connect to the RMS Gateway LA1B-10 using Linux AX.25 on the default axport.
   connect ax25://tmd710/LA1B-10      Connect to the RMS Gateway LA1B-10 using Linux AX.25 on axport 'tmd710'.
   connect ax25:///LA1B/LA5NTA        Peer-to-peer connection with LA5NTA via LA1B digipeater.
-  connect winmor:///LA3F             Connect to the RMS HF Gateway LA3F using WINMOR TNC on default tcp address and port.
-  connect winmor:///LA3F?freq=5350   Same as above, but set dial frequency of the radio using rigcontrol.
   connect ardop:///LA3F              Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
   connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
   connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.

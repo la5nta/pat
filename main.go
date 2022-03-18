@@ -35,7 +35,6 @@ import (
 )
 
 const (
-	MethodWinmor    = "winmor"
 	MethodArdop     = "ardop"
 	MethodTelnet    = "telnet"
 	MethodAX25      = "ax25"
@@ -202,10 +201,9 @@ func optionsSet() *pflag.FlagSet {
 	set := pflag.NewFlagSet("options", pflag.ExitOnError)
 
 	set.StringVar(&fOptions.MyCall, "mycall", "", "Your callsign (winlink user).")
-	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).")
+	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. ardop,telnet,ax25).")
 	set.BoolVarP(&fOptions.SendOnly, "send-only", "s", false, "Download inbound messages later, send only.")
 	set.BoolVarP(&fOptions.RadioOnly, "radio-only", "", false, "Radio Only mode (Winlink Hybrid RMS only).")
-	set.BoolVarP(&fOptions.Robust, "robust", "r", false, "Use robust modes only (useful to improve s/n-ratio at remote winmor station).")
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
 
 	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
@@ -490,11 +488,6 @@ func cleanup() {
 
 	abortActiveConnection(false)
 	listenHub.Close()
-	if wmTNC != nil {
-		if err := wmTNC.Close(); err != nil {
-			log.Fatalf("Failure to close winmor TNC: %s", err)
-		}
-	}
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)

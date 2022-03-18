@@ -73,13 +73,13 @@ type Config struct {
 
 	// Connect aliases
 	//
-	// Example: {"LA1B-10": "ax25:///LD5GU/LA1B-10", "LA1B": "winmor://LA3F?freq=5350"}
+	// Example: {"LA1B-10": "ax25:///LD5GU/LA1B-10", "LA1B": "ardop://LA3F?freq=5350"}
 	// Any occurrence of the substring "{mycall}" will be replaced with user's callsign.
 	ConnectAliases map[string]string `json:"connect_aliases"`
 
 	// Methods to listen for incoming P2P connections by default.
 	//
-	// Example: ["ax25", "winmor", "telnet", "ardop"]
+	// Example: ["ax25", "telnet", "ardop"]
 	Listen []string `json:"listen"`
 
 	// Hamlib rigs available (with reference name) for ptt and frequency control.
@@ -87,7 +87,6 @@ type Config struct {
 
 	AX25      AX25Config      `json:"ax25"`       // See AX25Config.
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
-	Winmor    WinmorConfig    `json:"winmor"`     // See WinmorConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
@@ -105,10 +104,10 @@ type Config struct {
 	//   # Connect to telnet once every hour
 	//   "@hourly": "connect telnet"
 	//
-	//   # Change winmor listen frequency based on hour of day
-	//   "00 10 * * *": "freq winmor:7350.000", # 40m from 10:00
-	//   "00 18 * * *": "freq winmor:5347.000", # 60m from 18:00
-	//   "00 22 * * *": "freq winmor:3602.000"  # 80m from 22:00
+	//   # Change ardop listen frequency based on hour of day
+	//   "00 10 * * *": "freq ardop:7350.000", # 40m from 10:00
+	//   "00 18 * * *": "freq ardop:5347.000", # 60m from 18:00
+	//   "00 22 * * *": "freq ardop:3602.000"  # 80m from 22:00
 	Schedule map[string]string `json:"schedule"`
 
 	// By default, Pat posts your callsign and running version to the Winlink CMS Web Services
@@ -137,25 +136,6 @@ type HamlibConfig struct {
 
 	// The rig's VFO to control ("A" or "B"). If empty, the current active VFO is used.
 	VFO string `json:"VFO"`
-}
-
-type WinmorConfig struct {
-	// Network address of the Winmor TNC (e.g. localhost:8500).
-	Addr string `json:"addr"`
-
-	// Bandwidth to use when getting an inbound connection (500/1600).
-	InboundBandwidth int `json:"inbound_bandwidth"`
-
-	// TX audio drive level
-	//
-	// Set to 0 to use WINMOR defaults
-	DriveLevel int `json:"drive_level"`
-
-	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
-	Rig string `json:"rig"`
-
-	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
-	PTTControl bool `json:"ptt_ctrl"`
 }
 
 type ArdopConfig struct {
@@ -276,10 +256,6 @@ var DefaultConfig = Config{
 		SerialBaud: 9600,
 		HBaud:      1200,
 		Type:       "Kenwood",
-	},
-	Winmor: WinmorConfig{
-		Addr:             "localhost:8500",
-		InboundBandwidth: 1600,
 	},
 	Ardop: ArdopConfig{
 		Addr:         "localhost:8515",

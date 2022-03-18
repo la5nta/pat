@@ -9,10 +9,7 @@
 
     <title>{{.AppName}} - Mailbox</title>
 
-    <link href="/res/bootstrap-3.2.0-dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="/res/bootstrap-select.min.css" rel="stylesheet" />
-    <link href="/res/bootstrap-tokenfield.min.css" rel="stylesheet" />
-    <link href="/res/site.css" rel="stylesheet" />
+    <link href="dist/css/style.css" rel="stylesheet" />
   </head>
 
   <body>
@@ -154,12 +151,7 @@
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <input
-                  type="submit"
-                  value="OK"
-                  class="btn btn-primary"
-                  onclick="return postPromptResponse()"
-                />
+                <input type="submit" value="OK" class="btn btn-primary" id="promptOkButton" />
               </div>
             </form>
           </div>
@@ -431,7 +423,7 @@
             </div>
             <div class="modal-body">
               <div>Current forms version: <span id="updateFormsVersion">unknown</span></div>
-              <button type="button" class="btn btn-primary" onclick="return updateForms()">
+              <button type="button" class="btn btn-primary" id="updateFormsButton">
                 Update now
               </button>
               <div>
@@ -465,7 +457,7 @@
             </div>
             <div class="modal-body" id="posView">
               <p id="version">{{.AppName}} {{.Version}}</p>
-              <img src="res/images/pat_logo.png" width="35%" class="center-block" />
+              <img src="dist/static/pat_logo.png" width="35%" class="center-block" />
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
@@ -684,23 +676,6 @@
       </div>
     </div>
 
-    <!-- Bootstrap core JavaScript
-================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/res/js/jquery.min.js"></script>
-    <script src="/res/bootstrap-3.2.0-dist/js/bootstrap.min.js"></script>
-    <script src="/res/js/bootstrap-select.min.js"></script>
-    <script src="/res/js/bootstrap-tokenfield.min.js"></script>
-    <script src="/res/js/URI.min.js"></script>
-    <!-- github.com/medialize/URI.js  -->
-    <script src="/res/js/index.js"></script>
-    <script language="javascript" type="text/javascript">
-      function init() {
-        var wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
-        initFrontend(wsURL);
-      }
-
-      window.addEventListener('load', init, false);
-    </script>
+    <script src="dist/js/app.js"></script>
   </body>
 </html>

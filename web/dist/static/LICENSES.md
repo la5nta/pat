@@ -119,6 +119,7 @@ Version: v0.12.1 (db79219699545ddea9b82ce31716045d064a5d5c)
 Repository: github.com/Open-Xchange-Frontend/bootstrap-tokenfield
 
 #### Sliptree
+
 - by Illimar Tambek for [Sliptree](http://sliptree.com)
 - Copyright (c) 2013 by Sliptree
 
@@ -141,4 +142,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-

@@ -4,7 +4,7 @@
   "auxiliary_addresses": ["LE1OF"],
   "locator": "JP20qe",
   "connect_aliases": {
-    "LA1B@60m": "winmor:///LA1B?freq=5310.00",
+    "LA1B@60m": "ardop:///LA1B?freq=5310.00",
     "LA1B-10": "ax25:///LA1B-10"
   },
   "hamlib_rigs": {
@@ -26,12 +26,6 @@
     "hbaud": 1200,
     "serial_baud": 9600,
     "type": "Kenwood"
-  },
-  "winmor": {
-    "addr": "la5nta.local.mesh:8500",
-    "inbound_bandwidth": 500,
-    "rig": "ft897",
-    "ptt_ctrl": false
   },
   "ardop": {
     "addr": "localhost:8515",

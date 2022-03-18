@@ -171,7 +171,7 @@ func toURL(gc cmsapi.GatewayChannel, targetcall string) *url.URL {
 	return chURL
 }
 
-var transports = []string{MethodWinmor, MethodAX25, MethodPactor, MethodArdop}
+var transports = []string{MethodAX25, MethodPactor, MethodArdop}
 
 func toTransport(gc cmsapi.GatewayChannel) string {
 	modes := strings.ToLower(gc.SupportedModes)

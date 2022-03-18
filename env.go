@@ -27,7 +27,6 @@ func writeEnvAll(w io.Writer) {
 	writeEnv(w, "PAT_FORMS_PATH", fOptions.FormsPath)
 	writeEnv(w, "PAT_DEBUG", os.Getenv("PAT_DEBUG"))
 	writeEnv(w, "ARDOP_DEBUG", os.Getenv("ARDOP_DEBUG"))
-	writeEnv(w, "WINMOR_DEBUG", os.Getenv("WINMOR_DEBUG"))
 	writeEnv(w, "PACTOR_DEBUG", os.Getenv("PACTOR_DEBUG"))
 }
 

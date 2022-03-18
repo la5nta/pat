@@ -30,8 +30,6 @@ func Listen(listenStr string) {
 	methods := strings.FieldsFunc(listenStr, SplitFunc)
 	for _, method := range methods {
 		switch strings.ToLower(method) {
-		case MethodWinmor:
-			listenHub.Enable(WINMORListener{})
 		case MethodArdop:
 			listenHub.Enable(ARDOPListener{})
 		case MethodTelnet:
@@ -123,24 +121,6 @@ func (l ARDOPListener) BeaconStart() error {
 }
 
 func (l ARDOPListener) BeaconStop() { adTNC.BeaconEvery(0) }
-
-type WINMORListener struct{}
-
-func (l WINMORListener) Name() string { return MethodWinmor }
-func (l WINMORListener) Init() (net.Listener, error) {
-	if err := initWinmorTNC(); err != nil {
-		return nil, err
-	}
-	return wmTNC.Listen(config.Winmor.InboundBandwidth)
-}
-
-func (l WINMORListener) CurrentFreq() (Frequency, bool) {
-	if rig, ok := rigs[config.Winmor.Rig]; ok {
-		f, _ := rig.GetFreq()
-		return Frequency(f), ok
-	}
-	return 0, false
-}
 
 type TelnetListener struct{}
 

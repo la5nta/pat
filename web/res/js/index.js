@@ -432,7 +432,6 @@ function initConnectModal() {
     onConnectFreqChange();
     switch ($(e.target).val()) {
       case 'ardop':
-      case 'winmor':
       case 'pactor':
         $('#modeSearchSelect').val($(e.target).val());
         break;

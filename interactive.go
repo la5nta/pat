@@ -69,7 +69,6 @@ func execCmd(line string) (quit bool) {
 		PrintQTC()
 	case "debug":
 		os.Setenv("ardop_debug", "1")
-		os.Setenv("winmor_debug", "1")
 		fmt.Println("Number of goroutines:", runtime.NumGoroutine())
 	case "q", "quit":
 		return true
@@ -85,7 +84,6 @@ func printInteractiveUsage() {
 	fmt.Println("Uri examples: 'LA3F@5350', 'LA1B-10 v LA5NTA-1', 'LA5NTA:secret@192.168.1.1:54321'")
 
 	methods := []string{
-		MethodWinmor,
 		MethodArdop,
 		MethodAX25,
 		MethodTelnet,
@@ -123,17 +121,6 @@ func getPrompt() string {
 func PrintHeard() {
 	pf := func(call string, t time.Time) {
 		fmt.Printf("  %-10s (%s)\n", call, t.Format(time.RFC1123))
-	}
-
-	fmt.Println("winmor:")
-	if wmTNC == nil {
-		fmt.Println("  (not initialized)")
-	} else if heard := wmTNC.Heard(); len(heard) == 0 {
-		fmt.Println("  (none)")
-	} else {
-		for call, t := range heard {
-			pf(call, t)
-		}
 	}
 
 	fmt.Println("ardop:")

@@ -110,6 +110,7 @@ func composeMessage(ctx context.Context, args []string) {
 	subject := set.StringP("subject", "s", "", "")
 	attachments := set.StringArrayP("attachment", "a", nil, "")
 	ccs := set.StringArrayP("cc", "c", nil, "")
+	p2pOnly := set.BoolP("p2p-only", "", false, "")
 	set.Parse(args)
 
 	// Remaining args are recipients
@@ -125,14 +126,13 @@ func composeMessage(ctx context.Context, args []string) {
 	// Check if any args are set. If so, go non-interactive
 	// Otherwise, interactive
 	if (len(*subject) + len(*attachments) + len(*ccs) + len(recipients)) > 0 {
-		noninteractiveComposeMessage(*from, *subject, *attachments, *ccs, recipients)
+		noninteractiveComposeMessage(*from, *subject, *attachments, *ccs, recipients, *p2pOnly)
 	} else {
 		interactiveComposeMessage(nil)
 	}
 }
 
-func noninteractiveComposeMessage(from string, subject string, attachments []string,
-	ccs []string, recipients []string) {
+func noninteractiveComposeMessage(from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
 	// We have to verify the args here. Follow the same pattern as main()
 	// We'll allow a missing recipient if CC is present (or vice versa)
 	if len(recipients)+len(ccs) <= 0 {
@@ -174,6 +174,9 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 	}
 
 	msg.SetBody(string(body))
+	if p2pOnly {
+		msg.Header.Set("X-P2POnly", "true")
+	}
 
 	postMessage(msg)
 }

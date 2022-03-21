@@ -85,6 +85,7 @@ var commands = []Command{
 			"--subject, -s":     "Subject",
 			"--attachment , -a": "Attachment path (may be repeated)",
 			"--cc, -c":          "CC Address(es) (may be repeated)",
+			"--p2p-only":        "Send over peer to peer links only (avoid CMS)",
 			"":                  "Recipient address (may be repeated)",
 		},
 		HandleFunc: composeMessage,

@@ -57,11 +57,12 @@ echo
 echo "Building Pat v$VERSION..."
 go build -tags "$TAGS" -ldflags "-X \"github.com/la5nta/pat/internal/buildinfo.GitRev=$GITREV\"" $(go list .)
 
-# Build macOS pkg (amd64)
+# Build macOS pkg
 if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then
+	ARCH=$(go env GOARCH)
 	echo "Generating macOS installer package..."
 	packagesbuild osx/pat.pkgproj
-	mv 'Pat :: A Modern Winlink Client.pkg' "pat_${VERSION}_darwin_amd64_unsigned.pkg"
+	mv 'Pat :: A Modern Winlink Client.pkg' "pat_${VERSION}_darwin_${ARCH}_unsigned.pkg"
 fi
 
 echo -e "Enjoy!"

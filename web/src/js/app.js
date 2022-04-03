@@ -399,10 +399,12 @@ function appendFormFolder(rootId, data) {
           const cardBodyFormsId = `${cardBodyId}Forms`;
           $(`#${cardBodyId}`).append(`<div id="${cardBodyFormsId}" class="list-group"></div>`);
           folder.forms.forEach((form) => {
-            const pathEncoded = encodeURIComponent(form.initial_uri);
-            $(`#${cardBodyFormsId}`).append(
-              `<div class="list-group-item list-group-item-action list-group-item-light" onclick="onFormLaunching('/api/forms?formPath=${pathEncoded}');">${form.name}</div>`
+            const newDiv = $(
+              `<div class="list-group-item list-group-item-action list-group-item-light">${form.name}</div>`
             );
+            const pathEncoded = encodeURIComponent(form.initial_uri);
+            newDiv.on('click', () => onFormLaunching(`/api/forms?formPath=${pathEncoded}`));
+            $(`#${cardBodyFormsId}`).append(newDiv);
           });
         }
       }

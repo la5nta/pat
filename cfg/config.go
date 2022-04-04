@@ -221,9 +221,9 @@ type BeaconConfig struct {
 }
 
 type GPSdConfig struct {
-	// enable GPSd support in web interface
-	// WARNING: If you enable GPSd http endpoint (enable_http) you might
-	// expose your current position to anyone who has access to Pat!!!
+	// Enable GPSd proxy for HTTP (web GUI)
+	//
+	// Caution: Your GPS position will be accessible to any network device able to access Pat's HTTP interface.
 	EnableHTTP bool `json:"enable_http"`
 
 	// Use server time instead of timestamp provided by GPSd (e.g for older GPS

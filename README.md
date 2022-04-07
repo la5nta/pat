@@ -73,9 +73,9 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 * LA3QMA - Kai Günter Brandt
 * LA4TTA - Erlend Grimseid
 * LA5NTA - Martin Hebnes Pedersen
+* VE7GNU - Doug Collinge
 * W6IPA  - JC Martin
 * WY2K - Benjamin Seidenberg
-* VE7GNU - Doug Collinge
 
 ## Thanks to
 

@@ -65,6 +65,7 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 
 * DL1THM - Torsten Harenberg
 * HB9GPA - Matthias Renner
+* K0RET - Ryan Turner
 * K0SWE - Chris Keller
 * KD8DRX - Will Davidson
 * KE8HMG - Andrew Huebner

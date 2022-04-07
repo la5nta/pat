@@ -43,10 +43,10 @@ Print detailed help for a given command.
 .SS Options
 .TP
 \fR--config string\fP
-Path to config file (default "/home/USER/.wl2k/config.json").
+Path to config file (located in the \fIPAT_CONFIG_PATH\fP returned from \fIpat env\fP).
 .TP
 \fR--event-log string\fP
-Path to event log file (default "/home/USER/.wl2k/config.json").
+Path to event log file (located in the \fIPAT_CONFIG_PATH\fP returned from \fIpat env\fP).
 .TP
 \fR--ignore-busy\fP
 Don't wait for clear channel before connevting to a node.
@@ -55,10 +55,10 @@ Don't wait for clear channel before connevting to a node.
 Comma-separated list of methods to listen on (e.g. ardop,telnet,ax25).
 .TP
 \fR--log string\fP
-Path to log file. The file is truncated on each startup (default "/home/USER/.wl2k/pat.log").
+Path to log file. The file is truncated on each startup (located in the \fIPAT_LOG_PATH\fP returned from \fIpat env\fP).
 .TP
 \fR--mbox string\fP
-Path to mailbox directory (default "/home/USER/.wl2k/mailbox").
+Path to mailbox directory (located in the \fIPAT_MAILBOX_PATH\fP returned from \fIpat env\fP).
 .TP
 \fR--mycall string\fP
 Your callsing (winlink user).

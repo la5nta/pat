@@ -19,6 +19,7 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
@@ -85,6 +86,8 @@ func init() {
 	}
 }
 
+func devServerAddr() string { return strings.TrimSuffix(os.Getenv("PAT_WEB_DEV_ADDR"), "/") }
+
 func ListenAndServe(ctx context.Context, addr string) error {
 	log.Printf("Starting HTTP service (http://%s)...", addr)
 
@@ -115,11 +118,11 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
-	r.HandleFunc("/ui", uiHandler).Methods("GET")
+	r.HandleFunc("/ui", uiHandler()).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	http.Handle("/", r)
-	http.Handle("/dist/", http.FileServer(http.FS(staticContent)))
+	http.Handle("/dist/", distHandler())
 
 	websocketHub = NewWSHub()
 
@@ -138,6 +141,19 @@ func ListenAndServe(ctx context.Context, addr string) error {
 		return nil
 	case err := <-errs:
 		return err
+	}
+}
+
+func distHandler() http.Handler {
+	switch target := devServerAddr(); {
+	case target != "":
+		targetURL, err := url.Parse(target)
+		if err != nil {
+			log.Fatalf("invalid proxy target URL: %v", err)
+		}
+		return httputil.NewSingleHostReverseProxy(targetURL)
+	default:
+		return http.FileServer(http.FS(staticContent))
 	}
 }
 
@@ -371,23 +387,36 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	websocketHub.Handle(conn)
 }
 
-func uiHandler(w http.ResponseWriter, _ *http.Request) {
-	data, err := fs.ReadFile(staticContent, path.Join("dist", "index.html"))
-	if err != nil {
-		log.Fatal(err)
+func uiHandler() http.HandlerFunc {
+	const indexPath = "dist/index.html"
+	templateFunc := func() ([]byte, error) { return fs.ReadFile(staticContent, indexPath) }
+	if target := devServerAddr(); target != "" {
+		templateFunc = func() ([]byte, error) {
+			resp, err := http.Get(target + "/" + indexPath)
+			if err != nil {
+				return nil, fmt.Errorf("dev server not reachable: %w", err)
+			}
+			defer resp.Body.Close()
+			return io.ReadAll(resp.Body)
+		}
 	}
 
-	t := template.New("index.html") // create a new template
-	t, err = t.Parse(string(data))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	tmplData := struct{ AppName, Version, Mycall string }{buildinfo.AppName, buildinfo.VersionString(), fOptions.MyCall}
-
-	err = t.Execute(w, tmplData)
-	if err != nil {
-		log.Fatal(err)
+	return func(w http.ResponseWriter, _ *http.Request) {
+		data, err := templateFunc()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		t, err := template.New("index.html").Parse(string(data))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmplData := struct{ AppName, Version, Mycall string }{buildinfo.AppName, buildinfo.VersionString(), fOptions.MyCall}
+		if err := t.Execute(w, tmplData); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 

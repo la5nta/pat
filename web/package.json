@@ -33,7 +33,7 @@
     "format": "prettier -w **",
     "production": "webpack --mode=production --progress --hide-modules --devtool=source-maps",
     "postinstall": "rm -rf node_modules/bootstrap-tokenfield/node_modules",
-    "start": "webpack-dev-server --open --mode=development",
+    "start": "webpack-dev-server --mode=development --port=8081",
     "watch": "webpack --mode=development --watch"
   },
   "dependencies": {

@@ -26,6 +26,7 @@ func writeEnvAll(w io.Writer) {
 	writeEnv(w, "PAT_EVENTLOG_PATH", fOptions.EventLogPath)
 	writeEnv(w, "PAT_FORMS_PATH", fOptions.FormsPath)
 	writeEnv(w, "PAT_DEBUG", os.Getenv("PAT_DEBUG"))
+	writeEnv(w, "PAT_WEB_DEV_ADDR", os.Getenv("PAT_WEB_DEV_ADDR"))
 	writeEnv(w, "ARDOP_DEBUG", os.Getenv("ARDOP_DEBUG"))
 	writeEnv(w, "PACTOR_DEBUG", os.Getenv("PACTOR_DEBUG"))
 }

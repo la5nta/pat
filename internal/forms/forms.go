@@ -93,6 +93,8 @@ type FormFolder struct {
 type FormData struct {
 	TargetForm Form              `json:"target_form"`
 	Fields     map[string]string `json:"fields"`
+	MsgTo      string            `json:"msg_to"`
+	MsgCc      string            `json:"msg_cc"`
 	MsgSubject string            `json:"msg_subject"`
 	MsgBody    string            `json:"msg_body"`
 	MsgXML     string            `json:"msg_xml"`
@@ -102,6 +104,8 @@ type FormData struct {
 
 // MessageForm represents a concrete form-based message
 type MessageForm struct {
+	To             string
+	Cc             string
 	Subject        string
 	Body           string
 	AttachmentXML  string
@@ -194,6 +198,8 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 	}
+	formData.MsgTo = formMsg.To
+	formData.MsgCc = formMsg.Cc
 	formData.MsgSubject = formMsg.Subject
 	formData.MsgBody = formMsg.Body
 	formData.MsgXML = formMsg.AttachmentXML
@@ -984,6 +990,8 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 		replier,
 		formVarsAsXML)
 	retVal.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
+	retVal.To = strings.TrimSpace(retVal.To)
+	retVal.Cc = strings.TrimSpace(retVal.Cc)
 	retVal.Subject = strings.TrimSpace(retVal.Subject)
 	retVal.Body = strings.TrimSpace(retVal.Body)
 	return retVal, nil
@@ -1010,6 +1018,8 @@ func (b formMessageBuilder) initFormValues() {
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
+	var inBody = false
+
 	infile, err := os.Open(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
@@ -1025,11 +1035,15 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		lineTmpl = strings.ReplaceAll(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall)
 		lineTmpl = strings.ReplaceAll(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion)
-		if strings.HasPrefix(lineTmpl, "Form:") ||
-			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
-			strings.HasPrefix(lineTmpl, "To:") ||
-			strings.HasPrefix(lineTmpl, "Msg:") {
+		if strings.HasPrefix(lineTmpl, "Form:") {
 			continue
+		}
+		if strings.HasPrefix(lineTmpl, "ReplyTemplate:") {
+			continue
+		}
+		if strings.HasPrefix(lineTmpl, "Msg:") {
+			lineTmpl = strings.TrimSpace(strings.TrimPrefix(lineTmpl, "Msg:"))
+			inBody = true
 		}
 		if b.Interactive {
 			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
@@ -1052,8 +1066,14 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		if strings.HasPrefix(lineTmpl, "Subject:") {
 			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
-		} else {
+		} else if strings.HasPrefix(lineTmpl, "To:") {
+			retVal.To = strings.TrimPrefix(lineTmpl, "To:")
+		} else if strings.HasPrefix(lineTmpl, "Cc:") {
+			retVal.Cc = strings.TrimPrefix(lineTmpl, "Cc:")
+		} else if inBody {
 			retVal.Body += lineTmpl + "\n"
+		} else {
+			log.Printf("skipping unknown template line: '%s'", lineTmpl)
 		}
 	}
 

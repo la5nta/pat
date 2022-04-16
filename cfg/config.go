@@ -142,7 +142,7 @@ type ArdopConfig struct {
 	// Network address of the Ardop TNC (e.g. localhost:8515).
 	Addr string `json:"addr"`
 
-	// Listen ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
+	// Default/listen ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.

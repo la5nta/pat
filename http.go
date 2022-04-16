@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/la5nta/wl2k-go/transport/ardop"
 	"html/template"
 	"io"
 	"io/fs"
@@ -29,6 +28,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport/ardop"
 
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/gpsd"
@@ -451,9 +452,10 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 	type BandwidthResponse struct {
 		Mode       string   `json:"mode"`
 		Bandwidths []string `json:"bandwidths"`
+		Default    string   `json:"default,omitempty"`
 	}
 	mode := strings.ToLower(req.FormValue("mode"))
-	var resp = BandwidthResponse{Mode: mode, Bandwidths: []string{}}
+	resp := BandwidthResponse{Mode: mode, Bandwidths: []string{}}
 	switch mode {
 	case MethodPactor:
 		fallthrough
@@ -466,6 +468,9 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 	case MethodArdop:
 		for _, bw := range ardop.Bandwidths() {
 			resp.Bandwidths = append(resp.Bandwidths, bw.String())
+		}
+		if bw := config.Ardop.ARQBandwidth; !bw.IsZero() {
+			resp.Default = bw.String()
 		}
 	default:
 		http.Error(w, "mode not recognized", http.StatusBadRequest)

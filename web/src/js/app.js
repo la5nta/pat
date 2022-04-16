@@ -425,7 +425,7 @@ function initConnectModal() {
     onConnectInputChange();
     onConnectFreqChange();
   });
-  $('#bandwidthInput').change(onConnectInputChange);
+  $('#bandwidthInput').change(onConnectBandwidthChange);
   $('#radioOnlyInput').change(onConnectInputChange);
   $('#addrInput').change(onConnectInputChange);
   $('#targetInput').change(onConnectInputChange);
@@ -438,6 +438,7 @@ function initConnectModal() {
   $('#bandSearchSelect').change(updateRmslist);
 
   $('#transportSelect').change(function (e) {
+    $('#bandwidthInput').val('').change();
     refreshExtraInputGroups();
     onConnectInputChange();
     onConnectFreqChange();
@@ -520,7 +521,6 @@ function setConnectValues(url) {
 
   $('#transportSelect').val(url.protocol());
   $('#transportSelect').selectpicker('refresh');
-  refreshExtraInputGroups();
 
   $('#targetInput').val(url.path().substr(1));
 
@@ -534,8 +534,10 @@ function setConnectValues(url) {
 
   if (url.hasQuery('bw')) {
     $('#bandwidthInput').val(query['bw']).change();
+    $('#bandwidthInput').attr('x-value', query['bw']); // Since the option might not be available yet.
   } else {
     $('#bandwidthInput').val('').change();
+    $('#bandwidthInput').removeAttr('x-value');
   }
 
   if (url.hasQuery('radio_only')) {
@@ -596,13 +598,9 @@ function onConnectFreqChange() {
   });
   inputGroup.tooltip('destroy');
 
-  const bandwidthInput = $('#bandwidthInput');
-  bandwidthInput.css('text-decoration', 'none currentcolor solid');
-
   const data = {
     transport: $('#transportSelect').val(),
     freq: new Number(freqInput.val()),
-    bandwidth: new Number(bandwidthInput.val()),
   };
   if (data.freq == 0) {
     return;
@@ -650,6 +648,16 @@ function onConnectFreqChange() {
   });
 }
 
+function onConnectBandwidthChange() {
+  const input = $(this);
+  console.log("connect bandwidth change " + input.val());
+  input.attr('x-value', input.val());
+  if (input.val() === '') {
+    input.removeAttr('x-value');
+  }
+  onConnectInputChange();
+}
+
 function onConnectInputChange() {
   $('#connectURLPreview').empty().append(getConnectURL());
 }
@@ -661,21 +669,16 @@ function refreshExtraInputGroups() {
     case 'telnet':
       $('#freqInputDiv').hide();
       $('#freqInput').val('');
-      $('#bandwidthInputDiv').hide();
-      $('#bandwidthInput').val('');
       $('#addrInputDiv').show();
       break;
     case 'ardop':
       $('#addrInputDiv').hide();
       $('#addrInput').val('');
       $('#freqInputDiv').show();
-      $('#bandwidthInputDiv').show();
       break;
     default:
       $('#addrInputDiv').hide();
       $('#addrInput').val('');
-      $('#bandwidthInputDiv').hide();
-      $('#bandwidthInput').val('');
       $('#freqInputDiv').show();
   }
 
@@ -689,17 +692,32 @@ function refreshExtraInputGroups() {
 
 function populateBandwidths(transport) {
   const select = $('#bandwidthInput');
+  const div = $('#bandwidthInputDiv');
+  var selected = select.attr('x-value');
+  select.empty();
+  select.prop('disabled', true);
   $.ajax({
     method: 'GET',
     url: `/api/bandwidths?mode=${transport}`,
     dataType: 'json',
     success: function (data) {
-      const beforeVal = select.val();
-      select.empty();
+      if (data.bandwidths.length === 0) {
+	return;
+      }
+      if (selected === undefined) {
+         selected = data.default;
+      }
       data.bandwidths.forEach((bw) => {
-        select.append(`<option value="${bw}">${bw}</option>`);
+        const option = $(`<option value="${bw}">${bw}</option>`);
+        option.prop('selected', bw === selected);
+        select.append(option);
       });
-      select.val(beforeVal).change();
+      select.val(selected).change();
+    },
+    complete: function (xhr) {
+      select.attr('x-for-transport', transport);
+      div.toggle(select.find('option').length > 0);
+      select.prop('disabled', false);
       select.selectpicker('refresh');
     },
   });

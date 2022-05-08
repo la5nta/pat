@@ -15,6 +15,7 @@ import (
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/winmor"
+	"github.com/n8jja/Pat-Vara/vara"
 
 	// Register other dialers
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
@@ -25,6 +26,7 @@ var (
 	dialing *transport.URL // The connect URL currently being dialed (if any)
 	wmTNC   *winmor.TNC    // Pointer to the WINMOR TNC used by Listen and Connect
 	adTNC   *ardop.TNC     // Pointer to the ARDOP TNC used by Listen and Connect
+	varaTNC *vara.Modem
 	pModem  *pactor.Modem
 )
 
@@ -70,6 +72,11 @@ func Connect(connectStr string) (success bool) {
 			ptCmdInit = strings.Join(val, "\n")
 		}
 		if err := initPactorModem(ptCmdInit); err != nil {
+			log.Println(err)
+			return
+		}
+	case MethodVara:
+		if err := initVaraTNC(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -138,6 +145,8 @@ func Connect(connectStr string) (success bool) {
 		waitBusy(adTNC)
 	case MethodWinmor:
 		waitBusy(wmTNC)
+	case MethodVara:
+		waitBusy(varaTNC)
 	}
 
 	// Catch interrupts (signals) while dialing, so users can abort ardop/winmor connects.
@@ -172,6 +181,42 @@ func Connect(connectStr string) (success bool) {
 	}
 
 	return
+}
+
+func initVaraTNC() error {
+	if varaTNC != nil && varaTNC.Ping() {
+		return nil
+	}
+
+	if varaTNC != nil {
+		varaTNC.Close()
+	}
+
+	var err error
+	varaTNC, err = vara.NewModem(fOptions.MyCall, config.Vara.Addr)
+	if err != nil {
+		return fmt.Errorf("Vara TNC initialization failed: %w", err)
+	}
+
+	if v, err := varaTNC.Version(); err != nil {
+		return fmt.Errorf("Vara TNC initialization failed: %s", err)
+	} else {
+		log.Printf("Vara TNC (%s) initialized", v)
+	}
+
+	transport.RegisterDialer(MethodVara, varaTNC)
+
+	if !config.Vara.PTTControl {
+		return nil
+	}
+
+	rig, ok := rigs[config.Vara.Rig]
+	if !ok {
+		return fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", config.Vara.Rig)
+	}
+
+	varaTNC.SetPTT(rig)
+	return nil
 }
 
 func qsy(method, addr string) (revert func(), err error) {

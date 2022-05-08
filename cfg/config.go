@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/la5nta/wl2k-go/transport/ardop"
+	"github.com/n8jja/Pat-Vara/vara"
 )
 
 const (
@@ -91,6 +92,7 @@ type Config struct {
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
+	Vara      VaraConfig      `json:"vara"`       // See VaraConfig
 
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:"gpsd"`
@@ -164,6 +166,26 @@ type ArdopConfig struct {
 
 	// ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
+
+	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
+	Rig string `json:"rig"`
+
+	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
+	PTTControl bool `json:"ptt_ctrl"`
+
+	// (optional) Send ID frame at a regular interval when the listener is active (unit is seconds)
+	BeaconInterval int `json:"beacon_interval"`
+
+	// Send FSK CW ID after an ID frame.
+	CWID bool `json:"cwid_enabled"`
+}
+
+type VaraConfig struct {
+	// Network address of the Ardop TNC (e.g. localhost:8515).
+	Addr vara.ModemConfig `json:"addr"`
+
+	// ARQ bandwidth "500", "2300", "2750"
+	ARQBandwidth string `json:"arq_bandwidth"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`

@@ -39,6 +39,7 @@ const (
 	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
 	MethodPactor    = "pactor"
+	MethodVara      = "vara"
 )
 
 var commands = []Command{
@@ -200,7 +201,7 @@ func optionsSet() *pflag.FlagSet {
 	set := pflag.NewFlagSet("options", pflag.ExitOnError)
 
 	set.StringVar(&fOptions.MyCall, "mycall", "", "Your callsign (winlink user).")
-	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25).")
+	set.StringVarP(&fOptions.Listen, "listen", "l", "", "Comma-separated list of methods to listen on (e.g. winmor,ardop,telnet,ax25,vara).")
 	set.BoolVarP(&fOptions.SendOnly, "send-only", "s", false, "Download inbound messages later, send only.")
 	set.BoolVarP(&fOptions.RadioOnly, "radio-only", "", false, "Radio Only mode (Winlink Hybrid RMS only).")
 	set.BoolVarP(&fOptions.Robust, "robust", "r", false, "Use robust modes only (useful to improve s/n-ratio at remote winmor station).")
@@ -472,6 +473,12 @@ func cleanup() {
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
 			log.Fatalf("Failure to close ardop TNC: %s", err)
+		}
+	}
+
+	if varaTNC != nil {
+		if err := varaTNC.Close(); err != nil {
+			log.Fatalf("Failure to close Vara TNC: %s", err)
 		}
 	}
 

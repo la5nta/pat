@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -24,6 +26,9 @@ var (
 	dialing *transport.URL // The connect URL currently being dialed (if any)
 	adTNC   *ardop.TNC     // Pointer to the ARDOP TNC used by Listen and Connect
 	pModem  *pactor.Modem
+
+	// Context cancellation function for aborting while dialing.
+	dialCancelFunc func() = func() {}
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -43,6 +48,9 @@ func Connect(connectStr string) (success bool) {
 	} else if aliased, ok := config.ConnectAliases[connectStr]; ok {
 		return Connect(aliased)
 	}
+
+	// Hack around bug in frontend which may occur if the status updates too quickly.
+	defer func() { time.Sleep(time.Second); websocketHub.UpdateStatus() }()
 
 	url, err := transport.ParseURL(connectStr)
 	if err != nil {
@@ -131,12 +139,16 @@ func Connect(connectStr string) (success bool) {
 		waitBusy(adTNC)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	dialCancelFunc = func() { dialing = nil; cancel() }
+	defer dialCancelFunc()
+
 	// Signal web gui that we are dialing a connection
 	dialing = url
 	websocketHub.UpdateStatus()
 
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
-	conn, err := transport.DialURL(url)
+	conn, err := transport.DialURLContext(ctx, url)
 
 	// Signal web gui that we are no longer dialing
 	dialing = nil
@@ -144,7 +156,11 @@ func Connect(connectStr string) (success bool) {
 
 	eventLog.LogConn("connect "+connectStr, currFreq, conn, err)
 
-	if err != nil {
+	switch {
+	case errors.Is(err, context.Canceled):
+		log.Printf("Connect cancelled")
+		return
+	case err != nil:
 		log.Printf("Unable to establish connection to remote: %s", err)
 		return
 	}

@@ -160,17 +160,23 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 
 func abortActiveConnection(dirty bool) (ok bool) {
 	switch {
+	case dialing != nil:
+		// If we're currently dialing a transport, attempt to abort by cancelling the associated context.
+		log.Printf("Got abort signal while dailing %s, cancelling...", dialing.Scheme)
+		dialCancelFunc()
+		return true
 	case exchangeConn != nil:
+		// If we have an active connection, close it gracefully.
 		log.Println("Got abort signal, disconnecting...")
 		exchangeConn.Close()
 		return true
-	case pModem != nil:
-		log.Println("Disconnecting pactor...")
-		err := pModem.Close()
-		if err != nil {
-			log.Println(err)
-		}
-		return err == nil
+	}
+
+	// Any connection and/or dial operation has been cancelled at this point.
+	// User is attempting to abort something, so try to identify any non-idling transports and abort.
+	// It might be a "dirty disconnect" of an already cancelled connection or dial operation which is in the
+	// process of gracefully terminating. It might also be an attempt to close an inbound P2P connection.
+	switch {
 	case adTNC != nil && !adTNC.Idle():
 		if dirty {
 			log.Println("Dirty disconnecting ardop...")
@@ -184,9 +190,13 @@ func abortActiveConnection(dirty bool) (ok bool) {
 			}
 		}()
 		return true
-	case dialing != nil:
-		log.Printf("Transport %s's dialer can not be aborted at this stage", dialing.Scheme)
-		return true
+	case pModem != nil:
+		log.Println("Disconnecting pactor...")
+		err := pModem.Close()
+		if err != nil {
+			log.Println(err)
+		}
+		return err == nil
 	default:
 		return false
 	}

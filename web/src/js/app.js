@@ -239,10 +239,10 @@ function writeFormDataToComposer(data) {
   if (data.target_form) {
     $('#msg_body').val(data.msg_body);
     if (data.msg_to) {
-      $('#msg_to').tokenfield('setTokens', data.msg_to.split(";").filter(Boolean));
+      $('#msg_to').tokenfield('setTokens', data.msg_to.split(/[ ;,]/).filter(Boolean));
     }
     if (data.msg_cc) {
-      $('#msg_cc').tokenfield('setTokens', data.msg_cc.split(";").filter(Boolean));
+      $('#msg_cc').tokenfield('setTokens', data.msg_cc.split(/[ ;,]/).filter(Boolean));
     }
     if (data.msg_subject) {
       // in case of composing a form-based reply we keep the 'Re: ...' subject line
@@ -256,7 +256,7 @@ function initComposeModal() {
     $('#composer').modal('toggle');
   });
   const tokenfieldConfig = {
-    delimiter: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)
+    delimiters: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)
     inputType: 'email',
     createTokensOnBlur: true,
   };

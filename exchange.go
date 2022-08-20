@@ -92,7 +92,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 			return config.SecureLoginPassword, nil
 		}
 		for _, aux := range config.AuxAddrs {
-			if addr.Addr != aux.Address {
+			if !addr.EqualString(aux.Address) {
 				continue
 			}
 			switch {

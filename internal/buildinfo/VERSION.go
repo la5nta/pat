@@ -6,9 +6,16 @@ package buildinfo
 
 const (
 	// AppName is the friendly name of the app.
+	//
+	// Forks should consider using a different name.
 	AppName = "Pat"
+
 	// Version is the app's SemVer.
-	Version = "0.12.1"
+	//
+	// Forks should NOT bump this unless they use a unique AppName. The Winlink
+	// system uses this to derive the "these users should upgrade" wall of shame
+	// from CMS connects.
+	Version = "0.13.0"
 )
 
 // GitRev is the git commit hash that the binary was built at.

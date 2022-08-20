@@ -1,3 +1,19 @@
+pat (0.13.0) stable; urgency=medium
+
+  * Add support for VARAHF and VARAFM
+  * Add support for setting the ARDOP ARQ bandwidth when dialing a connection
+  * Include linux/arm64 deb package in releases
+  * Remove support for WINMOR TNCs
+  * Add generic support for dial cancellation
+  * Implement dial cancellation for ax25:// and telnet://
+  * Improved non-interactive CLI compose command
+  * Improved shutdown behavior
+  * Improved FBB protocol compatibility with BPQ Mail
+  * Minor improvements and bug fixes to the PACTOR and serial-tnc transports
+  * Add a build system and package management for the Web GUI
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 20 Aug 2022 21:42:05 +0200
+
 pat (0.12.1) stable; urgency=medium
 
   * Add support for configurable telnet dial timeout (for Iridium GO users)

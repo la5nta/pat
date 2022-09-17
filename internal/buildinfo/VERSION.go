@@ -15,7 +15,7 @@ const (
 	// Forks should NOT bump this unless they use a unique AppName. The Winlink
 	// system uses this to derive the "these users should upgrade" wall of shame
 	// from CMS connects.
-	Version = "0.13.0"
+	Version = "0.13.1"
 )
 
 // GitRev is the git commit hash that the binary was built at.

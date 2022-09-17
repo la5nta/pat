@@ -1,3 +1,11 @@
+pat (0.13.1) stable; urgency=medium
+
+  * Fix panic when using unregistered VARA instances
+  * Use VARA HF/FM defaults if undefined in config
+  * Fix case sensitive matching when resolving aux addresses' passwords
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 17 Sep 2022 09:05:48 +0200
+
 pat (0.13.0) stable; urgency=medium
 
   * Add support for VARAHF and VARAFM

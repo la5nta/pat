@@ -6,6 +6,9 @@ package cfg
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
+	"strconv"
 	"strings"
 
 	"github.com/la5nta/wl2k-go/transport/ardop"
@@ -161,14 +164,8 @@ type ArdopConfig struct {
 }
 
 type VaraConfig struct {
-	// Network host of the VARA modem (defaults to localhost).
-	Host string `json:"host"`
-
-	// Network port of the VARA modem command channel (defaults to 8300).
-	CmdPort int `json:"cmdPort"`
-
-	// Network port of the VARA modem data channel (defaults to 8301).
-	DataPort int `json:"dataPort"`
+	// Network host of the VARA modem (defaults to localhost:8300).
+	Addr string `json:"addr"`
 
 	// Default/listen bandwidth (HF: 500/2300/2750 Hz).
 	Bandwidth int `json:"bandwidth"`
@@ -179,6 +176,42 @@ type VaraConfig struct {
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
 }
+
+// UnmarshalJSON implements VaraConfig JSON unmarshalling with support for legacy format.
+func (v *VaraConfig) UnmarshalJSON(b []byte) error {
+	type newFormat VaraConfig
+	legacy := struct {
+		newFormat
+		Host     string `json:"host"`
+		CmdPort  int    `json:"cmdPort"`
+		DataPort int    `json:"dataPort"`
+	}{}
+	if err := json.Unmarshal(b, &legacy); err != nil {
+		return err
+	}
+	if legacy.newFormat.Addr == "" && legacy.Host != "" {
+		legacy.newFormat.Addr = fmt.Sprintf("%s:%d", legacy.Host, legacy.CmdPort)
+	}
+	*v = VaraConfig(legacy.newFormat)
+	if !v.IsZero() && v.CmdPort() <= 0 {
+		return fmt.Errorf("invalid addr format")
+	}
+	return nil
+}
+
+func (v VaraConfig) IsZero() bool { return v == (VaraConfig{}) }
+
+func (v VaraConfig) Host() string {
+	host, _, _ := net.SplitHostPort(v.Addr)
+	return host
+}
+
+func (v VaraConfig) CmdPort() int {
+	_, portStr, _ := net.SplitHostPort(v.Addr)
+	port, _ := strconv.Atoi(portStr)
+	return port
+}
+func (v VaraConfig) DataPort() int { return v.CmdPort() + 1 }
 
 type PactorConfig struct {
 	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
@@ -297,15 +330,11 @@ var DefaultConfig = Config{
 		Password:   "",
 	},
 	VaraHF: VaraConfig{
-		Host:      "localhost",
-		CmdPort:   8300,
-		DataPort:  8301,
+		Addr:      "localhost:8300",
 		Bandwidth: 2300,
 	},
 	VaraFM: VaraConfig{
-		Host:     "localhost",
-		CmdPort:  8300,
-		DataPort: 8301,
+		Addr: "localhost:8300",
 	},
 	GPSd: GPSdConfig{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)

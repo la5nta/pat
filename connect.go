@@ -8,12 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/la5nta/pat/cfg"
-	"github.com/la5nta/pat/internal/debug"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/debug"
 
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
@@ -296,9 +297,9 @@ func initVaraModem(vModem *vara.Modem, scheme string, conf cfg.VaraConfig) error
 		_ = vModem.Close()
 	}
 	vConf := vara.ModemConfig{
-		Host:     conf.Host,
-		CmdPort:  conf.CmdPort,
-		DataPort: conf.DataPort,
+		Host:     conf.Host(),
+		CmdPort:  conf.CmdPort(),
+		DataPort: conf.DataPort(),
 	}
 	var err error
 	vModem, err = vara.NewModem(scheme, fOptions.MyCall, vConf)

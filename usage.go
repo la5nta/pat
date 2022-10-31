@@ -13,6 +13,8 @@ transport:
   telnet:     TCP/IP
   serial-tnc: Serial AX.25 TNC
   pactor:     SCS PTC modems
+  varahf:     VARA HF TNC
+  varafm:     VARA FM TNC
 
 host:
   Used to address the host interface (TNC/modem), _not_ to be confused with the connection PATH.
@@ -39,6 +41,9 @@ params:
   connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
   connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.
   connect pactor:///LA3F             Connect to RMS HF Gateway LA3F using PACTOR.
+  connect varahf:///LA1B             Connect to RMS HF Gateway LA1B using VARA HF TNC.
+  connect varafm:///LA5NTA           Connect to LA5NTA using VARA FM TNC.
+  
 `
 )
 

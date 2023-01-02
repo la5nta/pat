@@ -154,6 +154,10 @@ func Connect(connectStr string) (success bool) {
 	switch url.Scheme {
 	case MethodArdop:
 		waitBusy(adTNC)
+	case MethodVaraHF:
+		waitBusy(varaHFModem)
+	case MethodVaraFM:
+		waitBusy(varaFMModem)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

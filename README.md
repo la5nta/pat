@@ -1,6 +1,6 @@
 <a href="http://getpat.io"><img src="https://raw.githubusercontent.com/la5nta/pat-website/gh-pages/img/logo.png" width="128" ></a>
 
-[![Build Status](https://app.travis-ci.com/la5nta/pat.svg?branch=master)](https://app.travis-ci.com/la5nta/pat)
+[![Build status](https://github.com/la5nta/pat/actions/workflows/go.yaml/badge.svg)](https://github.com/la5nta/pat/actions)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/tstq4suxfdmudl5l/branch/master?svg=true)](https://ci.appveyor.com/project/martinhpedersen/pat)
 [![Go Report Card](https://goreportcard.com/badge/github.com/la5nta/pat)](https://goreportcard.com/report/github.com/la5nta/pat)
 [![Liberapay Patreons](http://img.shields.io/liberapay/patrons/la5nta.svg?logo=liberapay)](https://liberapay.com/la5nta)

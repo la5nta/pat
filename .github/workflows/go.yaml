@@ -13,7 +13,17 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
-      - name: Setup libax25
+      - name: Cache libax25
+        id: cache-libax25
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-libax25
+        with:
+          path: .build
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.go-version }}-${{ hashFiles('make.bash') }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.go-version }}-
+      - if: ${{ steps.cache-libax25.outputs.cache-hit != 'true' }}
+        name: Setup libax25
         run: ./make.bash libax25
       - name: Display Go version
         run: go version

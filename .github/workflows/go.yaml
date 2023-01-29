@@ -1,0 +1,41 @@
+name: build
+on:
+  push:
+  pull_request:
+    types: [ review_requested ]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: [ '1.x' ]
+        include:
+          - os: ubuntu-latest
+            go-version: '1.16'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
+        name: Cache libax25
+        id: cache-libax25
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-libax25
+        with:
+          path: .build
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.go-version }}-${{ hashFiles('make.bash') }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.go-version }}-
+      - if: ${{ matrix.os == 'ubuntu-latest' && steps.cache-libax25.outputs.cache-hit != 'true' }}
+        name: Setup libax25
+        run: ./make.bash libax25
+      - name: Display Go version
+        run: go version
+      - name: Vet
+        run: go vet ./...
+      - name: Build
+        run: ./make.bash

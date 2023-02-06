@@ -3,6 +3,9 @@ FROM golang:alpine as builder
 
 WORKDIR /build
 COPY . /build
+
+# Vet and build
+RUN go vet
 RUN go build
 
 # Runner

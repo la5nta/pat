@@ -1,11 +1,13 @@
+# Builder
 FROM golang:alpine as builder
 
-WORKDIR /app
-COPY . /app
+WORKDIR /build
+COPY . /build
 RUN go build
 
-
+# Runner
 FROM golang:alpine
+
 ENV MYCALL=N0CALL
 
 WORKDIR /app
@@ -13,11 +15,12 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8774
 
-RUN mkdir /app/mailbox
-RUN mkdir /app/standard_forms
-RUN mkdir /app/logs
-COPY docker/assets/entrypoint.sh .
+# Build out directory structure
+RUN mkdir mailbox
+RUN mkdir standard_forms
+RUN mkdir logs
 
-COPY --from=builder /app/pat /app/pat
+COPY docker/assets/entrypoint.sh .
+COPY --from=builder /build/pat .
 
 CMD sh entrypoint.sh

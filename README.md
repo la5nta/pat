@@ -57,6 +57,41 @@ This experiment is enabled by default and sessions between two Pat nodes (or oth
 
 For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 
+
+## Docker
+
+### Building
+
+To build Pat as a Docker image run the following:
+
+```
+docker build . -t latest
+```
+
+### Running the Docker image
+
+Make a directory called `docker/config` and creat a `config.json` file in it. This is the configuration file the Docker container will mount. Make sure the `http_addr` is set to `:8080` in `config.json` otherwise the web interface won't function inside the container.
+
+```
+# Build folder structure.
+mkdir docker/data
+mkdir docker/data/logs
+mkdir docker/data/mailbox
+mkdir docker/data/standard_forms
+
+# Run a container and expose the web interface and telnet listener port. Replace `N0CALL` with your actual callsign.
+docker run \
+    --env MYCALL=N0CALL \
+    -p 8080:8080 \
+    -p 8774:8774 \
+    --mount "type=bind,source=$(pwd)/docker/config/config.json,target=/app/config.json" \
+    --mount "type=bind,source=$(pwd)/docker/data/logs,target=/app/logs" \
+    --mount "type=bind,source=$(pwd)/docker/data/mailbox,target=/app/mailbox" \
+    --mount "type=bind,source=$(pwd)/docker/data/standard_forms,target=/app/standard_forms" \
+    --name pat \
+    pat:latest
+```
+
 ## Copyright/License
 
 Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
@@ -74,6 +109,7 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 * LA4TTA - Erlend Grimseid
 * LA5NTA - Martin Hebnes Pedersen
 * N2YGK - Alan Crosswell
+* ThreeSixes
 * VE7GNU - Doug Collinge
 * W6IPA  - JC Martin
 * WY2K - Benjamin Seidenberg

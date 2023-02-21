@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"html/template"
 	"io"
 	"io/fs"
@@ -458,25 +457,25 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	mode := strings.ToLower(req.FormValue("mode"))
 	resp := BandwidthResponse{Mode: mode, Bandwidths: []string{}}
-	switch mode {
-	case MethodPactor:
+	switch {
+	case mode == MethodPactor:
 		fallthrough
-	case MethodAX25:
+	case mode == MethodAX25, strings.HasPrefix(mode, MethodAX25+"+"):
 		fallthrough
-	case MethodTelnet:
+	case mode == MethodTelnet:
 		fallthrough
-	case MethodVaraFM:
+	case mode == MethodVaraFM:
 		fallthrough
-	case MethodSerialTNC:
+	case mode == MethodSerialTNC:
 		// bandwidth not supported, return empty list
-	case MethodArdop:
+	case mode == MethodArdop:
 		for _, bw := range ardop.Bandwidths() {
 			resp.Bandwidths = append(resp.Bandwidths, bw.String())
 		}
 		if bw := config.Ardop.ARQBandwidth; !bw.IsZero() {
 			resp.Default = bw.String()
 		}
-	case MethodVaraHF:
+	case mode == MethodVaraHF:
 		resp.Bandwidths = vara.Bandwidths()
 		if bw := config.VaraHF.Bandwidth; bw != 0 {
 			resp.Default = fmt.Sprintf("%d", bw)

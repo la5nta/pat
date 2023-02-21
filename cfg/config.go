@@ -89,6 +89,8 @@ type Config struct {
 	HamlibRigs map[string]HamlibConfig `json:"hamlib_rigs"`
 
 	AX25      AX25Config      `json:"ax25"`       // See AX25Config.
+	AX25Linux AX25LinuxConfig `json:"ax25_linux"` // See AX25LinuxConfig.
+	AGWPE     AGWPEConfig     `json:"agwpe"`      // See AGWPEConfig.
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
@@ -251,17 +253,41 @@ type SerialTNCConfig struct {
 
 	// Type of TNC (currently only 'kenwood').
 	Type string `json:"type"`
-}
-
-type AX25Config struct {
-	// axport to use (as defined in /etc/ax25/axports).
-	Port string `json:"port"`
-
-	// Optional beacon when listening for incoming packet-p2p connections.
-	Beacon BeaconConfig `json:"beacon"`
 
 	// (optional) Reference name to the Hamlib rig for frequency control.
 	Rig string `json:"rig"`
+}
+
+type AGWPEConfig struct {
+	// The TCP address of the TNC.
+	Addr string `json:"addr"`
+
+	// The AGWPE "radio port" (0-3).
+	RadioPort int `json:"radio_port"`
+}
+
+type AX25Config struct {
+	// The AX.25 engine to be used.
+	//
+	// Valid options are:
+	//   - linux
+	//   - agwpe
+	//   - serial-tnc
+	Engine AX25Engine `json:"engine"`
+
+	// (optional) Reference name to the Hamlib rig for frequency control.
+	Rig string `json:"rig"`
+
+	// DEPRECATED: See AX25Linux.Port.
+	AXPort string `json:"port,omitempty"`
+
+	// Optional beacon when listening for incoming packet-p2p connections.
+	Beacon BeaconConfig `json:"beacon"`
+}
+
+type AX25LinuxConfig struct {
+	// axport to use (as defined in /etc/ax25/axports). Only applicable to ax25 engine 'linux'.
+	Port string `json:"port"`
 }
 
 type BeaconConfig struct {
@@ -303,18 +329,25 @@ var DefaultConfig = Config{
 	Listen:   []string{},
 	HTTPAddr: "localhost:8080",
 	AX25: AX25Config{
-		Port: "wl2k",
+		Engine: DefaultAX25Engine(),
 		Beacon: BeaconConfig{
 			Every:       3600,
 			Message:     "Winlink P2P",
 			Destination: "IDENT",
 		},
 	},
+	AX25Linux: AX25LinuxConfig{
+		Port: "wl2k",
+	},
 	SerialTNC: SerialTNCConfig{
 		Path:       "/dev/ttyUSB0",
 		SerialBaud: 9600,
 		HBaud:      1200,
 		Type:       "Kenwood",
+	},
+	AGWPE: AGWPEConfig{
+		Addr:      "localhost:8000",
+		RadioPort: 0,
 	},
 	Ardop: ArdopConfig{
 		Addr:         "localhost:8515",

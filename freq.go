@@ -93,16 +93,16 @@ func (f Frequency) Dial(mode string) Frequency {
 
 func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool, err error) {
 	var rig string
-	switch transport {
-	case MethodArdop:
+	switch {
+	case transport == MethodArdop:
 		rig = config.Ardop.Rig
-	case MethodAX25:
+	case transport == MethodAX25, strings.HasPrefix(transport, MethodAX25+"+"):
 		rig = config.AX25.Rig
-	case MethodPactor:
+	case transport == MethodPactor:
 		rig = config.Pactor.Rig
-	case MethodVaraHF:
+	case transport == MethodVaraHF:
 		rig = config.VaraHF.Rig
-	case MethodVaraFM:
+	case transport == MethodVaraFM:
 		rig = config.VaraFM.Rig
 	default:
 		return vfo, "", false, fmt.Errorf("not supported with transport '%s'", transport)

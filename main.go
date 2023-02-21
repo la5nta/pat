@@ -37,11 +37,15 @@ import (
 const (
 	MethodArdop     = "ardop"
 	MethodTelnet    = "telnet"
-	MethodAX25      = "ax25"
 	MethodSerialTNC = "serial-tnc"
 	MethodPactor    = "pactor"
 	MethodVaraHF    = "varahf"
 	MethodVaraFM    = "varafm"
+
+	MethodAX25          = "ax25"
+	MethodAX25AGWPE     = MethodAX25 + "+agwpe"
+	MethodAX25Linux     = MethodAX25 + "+linux"
+	MethodAX25SerialTNC = MethodAX25 + "+serial-tnc"
 )
 
 var commands = []Command{
@@ -494,27 +498,32 @@ func cleanup() {
 	listenHub.Close()
 	if adTNC != nil {
 		if err := adTNC.Close(); err != nil {
-			log.Fatalf("Failure to close ardop TNC: %s", err)
+			log.Printf("Failure to close ardop TNC: %s", err)
 		}
 	}
 	if pModem != nil {
 		if err := pModem.Close(); err != nil {
-			log.Fatalf("Failure to close pactor modem: %s", err)
+			log.Printf("Failure to close pactor modem: %s", err)
 		}
 	}
 
 	if varaFMModem != nil {
 		if err := varaFMModem.Close(); err != nil {
-			log.Fatalf("Failure to close varafm modem: %s", err)
+			log.Printf("Failure to close varafm modem: %s", err)
 		}
 	}
 
 	if varaHFModem != nil {
 		if err := varaHFModem.Close(); err != nil {
-			log.Fatalf("Failure to close varahf modem: %s", err)
+			log.Printf("Failure to close varahf modem: %s", err)
 		}
 	}
 
+	if agwpeTNC != nil {
+		if err := agwpeTNC.Close(); err != nil {
+			log.Printf("Failure to close AGWPE TNC: %s", err)
+		}
+	}
 	eventLog.Close()
 }
 

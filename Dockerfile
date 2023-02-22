@@ -18,7 +18,7 @@ COPY . .
 RUN go build
 
 # Runner
-FROM gcr.io/distroless/base-debian11
+FROM gcr.io/distroless/static-debian11
 
 EXPOSE 8080
 EXPOSE 8774

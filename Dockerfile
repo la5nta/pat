@@ -2,28 +2,31 @@
 FROM golang:alpine as builder
 
 WORKDIR /build
-COPY . /build
 
-# Vet and build
-RUN go vet
+# Prerequisites for make.bash
+#RUN apk add git perl
+
+COPY . .
+
+# Maybe we can make the tests not fail on Alpine eventually?
+#RUN sh make.bash libax25
 RUN go build
 
 # Runner
-FROM golang:alpine
-
-ENV MYCALL=N0CALL
-
-WORKDIR /app
+FROM gcr.io/distroless/base-debian11
 
 EXPOSE 8080
 EXPOSE 8774
 
-# Build out directory structure
-RUN mkdir mailbox
-RUN mkdir standard_forms
-RUN mkdir logs
+ARG BASE_PATH=/app
 
-COPY docker/assets/entrypoint.sh .
-COPY --from=builder /build/pat .
+WORKDIR ${BASE_PATH}
 
-CMD sh entrypoint.sh
+# All paths lead to /app/pat.
+ENV XDG_DATA_HOME=${BASE_PATH}
+ENV XDG_STATE_HOME=${BASE_PATH}
+ENV XDG_CONFIG_HOME=${BASE_PATH}
+
+COPY --from=builder /build/pat ./bin/
+
+ENTRYPOINT [ "./bin/pat", "http" ]

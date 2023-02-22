@@ -65,31 +65,21 @@ For more information, see <https://github.com/la5nta/wl2k-go#gzip-experiment>.
 To build Pat as a Docker image run the following:
 
 ```
-docker build . -t latest
+docker build . -t pat:local
 ```
 
 ### Running the Docker image
 
-Make a directory called `docker/config` and creat a `config.json` file in it. This is the configuration file the Docker container will mount. Make sure the `http_addr` is set to `:8080` in `config.json` otherwise the web interface won't function inside the container.
+Create a `docker/data/config.json` file in it. This is the configuration file the Docker container will mount. Make sure the `http_addr` is set to `:8080` in `docker/data/config.json` otherwise the web interface won't function inside the container.
 
 ```
-# Build folder structure.
-mkdir docker/data
-mkdir docker/data/logs
-mkdir docker/data/mailbox
-mkdir docker/data/standard_forms
-
-# Run a container and expose the web interface and telnet listener port. Replace `N0CALL` with your actual callsign.
+# Run a container and expose the web interface and telnet listener port.
 docker run \
-    --env MYCALL=N0CALL \
     -p 8080:8080 \
     -p 8774:8774 \
-    --mount "type=bind,source=$(pwd)/docker/config/config.json,target=/app/config.json" \
-    --mount "type=bind,source=$(pwd)/docker/data/logs,target=/app/logs" \
-    --mount "type=bind,source=$(pwd)/docker/data/mailbox,target=/app/mailbox" \
-    --mount "type=bind,source=$(pwd)/docker/data/standard_forms,target=/app/standard_forms" \
+    --mount "type=bind,source=$(pwd)/docker/data,target=/app/pat" \
     --name pat \
-    pat:latest
+    pat:local
 ```
 
 ## Copyright/License

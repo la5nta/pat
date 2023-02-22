@@ -6,6 +6,11 @@ WORKDIR /build
 # Prerequisites for make.bash
 #RUN apk add git perl
 
+# Cache Go deps
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
 COPY . .
 
 # Maybe we can make the tests not fail on Alpine eventually?

@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-          cache: true
+          cache-latest: true
       - if: ${{ matrix.os == 'ubuntu-latest' }}
         name: Cache libax25
         id: cache-libax25

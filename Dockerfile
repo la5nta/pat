@@ -1,20 +1,18 @@
 # Builder
-#FROM golang:latest as builder
 FROM golang:alpine as builder
 
 WORKDIR /build
 
-# Cache Go deps
-COPY go.mod go.sum ./
-RUN go mod download
+# Build deps
+RUN apk add --no-cache bash perl git
 
 # Copy source
 COPY . .
 
-# RUN bash make.bash libax25
-# RUN bash make.bash
-# RUN chmod +x pat
-RUN go build
+# Build without tests due to AX.25 issues in our build container.
+ENV SKIP_TESTS=1
+ENV NO_AX25=1
+RUN ./make.bash
 
 # Runner
 FROM gcr.io/distroless/static-debian11

@@ -35,21 +35,23 @@ function build_web {
 
 # Link against libax25 (statically) on Linux
 if [[ "$OS" == "linux"* ]]; then
-	TAGS="libax25 $TAGS"
-	LIB=".build/${AX25DIST}/.libs/libax25.a"
-	if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
-		export CGO_CFLAGS="-I$(pwd)/.build/${AX25DIST}"
-		export CGO_LDFLAGS="$(pwd)/${LIB}"
-	fi
-	if [[ -z "$CGO_LDFLAGS" ]]; then
-		echo "WARNING: No static libax25 library available."
-		echo "  Linking against shared library instead. To fix"
-		echo "  this issue, set CGO_LDFLAGS to the full path of"
-		echo "  libax25.a, or run 'make.bash libax25' to download"
-		echo "  and compile ${AX25DIST} in .build/"
-		sleep 3;
-	else
-		TAGS="static $TAGS"
+	if [[ -z "$NO_AX25" ]]; then
+		TAGS="libax25 $TAGS"
+		LIB=".build/${AX25DIST}/.libs/libax25.a"
+		if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
+			export CGO_CFLAGS="-I$(pwd)/.build/${AX25DIST}"
+			export CGO_LDFLAGS="$(pwd)/${LIB}"
+		fi
+		if [[ -z "$CGO_LDFLAGS" ]]; then
+			echo "WARNING: No static libax25 library available."
+			echo "  Linking against shared library instead. To fix"
+			echo "  this issue, set CGO_LDFLAGS to the full path of"
+			echo "  libax25.a, or run 'make.bash libax25' to download"
+			echo "  and compile ${AX25DIST} in .build/"
+			sleep 3;
+		else
+			TAGS="static $TAGS"
+		fi
 	fi
 fi
 

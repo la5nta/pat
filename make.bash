@@ -4,6 +4,7 @@ set -e
 export GO111MODULE=on
 
 if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
+if [ -d $CGO_ENABLED ]; then CGO_ENABLED=$(go env CGO_ENABLED); else OS=$CGO_ENABLED; fi
 
 GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep "Version =" internal/buildinfo/VERSION.go|cut -d '"' -f2)
@@ -34,24 +35,25 @@ function build_web {
 [[ "$1" == "web" ]] && build_web && exit 0;
 
 # Link against libax25 (statically) on Linux
-if [[ "$OS" == "linux"* ]]; then
-	if [[ -z "$NO_AX25" ]]; then
-		TAGS="libax25 $TAGS"
-		LIB=".build/${AX25DIST}/.libs/libax25.a"
-		if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
-			export CGO_CFLAGS="-I$(pwd)/.build/${AX25DIST}"
-			export CGO_LDFLAGS="$(pwd)/${LIB}"
-		fi
-		if [[ -z "$CGO_LDFLAGS" ]]; then
-			echo "WARNING: No static libax25 library available."
-			echo "  Linking against shared library instead. To fix"
-			echo "  this issue, set CGO_LDFLAGS to the full path of"
-			echo "  libax25.a, or run 'make.bash libax25' to download"
-			echo "  and compile ${AX25DIST} in .build/"
-			sleep 3;
-		else
-			TAGS="static $TAGS"
-		fi
+if [[ "$OS" == "linux"* ]] && [[ "$CGO_ENABLED" == "1" ]]; then
+	TAGS="libax25 $TAGS"
+	LIB=".build/${AX25DIST}/.libs/libax25.a"
+	if [[ -z "$CGO_LDFLAGS" ]] && [[ -f "$LIB" ]]; then
+		export CGO_CFLAGS="-I$(pwd)/.build/${AX25DIST}"
+		export CGO_LDFLAGS="$(pwd)/${LIB}"
+	fi
+	if [[ -z "$CGO_LDFLAGS" ]]; then
+		echo "WARNING: No static libax25 library available."
+		echo "  Linking against shared library instead. To fix"
+		echo "  this issue, set CGO_LDFLAGS to the full path of"
+		echo "  libax25.a, or run 'make.bash libax25' to download"
+		echo "  and compile ${AX25DIST} in .build/"
+	else
+		TAGS="static $TAGS"
+	fi
+else
+	if [[ "$OS" == "linux"* ]]; then
+		echo "WARNING: CGO unavailable. libax25 (ax25+linux) will not be supported with this build."
 	fi
 fi
 

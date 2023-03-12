@@ -40,6 +40,7 @@ import (
 
 const (
 	fieldValueFalseInXML = "False"
+	htmlFileExt          = ".html"
 	txtFileExt           = ".txt"
 	formsVersionInfoURL  = "https://api.getpat.io/v1/forms/standard-templates/latest"
 )
@@ -533,15 +534,15 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 
 func (f Form) matchesName(nameToMatch string) bool {
 	return f.InitialURI == nameToMatch ||
-		f.InitialURI == nameToMatch+".html" ||
+		strings.EqualFold(f.InitialURI, nameToMatch + htmlFileExt) ||
 		f.ViewerURI == nameToMatch ||
-		f.ViewerURI == nameToMatch+".html" ||
+		strings.EqualFold(f.ViewerURI, nameToMatch + htmlFileExt) ||
 		f.ReplyInitialURI == nameToMatch ||
 		f.ReplyInitialURI == nameToMatch+".0" ||
 		f.ReplyViewerURI == nameToMatch ||
 		f.ReplyViewerURI == nameToMatch+".0" ||
 		f.TxtFileURI == nameToMatch ||
-		f.TxtFileURI == nameToMatch+".txt"
+		strings.EqualFold(f.TxtFileURI, nameToMatch + txtFileExt)
 }
 
 func (f Form) containsName(partialName string) bool {
@@ -595,7 +596,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 			retVal.FormCount += subfolder.FormCount
 			continue
 		}
-		if filepath.Ext(info.Name()) != txtFileExt {
+		if !strings.EqualFold(filepath.Ext(info.Name()), txtFileExt) {
 			continue
 		}
 		frm, err := m.buildFormFromTxt(path.Join(rootPath, info.Name()))
@@ -627,7 +628,7 @@ func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 	formsPathWithSlash := m.config.FormsPath + "/"
 
 	retVal := Form{
-		Name:       strings.TrimSuffix(path.Base(txtPath), ".txt"),
+		Name:       strings.TrimSuffix(path.Base(txtPath), path.Ext(txtPath)),
 		TxtFileURI: strings.TrimPrefix(txtPath, formsPathWithSlash),
 	}
 	scanner := bufio.NewScanner(f)

@@ -169,6 +169,9 @@ func (h *ListenerHub) Enable(t TransportListener) {
 }
 
 func (h *ListenerHub) Disable(name string) (bool, error) {
+	if name == MethodAX25 {
+		name = defaultAX25Method()
+	}
 	h.mu.Lock()
 	defer func() {
 		h.mu.Unlock()

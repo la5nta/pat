@@ -29,6 +29,7 @@ func writeEnvAll(w io.Writer) {
 	writeEnv(w, "PAT_WEB_DEV_ADDR", os.Getenv("PAT_WEB_DEV_ADDR"))
 	writeEnv(w, "ARDOP_DEBUG", os.Getenv("ARDOP_DEBUG"))
 	writeEnv(w, "PACTOR_DEBUG", os.Getenv("PACTOR_DEBUG"))
+	writeEnv(w, "AGWPE_DEBUG", os.Getenv("AGWPE_DEBUG"))
 }
 
 func writeEnv(w io.Writer, k, v string) {

@@ -8,18 +8,22 @@ var (
 	UsageConnect = `'alias' or 'transport://[host][/digi]/targetcall[?params...]'
 
 transport:
-  ardop:      ARDOP TNC
-  ax25:       AX.25 (Linux only)
-  telnet:     TCP/IP
-  serial-tnc: Serial AX.25 TNC
-  pactor:     SCS PTC modems
+  telnet:          TCP/IP
+  ardop:           ARDOP TNC
+  pactor:          SCS PTC modems
+  varahf:          VARA HF TNC
+  varafm:          VARA FM TNC
+  ax25:            AX.25 (Default - uses engine specified in config)
+  ax25+agwpe:      AX.25 (AGWPE/Direwolf)
+  ax25+linux:      AX.25 (Linux kernel)
+  ax25+serial-tnc: AX.25 (Serial TNC)
 
 host:
   Used to address the host interface (TNC/modem), _not_ to be confused with the connection PATH.
     Format: [user[:pass]@]host[:port]
 
   telnet:       [user:pass]@host:port
-  ax25:         (optional) host=axport
+  ax25+linux:   (optional) host=axport
   pactor:       (optional) serial device (e.g. COM1 or /dev/ttyUSB0)
 
 path:
@@ -31,14 +35,15 @@ params:
   ?host=        Overrides the host part of the path. Useful for serial-tnc to specify e.g. /dev/ttyS0.
 `
 	ExampleConnect = `
-  connect telnet                     (alias) Connect to one of the Winlink Common Message Servers via tcp.
-  connect ax25:///LA1B-10            Connect to the RMS Gateway LA1B-10 using Linux AX.25 on the default axport.
-  connect ax25://tmd710/LA1B-10      Connect to the RMS Gateway LA1B-10 using Linux AX.25 on axport 'tmd710'.
-  connect ax25:///LA1B/LA5NTA        Peer-to-peer connection with LA5NTA via LA1B digipeater.
-  connect ardop:///LA3F              Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
-  connect ardop:///LA3F?freq=5350    Same as above, but set dial frequency of the radio using rigcontrol.  
-  connect serial-tnc:///LA1B-10      Connect to the RMS Gateway LA1B-10 over a AX.25 serial TNC on the default serial port.
-  connect pactor:///LA3F             Connect to RMS HF Gateway LA3F using PACTOR.
+  connect telnet                       (alias) Connect to one of the Winlink Common Message Servers via tcp.
+  connect ax25:///LA1B-10              Connect to the RMS Gateway LA1B-10 using AX.25 engine as per configuration.
+  connect ax25+linux://tmd710/LA1B-10  Connect to LA1B-10 using Linux kernel's AX.25 stack on axport 'tmd710'.
+  connect ax25:///LA1B/LA5NTA          Peer-to-peer connection with LA5NTA via LA1B digipeater.
+  connect ardop:///LA3F                Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
+  connect ardop:///LA3F?freq=5350      Same as above, but set dial frequency of the radio using rigcontrol.  
+  connect pactor:///LA3F               Connect to RMS HF Gateway LA3F using PACTOR.
+  connect varahf:///LA1B               Connect to RMS HF Gateway LA1B using VARA HF TNC.
+  connect varafm:///LA5NTA             Connect to LA5NTA using VARA FM TNC.
 `
 )
 

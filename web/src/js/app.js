@@ -323,6 +323,7 @@ function initFormSelect(data) {
     );
     $('#updateFormsVersion').html(data.version);
     $('#formsRootFolderName').text(data.path);
+    $('#formFolderRoot').html('');
     appendFormFolder('formFolderRoot', data);
   } else {
     $('#formsRootFolderName').text('missing form templates');
@@ -348,6 +349,8 @@ function updateForms() {
           break;
         case 'update':
           $('#updateFormsResponse').text('Updated forms to ' + response.newestVersion);
+          // Update views to reflect new state
+          initForms();
           break;
       }
     },

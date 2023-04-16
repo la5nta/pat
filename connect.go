@@ -19,16 +19,19 @@ import (
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
+	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
 	"github.com/n8jja/Pat-Vara/vara"
 
-	// Register other dialers
+	// Register stateless dialers
 	_ "github.com/la5nta/wl2k-go/transport/ax25"
 	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )
 
 var (
-	dialing     *transport.URL // The connect URL currently being dialed (if any)
+	dialing *transport.URL // The connect URL currently being dialed (if any)
+
 	adTNC       *ardop.TNC     // Pointer to the ARDOP TNC used by Listen and Connect
+	agwpeTNC    *agwpe.TNCPort // Pointer to the AGWPE TNC combined TNC and Port
 	pModem      *pactor.Modem
 	varaHFModem *vara.Modem
 	varaFMModem *vara.Modem
@@ -65,8 +68,23 @@ func Connect(connectStr string) (success bool) {
 		return false
 	}
 
+	// Rewrite legacy serial-tnc scheme.
+	if url.Scheme == MethodSerialTNC {
+		url.Scheme = MethodAX25SerialTNC
+	}
+
+	// Rewrite the generic ax25:// scheme to use a specified AX.25 engine.
+	if url.Scheme == MethodAX25 {
+		url.Scheme = defaultAX25Method()
+	}
+
 	// Init TNCs
 	switch url.Scheme {
+	case MethodAX25AGWPE:
+		if err := initAGWPE(); err != nil {
+			log.Println(err)
+			return
+		}
 	case MethodArdop:
 		if err := initArdopTNC(); err != nil {
 			log.Println(err)
@@ -101,9 +119,9 @@ func Connect(connectStr string) (success bool) {
 	// Set default host interface address
 	if url.Host == "" {
 		switch url.Scheme {
-		case MethodAX25:
-			url.Host = config.AX25.Port
-		case MethodSerialTNC:
+		case MethodAX25Linux:
+			url.Host = config.AX25Linux.Port
+		case MethodAX25SerialTNC:
 			url.Host = config.SerialTNC.Path
 			if hbaud := config.SerialTNC.HBaud; hbaud > 0 {
 				url.Params.Set("hbaud", fmt.Sprint(hbaud))
@@ -125,13 +143,11 @@ func Connect(connectStr string) (success bool) {
 			return
 		}
 
-		switch url.Scheme {
-		case MethodAX25, MethodSerialTNC:
+		if strings.HasPrefix(url.Scheme, MethodAX25) {
 			log.Printf("Radio-Only is not available for %s", url.Scheme)
 			return
-		default:
-			url.SetUser(url.User.Username() + "-T")
 		}
+		url.SetUser(url.User.Username() + "-T")
 	}
 
 	// QSY
@@ -323,4 +339,43 @@ func initVaraModem(vModem *vara.Modem, scheme string, conf cfg.VaraConfig) error
 	}
 	vModem.SetPTT(rig)
 	return nil
+}
+
+func initAGWPE() error {
+	if agwpeTNC != nil && agwpeTNC.Ping() == nil {
+		return nil
+	}
+
+	if agwpeTNC != nil {
+		agwpeTNC.Close()
+	}
+
+	var err error
+	agwpeTNC, err = agwpe.OpenPortTCP(config.AGWPE.Addr, config.AGWPE.RadioPort, fOptions.MyCall)
+	if err != nil {
+		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
+	}
+
+	if v, err := agwpeTNC.Version(); err != nil {
+		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
+	} else {
+		log.Printf("AGWPE TNC (%s) initialized", v)
+	}
+
+	transport.RegisterContextDialer(MethodAX25AGWPE, agwpeTNC)
+	return nil
+}
+
+// defaultAX25Method resolves the generic ax25:// scheme to a implementation specific scheme.
+func defaultAX25Method() string {
+	switch config.AX25.Engine {
+	case cfg.AX25EngineAGWPE:
+		return MethodAX25AGWPE
+	case cfg.AX25EngineSerialTNC:
+		return MethodAX25SerialTNC
+	case cfg.AX25EngineLinux:
+		return MethodAX25Linux
+	default:
+		panic(fmt.Sprintf("invalid ax25 engine: %s", config.AX25.Engine))
+	}
 }

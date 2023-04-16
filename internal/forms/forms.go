@@ -94,6 +94,8 @@ type FormFolder struct {
 type FormData struct {
 	TargetForm Form              `json:"target_form"`
 	Fields     map[string]string `json:"fields"`
+	MsgTo      string            `json:"msg_to"`
+	MsgCc      string            `json:"msg_cc"`
 	MsgSubject string            `json:"msg_subject"`
 	MsgBody    string            `json:"msg_body"`
 	MsgXML     string            `json:"msg_xml"`
@@ -103,6 +105,8 @@ type FormData struct {
 
 // MessageForm represents a concrete form-based message
 type MessageForm struct {
+	To             string
+	Cc             string
 	Subject        string
 	Body           string
 	AttachmentXML  string
@@ -195,6 +199,8 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
 	}
+	formData.MsgTo = formMsg.To
+	formData.MsgCc = formMsg.Cc
 	formData.MsgSubject = formMsg.Subject
 	formData.MsgBody = formMsg.Body
 	formData.MsgXML = formMsg.AttachmentXML
@@ -358,7 +364,7 @@ func unzip(srcArchivePath, dstRoot string) error {
 		}
 
 		// Ensure target directory exists
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			return fmt.Errorf("can't create target directory: %w", err)
 		}
 
@@ -534,15 +540,15 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 
 func (f Form) matchesName(nameToMatch string) bool {
 	return f.InitialURI == nameToMatch ||
-		strings.EqualFold(f.InitialURI, nameToMatch + htmlFileExt) ||
+		strings.EqualFold(f.InitialURI, nameToMatch+htmlFileExt) ||
 		f.ViewerURI == nameToMatch ||
-		strings.EqualFold(f.ViewerURI, nameToMatch + htmlFileExt) ||
+		strings.EqualFold(f.ViewerURI, nameToMatch+htmlFileExt) ||
 		f.ReplyInitialURI == nameToMatch ||
 		f.ReplyInitialURI == nameToMatch+".0" ||
 		f.ReplyViewerURI == nameToMatch ||
 		f.ReplyViewerURI == nameToMatch+".0" ||
 		f.TxtFileURI == nameToMatch ||
-		strings.EqualFold(f.TxtFileURI, nameToMatch + txtFileExt)
+		strings.EqualFold(f.TxtFileURI, nameToMatch+txtFileExt)
 }
 
 func (f Form) containsName(partialName string) bool {
@@ -985,6 +991,8 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 		replier,
 		formVarsAsXML)
 	retVal.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
+	retVal.To = strings.TrimSpace(retVal.To)
+	retVal.Cc = strings.TrimSpace(retVal.Cc)
 	retVal.Subject = strings.TrimSpace(retVal.Subject)
 	retVal.Body = strings.TrimSpace(retVal.Body)
 	return retVal, nil
@@ -1021,16 +1029,21 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	scanner := bufio.NewScanner(infile)
 
 	var retVal MessageForm
+	var inBody bool
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
 		lineTmpl = strings.ReplaceAll(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall)
 		lineTmpl = strings.ReplaceAll(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion)
-		if strings.HasPrefix(lineTmpl, "Form:") ||
-			strings.HasPrefix(lineTmpl, "ReplyTemplate:") ||
-			strings.HasPrefix(lineTmpl, "To:") ||
-			strings.HasPrefix(lineTmpl, "Msg:") {
+		if strings.HasPrefix(lineTmpl, "Form:") {
 			continue
+		}
+		if strings.HasPrefix(lineTmpl, "ReplyTemplate:") {
+			continue
+		}
+		if strings.HasPrefix(lineTmpl, "Msg:") {
+			lineTmpl = strings.TrimSpace(strings.TrimPrefix(lineTmpl, "Msg:"))
+			inBody = true
 		}
 		if b.Interactive {
 			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
@@ -1051,10 +1064,17 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		}
 
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		if strings.HasPrefix(lineTmpl, "Subject:") {
+		switch {
+		case strings.HasPrefix(lineTmpl, "Subject:"):
 			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
-		} else {
+		case strings.HasPrefix(lineTmpl, "To:"):
+			retVal.To = strings.TrimPrefix(lineTmpl, "To:")
+		case strings.HasPrefix(lineTmpl, "Cc:"):
+			retVal.Cc = strings.TrimPrefix(lineTmpl, "Cc:")
+		case inBody:
 			retVal.Body += lineTmpl + "\n"
+		default:
+			log.Printf("skipping unknown template line: '%s'", lineTmpl)
 		}
 	}
 

@@ -100,12 +100,12 @@ func Connect(connectStr string) (success bool) {
 			return
 		}
 	case MethodVaraHF:
-		if err := initVaraModem(varaHFModem, MethodVaraHF, config.VaraHF); err != nil {
+		if err := initVaraHFModem(); err != nil {
 			log.Println(err)
 			return
 		}
 	case MethodVaraFM:
-		if err := initVaraModem(varaFMModem, MethodVaraFM, config.VaraFM); err != nil {
+		if err := initVaraFMModem(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -308,33 +308,52 @@ func initPactorModem(cmdlineinit string) error {
 	return nil
 }
 
-func initVaraModem(vModem *vara.Modem, scheme string, conf cfg.VaraConfig) error {
-	if vModem != nil {
-		_ = vModem.Close()
+func initVaraHFModem() error {
+	if varaHFModem != nil {
+		_ = varaHFModem.Close()
 	}
+	m, err := initVaraModem(MethodVaraHF, config.VaraHF)
+	if err != nil {
+		return err
+	}
+	varaHFModem = m
+	return nil
+}
+
+func initVaraFMModem() error {
+	if varaFMModem != nil {
+		_ = varaFMModem.Close()
+	}
+	m, err := initVaraModem(MethodVaraFM, config.VaraFM)
+	if err != nil {
+		return err
+	}
+	varaFMModem = m
+	return nil
+}
+
+func initVaraModem(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
 	vConf := vara.ModemConfig{
 		Host:     conf.Host(),
 		CmdPort:  conf.CmdPort(),
 		DataPort: conf.DataPort(),
 	}
-	var err error
-	vModem, err = vara.NewModem(scheme, fOptions.MyCall, vConf)
+	m, err := vara.NewModem(scheme, fOptions.MyCall, vConf)
 	if err != nil {
-		return fmt.Errorf("vara initialization failed: %w", err)
+		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
-
-	transport.RegisterDialer(scheme, vModem)
+	transport.RegisterDialer(scheme, m)
 
 	if !conf.PTTControl {
-		return nil
+		return m, nil
 	}
-
 	rig, ok := rigs[conf.Rig]
 	if !ok {
-		return fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", conf.Rig)
+		m.Close()
+		return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", conf.Rig)
 	}
-	vModem.SetPTT(rig)
-	return nil
+	m.SetPTT(rig)
+	return m, nil
 }
 
 func initAGWPE() error {

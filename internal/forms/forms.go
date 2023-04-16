@@ -364,7 +364,7 @@ func unzip(srcArchivePath, dstRoot string) error {
 		}
 
 		// Ensure target directory exists
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			return fmt.Errorf("can't create target directory: %w", err)
 		}
 
@@ -540,15 +540,15 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 
 func (f Form) matchesName(nameToMatch string) bool {
 	return f.InitialURI == nameToMatch ||
-		strings.EqualFold(f.InitialURI, nameToMatch + htmlFileExt) ||
+		strings.EqualFold(f.InitialURI, nameToMatch+htmlFileExt) ||
 		f.ViewerURI == nameToMatch ||
-		strings.EqualFold(f.ViewerURI, nameToMatch + htmlFileExt) ||
+		strings.EqualFold(f.ViewerURI, nameToMatch+htmlFileExt) ||
 		f.ReplyInitialURI == nameToMatch ||
 		f.ReplyInitialURI == nameToMatch+".0" ||
 		f.ReplyViewerURI == nameToMatch ||
 		f.ReplyViewerURI == nameToMatch+".0" ||
 		f.TxtFileURI == nameToMatch ||
-		strings.EqualFold(f.TxtFileURI, nameToMatch + txtFileExt)
+		strings.EqualFold(f.TxtFileURI, nameToMatch+txtFileExt)
 }
 
 func (f Form) containsName(partialName string) bool {
@@ -1019,8 +1019,6 @@ func (b formMessageBuilder) initFormValues() {
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
-	inBody := false
-
 	infile, err := os.Open(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
@@ -1031,6 +1029,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	scanner := bufio.NewScanner(infile)
 
 	var retVal MessageForm
+	var inBody bool
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
@@ -1065,15 +1064,16 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		}
 
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		if strings.HasPrefix(lineTmpl, "Subject:") {
+		switch {
+		case strings.HasPrefix(lineTmpl, "Subject:"):
 			retVal.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
-		} else if strings.HasPrefix(lineTmpl, "To:") {
+		case strings.HasPrefix(lineTmpl, "To:"):
 			retVal.To = strings.TrimPrefix(lineTmpl, "To:")
-		} else if strings.HasPrefix(lineTmpl, "Cc:") {
+		case strings.HasPrefix(lineTmpl, "Cc:"):
 			retVal.Cc = strings.TrimPrefix(lineTmpl, "Cc:")
-		} else if inBody {
+		case inBody:
 			retVal.Body += lineTmpl + "\n"
-		} else {
+		default:
 			log.Printf("skipping unknown template line: '%s'", lineTmpl)
 		}
 	}

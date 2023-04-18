@@ -190,7 +190,7 @@ func abortActiveConnection(dirty bool) (ok bool) {
 			}
 		}()
 		return true
-	case varaFMModem != nil:
+	case varaFMModem != nil && !varaFMModem.Idle():
 		log.Println("Disconnecting varafm...")
 		go func() {
 			if err := varaFMModem.Close(); err != nil {
@@ -198,7 +198,7 @@ func abortActiveConnection(dirty bool) (ok bool) {
 			}
 		}()
 		return true
-	case varaHFModem != nil:
+	case varaHFModem != nil && !varaHFModem.Idle():
 		log.Println("Disconnecting varahf...")
 		go func() {
 			if err := varaHFModem.Close(); err != nil {

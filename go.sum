@@ -46,8 +46,8 @@ github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/microcosm-cc/bluemonday v1.0.16 h1:kHmAq2t7WPWLjiGvzKa5o3HzSfahUKiOq7fAPUiMNIc=
 github.com/microcosm-cc/bluemonday v1.0.16/go.mod h1:Z0r70sCuXHig8YpBzCc5eGHAap2K7e/u082ZUpDRRqM=
-github.com/n8jja/Pat-Vara v1.0.2 h1:fEv216S1/JdUgM1ofcb5mqC74ym30wuTbkdlz2Q451k=
-github.com/n8jja/Pat-Vara v1.0.2/go.mod h1:eVJvcJZDzHuDoHShGHgNRBhd1i8IOr/Qktc79Tb+dBY=
+github.com/n8jja/Pat-Vara v1.0.3 h1:TPd+Zly6FIsqTigzBtnK1usCuvawaFnX8zQpeVWI0dI=
+github.com/n8jja/Pat-Vara v1.0.3/go.mod h1:eVJvcJZDzHuDoHShGHgNRBhd1i8IOr/Qktc79Tb+dBY=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
 github.com/paulrosania/go-charset v0.0.0-20151028000031-621bb39fcc83/go.mod h1:YnNlZP7l4MhyGQ4CBRwv6ohZTPrUJJZtEv4ZgADkbs4=

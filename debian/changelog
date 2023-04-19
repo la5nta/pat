@@ -1,3 +1,15 @@
+pat (0.14.0) stable; urgency=medium
+
+  * AX.25: Implement ability to switch between different AX.25 engines 
+  * AX.25: Add AGWPE support (use Direwolf directly over TCP on all platforms)
+  * Winlink HTML Forms: Various compatibility fixes
+  * VARA: Switch to more idiomatic config fields
+  * VARA: Improved progress report on outbound traffic
+  * VARA: Add support for dial cancellation
+  * VARA: Reject inbound P2P sessions (listener not supported yet)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Web, 19 Apr 2023 21:09:12 +0200
+
 pat (0.13.1) stable; urgency=medium
 
   * Fix panic when using unregistered VARA instances

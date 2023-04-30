@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path"
 
@@ -44,9 +45,14 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.AGWPE = cfg.DefaultConfig.AGWPE
 	}
 
-	// Use deprecated AXPort if defined
-	if config.AX25.AXPort != "" {
-		config.AX25Linux.Port = config.AX25.AXPort
+	// Ensure we have a default AX.25 Linux config
+	if config.AX25Linux == (cfg.AX25LinuxConfig{}) {
+		config.AX25Linux = cfg.DefaultConfig.AX25Linux
+	}
+	// TODO: Remove after some release cycles (2023-04-30)
+	if v := config.AX25.AXPort; v != "" && v != config.AX25Linux.Port {
+		log.Println("Using deprecated configuration option ax25.port. Please set ax25_linux.port instead.")
+		config.AX25Linux.Port = v
 	}
 
 	// Ensure Pactor has a default value
@@ -62,17 +68,30 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.VaraFM = cfg.DefaultConfig.VaraFM
 	}
 
+	// Ensure GPSd has a default value
+	if config.GPSd == (cfg.GPSdConfig{}) {
+		config.GPSd = cfg.DefaultConfig.GPSd
+	}
 	// TODO: Remove after some release cycles (2019-09-29)
-	if config.GPSdAddrLegacy != "" {
-		config.GPSd.Addr = config.GPSdAddrLegacy
+	if v := config.GPSdAddrLegacy; v != "" && v != config.GPSd.Addr {
+		log.Println("Using deprecated configuration option gpsd_addr. Please set gpsd.addr instead.")
+		config.GPSd.Addr = v
 	}
 
+	// Ensure SerialTNC has a default hbaud and serialbaud
+	if config.SerialTNC.HBaud == 0 {
+		config.SerialTNC.HBaud = cfg.DefaultConfig.SerialTNC.HBaud
+	}
+	if config.SerialTNC.SerialBaud == 0 {
+		config.SerialTNC.SerialBaud = cfg.DefaultConfig.SerialTNC.SerialBaud
+	}
 	// Compatibility for the old baudrate field for serial-tnc
-	if v := config.SerialTNC.BaudrateLegacy; v != 0 && config.SerialTNC.HBaud == 0 {
+	if v := config.SerialTNC.BaudrateLegacy; v != 0 && v != config.SerialTNC.HBaud {
+		// Since we changed the default value from 9600 to 1200, we can't warn about this without causing confusion.
 		debug.Printf("Legacy serial_tnc.baudrate config detected (%d). Translating to serial_tnc.hbaud.", v)
 		config.SerialTNC.HBaud = v
-		config.SerialTNC.BaudrateLegacy = 0
 	}
+
 	return config, nil
 }
 

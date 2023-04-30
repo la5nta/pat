@@ -5,14 +5,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
@@ -72,20 +67,6 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.GPSd.Addr = config.GPSdAddrLegacy
 	}
 
-	// TODO: config FormsPath is deprecated in favor of --forms flag
-	homeDir, _ := os.UserHomeDir()
-	formsOldDefault := filepath.Join(homeDir, ".wl2k", "Standard_Forms")
-	// Ignore the old default config value
-	if config.FormsPath == formsOldDefault {
-		config.FormsPath = ""
-	}
-	if config.FormsPath != "" {
-		log.Println("Using deprecated configuration option 'forms_path'. Please use --forms flag instead.")
-		// clean up FormsPath (normalizes trailing slashes, and embedded '.' )
-		config.FormsPath = filepath.Clean(config.FormsPath)
-		config.FormsPath = strings.ReplaceAll(config.FormsPath, "\\", "/")
-	}
-
 	// Compatibility for the old baudrate field for serial-tnc
 	if v := config.SerialTNC.BaudrateLegacy; v != 0 && config.SerialTNC.HBaud == 0 {
 		debug.Printf("Legacy serial_tnc.baudrate config detected (%d). Translating to serial_tnc.hbaud.", v)
@@ -95,43 +76,11 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	return config, nil
 }
 
-func replaceDeprecatedCMSHostname(path string, data []byte) ([]byte, error) {
-	const o = "@server.winlink.org:8772/wl2k"
-	const n = "@cms.winlink.org:8772/wl2k"
-
-	if !bytes.Contains(data, []byte(o)) {
-		return data, nil
-	}
-
-	data = bytes.ReplaceAll(data, []byte(o), []byte(n))
-
-	f, err := os.Open(path)
-	if err != nil {
-		return data, err
-	}
-	stat, err := f.Stat()
-	f.Close()
-	if err != nil {
-		return data, err
-	}
-	return data, os.WriteFile(path, data, stat.Mode())
-}
-
 func ReadConfig(path string) (config cfg.Config, err error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return
 	}
-
-	// TODO: Remove after some release cycles (2017-11-09)
-	data, err = replaceDeprecatedCMSHostname(path, data)
-	if err != nil {
-		fmt.Println("Failed to rewrite deprecated CMS hostname:", err)
-		fmt.Println("Please update your config's 'telnet' connect alias manually to:")
-		fmt.Println(cfg.DefaultConfig.ConnectAliases["telnet"])
-		fmt.Println("")
-	}
-
 	err = json.Unmarshal(data, &config)
 	return
 }

@@ -59,7 +59,9 @@ func Connect(connectStr string) (success bool) {
 	}
 
 	// Hack around bug in frontend which may occur if the status updates too quickly.
-	defer func() { time.Sleep(time.Second); websocketHub.UpdateStatus() }()
+	if websocketHub != nil {
+		defer func() { time.Sleep(time.Second); websocketHub.UpdateStatus() }()
+	}
 
 	debug.Printf("connectStr: %s", connectStr)
 	url, err := transport.ParseURL(connectStr)

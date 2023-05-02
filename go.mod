@@ -24,3 +24,5 @@ require (
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 )
+
+replace github.com/n8jja/Pat-Vara => github.com/martinhpedersen/Pat-Vara v0.0.0-20230502052346-487f03d3963f

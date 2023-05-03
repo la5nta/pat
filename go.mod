@@ -15,7 +15,7 @@ require (
 	github.com/la5nta/wl2k-go v0.11.2
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.16
-	github.com/n8jja/Pat-Vara v1.0.3
+	github.com/n8jja/Pat-Vara v1.0.4
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pd0mz/go-maidenhead v1.0.0
 	github.com/peterh/liner v1.2.1
@@ -24,5 +24,3 @@ require (
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 )
-
-replace github.com/n8jja/Pat-Vara => github.com/martinhpedersen/Pat-Vara v0.0.0-20230502052346-487f03d3963f

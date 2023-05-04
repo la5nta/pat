@@ -162,7 +162,7 @@ func abortActiveConnection(dirty bool) (ok bool) {
 	switch {
 	case dialing != nil:
 		// If we're currently dialing a transport, attempt to abort by cancelling the associated context.
-		log.Printf("Got abort signal while dailing %s, cancelling...", dialing.Scheme)
+		log.Printf("Got abort signal while dialing %s, cancelling...", dialing.Scheme)
 		dialCancelFunc()
 		return true
 	case exchangeConn != nil:

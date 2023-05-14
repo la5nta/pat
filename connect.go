@@ -311,8 +311,8 @@ func initPactorModem(cmdlineinit string) error {
 }
 
 func initVaraHFModem() error {
-	if varaHFModem != nil {
-		_ = varaHFModem.Close()
+	if varaHFModem != nil && varaHFModem.Ping() {
+		return nil
 	}
 	m, err := initVaraModem(MethodVaraHF, config.VaraHF)
 	if err != nil {
@@ -323,8 +323,8 @@ func initVaraHFModem() error {
 }
 
 func initVaraFMModem() error {
-	if varaFMModem != nil {
-		_ = varaFMModem.Close()
+	if varaFMModem != nil && varaFMModem.Ping() {
+		return nil
 	}
 	m, err := initVaraModem(MethodVaraFM, config.VaraFM)
 	if err != nil {

@@ -44,6 +44,10 @@ func Listen(listenStr string) {
 			listenHub.Enable(&AX25AGWPEListener{})
 		case MethodAX25Linux:
 			listenHub.Enable(&AX25LinuxListener{})
+		case MethodVaraFM:
+			listenHub.Enable(VaraFMListener{})
+		case MethodVaraHF:
+			listenHub.Enable(VaraHFListener{})
 		case MethodAX25SerialTNC, MethodSerialTNC:
 			log.Printf("%s listen not implemented, ignoring.", method)
 		default:
@@ -114,6 +118,50 @@ func (l ARDOPListener) BeaconStart() error {
 }
 
 func (l ARDOPListener) BeaconStop() { adTNC.BeaconEvery(0) }
+
+type VaraFMListener struct{}
+
+func (l VaraFMListener) Name() string { return MethodVaraFM }
+func (l VaraFMListener) Init() (net.Listener, error) {
+	if err := initVaraFMModem(); err != nil {
+		return nil, err
+	}
+	ln, err := varaFMModem.Listen()
+	if err != nil {
+		return nil, err
+	}
+	return ln, err
+}
+
+func (l VaraFMListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := rigs[config.VaraFM.Rig]; ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
+
+type VaraHFListener struct{}
+
+func (l VaraHFListener) Name() string { return MethodVaraHF }
+func (l VaraHFListener) Init() (net.Listener, error) {
+	if err := initVaraHFModem(); err != nil {
+		return nil, err
+	}
+	ln, err := varaHFModem.Listen()
+	if err != nil {
+		return nil, err
+	}
+	return ln, err
+}
+
+func (l VaraHFListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := rigs[config.VaraHF.Rig]; ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
 
 type AX25AGWPEListener struct{ stopBeacon func() }
 

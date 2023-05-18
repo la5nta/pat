@@ -885,8 +885,8 @@ function closeComposer(clear) {
     $('#composer_error').val('').hide();
     $('#msg_body').val('');
     $('#msg_subject').val('');
-    $('#msg_to').tokenfield('setTokens', '');
-    $('#msg_cc').tokenfield('setTokens', '');
+    $('#msg_to').tokenfield('setTokens', []);
+    $('#msg_cc').tokenfield('setTokens', []);
     $('#composer_form')[0].reset();
 
     // Attachment previews

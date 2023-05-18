@@ -17,6 +17,3 @@ const (
 	// from CMS connects.
 	Version = "0.14.1"
 )
-
-// GitRev is the git commit hash that the binary was built at.
-var GitRev = "unknown origin" // Set by make.bash

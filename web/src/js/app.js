@@ -470,10 +470,15 @@ function initConnectModal() {
     $('#modeSearchSelect').selectpicker('refresh');
     updateRmslist();
   });
+  let url = localStorage.getItem('pat_connect_url');
+  if( url != null ) {
+    setConnectValues(url);
+  }
   refreshExtraInputGroups();
 
   updateConnectAliases();
   updateRmslist();
+
 }
 
 function updateRmslist(forceDownload) {
@@ -902,8 +907,8 @@ function closeComposer(clear) {
 }
 
 function connect(evt) {
-  const url = encodeURIComponent(getConnectURL());
-
+  const url = getConnectURL();
+  localStorage.setItem('pat_connect_url', url);
   $('#connectModal').modal('hide');
 
   $.getJSON('/api/connect?url=' + url, function (data) {

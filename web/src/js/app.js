@@ -910,7 +910,7 @@ function connect(evt) {
         alert('No new messages.');
       }, 1000);
     }
-  }).error(function () {
+  }).fail(function () {
     alert('Connect failed. See console for detailed information.');
   });
 }

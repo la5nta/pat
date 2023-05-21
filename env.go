@@ -27,9 +27,11 @@ func writeEnvAll(w io.Writer) {
 	writeEnv(w, "PAT_FORMS_PATH", fOptions.FormsPath)
 	writeEnv(w, "PAT_DEBUG", os.Getenv("PAT_DEBUG"))
 	writeEnv(w, "PAT_WEB_DEV_ADDR", os.Getenv("PAT_WEB_DEV_ADDR"))
+
 	writeEnv(w, "ARDOP_DEBUG", os.Getenv("ARDOP_DEBUG"))
 	writeEnv(w, "PACTOR_DEBUG", os.Getenv("PACTOR_DEBUG"))
 	writeEnv(w, "AGWPE_DEBUG", os.Getenv("AGWPE_DEBUG"))
+	writeEnv(w, "VARA_DEBUG", os.Getenv("VARA_DEBUG"))
 
 	writeEnv(w, "GZIP_EXPERIMENT", os.Getenv("GZIP_EXPERIMENT"))
 	writeEnv(w, "ARDOP_FSKONLY_EXPERIMENT", os.Getenv("ARDOP_FSKONLY_EXPERIMENT"))

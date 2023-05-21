@@ -460,6 +460,9 @@ function initConnectModal() {
         break;
       case 'serial-tnc':
       case 'ax25':
+      case 'ax25+linux':
+      case 'ax25+agwpe':
+      case 'ax25+serial-tnc':
         $('#modeSearchSelect').val('packet');
         break;
       default:
@@ -694,7 +697,7 @@ function refreshExtraInputGroups() {
       $('#freqInputDiv').show();
   }
 
-  if (transport == 'ax25' || transport == 'serial-tnc') {
+  if (transport.startsWith('ax25') || transport == 'serial-tnc') {
     $('#radioOnlyInput')[0].checked = false;
     $('#radioOnlyInputDiv').hide();
   } else {

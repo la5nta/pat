@@ -911,7 +911,7 @@ function connect(evt) {
   localStorage.setItem('pat_connect_url', url);
   $('#connectModal').modal('hide');
 
-  $.getJSON('/api/connect?url=' + url, function (data) {
+  $.getJSON('/api/connect?url=' + encodeURIComponent(url), function (data) {
     if (data.NumReceived == 0) {
       window.setTimeout(function () {
         alert('No new messages.');

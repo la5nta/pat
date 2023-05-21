@@ -179,7 +179,7 @@
             <div class="modal-body">
               <form class="form-horizontal" role="form" id="connectForm">
                 <div class="form-group">
-                  <div class="col-md-10">
+                  <div class="col-md-11">
                     <div class="form-group row">
                       <div class="col-md-4">
                         <select
@@ -199,14 +199,16 @@
                           data-width="100%"
                           id="transportSelect"
                         >
-                          <optgroup label="transports">
-                            <option value="ardop">ARDOP</option>
-                            <option value="ax25">AX.25</option>
-                            <option value="pactor">Pactor</option>
-                            <option value="serial-tnc">serial-tnc</option>
-                            <option value="telnet">telnet</option>
-                            <option value="varafm">VARA FM</option>
-                            <option value="varahf">VARA HF</option>
+                          <option value="ardop">ARDOP</option>
+                          <option value="ax25">AX.25</option>
+                          <option value="pactor">PACTOR</option>
+                          <option value="telnet">Telnet</option>
+                          <option value="varafm">VARA FM</option>
+                          <option value="varahf">VARA HF</option>
+                          <optgroup label="advanced">
+                            <option value="ax25+agwpe">AX.25+agwpe</option>
+                            <option value="ax25+linux">AX.25+linux</option>
+                            <option value="ax25+serial-tnc">AX.25+serial-tnc</option>
                           </optgroup>
                         </select>
                       </div>
@@ -223,7 +225,7 @@
                     <div class="form-group row">
                       <div id="freqInputDiv">
                         <label for="freqInput" class="col-md-2 control-label">freq:</label>
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                           <div class="input-group">
                             <input
                               type="text"
@@ -239,7 +241,7 @@
                         <label for="bandwidthInput" class="col-md-2 control-label">
                           bandwidth:
                         </label>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                           <select
                             class="selectpicker form-control"
                             data-width="100%"

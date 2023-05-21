@@ -48,7 +48,7 @@ func Listen(listenStr string) {
 			listenHub.Enable(VaraFMListener{})
 		case MethodVaraHF:
 			listenHub.Enable(VaraHFListener{})
-		case MethodAX25SerialTNC, MethodSerialTNC:
+		case MethodAX25SerialTNC, MethodSerialTNCDeprecated:
 			log.Printf("%s listen not implemented, ignoring.", method)
 		default:
 			log.Printf("'%s' is not a valid listen method", method)

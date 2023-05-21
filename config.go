@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
@@ -28,6 +29,20 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	}
 	if _, exists := config.ConnectAliases["telnet"]; !exists {
 		config.ConnectAliases["telnet"] = cfg.DefaultConfig.ConnectAliases["telnet"]
+	}
+
+	// TODO: Remove after some release cycles (2023-05-21)
+	// Rewrite deprecated serial-tnc:// aliases to ax25-serial-tnc://
+	var deprecatedAliases []string
+	for k, v := range config.ConnectAliases {
+		if !strings.HasPrefix(v, MethodSerialTNCDeprecated+"://") {
+			continue
+		}
+		deprecatedAliases = append(deprecatedAliases, k)
+		config.ConnectAliases[k] = strings.Replace(v, MethodSerialTNCDeprecated, MethodAX25SerialTNC, 1)
+	}
+	if len(deprecatedAliases) > 0 {
+		log.Printf("Alias(es) %s uses deprecated transport scheme %s://. Please use %s:// instead.", strings.Join(deprecatedAliases, ", "), MethodSerialTNCDeprecated, MethodAX25SerialTNC)
 	}
 
 	// Ensure ServiceCodes has a default value

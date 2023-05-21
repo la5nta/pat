@@ -466,8 +466,6 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 		fallthrough
 	case mode == MethodVaraFM:
 		fallthrough
-	case mode == MethodSerialTNC:
-		// bandwidth not supported, return empty list
 	case mode == MethodArdop:
 		for _, bw := range ardop.Bandwidths() {
 			resp.Bandwidths = append(resp.Bandwidths, bw.String())

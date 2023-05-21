@@ -70,8 +70,10 @@ func Connect(connectStr string) (success bool) {
 		return false
 	}
 
+	// TODO: Remove after some release cycles (2023-05-21)
 	// Rewrite legacy serial-tnc scheme.
-	if url.Scheme == MethodSerialTNC {
+	if url.Scheme == MethodSerialTNCDeprecated {
+		log.Printf("Transport scheme %s:// is deprecated, use %s:// instead.", MethodSerialTNCDeprecated, MethodAX25SerialTNC)
 		url.Scheme = MethodAX25SerialTNC
 	}
 

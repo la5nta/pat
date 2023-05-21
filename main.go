@@ -35,17 +35,19 @@ import (
 )
 
 const (
-	MethodArdop     = "ardop"
-	MethodTelnet    = "telnet"
-	MethodSerialTNC = "serial-tnc"
-	MethodPactor    = "pactor"
-	MethodVaraHF    = "varahf"
-	MethodVaraFM    = "varafm"
+	MethodArdop  = "ardop"
+	MethodTelnet = "telnet"
+	MethodPactor = "pactor"
+	MethodVaraHF = "varahf"
+	MethodVaraFM = "varafm"
 
 	MethodAX25          = "ax25"
 	MethodAX25AGWPE     = MethodAX25 + "+agwpe"
 	MethodAX25Linux     = MethodAX25 + "+linux"
 	MethodAX25SerialTNC = MethodAX25 + "+serial-tnc"
+
+	// TODO: Remove after some release cycles (2023-05-21)
+	MethodSerialTNCDeprecated = "serial-tnc"
 )
 
 var commands = []Command{

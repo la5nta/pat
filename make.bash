@@ -25,6 +25,7 @@ function build_web {
 	cd web
 	if [ -d $NVM_DIR ]; then
 	  source $NVM_DIR/nvm.sh
+	  nvm install
 	  nvm use
 	fi
 	npm install

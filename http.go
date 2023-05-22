@@ -458,14 +458,6 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 	mode := strings.ToLower(req.FormValue("mode"))
 	resp := BandwidthResponse{Mode: mode, Bandwidths: []string{}}
 	switch {
-	case mode == MethodPactor:
-		fallthrough
-	case mode == MethodAX25, strings.HasPrefix(mode, MethodAX25+"+"):
-		fallthrough
-	case mode == MethodTelnet:
-		fallthrough
-	case mode == MethodVaraFM:
-		fallthrough
 	case mode == MethodArdop:
 		for _, bw := range ardop.Bandwidths() {
 			resp.Bandwidths = append(resp.Bandwidths, bw.String())
@@ -478,9 +470,6 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 		if bw := config.VaraHF.Bandwidth; bw != 0 {
 			resp.Default = fmt.Sprintf("%d", bw)
 		}
-	default:
-		http.Error(w, "mode not recognized", http.StatusBadRequest)
-		return
 	}
 	_ = json.NewEncoder(w).Encode(resp)
 }

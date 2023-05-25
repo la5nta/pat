@@ -160,15 +160,18 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 
 func abortActiveConnection(dirty bool) (ok bool) {
 	switch {
+	case dirty:
+		// This mean we've already tried to abort, but the connection is still active.
+		// Fallback to the below cases to try to identify the busy modem and abort hard.
 	case dialing != nil:
 		// If we're currently dialing a transport, attempt to abort by cancelling the associated context.
 		log.Printf("Got abort signal while dialing %s, cancelling...", dialing.Scheme)
-		dialCancelFunc()
+		go dialCancelFunc()
 		return true
 	case exchangeConn != nil:
 		// If we have an active connection, close it gracefully.
 		log.Println("Got abort signal, disconnecting...")
-		exchangeConn.Close()
+		go exchangeConn.Close()
 		return true
 	}
 
@@ -191,6 +194,11 @@ func abortActiveConnection(dirty bool) (ok bool) {
 		}()
 		return true
 	case varaFMModem != nil && !varaFMModem.Idle():
+		if dirty {
+			log.Println("Dirty disconnecting varafm...")
+			varaFMModem.Abort()
+			return true
+		}
 		log.Println("Disconnecting varafm...")
 		go func() {
 			if err := varaFMModem.Close(); err != nil {
@@ -199,6 +207,11 @@ func abortActiveConnection(dirty bool) (ok bool) {
 		}()
 		return true
 	case varaHFModem != nil && !varaHFModem.Idle():
+		if dirty {
+			log.Println("Dirty disconnecting varahf...")
+			varaHFModem.Abort()
+			return true
+		}
 		log.Println("Disconnecting varahf...")
 		go func() {
 			if err := varaHFModem.Close(); err != nil {

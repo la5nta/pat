@@ -320,6 +320,12 @@ func initVaraHFModem() error {
 	if err != nil {
 		return err
 	}
+	if bw := config.VaraHF.Bandwidth; bw != 0 {
+		if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
+			m.Close()
+			return err
+		}
+	}
 	varaHFModem = m
 	return nil
 }

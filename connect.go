@@ -354,15 +354,16 @@ func initVaraModem(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
 	}
 	transport.RegisterDialer(scheme, m)
 
-	if !conf.PTTControl {
-		return m, nil
+	if conf.PTTControl {
+		rig, ok := rigs[conf.Rig]
+		if !ok {
+			m.Close()
+			return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", conf.Rig)
+		}
+		m.SetPTT(rig)
 	}
-	rig, ok := rigs[conf.Rig]
-	if !ok {
-		m.Close()
-		return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", conf.Rig)
-	}
-	m.SetPTT(rig)
+	v, _ := m.Version()
+	log.Printf("VARA modem (%s) initialized", v)
 	return m, nil
 }
 

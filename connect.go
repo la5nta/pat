@@ -316,6 +316,9 @@ func initVaraHFModem() error {
 	if varaHFModem != nil && varaHFModem.Ping() {
 		return nil
 	}
+	if varaHFModem != nil {
+		varaHFModem.Close()
+	}
 	m, err := initVaraModem(MethodVaraHF, config.VaraHF)
 	if err != nil {
 		return err
@@ -333,6 +336,9 @@ func initVaraHFModem() error {
 func initVaraFMModem() error {
 	if varaFMModem != nil && varaFMModem.Ping() {
 		return nil
+	}
+	if varaFMModem != nil {
+		varaFMModem.Close()
 	}
 	m, err := initVaraModem(MethodVaraFM, config.VaraFM)
 	if err != nil {

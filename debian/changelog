@@ -1,3 +1,20 @@
+pat (0.15.0) stable; urgency=medium
+
+  * Restore previous connect parameters from browser's local storage
+  * Add missing AX.25 schemes to connect modal's transport dropdown
+  * Fix clearing of To/Cc fields after message is posted to outbox
+  * Fix alignment of connect modal input fields
+  * Improve the dirty disconnect feature
+  * Add deprecation warning for newly deprecated config options
+  * Remove support for previously deprecated config options
+  * AGWPE: Add support for QtSoundModem
+  * AGWPE: Wait for modem ack on dial cancellation
+  * VARA: Add support for inbound (P2P) connections
+  * VARA: Improved throughput, various bug fixes and other improvements
+  * ARDOP: Experimental FSKONLY support (with ARDOP_FSKONLY_EXPERIMENT=1)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 10 Jun 2023 13:07:32 +0200
+
 pat (0.14.1) stable; urgency=medium
 
   * VARA: Fix panic on 32-bit builds

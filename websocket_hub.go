@@ -100,22 +100,22 @@ func (w *WSHub) watchMBox() {
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Println("Unable to start fs watcher: ", err)
-	} else {
-		p := path.Join(mbox.MBoxPath, mailbox.DIR_INBOX)
-		if err := fsWatcher.Add(p); err != nil {
-			log.Printf("Unable to add path '%s' to fs watcher: %s", p, err)
-		}
+		return
+	}
+	defer fsWatcher.Close()
 
-		// These will probably fail if the first failed, but it's not important to log all.
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_OUTBOX))
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_SENT))
-		fsWatcher.Add(path.Join(mbox.MBoxPath, mailbox.DIR_ARCHIVE))
-		defer fsWatcher.Close()
+	// Add all directories in the mailbox to the watcher
+	for _, dir := range []string{mailbox.DIR_INBOX, mailbox.DIR_OUTBOX, mailbox.DIR_SENT, mailbox.DIR_ARCHIVE} {
+		p := path.Join(mbox.MBoxPath, dir)
+		debug.Printf("Adding '%s' to fs watcher", p)
+		if err := fsWatcher.Add(p); err != nil {
+			log.Printf("Unable to add path '%s' to fs watcher: %v", p, err)
+		}
 	}
 
+	// Listen for filesystem events and broadcast updates to all clients
 	for {
 		select {
-		// Filesystem events
 		case e := <-fsWatcher.Events:
 			if e.Op == fsnotify.Chmod {
 				continue

@@ -270,7 +270,7 @@ func readAttachment(path string) (*fbb.File, error) {
 	name := filepath.Base(path)
 
 	var resizeImage bool
-	if isImageMediaType(name, "") {
+	if isConvertableImageMediaType(name, "") {
 		fmt.Print("This seems to be an image. Auto resize? [Y/n]: ")
 		ans := readLine()
 		resizeImage = ans == "" || strings.EqualFold("y", ans)

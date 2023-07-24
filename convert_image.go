@@ -17,7 +17,7 @@ import (
 	"github.com/nfnt/resize"
 )
 
-func isImageMediaType(filename, contentType string) bool {
+func isConvertableImageMediaType(filename, contentType string) bool {
 	var mediaType string
 	if contentType != "" {
 		mediaType, _, _ = mime.ParseMediaType(contentType)
@@ -26,7 +26,13 @@ func isImageMediaType(filename, contentType string) bool {
 		mediaType = mime.TypeByExtension(path.Ext(filename))
 	}
 
-	return strings.HasPrefix(mediaType, "image/")
+	switch mediaType {
+	case "image/svg+xml":
+		// This is a text file
+		return false
+	default:
+		return strings.HasPrefix(mediaType, "image/")
+	}
 }
 
 func convertImage(orig []byte) ([]byte, error) {

@@ -631,17 +631,18 @@ func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 		l := scanner.Text()
 		switch {
 		case strings.HasPrefix(l, "Form:"):
-			trimmed := strings.TrimSpace(strings.TrimPrefix(l, "Form:"))
-			fileNames := strings.Split(trimmed, ",")
-			if len(fileNames) >= 2 {
-				initial := strings.TrimSpace(fileNames[0])
-				viewer := strings.TrimSpace(fileNames[1])
-				form.InitialURI = path.Join(baseURI, initial)
-				form.ViewerURI = path.Join(baseURI, viewer)
-			} else {
-				view := strings.TrimSpace(fileNames[0])
-				form.InitialURI = path.Join(baseURI, view)
-				form.ViewerURI = path.Join(baseURI, view)
+			// Form: <composer>,<viewer>
+			files := strings.Split(strings.TrimPrefix(l, "Form:"), ",")
+			// Extend to absolute paths and add missing html extension
+			for i := range files {
+				files[i] = path.Join(baseURI, strings.TrimSpace(files[i]))
+				if ext := path.Ext(files[i]); ext == "" {
+					files[i] += ".html"
+				}
+			}
+			form.InitialURI = files[0]
+			if len(files) > 1 {
+				form.ViewerURI = files[1]
 			}
 		case strings.HasPrefix(l, "ReplyTemplate:"):
 			form.ReplyTxtFileURI = path.Join(baseURI, strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:")))
@@ -949,7 +950,10 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 	if err != nil {
 		return MessageForm{}, err
 	}
-	msgForm.AttachmentXML = fmt.Sprintf(`%s<RMS_Express_Form>
+
+	// Add XML if a viewer is defined for this form
+	if b.Template.ViewerURI != "" {
+		msgForm.AttachmentXML = fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
     <rms_express_version>%s</rms_express_version>
@@ -964,16 +968,18 @@ func (b formMessageBuilder) build() (MessageForm, error) {
   </variables>
 </RMS_Express_Form>
 `,
-		xml.Header,
-		"1.0",
-		b.FormsMgr.config.AppVersion,
-		time.Now().UTC().Format("20060102150405"),
-		b.FormsMgr.config.MyCall,
-		b.FormsMgr.config.Locator,
-		viewer,
-		replier,
-		formVarsAsXML)
-	msgForm.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
+			xml.Header,
+			"1.0",
+			b.FormsMgr.config.AppVersion,
+			time.Now().UTC().Format("20060102150405"),
+			b.FormsMgr.config.MyCall,
+			b.FormsMgr.config.Locator,
+			viewer,
+			replier,
+			formVarsAsXML)
+		msgForm.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
+	}
+
 	msgForm.To = strings.TrimSpace(msgForm.To)
 	msgForm.Cc = strings.TrimSpace(msgForm.Cc)
 	msgForm.Subject = strings.TrimSpace(msgForm.Subject)

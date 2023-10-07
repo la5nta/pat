@@ -1,0 +1,8 @@
+services:
+  pat:
+    image: la5nta/pat
+    build: .
+    volumes:
+      - ./docker-data:/app/pat
+    ports:
+      - 8080:8080

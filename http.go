@@ -121,16 +121,18 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
+
+	r.PathPrefix("/dist/").Handler(distHandler())
 	r.HandleFunc("/ws", wsHandler)
 	r.HandleFunc("/ui", uiHandler()).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
-	http.Handle("/", r)
-	http.Handle("/dist/", distHandler())
-
 	websocketHub = NewWSHub()
 
-	srv := http.Server{Addr: addr}
+	srv := http.Server{
+		Addr:         addr,
+		Handler:      r,
+	}
 	errs := make(chan error, 1)
 	go func() {
 		errs <- srv.ListenAndServe()

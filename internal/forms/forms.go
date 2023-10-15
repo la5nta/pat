@@ -814,16 +814,7 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 		log.Printf("Warning: unsupported string encoding in template %s, expected utf-8", absPathTemplate)
 	}
 
-	var (
-		now            = time.Now()
-		nowDateTime    = now.Format("2006-01-02 15:04:05")
-		nowDateTimeUTC = now.UTC().Format("2006-01-02 15:04:05Z")
-		nowDate        = now.Format("2006-01-02")
-		nowTime        = now.Format("15:04:05")
-		nowDateUTC     = now.UTC().Format("2006-01-02Z")
-		nowTimeUTC     = now.UTC().Format("15:04:05Z")
-		udtg           = strings.ToUpper(now.UTC().Format("021504Z Jan 2006"))
-	)
+	now := time.Now()
 	validPos := "NO"
 	nowPos, err := m.gpsPos()
 	if err != nil {
@@ -843,13 +834,13 @@ func (m *Manager) fillFormTemplate(absPathTemplate string, formDestURL string, p
 		l = strings.ReplaceAll(l, "{MsgSender}", m.config.MyCall)
 		l = strings.ReplaceAll(l, "{Callsign}", m.config.MyCall)
 		l = strings.ReplaceAll(l, "{ProgramVersion}", "Pat "+m.config.AppVersion)
-		l = strings.ReplaceAll(l, "{DateTime}", nowDateTime)
-		l = strings.ReplaceAll(l, "{UDateTime}", nowDateTimeUTC)
-		l = strings.ReplaceAll(l, "{Date}", nowDate)
-		l = strings.ReplaceAll(l, "{UDate}", nowDateUTC)
-		l = strings.ReplaceAll(l, "{UDTG}", udtg)
-		l = strings.ReplaceAll(l, "{Time}", nowTime)
-		l = strings.ReplaceAll(l, "{UTime}", nowTimeUTC)
+		l = strings.ReplaceAll(l, "{DateTime}", formatDateTime(now))
+		l = strings.ReplaceAll(l, "{UDateTime}", formatDateTimeUTC(now))
+		l = strings.ReplaceAll(l, "{Date}", formatDate(now))
+		l = strings.ReplaceAll(l, "{UDate}", formatDateUTC(now))
+		l = strings.ReplaceAll(l, "{UDTG}", formatUDTG(now))
+		l = strings.ReplaceAll(l, "{Time}", formatTime(now))
+		l = strings.ReplaceAll(l, "{UTime}", formatTimeUTC(now))
 		l = strings.ReplaceAll(l, "{GPS}", gpsFmt(degreeMinute, nowPos))
 		l = strings.ReplaceAll(l, "{GPS_DECIMAL}", gpsFmt(decimal, nowPos))
 		l = strings.ReplaceAll(l, "{GPS_SIGNED_DECIMAL}", gpsFmt(signedDecimal, nowPos))

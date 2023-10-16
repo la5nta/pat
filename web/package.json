@@ -1,6 +1,6 @@
 {
   "name": "pat",
-  "version": "0.12.1",
+  "version": "0.15.0",
   "private": true,
   "description": "Pat is a cross platform Winlink client with basic messaging capabilities.",
   "author": "martinhpedersen",
@@ -10,8 +10,8 @@
     "url": "git+https://github.com/la5nta/pat.git"
   },
   "engines": {
-    "node": "14",
-    "npm": "6"
+    "node": "18",
+    "npm": "10"
   },
   "bugs": {
     "url": "https://github.com/la5nta/pat/issues"

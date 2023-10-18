@@ -9,9 +9,9 @@ if [ -d $CGO_ENABLED ]; then CGO_ENABLED=$(go env CGO_ENABLED); else OS=$CGO_ENA
 GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep "Version =" internal/buildinfo/VERSION.go|cut -d '"' -f2)
 
-# Go 1.16 or later is required
+# Go 1.19 or later is required
 GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
-[ "$GO_POINT_VERSION" -lt "16" ] && echo "Go 1.16 or later required" && exit 1;
+[ "$GO_POINT_VERSION" -lt "19" ] && echo "Go 1.19 or later required" && exit 1;
 
 AX25VERSION="0.0.12-rc4"
 AX25DIST="libax25-${AX25VERSION}"

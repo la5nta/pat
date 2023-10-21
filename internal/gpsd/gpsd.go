@@ -127,8 +127,8 @@ func (c *Conn) Close() error {
 // Next returns the next object sent from the daemon, or an error.
 //
 // The empty interface returned can be any of the following types:
-//   * Sky: A Sky object reports a sky view of the GPS satellite positions.
-//   * TPV: A TPV object is a time-position-velocity report.
+//   - Sky: A Sky object reports a sky view of the GPS satellite positions.
+//   - TPV: A TPV object is a time-position-velocity report.
 func (c *Conn) Next() (interface{}, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -130,8 +130,8 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	websocketHub = NewWSHub()
 
 	srv := http.Server{
-		Addr:         addr,
-		Handler:      r,
+		Addr:    addr,
+		Handler: r,
 	}
 	errs := make(chan error, 1)
 	go func() {

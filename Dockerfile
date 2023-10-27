@@ -1,5 +1,5 @@
 FROM golang:alpine as builder
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 WORKDIR /src
 ADD go.mod go.sum ./
 RUN go mod download
@@ -10,6 +10,7 @@ FROM scratch
 LABEL org.opencontainers.image.source=https://github.com/la5nta/pat
 LABEL org.opencontainers.image.description="Pat - A portable Winlink client for amateur radio email"
 LABEL org.opencontainers.image.licenses=MIT
+COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /src/pat /bin/pat
 USER 65534:65534
 WORKDIR /app

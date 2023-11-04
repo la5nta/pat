@@ -11,15 +11,26 @@ import (
 	"path"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 )
 
 func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err error) {
 	config, err = ReadConfig(cfgPath)
-	if os.IsNotExist(err) {
-		return fallback, WriteConfig(fallback, cfgPath)
-	} else if err != nil {
+	switch {
+	case os.IsNotExist(err):
+		config = fallback
+		if err := WriteConfig(config, cfgPath); err != nil {
+			return config, err
+		}
+	case err != nil:
+		return config, err
+	}
+
+	// Environment variables overrides values from the config file
+	if err := envconfig.Process(buildinfo.AppName, &config); err != nil {
 		return config, err
 	}
 

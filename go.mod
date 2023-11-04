@@ -12,6 +12,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/harenber/ptc-go/v2 v2.2.3
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/la5nta/wl2k-go v0.11.8
 	github.com/microcosm-cc/bluemonday v1.0.16
 	github.com/n8jja/Pat-Vara v1.1.4

@@ -17,6 +17,7 @@ WORKDIR /app
 ENV XDG_CONFIG_HOME=/app
 ENV XDG_DATA_HOME=/app
 ENV XDG_STATE_HOME=/app
+ENV PAT_HTTPADDR=:8080
 EXPOSE 8080
 ENTRYPOINT ["/bin/pat"]
-CMD ["http", "--addr", ":8080"]
+CMD ["http"]

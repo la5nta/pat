@@ -1,3 +1,17 @@
+pat (0.15.1) stable; urgency=medium
+
+  * Support config overrides using env variables
+  * Only attach Forms XML if a viewer file is defined
+  * Fix handling of SVG attachments (don't attempt auto resize)
+  * VARA: Silence "got a vara command I wasn't expecting..." messages
+  * VARA: Fix leak when re-initializing the modem connection
+  * hamlib: Fix compatibility with rigctld in VFO Mode
+  * hamlib: Fix tests and compilation when statically linking libhamlib
+  * New experiment FW_AUX_ONLY_EXPERIMENT (disabled by default)
+  * Require Go 1.19 or later (due to updated dependencies)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 5 Nov 2023 12:44:08 +0100
+
 pat (0.15.0) stable; urgency=medium
 
   * Restore previous connect parameters from browser's local storage

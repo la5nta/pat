@@ -124,7 +124,7 @@ type Config struct {
 }
 
 type HamlibConfig struct {
-	// The network type ("serial" or "tcp"). Use 'tcp' for rigctld.
+	// The network type ("serial" or "tcp"). Use 'tcp' for rigctld (default).
 	//
 	// (For serial support: build with "-tags libhamlib".)
 	Network string `json:"network,omitempty"`

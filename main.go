@@ -534,6 +534,9 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 			log.Printf("Missing address-field for rig '%s', skipping.", name)
 			continue
 		}
+		if conf.Network == "" {
+			conf.Network = "tcp"
+		}
 
 		rig, err := hamlib.Open(conf.Network, conf.Address)
 		if err != nil {

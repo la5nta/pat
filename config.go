@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -31,6 +32,10 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 
 	// Environment variables overrides values from the config file
 	if err := envconfig.Process(buildinfo.AppName, &config); err != nil {
+		return config, err
+	}
+	// Environment variables for hamlib rigs (custom syntax not handled by envconfig)
+	if err := readRigsFromEnv(&config.HamlibRigs); err != nil {
 		return config, err
 	}
 
@@ -119,6 +124,42 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 	}
 
 	return config, nil
+}
+
+// readRigsFromEnv reads hamlib rigs config from environment.
+// Syntax: PAT_HAMLIB_RIGS_{rig name}_{ATTRIBUTE}
+// _{ATTRIBUTE} is optional (defaults to _ADDRESS).
+// Examples:
+//   - PAT_HAMLIB_RIGS_rig1_NETWORK=tcp
+//   - PAT_HAMLIB_RIGS_rig1_ADDRESS=localhost:8080
+//   - PAT_HAMLIB_RIGS_rig1_VFO=A
+//   - PAT_HAMLIB_RIGS_rig2=localhost:8080
+func readRigsFromEnv(rigs *map[string]cfg.HamlibConfig) error {
+	prefix := strings.ToUpper(buildinfo.AppName) + "_HAMLIB_RIGS_"
+	for _, env := range os.Environ() {
+		attribute, value, _ := strings.Cut(env, "=")
+		if !strings.HasPrefix(attribute, prefix) {
+			continue
+		}
+		attribute = strings.TrimPrefix(attribute, prefix)
+		name, attribute, _ := strings.Cut(attribute, "_")
+		if *rigs == nil {
+			*rigs = make(map[string]cfg.HamlibConfig)
+		}
+		rig := (*rigs)[name]
+		switch attribute {
+		case "ADDRESS", "":
+			rig.Address = value
+		case "NETWORK":
+			rig.Network = value
+		case "VFO":
+			rig.VFO = value
+		default:
+			return fmt.Errorf("invalid attribute '%s' for rig '%s'", attribute, name)
+		}
+		(*rigs)[name] = rig
+	}
+	return nil
 }
 
 func ReadConfig(path string) (config cfg.Config, err error) {

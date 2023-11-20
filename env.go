@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/la5nta/pat/internal/buildinfo"
 )
@@ -15,28 +16,30 @@ func envHandle(_ context.Context, _ []string) {
 }
 
 func writeEnvAll(w io.Writer) {
-	writeEnv(w, "PAT_MYCALL", fOptions.MyCall)
-	writeEnv(w, "PAT_LOCATOR", config.Locator)
-	writeEnv(w, "PAT_VERSION", buildinfo.Version)
-	writeEnv(w, "PAT_ARCH", runtime.GOARCH)
-	writeEnv(w, "PAT_OS", runtime.GOOS)
-	writeEnv(w, "PAT_MAILBOX_PATH", fOptions.MailboxPath)
-	writeEnv(w, "PAT_CONFIG_PATH", fOptions.ConfigPath)
-	writeEnv(w, "PAT_LOG_PATH", fOptions.LogPath)
-	writeEnv(w, "PAT_EVENTLOG_PATH", fOptions.EventLogPath)
-	writeEnv(w, "PAT_FORMS_PATH", fOptions.FormsPath)
-	writeEnv(w, "PAT_DEBUG", os.Getenv("PAT_DEBUG"))
-	writeEnv(w, "PAT_WEB_DEV_ADDR", os.Getenv("PAT_WEB_DEV_ADDR"))
-
-	writeEnv(w, "ARDOP_DEBUG", os.Getenv("ARDOP_DEBUG"))
-	writeEnv(w, "PACTOR_DEBUG", os.Getenv("PACTOR_DEBUG"))
-	writeEnv(w, "AGWPE_DEBUG", os.Getenv("AGWPE_DEBUG"))
-	writeEnv(w, "VARA_DEBUG", os.Getenv("VARA_DEBUG"))
-
-	writeEnv(w, "GZIP_EXPERIMENT", os.Getenv("GZIP_EXPERIMENT"))
-	writeEnv(w, "ARDOP_FSKONLY_EXPERIMENT", os.Getenv("ARDOP_FSKONLY_EXPERIMENT"))
+	fmt.Fprintln(w, strings.Join(envAll(), "\n"))
 }
 
-func writeEnv(w io.Writer, k, v string) {
-	fmt.Fprintf(w, "%s=\"%s\"\n", k, v)
+func envAll() []string {
+	return []string{
+		`PAT_MYCALL="` + fOptions.MyCall + `"`,
+		`PAT_LOCATOR="` + config.Locator + `"`,
+		`PAT_VERSION="` + buildinfo.Version + `"`,
+		`PAT_ARCH="` + runtime.GOARCH + `"`,
+		`PAT_OS="` + runtime.GOOS + `"`,
+		`PAT_MAILBOX_PATH="` + fOptions.MailboxPath + `"`,
+		`PAT_CONFIG_PATH="` + fOptions.ConfigPath + `"`,
+		`PAT_LOG_PATH="` + fOptions.LogPath + `"`,
+		`PAT_EVENTLOG_PATH="` + fOptions.EventLogPath + `"`,
+		`PAT_FORMS_PATH="` + fOptions.FormsPath + `"`,
+		`PAT_DEBUG="` + os.Getenv("PAT_DEBUG") + `"`,
+		`PAT_WEB_DEV_ADDR="` + os.Getenv("PAT_WEB_DEV_ADDR") + `"`,
+
+		`ARDOP_DEBUG="` + os.Getenv("ARDOP_DEBUG") + `"`,
+		`PACTOR_DEBUG="` + os.Getenv("PACTOR_DEBUG") + `"`,
+		`AGWPE_DEBUG="` + os.Getenv("AGWPE_DEBUG") + `"`,
+		`VARA_DEBUG="` + os.Getenv("VARA_DEBUG") + `"`,
+
+		`GZIP_EXPERIMENT="` + os.Getenv("GZIP_EXPERIMENT") + `"`,
+		`ARDOP_FSKONLY_EXPERIMENT="` + os.Getenv("ARDOP_FSKONLY_EXPERIMENT") + `"`,
+	}
 }

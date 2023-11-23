@@ -202,6 +202,18 @@ func Connect(connectStr string) (success bool) {
 		return
 	}
 
+	if exec := url.Params.Get("prehook"); exec != "" {
+		log.Println("Running prehook...")
+		prehookConn := NewPrehookConn(conn, exec, url.Params["prehook-param"]...)
+		if err := prehookConn.Wait(ctx); err != nil {
+			conn.Close()
+			log.Printf("Prehook script failed: %s", err)
+			return
+		}
+		log.Println("Prehook succeeded")
+		conn = prehookConn
+	}
+
 	err = exchange(conn, url.Target, false)
 	if err != nil {
 		log.Printf("Exchange failed: %s", err)

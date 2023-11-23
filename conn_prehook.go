@@ -36,7 +36,6 @@ func (p prehookConn) Read(b []byte) (int, error) { return p.br.Read(b) }
 // terminated successfully (exit code 0).
 func (p prehookConn) Wait(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, p.executable, p.args...)
-	cmd.WaitDelay = time.Second
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = p.Conn
 	cmdStdin, err := cmd.StdinPipe()

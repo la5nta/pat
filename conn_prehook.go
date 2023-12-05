@@ -58,53 +58,69 @@ func (p prehookConn) Wait(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	g.Go(func() error { return p.forwardLines(ctx, cmdStdin) })
+	g.Go(func() error { return forwardLines(ctx, cmdStdin, p.br) })
 	g.Go(func() error { defer cancel(); return cmd.Wait() })
 	return g.Wait()
 }
 
 // forwardLines forwards data from to the spawned process line by line.
 //
-// The line delimiter is CR or LF, but to facilitate scripting we append LF if
-// it's missing.
-//
-// Wait one second after each line, to give the process time to terminate
-// before delivering the next line.
-func (p prehookConn) forwardLines(ctx context.Context, w io.Writer) error {
+// The line delimiter is CR or LF, but to facilitate scripting we forward
+// each line with LF ending only.
+func forwardLines(ctx context.Context, w io.Writer, r *bufio.Reader) error {
 	// Copy the lines to stdout so the user can see what's going on.
 	stdinBuffered := bufio.NewWriter(io.MultiWriter(w, os.Stdout))
 	defer stdinBuffered.Flush()
 
+	isDelimiter := func(b byte) bool { return b == '\n' || b == '\r' }
+
 	var isPrefix bool // true if we're in the middle of a line
 	for {
 		if !isPrefix {
-			// A line was just terminated (or no data has been read yet).
-			// Flush and wait one second to check if the process
-			// exited. If not we assume it expects an upcoming line.
-			if err := stdinBuffered.Flush(); err != nil {
-				return fmt.Errorf("child process exited prematurely: %w", err)
-			}
-			select {
-			case <-ctx.Done():
+			// Peek until the next new line (discard empty lines).
+			switch peek, err := r.Peek(1); {
+			case err != nil:
+				// Connection lost.
+				return err
+			case len(peek) > 0 && isDelimiter(peek[0]):
+				r.Discard(1)
+				continue
+			case ctx.Err() != nil:
+				// Child process exited before the next line
+				// arrived. We're done.
 				return nil
-			case <-time.After(time.Second):
 			}
 		}
 
-		b, err := p.br.ReadByte()
+		// Read and forward the byte.
+		// Replace CR with LF for convenience.
+		b, err := r.ReadByte()
 		if err != nil {
+			// Connection lost.
 			return err
 		}
-		stdinBuffered.WriteByte(b)
-		isPrefix = !(b == '\n' || b == '\r')
-
-		// Make sure CR is always followed by LF. It's easier to deal with in scripts.
 		if b == '\r' {
-			stdinBuffered.WriteByte('\n')
-			// Peek to check if the next byte is the LF we just wrote, in which case discard it.
-			if peek, _ := p.br.Peek(1); len(peek) > 0 && peek[0] == '\n' {
-				p.br.Discard(1)
-			}
+			b = '\n'
+		}
+		stdinBuffered.WriteByte(b)
+
+		isPrefix = !isDelimiter(b)
+		if isPrefix {
+			// Keep going. We're in the middle of a line.
+			continue
+		}
+
+		// A line was just terminated.
+		// Flush and wait a bit to check if the process exits.
+		if err := stdinBuffered.Flush(); err != nil {
+			return fmt.Errorf("child process exited prematurely: %w", err)
+		}
+		select {
+		case <-time.After(100 * time.Millisecond):
+			// Child process is still alive. Keep going.
+		case <-ctx.Done():
+			// Child process exited. We're done.
+			return nil
 		}
 	}
 }

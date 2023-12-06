@@ -184,6 +184,13 @@ func Connect(connectStr string) (success bool) {
 	dialing = url
 	websocketHub.UpdateStatus()
 
+	if exec := url.Params.Get("prehook"); exec != "" {
+		if err := VerifyPrehook(exec); err != nil {
+			log.Printf("prehook invalid: %s", err)
+			return
+		}
+	}
+
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
 	conn, err := transport.DialURLContext(ctx, url)
 

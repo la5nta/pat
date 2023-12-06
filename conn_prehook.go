@@ -3,13 +3,16 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 
+	"github.com/la5nta/pat/internal/directories"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -20,6 +23,8 @@ type prehookConn struct {
 	executable string
 	args       []string
 }
+
+func VerifyPrehook(file string) error { _, err := lookPrehookPath(file); return err }
 
 func NewPrehookConn(conn net.Conn, executable string, args ...string) prehookConn {
 	return prehookConn{
@@ -32,10 +37,26 @@ func NewPrehookConn(conn net.Conn, executable string, args ...string) prehookCon
 
 func (p prehookConn) Read(b []byte) (int, error) { return p.br.Read(b) }
 
+func lookPrehookPath(file string) (string, error) {
+	// Look in our custom location first
+	if p, err := exec.LookPath(filepath.Join(directories.ConfigDir(), "prehooks", file)); err == nil {
+		return p, nil
+	}
+	p, err := exec.LookPath(file)
+	if errors.Is(err, exec.ErrDot) {
+		return file, nil
+	}
+	return p, err
+}
+
 // Wait waits for the prehook process to exit, returning nil if the process
 // terminated successfully (exit code 0).
 func (p prehookConn) Wait(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, p.executable, p.args...)
+	execPath, err := lookPrehookPath(p.executable)
+	if err != nil {
+		return err
+	}
+	cmd := exec.CommandContext(ctx, execPath, p.args...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = p.Conn
 	cmdStdin, err := cmd.StdinPipe()

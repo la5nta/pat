@@ -1,4 +1,4 @@
-package main
+package prehook
 
 import (
 	"bufio"
@@ -20,16 +20,18 @@ type prehookConn struct {
 	net.Conn
 	br *bufio.Reader
 
+	env        []string
 	executable string
 	args       []string
 }
 
-func VerifyPrehook(file string) error { _, err := lookPrehookPath(file); return err }
+func Verify(file string) error { _, err := lookPath(file); return err }
 
-func NewPrehookConn(conn net.Conn, executable string, args ...string) prehookConn {
+func Wrap(conn net.Conn, env []string, executable string, args ...string) prehookConn {
 	return prehookConn{
 		Conn:       conn,
 		br:         bufio.NewReader(conn),
+		env:        env,
 		executable: executable,
 		args:       args,
 	}
@@ -37,7 +39,7 @@ func NewPrehookConn(conn net.Conn, executable string, args ...string) prehookCon
 
 func (p prehookConn) Read(b []byte) (int, error) { return p.br.Read(b) }
 
-func lookPrehookPath(file string) (string, error) {
+func lookPath(file string) (string, error) {
 	// Look in our custom location first
 	if p, err := exec.LookPath(filepath.Join(directories.ConfigDir(), "prehooks", file)); err == nil {
 		return p, nil
@@ -52,7 +54,7 @@ func lookPrehookPath(file string) (string, error) {
 // Wait waits for the prehook process to exit, returning nil if the process
 // terminated successfully (exit code 0).
 func (p prehookConn) Wait(ctx context.Context) error {
-	execPath, err := lookPrehookPath(p.executable)
+	execPath, err := lookPath(p.executable)
 	if err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func (p prehookConn) Wait(ctx context.Context) error {
 	cmd.Env = append(append(os.Environ(),
 		"PAT_REMOTE_ADDR="+p.RemoteAddr().String(),
 		"PAT_LOCAL_ADDR="+p.LocalAddr().String(),
-	), envAll()...)
+	), p.env...)
 
 	if err := cmd.Start(); err != nil {
 		return err

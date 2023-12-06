@@ -15,6 +15,7 @@ import (
 
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/prehook"
 
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
@@ -185,7 +186,7 @@ func Connect(connectStr string) (success bool) {
 	websocketHub.UpdateStatus()
 
 	if exec := url.Params.Get("prehook"); exec != "" {
-		if err := VerifyPrehook(exec); err != nil {
+		if err := prehook.Verify(exec); err != nil {
 			log.Printf("prehook invalid: %s", err)
 			return
 		}
@@ -211,7 +212,7 @@ func Connect(connectStr string) (success bool) {
 
 	if exec := url.Params.Get("prehook"); exec != "" {
 		log.Println("Running prehook...")
-		prehookConn := NewPrehookConn(conn, exec, url.Params["prehook-param"]...)
+		prehookConn := prehook.Wrap(conn, envAll(), exec, url.Params["prehook-param"]...)
 		if err := prehookConn.Wait(ctx); err != nil {
 			conn.Close()
 			log.Printf("Prehook script failed: %s", err)

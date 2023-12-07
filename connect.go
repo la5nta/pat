@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/la5nta/pat/cfg"
+	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/prehook"
 
@@ -212,14 +214,22 @@ func Connect(connectStr string) (success bool) {
 
 	if exec := url.Params.Get("prehook"); exec != "" {
 		log.Println("Running prehook...")
-		prehookConn := prehook.Wrap(conn, envAll(), exec, url.Params["prehook-param"]...)
-		if err := prehookConn.Wait(ctx); err != nil {
+		script := prehook.Script{
+			File: exec,
+			Args: url.Params["prehook-arg"],
+			Env: append([]string{
+				buildinfo.AppName + "_DIAL_URL=" + connectStr,
+				buildinfo.AppName + "_REMOTE_ADDR=" + conn.RemoteAddr().String(),
+				buildinfo.AppName + "_LOCAL_ADDR=" + conn.LocalAddr().String(),
+			}, append(os.Environ(), envAll()...)...),
+		}
+		conn = prehook.Wrap(conn)
+		if err := script.Execute(ctx, conn); err != nil {
 			conn.Close()
 			log.Printf("Prehook script failed: %s", err)
 			return
 		}
 		log.Println("Prehook succeeded")
-		conn = prehookConn
 	}
 
 	err = exchange(conn, url.Target, false)

@@ -33,6 +33,12 @@ path:
 params:
   ?freq=        Sets QSY frequency (ardop and ax25 only)
   ?host=        Overrides the host part of the path. Useful for serial-tnc to specify e.g. /dev/ttyS0.
+  ?prehook=     Sets an executable middleware to run before the connection is handed over to the B2F protocol.
+                 The executable must be given as full path, or a file located in $PATH or {CONFIG_DIR}/prehooks/.
+		 Received packets are forwarded to STDIN. Data written to STDOUT forwarded to the remote node.
+		 Additional arguments can be passed with one or more ?prehook-arg=.
+		 Environment variables describing the dialed connection are provided.
+                 Useful for packet node traversal. Supported across all transports.
 `
 	ExampleConnect = `
   connect telnet                       (alias) Connect to one of the Winlink Common Message Servers via tcp.

@@ -22,6 +22,12 @@ import (
 
 var ErrConnNotWrapped = errors.New("connection not wrapped for prehook")
 
+func init() {
+	// Add {config-dir}/prehooks/ to PATH
+	prehooksPath := filepath.Join(directories.ConfigDir(), "prehooks")
+	os.Setenv("PATH", fmt.Sprintf(`%s%c%s`, prehooksPath, os.PathListSeparator, os.Getenv("PATH")))
+}
+
 type Script struct {
 	File string
 	Args []string
@@ -44,18 +50,12 @@ type Conn struct {
 }
 
 // Verify returns nil if the given script file is found and valid.
-func Verify(file string) error { _, err := lookPath(file); return err }
-
-func lookPath(file string) (string, error) {
-	// Look in our custom location first
-	if p, err := exec.LookPath(filepath.Join(directories.ConfigDir(), "prehooks", file)); err == nil {
-		return p, nil
-	}
-	p, err := exec.LookPath(file)
+func Verify(file string) error {
+	_, err := exec.LookPath(file)
 	if errors.Is(err, exec.ErrDot) {
-		return file, nil
+		err = nil
 	}
-	return p, err
+	return err
 }
 
 // Wrap returns a wrapped connection with the ability to execute a prehook.
@@ -75,11 +75,7 @@ func (p *Conn) Read(b []byte) (int, error) { return p.br.Read(b) }
 // Execute executes the prehook script, returning nil if the process
 // terminated successfully (exit code 0).
 func (p *Conn) Execute(ctx context.Context, script Script) error {
-	execPath, err := lookPath(script.File)
-	if err != nil {
-		return err
-	}
-	cmd := exec.CommandContext(ctx, execPath, script.Args...)
+	cmd := exec.CommandContext(ctx, script.File, script.Args...)
 	cmd.Env = script.Env
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = p.Conn

@@ -32,6 +32,7 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 
 	"github.com/la5nta/pat/internal/buildinfo"
+	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/gpsd"
 
 	"github.com/gorilla/mux"
@@ -216,11 +217,6 @@ func postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func isInPath(base string, path string) error {
-	_, err := filepath.Rel(base, path)
-	return err
-}
-
 func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 	box := mux.Vars(r)["box"]
 	if box == "out" {
@@ -239,9 +235,9 @@ func postMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check that we don't escape our mailbox path
 	srcPath = filepath.Clean(srcPath)
-	if err := isInPath(mbox.MBoxPath, srcPath); err != nil {
-		log.Println("Malicious source path in move:", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !directories.IsInPath(mbox.MBoxPath, srcPath) {
+		log.Println("Malicious source path in move:", srcPath)
+		http.Error(w, "malicious source path", http.StatusBadRequest)
 		return
 	}
 
@@ -678,9 +674,9 @@ func messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	box, mid := mux.Vars(r)["box"], mux.Vars(r)["mid"]
 
 	file := filepath.Clean(filepath.Join(mbox.MBoxPath, box, mid+mailbox.Ext))
-	if err := isInPath(mbox.MBoxPath, file); err != nil {
-		log.Println("Malicious source path in move:", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !directories.IsInPath(mbox.MBoxPath, file) {
+		log.Println("Malicious source path in move:", file)
+		http.Error(w, "malicious source path", http.StatusBadRequest)
 		return
 	}
 

@@ -21,6 +21,21 @@ var (
 	statePath  string
 )
 
+// IsInPath returns true if sub is a sub-path of parent.
+//
+// Both paths must be either absolute or relative.
+func IsInPath(parent, sub string) bool {
+	parent, sub = filepath.Clean(parent), filepath.Clean(sub)
+	if filepath.IsAbs(parent) != filepath.IsAbs(sub) {
+		panic("mix of rel and abs paths")
+	}
+	rel, err := filepath.Rel(parent, sub)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func DataDir() string {
 	return getDir(&dataPath, xdg.DataHome, "DataDir")
 }

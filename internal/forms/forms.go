@@ -241,6 +241,12 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
 		return
 	}
+	formPath = m.abs(formPath)
+	// Make sure we don't escape FormsPath
+	if !directories.IsInPath(m.config.FormsPath, formPath) {
+		http.Error(w, fmt.Sprintf("%s escapes forms directory", formPath), http.StatusForbidden)
+		return
+	}
 
 	responseText, err := m.fillFormTemplate(formPath, "/api/form?"+r.URL.Query().Encode(), nil, make(map[string]string))
 	if err != nil {
@@ -466,33 +472,27 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (stri
 		return "", err
 	}
 
-	var formRelPath string
+	var tmplPath string
 	switch {
 	case composeReply:
 		// authoring a form reply
-		formRelPath = form.ReplyInitialURI
+		tmplPath = form.ReplyInitialURI
 	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
 		// viewing a form reply
-		formRelPath = form.ReplyViewerURI
+		tmplPath = form.ReplyViewerURI
 	default:
 		// viewing a form
-		formRelPath = form.ViewerURI
+		tmplPath = form.ViewerURI
 	}
 
-	return m.fillFormTemplate(formRelPath, "/api/form?composereply=true&formPath="+formRelPath, regexp.MustCompile(`{[vV][aA][rR]\s+(\w+)\s*}`), formVars)
+	return m.fillFormTemplate(tmplPath, "/api/form?composereply=true&formPath="+m.rel(tmplPath), regexp.MustCompile(`{[vV][aA][rR]\s+(\w+)\s*}`), formVars)
 }
 
 // ComposeForm combines all data needed for the whole form-based message: subject, body, and attachment
 func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, error) {
-	formFolder, err := m.buildFormFolder()
+	form, err := buildFormFromTxt(tmplPath)
 	if err != nil {
-		return MessageForm{}, fmt.Errorf("failed to build form folder tree: %v", err)
-	}
-
-	tmplPath = filepath.Clean(tmplPath)
-	form, err := findFormFromURI(tmplPath, formFolder)
-	if err != nil {
-		return MessageForm{}, fmt.Errorf("failed to find '%s': %v", tmplPath, err)
+		return MessageForm{}, err
 	}
 
 	formValues := map[string]string{
@@ -582,8 +582,8 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 		if !strings.EqualFold(filepath.Ext(info.Name()), txtFileExt) {
 			continue
 		}
-		path := m.rel(filepath.Join(rootPath, info.Name()))
-		frm, err := m.buildFormFromTxt(path)
+		path := filepath.Join(rootPath, info.Name())
+		frm, err := buildFormFromTxt(path)
 		if err != nil {
 			debug.Printf("failed to load form file %q: %v", path, err)
 			continue
@@ -611,30 +611,6 @@ func (m *Manager) abs(path string) string {
 	return filepath.Join(m.config.FormsPath, path)
 }
 
-// resolveFileReference searches for files referenced in .txt files.
-//
-// If found the returned path is relative to FormsPath and bool is true, otherwise the given path is returned unmodified.
-func (m *Manager) resolveFileReference(path string) (string, bool) {
-	path = m.abs(path)
-	if _, err := os.Stat(path); err == nil {
-		return m.rel(path), true
-	}
-	// Fallback to case-insenstive search.
-	// Some HTML files references in the .txt files has a different caseness than the actual filename on disk.
-	absPathTemplateFolder := filepath.Dir(path)
-	entries, err := os.ReadDir(absPathTemplateFolder)
-	if err != nil {
-		return m.rel(path), false
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if strings.EqualFold(filepath.Base(path), name) {
-			return m.rel(filepath.Join(absPathTemplateFolder, name)), true
-		}
-	}
-	return m.rel(path), false
-}
-
 // rel returns a path relative to m.FormsPath.
 func (m *Manager) rel(path string) string {
 	if !filepath.IsAbs(path) {
@@ -647,31 +623,48 @@ func (m *Manager) rel(path string) string {
 	return rel
 }
 
-// open opens a file with absolute path or path relative to m.FormsPath.
+// resolveFileReference searches for files referenced in .txt files.
 //
-// An error is returned if the given path escapes m.FromsPath.
-func (m *Manager) open(path string) (*os.File, error) {
-	absPath := m.abs(path)
-	// Make sure we don't escape FormsPath
-	if !directories.IsInPath(m.config.FormsPath, absPath) {
-		return nil, fmt.Errorf("%s escapes forms directory", path)
+// If found the returned path is relative to FormsPath and bool is true, otherwise the given path is returned unmodified.
+func resolveFileReference(basePath string, referencePath string) (string, bool) {
+	path := filepath.Join(basePath, referencePath)
+	if !directories.IsInPath(basePath, path) {
+		debug.Printf("%q escapes template's base path (%q)", referencePath, basePath)
+		return "", false
 	}
-	return os.Open(absPath)
+	if _, err := os.Stat(path); err == nil {
+		return path, true
+	}
+	// Fallback to case-insenstive search.
+	// Some HTML files references in the .txt files has a different caseness than the actual filename on disk.
+	//TODO: Walk basePath tree instead
+	absPathTemplateFolder := filepath.Dir(path)
+	entries, err := os.ReadDir(absPathTemplateFolder)
+	if err != nil {
+		return path, false
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.EqualFold(filepath.Base(path), name) {
+			return filepath.Join(absPathTemplateFolder, name), true
+		}
+	}
+	return path, false
 }
 
-func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
-	f, err := m.open(txtPath)
+func buildFormFromTxt(path string) (Form, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return Form{}, err
 	}
 	defer f.Close()
 
 	form := Form{
-		Name:       strings.TrimSuffix(path.Base(txtPath), path.Ext(txtPath)),
-		TxtFileURI: txtPath,
+		Name:       strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
+		TxtFileURI: path,
 	}
 	scanner := bufio.NewScanner(f)
-	baseURI := path.Dir(form.TxtFileURI)
+	baseURI := filepath.Dir(form.TxtFileURI)
 	for scanner.Scan() {
 		l := scanner.Text()
 		switch {
@@ -679,15 +672,15 @@ func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 			// Form: <composer>,<viewer>
 			files := strings.Split(strings.TrimPrefix(l, "Form:"), ",")
 			// Extend to absolute paths and add missing html extension
-			for i, name := range files {
-				files[i] = filepath.Join(baseURI, strings.TrimSpace(name))
-				if ext := filepath.Ext(files[i]); ext == "" {
-					files[i] += ".html"
+			for i, path := range files {
+				path = strings.TrimSpace(path)
+				if ext := filepath.Ext(path); ext == "" {
+					path += ".html"
 				}
 				var ok bool
-				files[i], ok = m.resolveFileReference(files[i])
+				files[i], ok = resolveFileReference(baseURI, path)
 				if !ok {
-					debug.Printf("%s: failed to resolve referenced file %q", form.TxtFileURI, name)
+					debug.Printf("%s: failed to resolve referenced file %q", form.TxtFileURI, path)
 				}
 			}
 			form.InitialURI = files[0]
@@ -700,20 +693,17 @@ func (m *Manager) buildFormFromTxt(txtPath string) (Form, error) {
 			if filepath.Ext(path) == "" {
 				path += txtFileExt
 			}
-			// Some are relative to root, while some are relative to the referencing file.
-			if dir := filepath.Dir(path); dir == "." {
-				path = filepath.Join(baseURI, path)
-			}
 			var ok bool
-			path, ok = m.resolveFileReference(path)
+			path, ok = resolveFileReference(baseURI, path)
 			if !ok {
 				debug.Printf("%s: failed to resolve referenced reply template file %q", form.TxtFileURI, path)
 				continue
 			}
-			tmpForm, err := m.buildFormFromTxt(form.ReplyTxtFileURI)
+			tmpForm, err := buildFormFromTxt(path)
 			if err != nil {
 				debug.Printf("%s: failed to load referenced reply template: %v", form.TxtFileURI, err)
 			}
+			form.ReplyTxtFileURI = path
 			form.ReplyInitialURI = tmpForm.InitialURI
 			form.ReplyViewerURI = tmpForm.ViewerURI
 		}
@@ -744,30 +734,6 @@ func findFormFromURI(formName string, folder FormFolder) (Form, error) {
 		}
 	}
 	return form, errors.New("form not found")
-}
-
-func (m *Manager) findAbsPathForTemplatePath(tmplPath string) (string, error) {
-	absPathTemplate := filepath.Join(m.config.FormsPath, filepath.Clean(tmplPath))
-
-	// First try to resolve by simply joining the relative path with the absolute path of the templates folder.
-	if _, err := os.Stat(absPathTemplate); err == nil {
-		return absPathTemplate, nil
-	}
-
-	// Fallback to case-insenstive search.
-	// Some HTML files references in the .txt files has a different caseness than the actual filename on disk.
-	absPathTemplateFolder := filepath.Dir(absPathTemplate)
-	entries, err := os.ReadDir(absPathTemplateFolder)
-	if err != nil {
-		return "", err
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if strings.EqualFold(filepath.Base(tmplPath), name) {
-			return filepath.Join(absPathTemplateFolder, name), nil
-		}
-	}
-	return "", fmt.Errorf("failed to resolve relative path: %s", tmplPath)
 }
 
 // gpsPos returns the current GPS Position
@@ -862,7 +828,7 @@ func posToGridSquare(pos gpsd.Position) string {
 }
 
 func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
-	fUnsanitized, err := m.open(tmplPath)
+	fUnsanitized, err := os.Open(tmplPath)
 	if err != nil {
 		return "", err
 	}
@@ -1062,7 +1028,7 @@ func (b formMessageBuilder) initFormValues() {
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
-	infile, err := b.FormsMgr.open(tmplPath)
+	infile, err := os.Open(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
 	}

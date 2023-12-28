@@ -893,42 +893,12 @@ func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placehol
 }
 
 func (m *Manager) getFormsVersion() string {
-	// walking up the path to find a version file.
-	// Winlink's Standard_Forms.zip includes it in its root.
-	dir := m.config.FormsPath
-	if filepath.Ext(dir) == txtFileExt {
-		dir = filepath.Dir(dir)
+	data, err := os.ReadFile(m.abs("Standard_Forms_Version.dat"))
+	if err != nil {
+		debug.Printf("failed to open version file: %v", err)
+		return "unknown"
 	}
-
-	var verFile *os.File
-	// loop to walk up the subfolders until we find the top, or Winlink's Standard_Forms_Version.dat file
-	for {
-		f, err := os.Open(filepath.Join(dir, "Standard_Forms_Version.dat"))
-		if err != nil {
-			dir = filepath.Dir(dir) // have not found the version file or couldn't open it, going up by one
-			if dir == "." || dir == ".." || strings.HasSuffix(dir, string(os.PathSeparator)) {
-				return "unknown" // reached top-level and couldn't find version .dat file
-			}
-			continue
-		}
-		// found and opened the version file
-		verFile = f
-		break
-	}
-
-	if verFile != nil {
-		defer verFile.Close()
-		return readFileFirstLine(verFile)
-	}
-	return "unknown"
-}
-
-func readFileFirstLine(f *os.File) string {
-	scanner := bufio.NewScanner(f)
-	if scanner.Scan() {
-		return scanner.Text()
-	}
-	return ""
+	return string(bytes.TrimSpace(data))
 }
 
 type formMessageBuilder struct {

@@ -39,11 +39,11 @@ import (
 	"github.com/pd0mz/go-maidenhead"
 )
 
+const formsVersionInfoURL = "https://api.getpat.io/v1/forms/standard-templates/latest"
+
 const (
-	fieldValueFalseInXML = "False"
-	htmlFileExt          = ".html"
-	txtFileExt           = ".txt"
-	formsVersionInfoURL  = "https://api.getpat.io/v1/forms/standard-templates/latest"
+	htmlFileExt = ".html"
+	txtFileExt  = ".txt"
 )
 
 // Manager manages the forms subsystem
@@ -666,16 +666,15 @@ func buildFormFromTxt(path string) (Form, error) {
 	scanner := bufio.NewScanner(f)
 	baseURI := filepath.Dir(form.TxtFileURI)
 	for scanner.Scan() {
-		l := scanner.Text()
-		switch {
-		case strings.HasPrefix(l, "Form:"):
+		switch key, value, _ := strings.Cut(scanner.Text(), ":"); key {
+		case "Form":
 			// Form: <composer>,<viewer>
-			files := strings.Split(strings.TrimPrefix(l, "Form:"), ",")
+			files := strings.Split(value, ",")
 			// Extend to absolute paths and add missing html extension
 			for i, path := range files {
 				path = strings.TrimSpace(path)
 				if ext := filepath.Ext(path); ext == "" {
-					path += ".html"
+					path += htmlFileExt
 				}
 				var ok bool
 				files[i], ok = resolveFileReference(baseURI, path)
@@ -687,8 +686,8 @@ func buildFormFromTxt(path string) (Form, error) {
 			if len(files) > 1 {
 				form.ViewerURI = files[1]
 			}
-		case strings.HasPrefix(l, "ReplyTemplate:"):
-			path := strings.TrimSpace(strings.TrimPrefix(l, "ReplyTemplate:"))
+		case "ReplyTemplate":
+			path := strings.TrimSpace(value)
 			// Some are missing .txt
 			if filepath.Ext(path) == "" {
 				path += txtFileExt
@@ -923,19 +922,6 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 		formVarsAsXML += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(varKey), xmlEscape(varVal), xmlEscape(varKey))
 	}
 
-	viewer := ""
-	if b.Template.ViewerURI != "" {
-		viewer = filepath.Base(b.Template.ViewerURI)
-	}
-	if b.IsReply && b.Template.ReplyViewerURI != "" {
-		viewer = filepath.Base(b.Template.ReplyViewerURI)
-	}
-
-	replier := ""
-	if !b.IsReply && b.Template.ReplyTxtFileURI != "" {
-		replier = filepath.Base(b.Template.ReplyTxtFileURI)
-	}
-
 	msgForm, err := b.scanTmplBuildMessage(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
@@ -943,6 +929,10 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 
 	// Add XML if a viewer is defined for this form
 	if b.Template.ViewerURI != "" {
+		viewer := b.Template.ViewerURI
+		if b.IsReply && b.Template.ReplyViewerURI != "" {
+			viewer = b.Template.ReplyViewerURI
+		}
 		msgForm.AttachmentXML = fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
@@ -964,8 +954,8 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 			time.Now().UTC().Format("20060102150405"),
 			b.FormsMgr.config.MyCall,
 			b.FormsMgr.config.Locator,
-			viewer,
-			replier,
+			filepath.Base(viewer),
+			filepath.Base(b.Template.ReplyTxtFileURI),
 			formVarsAsXML)
 		msgForm.AttachmentName = b.FormsMgr.GetXMLAttachmentNameForForm(b.Template, false)
 	}
@@ -992,8 +982,8 @@ func (b formMessageBuilder) initFormValues() {
 	b.FormValues["msgsubject"] = ""
 	b.FormValues["msgbody"] = ""
 	b.FormValues["msgp2p"] = ""
-	b.FormValues["msgisforward"] = fieldValueFalseInXML
-	b.FormValues["msgisacknowledgement"] = fieldValueFalseInXML
+	b.FormValues["msgisforward"] = "False"
+	b.FormValues["msgisacknowledgement"] = "False"
 	b.FormValues["msgseqnum"] = "0"
 }
 
@@ -1043,17 +1033,19 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		}
 
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		switch {
-		case strings.HasPrefix(lineTmpl, "Subject:"):
-			msgForm.Subject = strings.TrimPrefix(lineTmpl, "Subject:")
-		case strings.HasPrefix(lineTmpl, "To:"):
-			msgForm.To = strings.TrimPrefix(lineTmpl, "To:")
-		case strings.HasPrefix(lineTmpl, "Cc:"):
-			msgForm.Cc = strings.TrimPrefix(lineTmpl, "Cc:")
-		case inBody:
-			msgForm.Body += lineTmpl + "\n"
+		switch key, value, _ := strings.Cut(lineTmpl, ":"); key {
+		case "Subject":
+			msgForm.Subject = strings.TrimSpace(value)
+		case "To":
+			msgForm.To = strings.TrimSpace(value)
+		case "Cc":
+			msgForm.Cc = strings.TrimSpace(value)
 		default:
-			log.Printf("skipping unknown template line: '%s'", lineTmpl)
+			if inBody {
+				msgForm.Body += lineTmpl + "\n"
+			} else {
+				log.Printf("skipping unknown template line: '%s'", lineTmpl)
+			}
 		}
 	}
 	return msgForm, nil

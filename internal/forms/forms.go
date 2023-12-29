@@ -983,14 +983,20 @@ func (b formMessageBuilder) initFormValues() {
 	b.FormValues["msgsender"] = b.FormsMgr.config.MyCall
 
 	// some defaults that we can't set yet. Winlink doesn't seem to care about these
-	b.FormValues["msgto"] = ""
-	b.FormValues["msgcc"] = ""
-	b.FormValues["msgsubject"] = ""
-	b.FormValues["msgbody"] = ""
-	b.FormValues["msgp2p"] = ""
-	b.FormValues["msgisforward"] = "False"
-	b.FormValues["msgisacknowledgement"] = "False"
-	b.FormValues["msgseqnum"] = "0"
+	// Set only if they're not set by form values.
+	for _, key := range []string{"msgto", "msgcc", "msgsubject", "msgbody", "msgp2p"} {
+		if _, ok := b.FormValues[key]; !ok {
+			b.FormValues[key] = ""
+		}
+	}
+	for _, key := range []string{"msgisforward", "msgisacknowledgement"} {
+		if _, ok := b.FormValues[key]; !ok {
+			b.FormValues[key] = "False"
+		}
+	}
+	if _, ok := b.FormValues["msgseqnum"]; !ok {
+		b.FormValues["msgseqnum"] = "0"
+	}
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
@@ -1046,6 +1052,8 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 			msgForm.To = strings.TrimSpace(value)
 		case "Cc":
 			msgForm.Cc = strings.TrimSpace(value)
+		case "Readonly":
+			// TODO: Disable editing of body in composer?
 		default:
 			if inBody {
 				msgForm.Body += lineTmpl + "\n"

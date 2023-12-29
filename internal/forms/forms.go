@@ -106,6 +106,7 @@ type MessageForm struct {
 	Body    string `json:"msg_body"`
 
 	attachmentXML string
+	attachmentTXT string
 	targetForm    Form
 	isReply       bool
 	submitted     time.Time
@@ -117,6 +118,9 @@ func (m MessageForm) Attachments() []*fbb.File {
 	if xml := m.attachmentXML; xml != "" {
 		name := getXMLAttachmentNameForForm(m.targetForm, m.isReply)
 		files = append(files, fbb.NewFile(name, []byte(xml)))
+	}
+	if txt := m.attachmentTXT; txt != "" {
+		files = append(files, fbb.NewFile("FormData.txt", []byte(txt)))
 	}
 	return files
 }
@@ -911,7 +915,7 @@ type formMessageBuilder struct {
 	FormsMgr    *Manager
 }
 
-// build returns message subject, body, and XML attachment content for the given template and variable map
+// build returns message subject, body, and attachments for the given template and variable map
 func (b formMessageBuilder) build() (MessageForm, error) {
 	tmplPath := b.Template.TxtFileURI
 	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
@@ -928,6 +932,12 @@ func (b formMessageBuilder) build() (MessageForm, error) {
 	msgForm.targetForm = b.Template
 	msgForm.isReply = b.IsReply
 	msgForm.submitted = time.Now()
+
+	// Add TXT attachment if defined by the form
+	if v, ok := b.FormValues["attached_text"]; ok {
+		delete(b.FormValues, "attached_text")
+		msgForm.attachmentTXT = v
+	}
 
 	formVarsAsXML := ""
 	for varKey, varVal := range b.FormValues {

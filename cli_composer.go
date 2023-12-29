@@ -332,9 +332,8 @@ func composeFormReport(ctx context.Context, args []string) {
 
 	msg.SetBody(formMsg.Body)
 
-	if xml := formMsg.AttachmentXML; xml != "" {
-		attachmentFile := fbb.NewFile(formMsg.AttachmentName, []byte(xml))
-		msg.AddFile(attachmentFile)
+	for _, f := range formMsg.Attachments() {
+		msg.AddFile(f)
 	}
 
 	postMessage(msg)

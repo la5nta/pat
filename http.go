@@ -32,6 +32,7 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 
 	"github.com/la5nta/pat/internal/buildinfo"
+	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/gpsd"
 
@@ -277,12 +278,20 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cookie, err := r.Cookie("forminstance")
-	if err == nil {
-		formData := formsMgr.GetPostedFormData(cookie.Value)
-		if xml := formData.MsgXML; xml != "" {
-			name := formsMgr.GetXMLAttachmentNameForForm(formData.TargetForm, formData.IsReply)
-			msg.AddFile(fbb.NewFile(name, []byte(formData.MsgXML)))
+	if cookie, err := r.Cookie("forminstance"); err == nil {
+		// We must add the attachment files here because it is impossible
+		// for the frontend to dynamically add form files due to legacy
+		// security vulnerabilities in older HTML specs.
+		// The rest of the form data (to, subject, body etc) is added by
+		// the frontend.
+		formData, ok := formsMgr.GetPostedFormData(cookie.Value)
+		if !ok {
+			debug.Printf("form instance key (%q) not valid", cookie.Value)
+			http.Error(w, "form instance key not valid", http.StatusBadRequest)
+			return
+		}
+		for _, f := range formData.Attachments() {
+			msg.AddFile(f)
 		}
 	}
 

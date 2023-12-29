@@ -217,37 +217,38 @@ function forgetFormData() {
 let pollTimer;
 
 function pollFormData() {
-  $.get(
-    'api/form',
-    {},
-    function (data) {
+  $.ajax({
+    method: 'GET',
+    url: '/api/form',
+    dataType: 'json',
+    success: function (data) {
+      // TODO: Should verify forminstance key in case of multi-user scenario
+      console.log('done polling');
       console.log(data);
-      if (!$('#composer').hasClass('hidden') && (!data.target_form || !data.target_form.name)) {
-        pollTimer = window.setTimeout(pollFormData, 1000);
-      } else {
-        console.log('done polling');
-        if (!$('#composer').hasClass('hidden') && data.target_form && data.target_form.name) {
-          writeFormDataToComposer(data);
-        }
+      if (!$('#composer').hasClass('hidden')) {
+        writeFormDataToComposer(data);
       }
     },
-    'json'
-  );
+    error: function () {
+      if (!$('#composer').hasClass('hidden')) {
+        // TODO: Consider replacing this polling mechanism with a WS message (push)
+        pollTimer = window.setTimeout(pollFormData, 1000);
+      }
+    },
+  });
 }
 
 function writeFormDataToComposer(data) {
-  if (data.target_form) {
-    $('#msg_body').val(data.msg_body);
-    if (data.msg_to) {
-      $('#msg_to').tokenfield('setTokens', data.msg_to.split(/[ ;,]/).filter(Boolean));
-    }
-    if (data.msg_cc) {
-      $('#msg_cc').tokenfield('setTokens', data.msg_cc.split(/[ ;,]/).filter(Boolean));
-    }
-    if (data.msg_subject) {
-      // in case of composing a form-based reply we keep the 'Re: ...' subject line
-      $('#msg_subject').val(data.msg_subject);
-    }
+  $('#msg_body').val(data.msg_body);
+  if (data.msg_to) {
+    $('#msg_to').tokenfield('setTokens', data.msg_to.split(/[ ;,]/).filter(Boolean));
+  }
+  if (data.msg_cc) {
+    $('#msg_cc').tokenfield('setTokens', data.msg_cc.split(/[ ;,]/).filter(Boolean));
+  }
+  if (data.msg_subject) {
+    // in case of composing a form-based reply we keep the 'Re: ...' subject line
+    $('#msg_subject').val(data.msg_subject);
   }
 }
 

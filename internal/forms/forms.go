@@ -20,6 +20,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/textproto"
 	"os"
 	"path"
 	"path/filepath"
@@ -505,7 +506,6 @@ func (m *Manager) ComposeForm(tmplPath string, subject string) (MessageForm, err
 	formValues := map[string]string{
 		"subjectline":     subject,
 		"templateversion": m.getFormsVersion(),
-		"msgsender":       m.config.MyCall,
 	}
 	fmt.Printf("Form '%s', version: %s", form.TxtFileURI, formValues["templateversion"])
 	formMsg, err := formMessageBuilder{
@@ -989,8 +989,11 @@ func (b formMessageBuilder) initFormValues() {
 	} else {
 		b.FormValues["msgisreply"] = "False"
 	}
-
-	b.FormValues["msgsender"] = b.FormsMgr.config.MyCall
+	for _, key := range []string{"msgsender"} {
+		if _, ok := b.FormValues[key]; !ok {
+			b.FormValues[key] = b.FormsMgr.config.MyCall
+		}
+	}
 
 	// some defaults that we can't set yet. Winlink doesn't seem to care about these
 	// Set only if they're not set by form values.
@@ -1004,8 +1007,12 @@ func (b formMessageBuilder) initFormValues() {
 			b.FormValues[key] = "False"
 		}
 	}
-	if _, ok := b.FormValues["msgseqnum"]; !ok {
-		b.FormValues["msgseqnum"] = "0"
+
+	//TODO: Implement sequences
+	for _, key := range []string{"msgseqnum"} {
+		if _, ok := b.FormValues[key]; !ok {
+			b.FormValues[key] = "0"
+		}
 	}
 }
 
@@ -1016,63 +1023,110 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	}
 	defer infile.Close()
 
-	placeholderRegEx := regexp.MustCompile(`<[vV][aA][rR]\s+(\w+)\s*>`)
+	placeholderRegEx := regexp.MustCompile(`(?i)<Var\s+(\w+)\s*>`)
 	scanner := bufio.NewScanner(infile)
 
 	var msgForm MessageForm
 	var inBody bool
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
+
+		// Insertion tags
+		lineTmpl = b.replaceInsertionTags(lineTmpl)
+
+		// Variables
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		lineTmpl = strings.ReplaceAll(lineTmpl, "<MsgSender>", b.FormsMgr.config.MyCall)
-		lineTmpl = strings.ReplaceAll(lineTmpl, "<ProgramVersion>", "Pat "+b.FormsMgr.config.AppVersion)
-		if strings.HasPrefix(lineTmpl, "Form:") {
-			continue
-		}
-		if strings.HasPrefix(lineTmpl, "ReplyTemplate:") {
-			continue
-		}
-		if strings.HasPrefix(lineTmpl, "Msg:") {
-			lineTmpl = strings.TrimSpace(strings.TrimPrefix(lineTmpl, "Msg:"))
-			inBody = true
-		}
+
+		// Prompts (mostly found in text templates)
 		if b.Interactive {
-			matches := placeholderRegEx.FindAllStringSubmatch(lineTmpl, -1)
-			fmt.Println(lineTmpl)
-			for i := range matches {
-				varName := matches[i][1]
-				varNameLower := strings.ToLower(varName)
-				if b.FormValues[varNameLower] != "" {
-					continue
+			lineTmpl = promptAsks(lineTmpl, func(a Ask) string {
+				//TODO: Handle a.Multiline as we do message body
+				fmt.Printf(a.Prompt + " ")
+				return b.FormsMgr.config.LineReader()
+			})
+			lineTmpl = promptSelects(lineTmpl, func(s Select) Option {
+				for {
+					fmt.Println(s.Prompt)
+					for i, opt := range s.Options {
+						fmt.Printf("  %d\t%s\n", i, opt.Item)
+					}
+					fmt.Printf("select 0-%d: ", len(s.Options)-1)
+					idx, err := strconv.Atoi(b.FormsMgr.config.LineReader())
+					if err == nil && idx < len(s.Options) {
+						return s.Options[idx]
+					}
 				}
-				fmt.Print(varName + ": ")
-				b.FormValues[varNameLower] = "blank"
-				val := b.FormsMgr.config.LineReader()
-				if val != "" {
-					b.FormValues[varNameLower] = val
-				}
-			}
+			})
+			// Fallback prompt for undefined form variables.
+			// Typically these are defined by the associated HTML form, but since
+			// this is CLI land we'll just prompt for the variable value.
+			lineTmpl = promptVars(lineTmpl, func(key string) string {
+				fmt.Printf("%s: ", key)
+				value := b.FormsMgr.config.LineReader()
+				b.FormValues[strings.ToLower(key)] = value
+				return value
+			})
 		}
 
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
-		switch key, value, _ := strings.Cut(lineTmpl, ":"); key {
-		case "Subject":
+		if inBody {
+			msgForm.Body += lineTmpl + "\n"
+			continue // No control fields in body
+		}
+
+		// Control fields
+		switch key, value, _ := strings.Cut(lineTmpl, ":"); textproto.CanonicalMIMEHeaderKey(key) {
+		case "Msg":
+			// The message body starts here. No more control fields after this.
+			msgForm.Body += value
+			inBody = true
+		case "Form", "ReplyTemplate":
+			// Handled elsewhere
+			continue
+		case "Def", "Define":
+			// Def: variable=value – Define the value of a variable.
+			key, value, ok := strings.Cut(value, "=")
+			if !ok {
+				debug.Printf("Def: without key-value pair: %q", value)
+				continue
+			}
+			key, value = strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value)
+			b.FormValues[key] = value
+			debug.Printf("Defined %q=%q", key, value)
+		case "Subject", "Subj":
+			// Set the subject of the message
 			msgForm.Subject = strings.TrimSpace(value)
 		case "To":
+			// Specify to whom the message is being sent
 			msgForm.To = strings.TrimSpace(value)
 		case "Cc":
+			// Specify carbon copy addresses
 			msgForm.Cc = strings.TrimSpace(value)
 		case "Readonly":
+			// Yes/No – Specify whether user can edit.
 			// TODO: Disable editing of body in composer?
+		case "Seqinc":
+			//TODO: Handle sequences
 		default:
-			if inBody {
-				msgForm.Body += lineTmpl + "\n"
-			} else {
+			if strings.TrimSpace(lineTmpl) != "" {
 				log.Printf("skipping unknown template line: '%s'", lineTmpl)
 			}
 		}
 	}
 	return msgForm, nil
+}
+
+func (b formMessageBuilder) replaceInsertionTags(str string) string {
+	const tagStart, tagEnd = '<', '>'
+	m := map[string]string{
+		"Callsign":       b.FormsMgr.config.MyCall,
+		"ProgramVersion": "Pat " + b.FormsMgr.config.AppVersion,
+		"SeqNum":         b.FormValues["msgseqnum"], // TODO: Not a good idea since insertions are handled before vars.
+	}
+	for k, v := range m {
+		k = string(tagStart) + k + string(tagEnd)
+		str = strings.ReplaceAll(str, k, v)
+	}
+	return str
 }
 
 func xmlEscape(s string) string {

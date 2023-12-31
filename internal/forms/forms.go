@@ -24,7 +24,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -256,7 +255,7 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	responseText, err := m.fillFormTemplate(formPath, "/api/form?"+r.URL.Query().Encode(), nil, make(map[string]string))
+	responseText, err := m.fillFormTemplate(formPath, "/api/form?"+r.URL.Query().Encode(), nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
@@ -493,7 +492,7 @@ func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (stri
 		tmplPath = form.ViewerURI
 	}
 
-	return m.fillFormTemplate(tmplPath, "/api/form?composereply=true&formPath="+m.rel(tmplPath), regexp.MustCompile(`{[vV][aA][rR]\s+(\w+)\s*}`), formVars)
+	return m.fillFormTemplate(tmplPath, "/api/form?composereply=true&formPath="+m.rel(tmplPath), formVars)
 }
 
 // ComposeForm combines all data needed for the whole form-based message: subject, body, and attachment
@@ -833,7 +832,7 @@ func posToGridSquare(pos gpsd.Position) string {
 	return gridsquare
 }
 
-func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placeholderRegEx *regexp.Regexp, formVars map[string]string) (string, error) {
+func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, formVars map[string]string) (string, error) {
 	fUnsanitized, err := os.Open(tmplPath)
 	if err != nil {
 		return "", err
@@ -853,6 +852,7 @@ func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placehol
 	}
 
 	replaceInsertionTags := m.insertionTagReplacer("{", "}")
+	replaceVars := variableReplacer("{", "}", formVars)
 
 	var buf bytes.Buffer
 	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
@@ -862,9 +862,7 @@ func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placehol
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
 		l = strings.ReplaceAll(l, "http://localhost:8001", formDestURL)
 		l = replaceInsertionTags(l)
-		if placeholderRegEx != nil {
-			l = fillPlaceholders(l, placeholderRegEx, formVars)
-		}
+		l = replaceVars(l)
 		buf.WriteString(l + "\n")
 	}
 	return buf.String(), nil
@@ -969,7 +967,7 @@ func (b formMessageBuilder) initFormValues() {
 
 	// some defaults that we can't set yet. Winlink doesn't seem to care about these
 	// Set only if they're not set by form values.
-	for _, key := range []string{"msgto", "msgcc", "msgsubject", "msgbody", "msgp2p"} {
+	for _, key := range []string{"msgto", "msgcc", "msgsubject", "msgbody", "msgp2p", "txtstr"} {
 		if _, ok := b.FormValues[key]; !ok {
 			b.FormValues[key] = ""
 		}
@@ -995,7 +993,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	}
 	defer infile.Close()
 
-	placeholderRegEx := regexp.MustCompile(`(?i)<Var\s+(\w+)\s*>`)
+	replaceVars := variableReplacer("<", ">", b.FormValues)
 	replaceInsertionTags := b.FormsMgr.insertionTagReplacer("<", ">")
 	scanner := bufio.NewScanner(infile)
 
@@ -1004,11 +1002,9 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
 
-		// Insertion tags
+		// Insertion tags and variables
 		lineTmpl = replaceInsertionTags(lineTmpl)
-
-		// Variables
-		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
+		lineTmpl = replaceVars(lineTmpl)
 
 		// Prompts (mostly found in text templates)
 		if b.Interactive {
@@ -1088,6 +1084,12 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	return msgForm, nil
 }
 
+// VariableReplacer returns a function that replaces the given key-value pairs.
+func variableReplacer(tagStart, tagEnd string, vars map[string]string) func(string) string {
+	return placeholderReplacer(tagStart+"Var ", tagEnd, vars)
+}
+
+// InsertionTagReplacer returns a function that replaces the fixed set of insertion tags with their corresponding values.
 func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) string {
 	now := time.Now()
 	validPos := "NO"
@@ -1098,7 +1100,7 @@ func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) str
 		validPos = "YES"
 		debug.Printf("GPSd position: %s", gpsFmt(signedDecimal, nowPos))
 	}
-	tags := map[string]string{
+	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
 		"Callsign":       m.config.MyCall,
 		"ProgramVersion": "Pat " + m.config.AppVersion,
@@ -1131,32 +1133,7 @@ func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) str
 		// Speed
 		// course
 		// decimal_separator
-	}
-
-	// compileRegexp compiles a case insensitive regular expression matching the given tag.
-	compileRegexp := func(tag string) *regexp.Regexp {
-		tag = tagStart + tag + tagEnd
-		return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(tag))
-	}
-	// Build a map from regexp to replacement values of for all tags.
-	regexps := make(map[*regexp.Regexp]string, len(tags))
-	for tag, newValue := range tags {
-		regexps[compileRegexp(tag)] = newValue
-	}
-	// Return a function for applying the replacements.
-	return func(str string) string {
-		for re, newValue := range regexps {
-			str = re.ReplaceAllLiteralString(str, newValue)
-		}
-		if debug.Enabled() {
-			// Log remaining insertion tags
-			re := regexp.QuoteMeta(tagStart) + `[\w_-]+` + regexp.QuoteMeta(tagEnd)
-			if matches := regexp.MustCompile(re).FindAllString(str, -1); len(matches) > 0 {
-				debug.Printf("Unhandled insertion tags: %v", matches)
-			}
-		}
-		return str
-	}
+	})
 }
 
 func xmlEscape(s string) string {
@@ -1165,21 +1142,6 @@ func xmlEscape(s string) string {
 		log.Printf("Error trying to escape XML string %s", err)
 	}
 	return buf.String()
-}
-
-func fillPlaceholders(s string, re *regexp.Regexp, values map[string]string) string {
-	if _, ok := values["txtstr"]; !ok {
-		values["txtstr"] = ""
-	}
-	result := s
-	matches := re.FindAllStringSubmatch(s, -1)
-	for _, match := range matches {
-		value, ok := values[strings.ToLower(match[1])]
-		if ok {
-			result = strings.ReplaceAll(result, match[0], value)
-		}
-	}
-	return result
 }
 
 func (m *Manager) cleanupOldFormData() {

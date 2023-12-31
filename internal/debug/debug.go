@@ -17,6 +17,8 @@ func init() {
 	enabled, _ = strconv.ParseBool(os.Getenv(EnvVar))
 }
 
+func Enabled() bool { return enabled }
+
 func Printf(format string, v ...interface{}) {
 	if !enabled {
 		return

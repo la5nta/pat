@@ -852,15 +852,7 @@ func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placehol
 		log.Printf("Warning: unsupported string encoding in template %s, expected utf-8", tmplPath)
 	}
 
-	now := time.Now()
-	validPos := "NO"
-	nowPos, err := m.gpsPos()
-	if err != nil {
-		debug.Printf("GPSd error: %v", err)
-	} else {
-		validPos = "YES"
-		debug.Printf("GPSd position: %s", gpsFmt(signedDecimal, nowPos))
-	}
+	replaceInsertionTags := m.insertionTagReplacer("{", "}")
 
 	var buf bytes.Buffer
 	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
@@ -869,27 +861,7 @@ func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, placehol
 		l = strings.ReplaceAll(l, "http://{FormServer}:{FormPort}", formDestURL)
 		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
 		l = strings.ReplaceAll(l, "http://localhost:8001", formDestURL)
-		l = strings.ReplaceAll(l, "{MsgSender}", m.config.MyCall)
-		l = strings.ReplaceAll(l, "{Callsign}", m.config.MyCall)
-		l = strings.ReplaceAll(l, "{ProgramVersion}", "Pat "+m.config.AppVersion)
-		l = strings.ReplaceAll(l, "{DateTime}", formatDateTime(now))
-		l = strings.ReplaceAll(l, "{UDateTime}", formatDateTimeUTC(now))
-		l = strings.ReplaceAll(l, "{Date}", formatDate(now))
-		l = strings.ReplaceAll(l, "{UDate}", formatDateUTC(now))
-		l = strings.ReplaceAll(l, "{UDTG}", formatUDTG(now))
-		l = strings.ReplaceAll(l, "{Time}", formatTime(now))
-		l = strings.ReplaceAll(l, "{UTime}", formatTimeUTC(now))
-		l = strings.ReplaceAll(l, "{GPS}", gpsFmt(degreeMinute, nowPos))
-		l = strings.ReplaceAll(l, "{GPS_DECIMAL}", gpsFmt(decimal, nowPos))
-		l = strings.ReplaceAll(l, "{GPS_SIGNED_DECIMAL}", gpsFmt(signedDecimal, nowPos))
-		// Lots of undocumented tags found in the Winlink check in form.
-		// Note also various ways of capitalizing. Perhaps best to do case insenstive string replacements....
-		l = strings.ReplaceAll(l, "{Latitude}", fmt.Sprintf("%.4f", nowPos.Lat))
-		l = strings.ReplaceAll(l, "{latitude}", fmt.Sprintf("%.4f", nowPos.Lat))
-		l = strings.ReplaceAll(l, "{Longitude}", fmt.Sprintf("%.4f", nowPos.Lon))
-		l = strings.ReplaceAll(l, "{longitude}", fmt.Sprintf("%.4f", nowPos.Lon))
-		l = strings.ReplaceAll(l, "{GridSquare}", posToGridSquare(nowPos))
-		l = strings.ReplaceAll(l, "{GPSValid}", fmt.Sprintf("%s ", validPos))
+		l = replaceInsertionTags(l)
 		if placeholderRegEx != nil {
 			l = fillPlaceholders(l, placeholderRegEx, formVars)
 		}
@@ -1024,6 +996,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	defer infile.Close()
 
 	placeholderRegEx := regexp.MustCompile(`(?i)<Var\s+(\w+)\s*>`)
+	replaceInsertionTags := b.FormsMgr.insertionTagReplacer("<", ">")
 	scanner := bufio.NewScanner(infile)
 
 	var msgForm MessageForm
@@ -1032,7 +1005,7 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 		lineTmpl := scanner.Text()
 
 		// Insertion tags
-		lineTmpl = b.replaceInsertionTags(lineTmpl)
+		lineTmpl = replaceInsertionTags(lineTmpl)
 
 		// Variables
 		lineTmpl = fillPlaceholders(lineTmpl, placeholderRegEx, b.FormValues)
@@ -1115,18 +1088,75 @@ func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, 
 	return msgForm, nil
 }
 
-func (b formMessageBuilder) replaceInsertionTags(str string) string {
-	const tagStart, tagEnd = '<', '>'
-	m := map[string]string{
-		"Callsign":       b.FormsMgr.config.MyCall,
-		"ProgramVersion": "Pat " + b.FormsMgr.config.AppVersion,
-		"SeqNum":         b.FormValues["msgseqnum"], // TODO: Not a good idea since insertions are handled before vars.
+func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) string {
+	now := time.Now()
+	validPos := "NO"
+	nowPos, err := m.gpsPos()
+	if err != nil {
+		debug.Printf("GPSd error: %v", err)
+	} else {
+		validPos = "YES"
+		debug.Printf("GPSd position: %s", gpsFmt(signedDecimal, nowPos))
 	}
-	for k, v := range m {
-		k = string(tagStart) + k + string(tagEnd)
-		str = strings.ReplaceAll(str, k, v)
+	tags := map[string]string{
+		"MsgSender":      m.config.MyCall,
+		"Callsign":       m.config.MyCall,
+		"ProgramVersion": "Pat " + m.config.AppVersion,
+
+		"DateTime":  formatDateTime(now),
+		"UDateTime": formatDateTimeUTC(now),
+		"Date":      formatDate(now),
+		"UDate":     formatDateUTC(now),
+		"UDTG":      formatUDTG(now),
+		"Time":      formatTime(now),
+		"UTime":     formatTimeUTC(now),
+
+		"GPS":                gpsFmt(degreeMinute, nowPos),
+		"GPS_DECIMAL":        gpsFmt(decimal, nowPos),
+		"GPS_SIGNED_DECIMAL": gpsFmt(signedDecimal, nowPos),
+		"Latitude":           fmt.Sprintf("%.4f", nowPos.Lat),
+		"Longitude":          fmt.Sprintf("%.4f", nowPos.Lon),
+		"GridSquare":         posToGridSquare(nowPos),
+		"GPSValid":           fmt.Sprintf("%s ", validPos),
+
+		//TODO (other insertion tags found in Standard Forms):
+		// SeqNum
+		// FormFolder
+		// GPSLatitude
+		// GPSLongitude
+		// InternetAvailable
+		// MsgP2P
+		// MsgSubject
+		// Sender
+		// Speed
+		// course
+		// decimal_separator
 	}
-	return str
+
+	// compileRegexp compiles a case insensitive regular expression matching the given tag.
+	compileRegexp := func(tag string) *regexp.Regexp {
+		tag = tagStart + tag + tagEnd
+		return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(tag))
+	}
+	// Build a map from regexp to replacement values of for all tags.
+	regexps := make(map[*regexp.Regexp]string, len(tags))
+	for tag, newValue := range tags {
+		regexps[compileRegexp(tag)] = newValue
+	}
+	// Return a function for applying the replacements.
+	return func(str string) string {
+		for re, newValue := range regexps {
+			str = re.ReplaceAllLiteralString(str, newValue)
+		}
+		if debug.Enabled() {
+			// Log remaining insertion tags
+			re := regexp.QuoteMeta(tagStart) + `[\w_-]+` + regexp.QuoteMeta(tagEnd)
+			if matches := regexp.MustCompile(re).FindAllString(str, -1); len(matches) > 0 {
+				debug.Printf("Unhandled insertion tags: %v", matches)
+			}
+		}
+		return str
+	}
 }
 
 func xmlEscape(s string) string {

@@ -31,7 +31,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/dimchansky/utfbom"
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
@@ -414,29 +413,23 @@ func getXMLAttachmentNameForForm(f Form, isReply bool) string {
 }
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
-func (m *Manager) RenderForm(contentUnsanitized []byte, composeReply bool) (string, error) {
+func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 	type Node struct {
 		XMLName xml.Name
 		Content []byte `xml:",innerxml"`
 		Nodes   []Node `xml:",any"`
 	}
 
-	sr := utfbom.SkipOnly(bytes.NewReader(contentUnsanitized))
-
-	contentData, err := io.ReadAll(sr)
-	if err != nil {
-		return "", fmt.Errorf("error reading sanitized form xml: %w", err)
-	}
-
-	if !utf8.Valid(contentData) {
-		log.Println("Warning: unsupported string encoding in form XML, expected utf-8")
+	data = trimBom(data)
+	if !utf8.Valid(data) {
+		log.Println("Warning: unsupported string encoding in form XML, expected UTF-8")
 	}
 
 	var n1 Node
 	formParams := make(map[string]string)
 	formVars := make(map[string]string)
 
-	if err := xml.Unmarshal(contentData, &n1); err != nil {
+	if err := xml.Unmarshal(data, &n1); err != nil {
 		return "", err
 	}
 
@@ -550,34 +543,21 @@ func (m *Manager) buildFormFolder() (FormFolder, error) {
 }
 
 func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
-	rootFile, err := os.Open(rootPath)
+	rootPath = filepath.Clean(rootPath)
+	entries, err := os.ReadDir(rootPath)
 	if err != nil {
 		return FormFolder{}, err
 	}
-	defer rootFile.Close()
-	rootFileInfo, _ := os.Stat(rootPath)
-
-	if !rootFileInfo.IsDir() {
-		return FormFolder{}, errors.New(rootPath + " is not a directory")
-	}
 
 	folder := FormFolder{
-		Name:    rootFileInfo.Name(),
-		Path:    rootFile.Name(),
+		Name:    filepath.Base(rootPath),
+		Path:    rootPath,
 		Forms:   []Form{},
 		Folders: []FormFolder{},
 	}
-
-	infos, err := rootFile.Readdir(0)
-	if err != nil {
-		return folder, err
-	}
-	_ = rootFile.Close()
-
-	formCnt := 0
-	for _, info := range infos {
-		if info.IsDir() {
-			subfolder, err := m.innerRecursiveBuildFormFolder(filepath.Join(rootPath, info.Name()))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			subfolder, err := m.innerRecursiveBuildFormFolder(filepath.Join(rootPath, entry.Name()))
 			if err != nil {
 				return folder, err
 			}
@@ -585,17 +565,16 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 			folder.FormCount += subfolder.FormCount
 			continue
 		}
-		if !strings.EqualFold(filepath.Ext(info.Name()), txtFileExt) {
+		if !strings.EqualFold(filepath.Ext(entry.Name()), txtFileExt) {
 			continue
 		}
-		path := filepath.Join(rootPath, info.Name())
+		path := filepath.Join(rootPath, entry.Name())
 		frm, err := buildFormFromTxt(path)
 		if err != nil {
 			debug.Printf("failed to load form file %q: %v", path, err)
 			continue
 		}
 		if frm.InitialURI != "" || frm.ViewerURI != "" {
-			formCnt++
 			folder.Forms = append(folder.Forms, frm)
 			folder.FormCount++
 		}
@@ -833,48 +812,29 @@ func posToGridSquare(pos gpsd.Position) string {
 }
 
 func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, formVars map[string]string) (string, error) {
-	fUnsanitized, err := os.Open(tmplPath)
+	data, err := readFile(tmplPath)
 	if err != nil {
 		return "", err
 	}
-	defer fUnsanitized.Close()
 
-	// skipping over UTF-8 byte-ordering mark EFBBEF, some 3rd party templates use it
-	// (e.g. Sonoma county's ICS213_v2.1_SonomaACS_TwoWay_Initial_Viewer.html)
-	f := utfbom.SkipOnly(fUnsanitized)
+	// Set the "form server" URL
+	data = strings.ReplaceAll(data, "http://{FormServer}:{FormPort}", formDestURL)
+	data = strings.ReplaceAll(data, "http://localhost:8001", formDestURL) // Some Canada BC forms are hardcoded to this URL
 
-	sanitizedFileContent, err := io.ReadAll(f)
-	if err != nil {
-		return "", fmt.Errorf("error reading file %s", tmplPath)
-	}
-	if !utf8.Valid(sanitizedFileContent) {
-		log.Printf("Warning: unsupported string encoding in template %s, expected utf-8", tmplPath)
-	}
+	// Substitute insertion tags and variables
+	data = m.insertionTagReplacer("{", "}")(data)
+	data = variableReplacer("{", "}", formVars)(data)
 
-	replaceInsertionTags := m.insertionTagReplacer("{", "}")
-	replaceVars := variableReplacer("{", "}", formVars)
-
-	var buf bytes.Buffer
-	scanner := bufio.NewScanner(bytes.NewReader(sanitizedFileContent))
-	for scanner.Scan() {
-		l := scanner.Text()
-		l = strings.ReplaceAll(l, "http://{FormServer}:{FormPort}", formDestURL)
-		// some Canada BC forms don't use the {FormServer} placeholder, it's OK, can deal with it here
-		l = strings.ReplaceAll(l, "http://localhost:8001", formDestURL)
-		l = replaceInsertionTags(l)
-		l = replaceVars(l)
-		buf.WriteString(l + "\n")
-	}
-	return buf.String(), nil
+	return data, nil
 }
 
 func (m *Manager) getFormsVersion() string {
-	data, err := os.ReadFile(m.abs("Standard_Forms_Version.dat"))
+	str, err := readFile(m.abs("Standard_Forms_Version.dat"))
 	if err != nil {
 		debug.Printf("failed to open version file: %v", err)
 		return "unknown"
 	}
-	return string(bytes.TrimSpace(data))
+	return strings.TrimSpace(str)
 }
 
 type formMessageBuilder struct {
@@ -987,15 +947,16 @@ func (b formMessageBuilder) initFormValues() {
 }
 
 func (b formMessageBuilder) scanTmplBuildMessage(tmplPath string) (MessageForm, error) {
-	infile, err := os.Open(tmplPath)
+	f, err := os.Open(tmplPath)
 	if err != nil {
 		return MessageForm{}, err
 	}
-	defer infile.Close()
+	defer f.Close()
 
 	replaceVars := variableReplacer("<", ">", b.FormValues)
 	replaceInsertionTags := b.FormsMgr.insertionTagReplacer("<", ">")
-	scanner := bufio.NewScanner(infile)
+
+	scanner := bufio.NewScanner(f)
 
 	var msgForm MessageForm
 	var inBody bool

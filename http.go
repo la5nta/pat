@@ -290,7 +290,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "form instance key not valid", http.StatusBadRequest)
 			return
 		}
-		for _, f := range formData.Attachments() {
+		for _, f := range formData.Attachments {
 			msg.AddFile(f)
 		}
 	}

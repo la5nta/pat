@@ -307,7 +307,7 @@ func composeFormReport(ctx context.Context, args []string) {
 
 	msg.SetBody(formMsg.Body)
 
-	for _, f := range formMsg.Attachments() {
+	for _, f := range formMsg.Attachments {
 		msg.AddFile(f)
 	}
 

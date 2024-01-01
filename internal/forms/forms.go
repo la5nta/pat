@@ -451,7 +451,7 @@ func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, err
 		"subjectline":     subject,
 		"templateversion": m.getFormsVersion(),
 	}
-	fmt.Printf("Form '%s', version: %s", template.TxtFileURI, formValues["templateversion"])
+	fmt.Printf("Form '%s', version: %s\n", template.TxtFileURI, formValues["templateversion"])
 	return messageBuilder{
 		Template:    template,
 		FormValues:  formValues,
@@ -870,9 +870,11 @@ func (b messageBuilder) scanTmplBuildMessage(tmplPath string) (Message, error) {
 			// Typically these are defined by the associated HTML form, but since
 			// this is CLI land we'll just prompt for the variable value.
 			lineTmpl = promptVars(lineTmpl, func(key string) string {
+				fmt.Println(lineTmpl)
 				fmt.Printf("%s: ", key)
 				value := b.FormsMgr.config.LineReader()
 				b.FormValues[strings.ToLower(key)] = value
+				replaceVars = variableReplacer("<", ">", b.FormValues) // Refresh variableReplacer to avoid prompting the same again
 				return value
 			})
 		}

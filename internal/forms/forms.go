@@ -7,7 +7,6 @@
 package forms
 
 import (
-	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
@@ -18,7 +17,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
 	"net/http"
 	"net/textproto"
 	"os"
@@ -36,7 +34,6 @@ import (
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/wl2k-go/fbb"
-	"github.com/pd0mz/go-maidenhead"
 )
 
 const formsVersionInfoURL = "https://api.getpat.io/v1/forms/standard-templates/latest"
@@ -347,53 +344,6 @@ func (m *Manager) downloadAndUnzipForms(ctx context.Context, downloadLink string
 
 	if err := unzip(f.Name(), m.config.FormsPath); err != nil {
 		return fmt.Errorf("can't unzip forms update: %w", err)
-	}
-	return nil
-}
-
-func unzip(srcArchivePath, dstRoot string) error {
-	// Closure to address file descriptors issue with all the deferred .Close() methods
-	extractAndWriteFile := func(zf *zip.File) error {
-		if zf.FileInfo().IsDir() {
-			return nil
-		}
-		destPath := filepath.Join(dstRoot, zf.Name)
-
-		// Check for ZipSlip (Directory traversal)
-		if !strings.HasPrefix(destPath, filepath.Clean(dstRoot)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", destPath)
-		}
-
-		// Ensure target directory exists
-		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-			return fmt.Errorf("can't create target directory: %w", err)
-		}
-
-		// Write file
-		src, err := zf.Open()
-		if err != nil {
-			return err
-		}
-		defer src.Close()
-		dst, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
-		if err != nil {
-			return err
-		}
-		defer dst.Close()
-		_, err = io.Copy(dst, src)
-		return err
-	}
-
-	r, err := zip.OpenReader(srcArchivePath)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	for _, f := range r.File {
-		err := extractAndWriteFile(f)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -743,74 +693,6 @@ func (m *Manager) gpsPos() (gpsd.Position, error) {
 	return conn.NextPosTimeout(3 * time.Second)
 }
 
-type gpsStyle int
-
-const (
-	// documentation: https://www.winlink.org/sites/default/files/RMSE_FORMS/insertion_tags.zip
-	signedDecimal gpsStyle = iota // 41.1234 -73.4567
-	decimal                       // 46.3795N 121.5835W
-	degreeMinute                  // 46-22.77N 121-35.01W
-)
-
-func gpsFmt(style gpsStyle, pos gpsd.Position) string {
-	var (
-		northing   string
-		easting    string
-		latDegrees int
-		latMinutes float64
-		lonDegrees int
-		lonMinutes float64
-	)
-
-	noPos := gpsd.Position{}
-	if pos == noPos {
-		return "(Not available)"
-	}
-	switch style {
-	case degreeMinute:
-		{
-			latDegrees = int(math.Trunc(math.Abs(pos.Lat)))
-			latMinutes = (math.Abs(pos.Lat) - float64(latDegrees)) * 60
-			lonDegrees = int(math.Trunc(math.Abs(pos.Lon)))
-			lonMinutes = (math.Abs(pos.Lon) - float64(lonDegrees)) * 60
-		}
-		fallthrough
-	case decimal:
-		{
-			if pos.Lat >= 0 {
-				northing = "N"
-			} else {
-				northing = "S"
-			}
-			if pos.Lon >= 0 {
-				easting = "E"
-			} else {
-				easting = "W"
-			}
-		}
-	}
-
-	switch style {
-	case signedDecimal:
-		return fmt.Sprintf("%.4f %.4f", pos.Lat, pos.Lon)
-	case decimal:
-		return fmt.Sprintf("%.4f%s %.4f%s", math.Abs(pos.Lat), northing, math.Abs(pos.Lon), easting)
-	case degreeMinute:
-		return fmt.Sprintf("%02d-%05.2f%s %03d-%05.2f%s", latDegrees, latMinutes, northing, lonDegrees, lonMinutes, easting)
-	default:
-		return "(Not available)"
-	}
-}
-
-func posToGridSquare(pos gpsd.Position) string {
-	point := maidenhead.NewPoint(pos.Lat, pos.Lon)
-	gridsquare, err := point.GridSquare()
-	if err != nil {
-		return ""
-	}
-	return gridsquare
-}
-
 func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, formVars map[string]string) (string, error) {
 	data, err := readFile(tmplPath)
 	if err != nil {
@@ -1059,7 +941,7 @@ func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) str
 		debug.Printf("GPSd error: %v", err)
 	} else {
 		validPos = "YES"
-		debug.Printf("GPSd position: %s", gpsFmt(signedDecimal, nowPos))
+		debug.Printf("GPSd position: %s", positionFmt(signedDecimal, nowPos))
 	}
 	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
@@ -1074,9 +956,9 @@ func (m *Manager) insertionTagReplacer(tagStart, tagEnd string) func(string) str
 		"Time":      formatTime(now),
 		"UTime":     formatTimeUTC(now),
 
-		"GPS":                gpsFmt(degreeMinute, nowPos),
-		"GPS_DECIMAL":        gpsFmt(decimal, nowPos),
-		"GPS_SIGNED_DECIMAL": gpsFmt(signedDecimal, nowPos),
+		"GPS":                positionFmt(degreeMinute, nowPos),
+		"GPS_DECIMAL":        positionFmt(decimal, nowPos),
+		"GPS_SIGNED_DECIMAL": positionFmt(signedDecimal, nowPos),
 		"Latitude":           fmt.Sprintf("%.4f", nowPos.Lat),
 		"Longitude":          fmt.Sprintf("%.4f", nowPos.Lon),
 		"GridSquare":         posToGridSquare(nowPos),

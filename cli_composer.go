@@ -283,7 +283,7 @@ func composeFormReport(ctx context.Context, args []string) {
 
 	msg := composeMessageHeader(nil)
 
-	formMsg, err := formsMgr.ComposeForm(tmplPathArg, msg.Subject())
+	formMsg, err := formsMgr.ComposeTemplate(tmplPathArg, msg.Subject())
 	if err != nil {
 		log.Printf("failed to compose message for template: %v", err)
 		return

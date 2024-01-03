@@ -117,12 +117,17 @@ func VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool,
 func freq(param string) {
 	parts := strings.SplitN(param, ":", 2)
 	if parts[0] == "" {
-		fmt.Println("Need freq method.")
+		fmt.Println("Missing transport parameter.")
+		fmt.Println("Syntax: freq <transport>[:<frequency>]")
+		return
 	}
 
-	rig, _, ok, _ := VFOForTransport(parts[0])
-	if !ok {
-		log.Printf("Hamlib rig not loaded.")
+	rig, rigName, ok, err := VFOForTransport(parts[0])
+	if err != nil {
+		log.Println(err)
+		return
+	} else if !ok {
+		log.Printf("Rig '%s' not loaded.", rigName)
 		return
 	}
 

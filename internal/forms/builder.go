@@ -145,8 +145,13 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 	}
 	defer f.Close()
 
-	replaceVars := variableReplacer("<", ">", b.FormValues)
 	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, "<", ">")
+	replaceVars := variableReplacer("<", ">", b.FormValues)
+	addFormValue := func(k, v string) {
+		b.FormValues[strings.ToLower(k)] = v
+		replaceVars = variableReplacer("<", ">", b.FormValues) // Refresh variableReplacer (rebuild regular expressions)
+		debug.Printf("Defined %q=%q", k, v)
+	}
 
 	scanner := bufio.NewScanner(f)
 
@@ -186,8 +191,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 				fmt.Println(lineTmpl)
 				fmt.Printf("%s: ", key)
 				value := b.FormsMgr.config.LineReader()
-				b.FormValues[strings.ToLower(key)] = value
-				replaceVars = variableReplacer("<", ">", b.FormValues) // Refresh variableReplacer to avoid prompting the same again
+				addFormValue(key, value)
 				return value
 			})
 		}
@@ -213,9 +217,8 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 				debug.Printf("Def: without key-value pair: %q", value)
 				continue
 			}
-			key, value = strings.ToLower(strings.TrimSpace(key)), strings.TrimSpace(value)
-			b.FormValues[key] = value
-			debug.Printf("Defined %q=%q", key, value)
+			key, value = strings.TrimSpace(key), strings.TrimSpace(value)
+			addFormValue(key, value)
 		case "Subject", "Subj":
 			// Set the subject of the message
 			msg.Subject = strings.TrimSpace(value)

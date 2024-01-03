@@ -83,7 +83,7 @@ func execCmd(line string) (quit bool) {
 func printInteractiveUsage() {
 	fmt.Println("Uri examples: 'LA3F@5350', 'LA1B-10 v LA5NTA-1', 'LA5NTA:secret@192.168.1.1:54321'")
 
-	methods := []string{
+	transports := []string{
 		MethodArdop,
 		MethodAX25, MethodAX25AGWPE, MethodAX25Linux, MethodAX25SerialTNC,
 		MethodPactor,
@@ -91,15 +91,15 @@ func printInteractiveUsage() {
 		MethodVaraHF,
 		MethodVaraFM,
 	}
-	fmt.Println("Methods:", strings.Join(methods, ", "))
+	fmt.Println("Transports:", strings.Join(transports, ", "))
 
 	cmds := []string{
-		"connect  METHOD:[URI] or alias  Connect to a remote station.",
-		"listen   METHOD                 Listen for incoming connections.",
-		"unlisten METHOD                 Unregister listener for incoming connections.",
-		"freq     METHOD:FREQ            Change rig frequency.",
-		"heard                           Display all stations heard over the air.",
-		"qtc                             Print pending outbound messages.",
+		"connect  <connect-url or alias>  Connect to a remote station.",
+		"listen   <transport>             Listen for incoming connections.",
+		"unlisten <transport>             Unregister listener for incoming connections.",
+		"freq     <transport>[:<freq>]    Read/set rig frequency.",
+		"heard                            Display all stations heard over the air.",
+		"qtc                              Print pending outbound messages.",
 	}
 	fmt.Println("Commands: ")
 	for _, cmd := range cmds {

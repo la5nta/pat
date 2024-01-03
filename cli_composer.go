@@ -157,13 +157,11 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 	msg.SetSubject(subject)
 
 	// Handle Attachments. Since we're not interactive, treat errors as fatal so the user can fix
-	for _, filename := range attachments {
-		file, err := readAttachment(filename)
-		if err != nil {
+	for _, path := range attachments {
+		if err := addAttachmentFromPath(msg, path); err != nil {
 			fmt.Fprint(os.Stderr, err.Error()+"\nAborting! (Message not posted)\n")
 			os.Exit(1)
 		}
-		msg.AddFile(file)
 	}
 
 	// Read the message body from stdin
@@ -247,45 +245,22 @@ func interactiveComposeMessage(replyMsg *fbb.Message) {
 		if path == "" {
 			break
 		}
-
-		file, err := readAttachment(path)
-		if err != nil {
+		if err := addAttachmentFromPath(msg, path); err != nil {
 			log.Println(err)
 			continue
 		}
-
-		msg.AddFile(file)
 	}
 	fmt.Println(msg)
 	postMessage(msg)
 }
 
-func readAttachment(path string) (*fbb.File, error) {
+func addAttachmentFromPath(msg *fbb.Message, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer f.Close()
-
-	name := filepath.Base(path)
-
-	var resizeImage bool
-	if isConvertableImageMediaType(name, "") {
-		fmt.Print("This seems to be an image. Auto resize? [Y/n]: ")
-		ans := readLine()
-		resizeImage = ans == "" || strings.EqualFold("y", ans)
-	}
-
-	var data []byte
-
-	data, err = ioutil.ReadAll(f)
-	if resizeImage {
-		data, err = convertImage(data)
-		ext := filepath.Ext(name)
-		name = name[:len(name)-len(ext)] + ".jpg"
-	}
-
-	return fbb.NewFile(name, data), err
+	return addAttachment(msg, filepath.Base(path), "", f)
 }
 
 var stdin *bufio.Reader

@@ -266,7 +266,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		files := r.MultipartForm.File["files"]
 		for _, f := range files {
-			err := attachFile(f, msg)
+			err := addAttachmentFromMultipartFile(msg, f)
 			switch err := err.(type) {
 			case nil:
 				// No problem
@@ -345,7 +345,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "Message posted (%.2f kB)", float64(buf.Len()/1024))
 }
 
-func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
+func addAttachmentFromMultipartFile(msg *fbb.Message, f *multipart.FileHeader) error {
 	// For some unknown reason, we receive this empty unnamed file when no
 	// attachment is provided. Prior to Go 1.10, this was filtered by
 	// multipart.Reader.
@@ -361,28 +361,10 @@ func attachFile(f *multipart.FileHeader, msg *fbb.Message) error {
 	if err != nil {
 		return HTTPError{err, http.StatusInternalServerError}
 	}
-
-	p, err := io.ReadAll(file)
-	_ = file.Close()
-	if err != nil {
+	defer file.Close()
+	if err := addAttachment(msg, f.Filename, f.Header.Get("Content-Type"), file); err != nil {
 		return HTTPError{err, http.StatusInternalServerError}
 	}
-
-	if isConvertableImageMediaType(f.Filename, f.Header.Get("Content-Type")) {
-		log.Printf("Auto converting '%s' [%s]...", f.Filename, f.Header.Get("Content-Type"))
-
-		if converted, err := convertImage(p); err != nil {
-			log.Printf("Error converting image: %s", err)
-		} else {
-			log.Printf("Done converting '%s'.", f.Filename)
-
-			ext := path.Ext(f.Filename)
-			f.Filename = f.Filename[:len(f.Filename)-len(ext)] + ".jpg"
-			p = converted
-		}
-	}
-
-	msg.AddFile(fbb.NewFile(f.Filename, p))
 	return nil
 }
 

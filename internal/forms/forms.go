@@ -503,11 +503,16 @@ func findFormFromURI(formName string, folder FormFolder) (Template, error) {
 	return form, errors.New("form not found")
 }
 
+const gpsMockAddr = "mock" // Hack for unit testing
+
 // gpsPos returns the current GPS Position
 func (m *Manager) gpsPos() (gpsd.Position, error) {
 	addr := m.config.GPSd.Addr
 	if addr == "" {
 		return gpsd.Position{}, errors.New("GPSd: not configured.")
+	}
+	if addr == gpsMockAddr {
+		return gpsd.Position{Lat: 59.41378, Lon: 5.268}, nil
 	}
 	if !m.config.GPSd.AllowForms {
 		return gpsd.Position{}, errors.New("GPSd: allow_forms is disabled. GPS position will not be available in form templates.")

@@ -15,9 +15,12 @@ const (
 	signedDecimal gpsStyle = iota // 41.1234 -73.4567
 	decimal                       // 46.3795N 121.5835W
 	degreeMinute                  // 46-22.77N 121-35.01W
+	gridSquare                    // JO29PJ
 )
 
 func positionFmt(style gpsStyle, pos gpsd.Position) string {
+	const notAvailable = "(Not available)"
+
 	var (
 		northing   string
 		easting    string
@@ -29,9 +32,15 @@ func positionFmt(style gpsStyle, pos gpsd.Position) string {
 
 	noPos := gpsd.Position{}
 	if pos == noPos {
-		return "(Not available)"
+		return notAvailable
 	}
 	switch style {
+	case gridSquare:
+		str, err := maidenhead.NewPoint(pos.Lat, pos.Lon).GridSquare()
+		if err != nil {
+			return notAvailable
+		}
+		return str
 	case degreeMinute:
 		{
 			latDegrees = int(math.Trunc(math.Abs(pos.Lat)))
@@ -65,13 +74,4 @@ func positionFmt(style gpsStyle, pos gpsd.Position) string {
 	default:
 		panic("invalid style")
 	}
-}
-
-func posToGridSquare(pos gpsd.Position) string {
-	point := maidenhead.NewPoint(pos.Lat, pos.Lon)
-	gridsquare, err := point.GridSquare()
-	if err != nil {
-		return ""
-	}
-	return gridsquare
 }

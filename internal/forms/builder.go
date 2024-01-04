@@ -279,9 +279,9 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"GPS":                positionFmt(degreeMinute, nowPos),
 		"GPS_DECIMAL":        positionFmt(decimal, nowPos),
 		"GPS_SIGNED_DECIMAL": positionFmt(signedDecimal, nowPos),
+		"GridSquare":         positionFmt(gridSquare, nowPos),
 		"Latitude":           fmt.Sprintf("%.4f", nowPos.Lat),
 		"Longitude":          fmt.Sprintf("%.4f", nowPos.Lon),
-		"GridSquare":         posToGridSquare(nowPos),
 		"GPSValid":           fmt.Sprintf("%s ", validPos),
 
 		//TODO (other insertion tags found in Standard Forms):

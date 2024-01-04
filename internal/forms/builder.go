@@ -169,6 +169,10 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			lineTmpl = promptAsks(lineTmpl, func(a Ask) string {
 				//TODO: Handle a.Multiline as we do message body
 				fmt.Printf(a.Prompt + " ")
+				ans := b.FormsMgr.config.LineReader()
+				if a.Uppercase {
+					ans = strings.ToUpper(ans)
+				}
 				return b.FormsMgr.config.LineReader()
 			})
 			lineTmpl = promptSelects(lineTmpl, func(s Select) Option {
@@ -258,6 +262,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		validPos = "YES"
 		debug.Printf("GPSd position: %s", positionFmt(signedDecimal, nowPos))
 	}
+	// documentation: https://www.winlink.org/sites/default/files/RMSE_FORMS/insertion_tags.zip
 	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
 		"Callsign":       m.config.MyCall,

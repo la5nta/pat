@@ -282,7 +282,9 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"GridSquare":         positionFmt(gridSquare, nowPos),
 		"Latitude":           fmt.Sprintf("%.4f", nowPos.Lat),
 		"Longitude":          fmt.Sprintf("%.4f", nowPos.Lon),
-		"GPSValid":           fmt.Sprintf("%s ", validPos),
+		//TODO: Why a trailing space here?
+		// Some forms also adds a whitespace in their <Var > declaration, so we end up with two trailing spaces..
+		"GPSValid": fmt.Sprintf("%s ", validPos),
 
 		//TODO (other insertion tags found in Standard Forms):
 		// SeqNum

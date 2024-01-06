@@ -8,6 +8,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -87,27 +88,22 @@ func (b messageBuilder) setDefaultFormValues() {
 	}
 }
 
-func (b messageBuilder) buildAttachments() []*fbb.File {
-	var attachments []*fbb.File
-
-	// Add FormData.txt attachment if defined by the form
-	if v, ok := b.FormValues["attached_text"]; ok {
-		delete(b.FormValues, "attached_text") // Should not be included in the XML.
-		attachments = append(attachments, fbb.NewFile("FormData.txt", []byte(v)))
+func (b messageBuilder) buildXML() []byte {
+	viewer := b.Template.ViewerURI
+	if b.IsReply && b.Template.ReplyViewerURI != "" {
+		viewer = b.Template.ReplyViewerURI
 	}
-
-	// Add XML if a viewer is defined for this template
-	if b.Template.ViewerURI != "" {
-		viewer := b.Template.ViewerURI
-		if b.IsReply && b.Template.ReplyViewerURI != "" {
-			viewer = b.Template.ReplyViewerURI
-		}
-		formVarsAsXML := ""
-		for varKey, varVal := range b.FormValues {
-			formVarsAsXML += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(varKey), xmlEscape(varVal), xmlEscape(varKey))
-		}
-		filename := xmlName(b.Template, b.IsReply)
-		attachments = append(attachments, fbb.NewFile(filename, []byte(fmt.Sprintf(`%s<RMS_Express_Form>
+	// Make sure the order in stable so the output is deterministic.
+	keys := make([]string, 0, len(b.FormValues))
+	for k := range b.FormValues {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	formVarsAsXML := ""
+	for _, k := range keys {
+		formVarsAsXML += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(k), xmlEscape(b.FormValues[k]), xmlEscape(k))
+	}
+	return []byte(fmt.Sprintf(`%s<RMS_Express_Form>
   <form_parameters>
     <xml_file_version>%s</xml_file_version>
     <rms_express_version>%s</rms_express_version>
@@ -122,15 +118,30 @@ func (b messageBuilder) buildAttachments() []*fbb.File {
   </variables>
 </RMS_Express_Form>
 `,
-			xml.Header,
-			"1.0",
-			b.FormsMgr.config.AppVersion,
-			now().UTC().Format("20060102150405"),
-			b.FormsMgr.config.MyCall,
-			b.FormsMgr.config.Locator,
-			filepath.Base(viewer),
-			filepath.Base(b.Template.ReplyTxtFileURI),
-			formVarsAsXML))))
+		xml.Header,
+		"1.0",
+		b.FormsMgr.config.AppVersion,
+		now().UTC().Format("20060102150405"),
+		b.FormsMgr.config.MyCall,
+		b.FormsMgr.config.Locator,
+		filepath.Base(viewer),
+		filepath.Base(b.Template.ReplyTxtFileURI),
+		formVarsAsXML))
+}
+
+func (b messageBuilder) buildAttachments() []*fbb.File {
+	var attachments []*fbb.File
+
+	// Add FormData.txt attachment if defined by the form
+	if v, ok := b.FormValues["attached_text"]; ok {
+		delete(b.FormValues, "attached_text") // Should not be included in the XML.
+		attachments = append(attachments, fbb.NewFile("FormData.txt", []byte(v)))
+	}
+
+	// Add XML if a viewer is defined for this template
+	if b.Template.ViewerURI != "" {
+		filename := xmlName(b.Template, b.IsReply)
+		attachments = append(attachments, fbb.NewFile(filename, b.buildXML()))
 	}
 	return attachments
 }

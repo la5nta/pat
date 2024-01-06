@@ -27,6 +27,8 @@ func TestInsertionTagReplacer(t *testing.T) {
 		"<UDTG>":      "202300Z MAR 1988",
 		"<Time>":      "00:00:00",
 		"<UTime>":     "23:00:00Z",
+		"<Day>":       "Monday",
+		"<UDay>":      "Sunday",
 
 		"<GPS>":                "59-24.83N 005-16.08E",
 		"<GPS_DECIMAL>":        "59.4138N 5.2680E",
@@ -35,6 +37,8 @@ func TestInsertionTagReplacer(t *testing.T) {
 		"<Latitude>":           "59.4138",
 		"<Longitude>":          "5.2680",
 		"<GPSValid>":           "YES ", // This trailing space appears to be intentional,
+		"<GPSLatitude>":        "59.4138",
+		"<GPSLongitude>":       "5.2680",
 	}
 	for in, expect := range tests {
 		t.Run(in, func(t *testing.T) {

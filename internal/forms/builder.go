@@ -262,7 +262,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		validPos = "YES"
 		debug.Printf("GPSd position: %s", positionFmt(signedDecimal, nowPos))
 	}
-	// documentation: https://www.winlink.org/sites/default/files/RMSE_FORMS/insertion_tags.zip
+	// This list is based on RMSE_FORMS/insertion_tags.zip (copy in docs/) as well as searching Standard Forms's templates.
 	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
 		"Callsign":       m.config.MyCall,
@@ -275,6 +275,8 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"UDTG":      formatUDTG(now),
 		"Time":      formatTime(now),
 		"UTime":     formatTimeUTC(now),
+		"Day":       formatDay(now, location),
+		"UDay":      formatDay(now, time.UTC),
 
 		"GPS":                positionFmt(degreeMinute, nowPos),
 		"GPS_DECIMAL":        positionFmt(decimal, nowPos),
@@ -282,6 +284,10 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"GridSquare":         positionFmt(gridSquare, nowPos),
 		"Latitude":           fmt.Sprintf("%.4f", nowPos.Lat),
 		"Longitude":          fmt.Sprintf("%.4f", nowPos.Lon),
+		// No docs found for these, but they are referenced by a couple of templates in Standard Forms.
+		// By reading the embedded javascript, they appear to be signed decimal.
+		"GPSLatitude":  fmt.Sprintf("%.4f", nowPos.Lat),
+		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
 		//TODO: Why a trailing space here?
 		// Some forms also adds a whitespace in their <Var > declaration, so we end up with two trailing spaces..
 		"GPSValid": fmt.Sprintf("%s ", validPos),
@@ -289,14 +295,14 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		//TODO (other insertion tags found in Standard Forms):
 		// SeqNum
 		// FormFolder
-		// GPSLatitude
-		// GPSLongitude
 		// InternetAvailable
-		// MsgP2P
+		// MsgTo
+		// MsgCc
 		// MsgSubject
-		// Sender
-		// Speed
-		// course
+		// MsgP2P
+		// Sender (only in 'ARC Forms/Disaster Receipt 6409-B Reply.0')
+		// Speed  (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
+		// course (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
 		// decimal_separator
 	})
 }

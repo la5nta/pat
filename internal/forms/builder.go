@@ -125,7 +125,7 @@ func (b messageBuilder) buildAttachments() []*fbb.File {
 			xml.Header,
 			"1.0",
 			b.FormsMgr.config.AppVersion,
-			time.Now().UTC().Format("20060102150405"),
+			now().UTC().Format("20060102150405"),
 			b.FormsMgr.config.MyCall,
 			b.FormsMgr.config.Locator,
 			filepath.Base(viewer),
@@ -155,7 +155,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 
 	scanner := bufio.NewScanner(f)
 
-	msg := Message{submitted: time.Now()}
+	msg := Message{submitted: now()}
 	var inBody bool
 	for scanner.Scan() {
 		lineTmpl := scanner.Text()
@@ -253,7 +253,7 @@ func variableReplacer(tagStart, tagEnd string, vars map[string]string) func(stri
 
 // InsertionTagReplacer returns a function that replaces the fixed set of insertion tags with their corresponding values.
 func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) string {
-	now := time.Now()
+	now := now()
 	validPos := "NO"
 	nowPos, err := m.gpsPos()
 	if err != nil {

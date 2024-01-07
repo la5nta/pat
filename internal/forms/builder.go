@@ -89,44 +89,46 @@ func (b messageBuilder) setDefaultFormValues() {
 }
 
 func (b messageBuilder) buildXML() []byte {
-	viewer := b.Template.ViewerURI
+	type Variable struct {
+		XMLName xml.Name
+		Value   string `xml:",chardata"`
+	}
+	form := struct {
+		XMLName            xml.Name   `xml:"RMS_Express_Form"`
+		XMLFileVersion     string     `xml:"form_parameters>xml_file_version"`
+		RMSExpressVersion  string     `xml:"form_parameters>rms_express_version"`
+		SubmissionDatetime string     `xml:"form_parameters>submission_datetime"`
+		SendersCallsign    string     `xml:"form_parameters>senders_callsign"`
+		GridSquare         string     `xml:"form_parameters>grid_square"`
+		DisplayForm        string     `xml:"form_parameters>display_form"`
+		ReplyTemplate      string     `xml:"form_parameters>reply_template"`
+		Variables          []Variable `xml:"variables>name"`
+	}{
+		XMLFileVersion:     "1.0",
+		RMSExpressVersion:  b.FormsMgr.config.AppVersion,
+		SubmissionDatetime: now().UTC().Format("20060102150405"),
+		SendersCallsign:    b.FormsMgr.config.MyCall,
+		GridSquare:         b.FormsMgr.config.Locator,
+		DisplayForm:        filepath.Base(b.Template.ViewerURI),
+		ReplyTemplate:      filepath.Base(b.Template.ReplyTxtFileURI),
+	}
 	if b.IsReply && b.Template.ReplyViewerURI != "" {
-		viewer = b.Template.ReplyViewerURI
+		form.DisplayForm = filepath.Base(b.Template.ReplyViewerURI)
 	}
-	// Make sure the order in stable so the output is deterministic.
-	keys := make([]string, 0, len(b.FormValues))
-	for k := range b.FormValues {
-		keys = append(keys, k)
+	for k, v := range b.FormValues {
+		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})
 	}
-	sort.Strings(keys)
-	formVarsAsXML := ""
-	for _, k := range keys {
-		formVarsAsXML += fmt.Sprintf("    <%s>%s</%s>\n", xmlEscape(k), xmlEscape(b.FormValues[k]), xmlEscape(k))
+	// Sort vars by name to make sure the output is deterministic.
+	sort.Slice(form.Variables, func(i, j int) bool {
+		a, b := form.Variables[i], form.Variables[j]
+		return a.XMLName.Local < b.XMLName.Local
+	})
+
+	data, err := xml.MarshalIndent(form, "", "    ")
+	if err != nil {
+		panic(err)
 	}
-	return []byte(fmt.Sprintf(`%s<RMS_Express_Form>
-  <form_parameters>
-    <xml_file_version>%s</xml_file_version>
-    <rms_express_version>%s</rms_express_version>
-    <submission_datetime>%s</submission_datetime>
-    <senders_callsign>%s</senders_callsign>
-    <grid_square>%s</grid_square>
-    <display_form>%s</display_form>
-    <reply_template>%s</reply_template>
-  </form_parameters>
-  <variables>
-%s
-  </variables>
-</RMS_Express_Form>
-`,
-		xml.Header,
-		"1.0",
-		b.FormsMgr.config.AppVersion,
-		now().UTC().Format("20060102150405"),
-		b.FormsMgr.config.MyCall,
-		b.FormsMgr.config.Locator,
-		filepath.Base(viewer),
-		filepath.Base(b.Template.ReplyTxtFileURI),
-		formVarsAsXML))
+	return append([]byte(xml.Header), data...)
 }
 
 func (b messageBuilder) buildAttachments() []*fbb.File {

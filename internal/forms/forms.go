@@ -7,7 +7,6 @@
 package forms
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"encoding/xml"
@@ -555,14 +554,6 @@ func (m *Manager) getFormsVersion() string {
 		return "unknown"
 	}
 	return strings.TrimSpace(str)
-}
-
-func xmlEscape(s string) string {
-	var buf bytes.Buffer
-	if err := xml.EscapeText(&buf, []byte(s)); err != nil {
-		log.Printf("Error trying to escape XML string %s", err)
-	}
-	return buf.String()
 }
 
 func (m *Manager) cleanupOldFormData() {

@@ -110,10 +110,12 @@ func (b messageBuilder) buildXML() []byte {
 		SendersCallsign:    b.FormsMgr.config.MyCall,
 		GridSquare:         b.FormsMgr.config.Locator,
 		DisplayForm:        filepath.Base(b.Template.ViewerURI),
-		ReplyTemplate:      filepath.Base(b.Template.ReplyTxtFileURI),
 	}
 	if b.IsReply && b.Template.ReplyViewerURI != "" {
 		form.DisplayForm = filepath.Base(b.Template.ReplyViewerURI)
+	}
+	if b.Template.ReplyTxtFileURI != "" {
+		form.ReplyTemplate = filepath.Base(b.Template.ReplyTxtFileURI)
 	}
 	for k, v := range b.FormValues {
 		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})

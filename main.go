@@ -357,7 +357,7 @@ func main() {
 		FormsPath:  fOptions.FormsPath,
 		MyCall:     fOptions.MyCall,
 		Locator:    config.Locator,
-		AppVersion: buildinfo.VersionStringShort(),
+		AppVersion: buildinfo.AppName + " " + buildinfo.VersionStringShort(),
 		UserAgent:  buildinfo.UserAgent(),
 		LineReader: readLine,
 		GPSd:       config.GPSd,

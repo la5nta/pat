@@ -281,7 +281,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
 		"Callsign":       m.config.MyCall,
-		"ProgramVersion": "Pat " + m.config.AppVersion,
+		"ProgramVersion": m.config.AppVersion,
 
 		"DateTime":  formatDateTime(now),
 		"UDateTime": formatDateTimeUTC(now),

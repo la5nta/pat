@@ -12,13 +12,13 @@ import (
 func TestInsertionTagReplacer(t *testing.T) {
 	m := &Manager{config: Config{
 		MyCall:     "LA5NTA",
-		AppVersion: "v1.0.0",
+		AppVersion: "Pat v1.0.0 (test)",
 		GPSd:       cfg.GPSdConfig{Addr: gpsMockAddr},
 	}}
 	location = time.FixedZone("UTC+1", 1*60*60)
 	now = func() time.Time { return time.Date(1988, 3, 21, 00, 00, 00, 00, location).In(time.UTC) }
 	tests := map[string]string{
-		"<ProgramVersion>": "Pat v1.0.0",
+		"<ProgramVersion>": "Pat v1.0.0 (test)",
 		"<Callsign>":       "LA5NTA",
 		"<MsgSender>":      "LA5NTA",
 

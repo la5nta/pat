@@ -195,6 +195,7 @@ var fOptions struct {
 	IgnoreBusy bool // Move to connect?
 	SendOnly   bool // Move to connect?
 	RadioOnly  bool
+	UpdateGrid bool
 
 	Robust       bool
 	MyCall       string
@@ -214,6 +215,7 @@ func optionsSet() *pflag.FlagSet {
 	set.BoolVarP(&fOptions.SendOnly, "send-only", "s", false, "Download inbound messages later, send only.")
 	set.BoolVarP(&fOptions.RadioOnly, "radio-only", "", false, "Radio Only mode (Winlink Hybrid RMS only).")
 	set.BoolVar(&fOptions.IgnoreBusy, "ignore-busy", false, "Don't wait for clear channel before connecting to a node.")
+	set.BoolVar(&fOptions.UpdateGrid, "gridsquare-update", true, "Automatically update the maidenhead grid square from the gpsd daemon.")
 
 	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
 	defaultFormsPath := filepath.Join(directories.DataDir(), "Standard_Forms")
@@ -264,6 +266,7 @@ func main() {
 	debug.Printf("Config file is\t'%s'", fOptions.ConfigPath)
 	debug.Printf("Log file is \t'%s'", fOptions.LogPath)
 	debug.Printf("Event log file is\t'%s'", fOptions.EventLogPath)
+	debug.Printf("Auto gridsquare update is\t'%s'", fOptions.UpdateGrid)
 	directories.MigrateLegacyDataDir()
 
 	// Graceful shutdown by cancelling background context on interrupt.
@@ -387,6 +390,48 @@ func main() {
 
 	// Start command execution
 	cmd.HandleFunc(ctx, args)
+
+	// Go routine for checking the GPS
+	go func() {
+		if fOptions.UpdateGrid {
+			for range time.Tick(time.Minute * 5) {
+				updateGridIfNeeded()
+			}
+		}
+	}()
+}
+
+// Update Grid if needed
+func updateGridIfNeeded() {
+	// create connection to gpsd
+	conn, err := gpsd.Dial(config.GPSd.Addr)
+	if err != nil {
+		log.Printf("GPSd daemon: %s", err)
+		return
+	}
+	defer conn.Close()
+	conn.Watch(true)
+
+	// get next position from gpsd
+	pos, err := conn.NextPos()
+	if err != nil {
+		log.Printf("GPSd: %s", err)
+		return
+	}
+
+	// get grid square from position
+	currGridSquare := pos.GridSquare
+
+	if currGridSquare != config.Locator {
+		// update config
+		config.Locator = currGridSquare
+		// write config
+		if err := WriteConfig(config, fOptions.ConfigPath); err != nil {
+			log.Printf("Unable to write config: %s", err)
+		}
+		// log
+		log.Printf("Grid square updated to %s", currGridSquare)
+	}
 }
 
 func configureHandle(ctx context.Context, args []string) {

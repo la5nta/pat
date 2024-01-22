@@ -3,6 +3,7 @@ package gpsd
 import (
 	"encoding/json"
 	"errors"
+	"github.com/pd0mz/go-maidenhead"
 	"time"
 )
 
@@ -27,6 +28,23 @@ type TPV struct {
 	EPX, EPY, EPV       json.Number // Lat, Lon, Alt error estimate in meters, 95% confidence. Present if mode is 2 or 3 and DOPs can be calculated from the satellite view.
 	Track, Speed, Climb json.Number
 	EPD, EPS, EPC       json.Number
+	GridSquare          string `json:"-"`
+}
+
+func (t *TPV) CalculateGridSquare() error {
+	lat, err := t.Lat.Float64()
+	if err != nil {
+		return err
+	}
+
+	lon, err := t.Lon.Float64()
+	if err != nil {
+		return err
+	}
+
+	point := maidenhead.NewPoint(lat, lon)
+	t.GridSquare, err = point.GridSquare()
+	return err
 }
 
 func (t TPV) Position() Position {
@@ -35,8 +53,9 @@ func (t TPV) Position() Position {
 	alt, _ := t.Alt.Float64()
 	track, _ := t.Track.Float64()
 	speed, _ := t.Speed.Float64()
+	gridsquare := t.GridSquare
 
-	return Position{Lat: lat, Lon: lon, Alt: alt, Track: track, Speed: speed, Time: t.Time}
+	return Position{Lat: lat, Lon: lon, Alt: alt, Track: track, Speed: speed, Time: t.Time, GridSquare: gridsquare}
 }
 
 func (t TPV) HasFix() bool { return t.Mode > ModeNoFix }
@@ -131,7 +150,11 @@ func parseJSONObject(raw []byte) (interface{}, error) {
 	case "TPV":
 		var tpv TPV
 		err = json.Unmarshal(raw, &tpv)
-		return tpv, err
+		err = tpv.CalculateGridSquare()
+		if err != nil {
+			return nil, err
+		}
+		return tpv, nil
 	default:
 		var m map[string]interface{}
 		err = json.Unmarshal(raw, &m)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/pd0mz/go-maidenhead"
 	"io"
 	"net"
 	"sync"
@@ -32,11 +33,12 @@ type Positioner interface {
 
 // Position holds geographic positioning data.
 type Position struct {
-	Lat, Lon float64   // Latitude/longitude in degrees. +/- signifies north/south.
-	Alt      float64   // Altitude in meters.
-	Track    float64   // Course over ground, degrees from true north.
-	Speed    float64   // Speed over ground, meters per second.
-	Time     time.Time // Time as reported by the device.
+	Lat, Lon   float64   // Latitude/longitude in degrees. +/- signifies north/south.
+	Alt        float64   // Altitude in meters.
+	Track      float64   // Course over ground, degrees from true north.
+	Speed      float64   // Speed over ground, meters per second.
+	Time       time.Time // Time as reported by the device.
+	GridSquare string    // GridSquare calculated using Maidenhead Locator System
 }
 
 // Conn represents a socket connection to an GPSd daemon.
@@ -48,6 +50,12 @@ type Conn struct {
 	rd           *bufio.Reader
 	watchEnabled bool
 	closed       bool
+}
+
+type GPSdClient interface {
+	Dial(addr string) (GPSdClient, error)
+	Watch(enable bool)
+	Next() (*TPV, error)
 }
 
 // Dial establishes a socket connection to the GPSd daemon.
@@ -234,4 +242,25 @@ func errUnexpected(err error) error {
 		err = io.ErrUnexpectedEOF
 	}
 	return err
+}
+
+// GetGridSquare provides function for getting updated position and calculating the grid square.
+func (c *Conn) GetGridSquare() (string, error) {
+	for {
+		obj, err := c.NextPos()
+		if err != nil {
+			return "", err
+		}
+
+		var lat = obj.Lat
+		var lon = obj.Lon
+
+		point := maidenhead.NewPoint(lat, lon)
+		newGridSquare, err := point.GridSquare()
+		if err != nil {
+			return "", err
+		}
+
+		return newGridSquare, nil
+	}
 }

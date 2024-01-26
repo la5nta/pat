@@ -45,9 +45,8 @@ func readTemplate(path string) (Template, error) {
 				if ext := filepath.Ext(path); ext == "" {
 					path += htmlFileExt
 				}
-				var ok bool
-				files[i], ok = resolveFileReference(baseURI, path)
-				if !ok {
+				files[i] = resolveFileReference(baseURI, path)
+				if files[i] == "" {
 					debug.Printf("%s: failed to resolve referenced file %q", template.TxtFileURI, path)
 				}
 			}
@@ -61,9 +60,8 @@ func readTemplate(path string) (Template, error) {
 			if filepath.Ext(path) == "" {
 				path += txtFileExt
 			}
-			var ok bool
-			path, ok = resolveFileReference(baseURI, path)
-			if !ok {
+			path = resolveFileReference(baseURI, path)
+			if path == "" {
 				debug.Printf("%s: failed to resolve referenced reply template file %q", template.TxtFileURI, path)
 				continue
 			}
@@ -103,15 +101,15 @@ func (t Template) containsName(partialName string) bool {
 
 // resolveFileReference searches for files referenced in .txt files.
 //
-// If found the returned path is relative to FormsPath and bool is true, otherwise the given path is returned unmodified.
-func resolveFileReference(basePath string, referencePath string) (string, bool) {
+// If found the returned path is the absolute path, otherwise an empty string is returned.
+func resolveFileReference(basePath string, referencePath string) string {
 	path := filepath.Join(basePath, referencePath)
 	if !directories.IsInPath(basePath, path) {
 		debug.Printf("%q escapes template's base path (%q)", referencePath, basePath)
-		return "", false
+		return ""
 	}
 	if _, err := os.Stat(path); err == nil {
-		return path, true
+		return path
 	}
 	// Fallback to case-insenstive search.
 	// Some HTML files references in the .txt files has a different caseness than the actual filename on disk.
@@ -119,13 +117,13 @@ func resolveFileReference(basePath string, referencePath string) (string, bool) 
 	absPathTemplateFolder := filepath.Dir(path)
 	entries, err := os.ReadDir(absPathTemplateFolder)
 	if err != nil {
-		return path, false
+		return path
 	}
 	for _, entry := range entries {
 		name := entry.Name()
 		if strings.EqualFold(filepath.Base(path), name) {
-			return filepath.Join(absPathTemplateFolder, name), true
+			return filepath.Join(absPathTemplateFolder, name)
 		}
 	}
-	return path, false
+	return ""
 }

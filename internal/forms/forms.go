@@ -386,7 +386,7 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 //
 // It combines all data needed for the whole template-based message: subject, body, and attachments.
 func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, error) {
-	template, err := readTemplate(tmplPath)
+	template, err := readTemplate(tmplPath, formFilesFromPath(m.config.FormsPath))
 	if err != nil {
 		return Message{}, err
 	}
@@ -406,12 +406,12 @@ func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, err
 }
 
 func (m *Manager) buildFormFolder() (FormFolder, error) {
-	formFolder, err := m.innerRecursiveBuildFormFolder(m.config.FormsPath)
+	formFolder, err := m.innerRecursiveBuildFormFolder(m.config.FormsPath, formFilesFromPath(m.config.FormsPath))
 	formFolder.Version = m.getFormsVersion()
 	return formFolder, err
 }
 
-func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, error) {
+func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFilesMap) (FormFolder, error) {
 	rootPath = filepath.Clean(rootPath)
 	entries, err := os.ReadDir(rootPath)
 	if err != nil {
@@ -426,7 +426,8 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 	}
 	for _, entry := range entries {
 		if entry.IsDir() {
-			subfolder, err := m.innerRecursiveBuildFormFolder(filepath.Join(rootPath, entry.Name()))
+			path := filepath.Join(rootPath, entry.Name())
+			subfolder, err := m.innerRecursiveBuildFormFolder(path, filesMap)
 			if err != nil {
 				return folder, err
 			}
@@ -438,7 +439,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string) (FormFolder, er
 			continue
 		}
 		path := filepath.Join(rootPath, entry.Name())
-		tmpl, err := readTemplate(path)
+		tmpl, err := readTemplate(path, filesMap)
 		if err != nil {
 			debug.Printf("failed to load form file %q: %v", path, err)
 			continue
@@ -478,6 +479,15 @@ func (m *Manager) rel(path string) string {
 }
 
 func findFormFromURI(formName string, folder FormFolder) (Template, error) {
+	// TODO
+	// When a HTML viewer and/or reply template is referenced by the XML
+	// attachment, they are always referenced by filename only. By examining
+	// the Standard Forms archive, it seems referenced HTML files and reply
+	// templates are assigned a unique filename by design to make them globally
+	// identified regardless of the referencing template's location.
+	//
+	// Given this observation, it seems we could simplify this to be a simple
+	// map lookup by formName to load the correct template from disk.
 	form := Template{Name: "unknown"}
 	for _, subFolder := range folder.Folders {
 		form, err := findFormFromURI(formName, subFolder)

@@ -13,8 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/wl2k-go/fbb"
+
+	"github.com/la5nta/pat/internal/debug"
 )
 
 // Message represents a concrete message compiled from a template
@@ -39,20 +40,12 @@ type messageBuilder struct {
 // build returns message subject, body, and attachments for the given template and variable map
 func (b messageBuilder) build() (Message, error) {
 	b.setDefaultFormValues()
-	msg, err := b.scanAndBuild(b.templatePath())
+	msg, err := b.scanAndBuild(b.Template.Path)
 	if err != nil {
 		return Message{}, err
 	}
 	msg.Attachments = b.buildAttachments()
 	return msg, nil
-}
-
-func (b messageBuilder) templatePath() string {
-	path := b.Template.TxtFileURI
-	if b.IsReply && b.Template.ReplyTxtFileURI != "" {
-		path = b.Template.ReplyTxtFileURI
-	}
-	return path
 }
 
 func (b messageBuilder) setDefaultFormValues() {
@@ -80,7 +73,7 @@ func (b messageBuilder) setDefaultFormValues() {
 		}
 	}
 
-	//TODO: Implement sequences
+	// TODO: Implement sequences
 	for _, key := range []string{"msgseqnum"} {
 		if _, ok := b.FormValues[key]; !ok {
 			b.FormValues[key] = "0"
@@ -93,6 +86,15 @@ func (b messageBuilder) buildXML() []byte {
 		XMLName xml.Name
 		Value   string `xml:",chardata"`
 	}
+
+	filename := func(path string) string {
+		// Avoid "." for empty paths
+		if path == "" {
+			return ""
+		}
+		return filepath.Base(path)
+	}
+
 	form := struct {
 		XMLName            xml.Name   `xml:"RMS_Express_Form"`
 		XMLFileVersion     string     `xml:"form_parameters>xml_file_version"`
@@ -109,13 +111,8 @@ func (b messageBuilder) buildXML() []byte {
 		SubmissionDatetime: now().UTC().Format("20060102150405"),
 		SendersCallsign:    b.FormsMgr.config.MyCall,
 		GridSquare:         b.FormsMgr.config.Locator,
-		DisplayForm:        filepath.Base(b.Template.ViewerURI),
-	}
-	if b.IsReply && b.Template.ReplyViewerURI != "" {
-		form.DisplayForm = filepath.Base(b.Template.ReplyViewerURI)
-	}
-	if b.Template.ReplyTxtFileURI != "" {
-		form.ReplyTemplate = filepath.Base(b.Template.ReplyTxtFileURI)
+		DisplayForm:        filename(b.Template.ViewerURI),
+		ReplyTemplate:      filename(b.Template.ReplyTxtFileURI),
 	}
 	for k, v := range b.FormValues {
 		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})
@@ -144,7 +141,7 @@ func (b messageBuilder) buildAttachments() []*fbb.File {
 
 	// Add XML if a viewer is defined for this template
 	if b.Template.ViewerURI != "" {
-		filename := xmlName(b.Template, b.IsReply)
+		filename := xmlName(b.Template)
 		attachments = append(attachments, fbb.NewFile(filename, b.buildXML()))
 	}
 	return attachments
@@ -182,7 +179,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 		// Prompts (mostly found in text templates)
 		if b.Interactive {
 			lineTmpl = promptAsks(lineTmpl, func(a Ask) string {
-				//TODO: Handle a.Multiline as we do message body
+				// TODO: Handle a.Multiline as we do message body
 				fmt.Printf(a.Prompt + " ")
 				ans := b.FormsMgr.config.LineReader()
 				if a.Uppercase {
@@ -251,7 +248,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			// Yes/No – Specify whether user can edit.
 			// TODO: Disable editing of body in composer?
 		case "Seqinc":
-			//TODO: Handle sequences
+			// TODO: Handle sequences
 		default:
 			if strings.TrimSpace(lineTmpl) != "" {
 				log.Printf("skipping unknown template line: '%s'", lineTmpl)
@@ -303,11 +300,11 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		// By reading the embedded javascript, they appear to be signed decimal.
 		"GPSLatitude":  fmt.Sprintf("%.4f", nowPos.Lat),
 		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
-		//TODO: Why a trailing space here?
+		// TODO: Why a trailing space here?
 		// Some forms also adds a whitespace in their <Var > declaration, so we end up with two trailing spaces..
 		"GPSValid": fmt.Sprintf("%s ", validPos),
 
-		//TODO (other insertion tags found in Standard Forms):
+		// TODO (other insertion tags found in Standard Forms):
 		// SeqNum
 		// FormFolder
 		// InternetAvailable
@@ -319,15 +316,15 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		// Speed  (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
 		// course (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
 		// decimal_separator
+
+		// TODO: MsgOriginal* (see "RMSE_FORMS/insertion_tags.zip/Insertion Tags.txt")
+		//       This will require changing the IsReply/composereply boolean to a message reference.
 	})
 }
 
 // xmlName returns the user-visible filename for the message attachment that holds the form instance values
-func xmlName(t Template, isReply bool) string {
+func xmlName(t Template) string {
 	attachmentName := filepath.Base(t.ViewerURI)
-	if isReply {
-		attachmentName = filepath.Base(t.ReplyViewerURI)
-	}
 	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
 	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
 	if len(attachmentName) > 255 {

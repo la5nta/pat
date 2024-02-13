@@ -14,13 +14,12 @@ import (
 
 // Template holds information about a Winlink form template
 type Template struct {
-	Name            string `json:"name"`
-	TxtFileURI      string `json:"txt_file_uri"`
-	InitialURI      string `json:"initial_uri"`
-	ViewerURI       string `json:"viewer_uri"`
-	ReplyTxtFileURI string `json:"reply_txt_file_uri"`
-	ReplyInitialURI string `json:"reply_initial_uri"`
-	ReplyViewerURI  string `json:"reply_viewer_uri"`
+	Name string `json:"name"`
+	Path string `json:"template_path"`
+
+	InitialURI      string `json:"-"`
+	ViewerURI       string `json:"-"`
+	ReplyTxtFileURI string `json:"-"`
 }
 
 func readTemplate(path string, filesMap formFilesMap) (Template, error) {
@@ -31,8 +30,8 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 	defer f.Close()
 
 	template := Template{
-		Name:       strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
-		TxtFileURI: path,
+		Name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
+		Path: path,
 	}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -43,12 +42,9 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 			// Extend to absolute paths and add missing html extension
 			for i, name := range files {
 				name = strings.TrimSpace(name)
-				if ext := filepath.Ext(name); ext == "" {
-					name += htmlFileExt
-				}
 				files[i] = resolveFileReference(filesMap, filepath.Dir(path), name)
 				if files[i] == "" {
-					debug.Printf("%s: failed to resolve referenced file %q", template.TxtFileURI, name)
+					debug.Printf("%s: failed to resolve referenced file %q", template.Path, name)
 				}
 			}
 			template.InitialURI = files[0]
@@ -57,22 +53,11 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 			}
 		case "ReplyTemplate":
 			name := strings.TrimSpace(value)
-			// Some are missing file extension (default to .txt)
-			if filepath.Ext(name) == "" {
-				name += txtFileExt
-			}
-			path := resolveFileReference(filesMap, filepath.Dir(path), name)
-			if path == "" {
-				debug.Printf("%s: failed to resolve referenced reply template file %q", template.TxtFileURI, name)
+			template.ReplyTxtFileURI = resolveFileReference(filesMap, filepath.Dir(path), name)
+			if template.ReplyTxtFileURI == "" {
+				debug.Printf("%s: failed to resolve referenced reply template file %q", template.Path, name)
 				continue
 			}
-			replyTemplate, err := readTemplate(path, filesMap)
-			if err != nil {
-				debug.Printf("%s: failed to load referenced reply template: %v", template.TxtFileURI, err)
-			}
-			template.ReplyTxtFileURI = path
-			template.ReplyInitialURI = replyTemplate.InitialURI
-			template.ReplyViewerURI = replyTemplate.ViewerURI
 		}
 	}
 	return template, err
@@ -90,38 +75,37 @@ func resolveFileReference(filesMap formFilesMap, basePath string, referencePath 
 	if _, err := os.Stat(path); err == nil {
 		return path
 	}
-	debug.Printf("fallback to map based lookup of %q", filepath.Join(filepath.Base(basePath), referencePath))
-	return filesMap.get(referencePath)
-}
-
-func (t Template) matchesName(nameToMatch string) bool {
-	return t.InitialURI == nameToMatch ||
-		strings.EqualFold(t.InitialURI, nameToMatch+htmlFileExt) ||
-		t.ViewerURI == nameToMatch ||
-		strings.EqualFold(t.ViewerURI, nameToMatch+htmlFileExt) ||
-		t.ReplyInitialURI == nameToMatch ||
-		t.ReplyInitialURI == nameToMatch+".0" ||
-		t.ReplyViewerURI == nameToMatch ||
-		t.ReplyViewerURI == nameToMatch+".0" ||
-		t.TxtFileURI == nameToMatch ||
-		strings.EqualFold(t.TxtFileURI, nameToMatch+txtFileExt)
-}
-
-func (t Template) containsName(partialName string) bool {
-	return strings.Contains(t.InitialURI, partialName) ||
-		strings.Contains(t.ViewerURI, partialName) ||
-		strings.Contains(t.ReplyInitialURI, partialName) ||
-		strings.Contains(t.ReplyViewerURI, partialName) ||
-		strings.Contains(t.ReplyTxtFileURI, partialName) ||
-		strings.Contains(t.TxtFileURI, partialName)
+	// Attempt by guessing the file extension.
+	debugName := filepath.Join(filepath.Base(basePath), referencePath)
+	for _, ext := range []string{htmlFileExt, replyFileExt, txtFileExt} {
+		if _, err := os.Stat(path + ext); err == nil {
+			debug.Printf("found %q by guessing file extension (%s)", debugName, ext)
+			return path + ext
+		}
+	}
+	// Fallback to map based lookup.
+	if path := filesMap.get(referencePath); path != "" {
+		debug.Printf("found %q by map based lookup", debugName)
+		return path
+	}
+	return ""
 }
 
 type formFilesMap map[string]string
 
 func (m formFilesMap) get(name string) string {
-	name = strings.ToLower(name)
-	if path, ok := m[name]; ok {
+	if path, ok := m[strings.ToLower(name)]; ok {
 		return path
+	}
+	if filepath.Ext(name) != "" {
+		return ""
+	}
+	// Attempt by guessing the file extension
+	for _, ext := range []string{htmlFileExt, replyFileExt, txtFileExt} {
+		if path := m.get(name + ext); path != "" {
+			debug.Printf("found %q (in map) by guessing file extension (%s)", name, ext)
+			return path
+		}
 	}
 	return ""
 }
@@ -134,7 +118,7 @@ func formFilesFromPath(basePath string) formFilesMap {
 		return strings.EqualFold(filepath.Ext(name), htmlFileExt)
 	}
 	isReplyTemplate := func(name string) bool {
-		return strings.EqualFold(filepath.Ext(name), ".0")
+		return strings.EqualFold(filepath.Ext(name), replyFileExt)
 	}
 	add := func(name, path string) {
 		name = strings.ToLower(name)

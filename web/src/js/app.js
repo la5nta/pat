@@ -412,8 +412,8 @@ function appendFormFolder(rootId, data) {
             const newDiv = $(
               `<div class="list-group-item list-group-item-action list-group-item-light">${form.name}</div>`
             );
-            const pathEncoded = encodeURIComponent(form.initial_uri);
-            newDiv.on('click', () => onFormLaunching(`/api/forms?formPath=${pathEncoded}`));
+            const path = encodeURIComponent(form.template_path);
+            newDiv.on('click', () => onFormLaunching(`/api/forms?template=${path}`));
             $(`#${cardBodyFormsId}`).append(newDiv);
           });
         }

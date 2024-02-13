@@ -16,8 +16,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -35,8 +35,9 @@ import (
 const formsVersionInfoURL = "https://api.getpat.io/v1/forms/standard-templates/latest"
 
 const (
-	htmlFileExt = ".html"
-	txtFileExt  = ".txt"
+	htmlFileExt  = ".html"
+	txtFileExt   = ".txt"
+	replyFileExt = ".0"
 )
 
 // Manager manages the forms subsystem
@@ -116,33 +117,24 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	formPath := r.URL.Query().Get("formPath")
-	if formPath == "" {
-		http.Error(w, "formPath query param missing", http.StatusBadRequest)
-		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
-		return
-	}
-
 	composeReply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
-
-	formFolder, err := m.buildFormFolder()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+	templatePath := r.URL.Query().Get("template")
+	if templatePath == "" {
+		http.Error(w, "template query param missing", http.StatusBadRequest)
+		log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
 		return
 	}
-
-	form, err := findFormFromURI(formPath, formFolder)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't find form to match posted form data %s %s", formPath, r.URL)
+	templatePath = m.abs(templatePath)
+	// Make sure we don't escape FormsPath
+	if !directories.IsInPath(m.config.FormsPath, templatePath) {
+		http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
 		return
 	}
 
 	formInstanceKey, err := r.Cookie("forminstance")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", formPath, r.URL)
+		log.Printf("missing cookie %s %s", templatePath, r.URL)
 		return
 	}
 	fields := make(map[string]string, len(r.PostForm))
@@ -150,8 +142,18 @@ func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
 		fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
 	}
 
+	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
+	switch {
+	case os.IsNotExist(err):
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	case err != nil:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("failed to parse relevant form template (%q): %v", m.rel(templatePath), err)
+		return
+	}
 	msg, err := messageBuilder{
-		Template:    form,
+		Template:    template,
 		FormValues:  fields,
 		Interactive: false,
 		IsReply:     composeReply,
@@ -194,18 +196,34 @@ func (m *Manager) GetPostedFormData(key string) (Message, bool) {
 	return v, ok
 }
 
-// GetFormTemplateHandler handles the request for viewing a form filled-in with instance values
+// GetFormTemplateHandler serves a template's HTML form (filled-in with instance values)
 func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	formPath := r.URL.Query().Get("formPath")
-	if formPath == "" {
-		http.Error(w, "formPath query param missing", http.StatusBadRequest)
-		log.Printf("formPath query param missing %s %s", r.Method, r.URL.Path)
+	templatePath := r.URL.Query().Get("template")
+	if templatePath == "" {
+		http.Error(w, "template query param missing", http.StatusBadRequest)
+		log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
 		return
 	}
-	formPath = m.abs(formPath)
+	templatePath = m.abs(templatePath)
 	// Make sure we don't escape FormsPath
-	if !directories.IsInPath(m.config.FormsPath, formPath) {
-		http.Error(w, fmt.Sprintf("%s escapes forms directory", formPath), http.StatusForbidden)
+	if !directories.IsInPath(m.config.FormsPath, templatePath) {
+		http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
+		return
+	}
+
+	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
+	switch {
+	case os.IsNotExist(err):
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	case err != nil:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("failed to parse requested template (%q): %v", m.rel(templatePath), err)
+		return
+	}
+	formPath := template.InitialURI
+	if formPath == "" {
+		http.Error(w, "requested template does not provide a HTML form", http.StatusNotFound)
 		return
 	}
 
@@ -215,7 +233,6 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
 		return
 	}
-
 	_, err = io.WriteString(w, responseText)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -343,43 +360,41 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 		}
 	}
 
-	switch {
-	case formParams["display_form"] == "":
-		return "", errors.New("missing display_form tag in form XML")
-	case composeReply && formParams["reply_template"] == "":
-		return "", errors.New("missing reply_template tag in form XML for a reply message")
-	}
-
-	formFolder, err := m.buildFormFolder()
-	if err != nil {
-		return "", err
-	}
-
-	formToLoad := formParams["display_form"]
-	if composeReply {
-		// we're authoring a reply
-		formToLoad = formParams["reply_template"]
-	}
-
-	form, err := findFormFromURI(formToLoad, formFolder)
-	if err != nil {
-		return "", err
-	}
-
-	var tmplPath string
+	filesMap := formFilesFromPath(m.config.FormsPath)
 	switch {
 	case composeReply:
-		// authoring a form reply
-		tmplPath = form.ReplyInitialURI
-	case strings.HasSuffix(form.ReplyViewerURI, formParams["display_form"]):
-		// viewing a form reply
-		tmplPath = form.ReplyViewerURI
+		replyTemplate := formParams["reply_template"]
+		if replyTemplate == "" {
+			return "", errors.New("missing reply_template tag in form XML for a reply message")
+		}
+		if filepath.Ext(replyTemplate) == "" {
+			replyTemplate += replyFileExt
+		}
+		path := filesMap.get(replyTemplate)
+		if path == "" {
+			return "", fmt.Errorf("reply template not found: %q", replyTemplate)
+		}
+		template, err := readTemplate(path, filesMap)
+		if err != nil {
+			return "", fmt.Errorf("failed to read referenced reply template: %w", err)
+		}
+		submitURL := "/api/form?composereply=true&template=" + url.QueryEscape(template.Path)
+		return m.fillFormTemplate(template.InitialURI, submitURL, formVars)
 	default:
-		// viewing a form
-		tmplPath = form.ViewerURI
+		displayForm := formParams["display_form"]
+		if displayForm == "" {
+			return "", errors.New("missing display_form tag in form XML")
+		}
+		if filepath.Ext(displayForm) == "" {
+			displayForm += htmlFileExt
+		}
+		// Viewing a form (initial or reply)
+		path := filesMap.get(displayForm)
+		if path == "" {
+			return "", fmt.Errorf("display from not found: %q", displayForm)
+		}
+		return m.fillFormTemplate(path, "", formVars)
 	}
-
-	return m.fillFormTemplate(tmplPath, "/api/form?composereply=true&formPath="+m.rel(tmplPath), formVars)
 }
 
 // ComposeTemplate composes a message from a template (tmplPath) by prompting the user through stdio.
@@ -395,12 +410,11 @@ func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, err
 		"subjectline":     subject,
 		"templateversion": m.getFormsVersion(),
 	}
-	fmt.Printf("Form '%s', version: %s\n", template.TxtFileURI, formValues["templateversion"])
+	fmt.Printf("Form '%s', version: %s\n", template.Path, formValues["templateversion"])
 	return messageBuilder{
 		Template:    template,
 		FormValues:  formValues,
 		Interactive: true,
-		IsReply:     false,
 		FormsMgr:    m,
 	}.build()
 }
@@ -444,6 +458,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFi
 			debug.Printf("failed to load form file %q: %v", path, err)
 			continue
 		}
+		tmpl.Path = m.rel(tmpl.Path)
 		if tmpl.InitialURI != "" || tmpl.ViewerURI != "" {
 			folder.Forms = append(folder.Forms, tmpl)
 			folder.FormCount++
@@ -476,40 +491,6 @@ func (m *Manager) rel(path string) string {
 		panic(err)
 	}
 	return rel
-}
-
-func findFormFromURI(formName string, folder FormFolder) (Template, error) {
-	// TODO
-	// When a HTML viewer and/or reply template is referenced by the XML
-	// attachment, they are always referenced by filename only. By examining
-	// the Standard Forms archive, it seems referenced HTML files and reply
-	// templates are assigned a unique filename by design to make them globally
-	// identified regardless of the referencing template's location.
-	//
-	// Given this observation, it seems we could simplify this to be a simple
-	// map lookup by formName to load the correct template from disk.
-	form := Template{Name: "unknown"}
-	for _, subFolder := range folder.Folders {
-		form, err := findFormFromURI(formName, subFolder)
-		if err == nil {
-			return form, nil
-		}
-	}
-
-	for _, form := range folder.Forms {
-		if form.matchesName(formName) {
-			return form, nil
-		}
-	}
-
-	// couldn't find it by full path, so try to find match by guessing folder name
-	formName = path.Join(folder.Name, formName)
-	for _, form := range folder.Forms {
-		if form.containsName(formName) {
-			return form, nil
-		}
-	}
-	return form, errors.New("form not found")
 }
 
 const gpsMockAddr = "mock" // Hack for unit testing

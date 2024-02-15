@@ -61,7 +61,7 @@ func TestBuildXML(t *testing.T) {
 			Locator:    "JO29PJ",
 			GPSd:       cfg.GPSdConfig{Addr: gpsMockAddr},
 		}},
-		Template: Template{ViewerURI: "viewer.html", ReplyTxtFileURI: "reply.txt"},
+		Template: Template{DisplayFormPath: "viewer.html", ReplyTemplatePath: "reply.txt"},
 		FormValues: map[string]string{
 			"var1": "foo",
 			"var2": "bar",

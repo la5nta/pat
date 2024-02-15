@@ -221,7 +221,7 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		log.Printf("failed to parse requested template (%q): %v", m.rel(templatePath), err)
 		return
 	}
-	formPath := template.InitialURI
+	formPath := template.InputFormPath
 	if formPath == "" {
 		http.Error(w, "requested template does not provide a HTML form", http.StatusNotFound)
 		return
@@ -378,8 +378,8 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to read referenced reply template: %w", err)
 		}
-		submitURL := "/api/form?composereply=true&template=" + url.QueryEscape(template.Path)
-		return m.fillFormTemplate(template.InitialURI, submitURL, formVars)
+		submitURL := "/api/form?composereply=true&template=" + url.QueryEscape(m.rel(template.Path))
+		return m.fillFormTemplate(template.InputFormPath, submitURL, formVars)
 	default:
 		displayForm := formParams["display_form"]
 		if displayForm == "" {
@@ -397,11 +397,11 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 	}
 }
 
-// ComposeTemplate composes a message from a template (tmplPath) by prompting the user through stdio.
+// ComposeTemplate composes a message from a template (templatePath) by prompting the user through stdio.
 //
 // It combines all data needed for the whole template-based message: subject, body, and attachments.
-func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, error) {
-	template, err := readTemplate(tmplPath, formFilesFromPath(m.config.FormsPath))
+func (m *Manager) ComposeTemplate(templatePath string, subject string) (Message, error) {
+	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
 	if err != nil {
 		return Message{}, err
 	}
@@ -410,7 +410,7 @@ func (m *Manager) ComposeTemplate(tmplPath string, subject string) (Message, err
 		"subjectline":     subject,
 		"templateversion": m.getFormsVersion(),
 	}
-	fmt.Printf("Form '%s', version: %s\n", template.Path, formValues["templateversion"])
+	fmt.Printf("Form '%s', version: %s\n", m.rel(template.Path), formValues["templateversion"])
 	return messageBuilder{
 		Template:    template,
 		FormValues:  formValues,
@@ -459,7 +459,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFi
 			continue
 		}
 		tmpl.Path = m.rel(tmpl.Path)
-		if tmpl.InitialURI != "" || tmpl.ViewerURI != "" {
+		if tmpl.InputFormPath != "" || tmpl.DisplayFormPath != "" {
 			folder.Forms = append(folder.Forms, tmpl)
 			folder.FormCount++
 		}
@@ -474,6 +474,9 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFi
 }
 
 // abs returns the absolute path of a path relative to m.FormsPath.
+//
+// It is primarily used to resolve template references from the web gui, which
+// are relative to m.config.FormsPath.
 func (m *Manager) abs(path string) string {
 	if filepath.IsAbs(path) {
 		return path
@@ -482,6 +485,8 @@ func (m *Manager) abs(path string) string {
 }
 
 // rel returns a path relative to m.FormsPath.
+//
+// The web gui uses this variant to reference template files.
 func (m *Manager) rel(path string) string {
 	if !filepath.IsAbs(path) {
 		return path
@@ -521,8 +526,8 @@ func (m *Manager) gpsPos() (gpsd.Position, error) {
 	return conn.NextPosTimeout(3 * time.Second)
 }
 
-func (m *Manager) fillFormTemplate(tmplPath string, formDestURL string, formVars map[string]string) (string, error) {
-	data, err := readFile(tmplPath)
+func (m *Manager) fillFormTemplate(templatePath string, formDestURL string, formVars map[string]string) (string, error) {
+	data, err := readFile(templatePath)
 	if err != nil {
 		return "", err
 	}

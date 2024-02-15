@@ -111,8 +111,8 @@ func (b messageBuilder) buildXML() []byte {
 		SubmissionDatetime: now().UTC().Format("20060102150405"),
 		SendersCallsign:    b.FormsMgr.config.MyCall,
 		GridSquare:         b.FormsMgr.config.Locator,
-		DisplayForm:        filename(b.Template.ViewerURI),
-		ReplyTemplate:      filename(b.Template.ReplyTxtFileURI),
+		DisplayForm:        filename(b.Template.DisplayFormPath),
+		ReplyTemplate:      filename(b.Template.ReplyTemplatePath),
 	}
 	for k, v := range b.FormValues {
 		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})
@@ -140,7 +140,7 @@ func (b messageBuilder) buildAttachments() []*fbb.File {
 	}
 
 	// Add XML if a viewer is defined for this template
-	if b.Template.ViewerURI != "" {
+	if b.Template.DisplayFormPath != "" {
 		filename := xmlName(b.Template)
 		attachments = append(attachments, fbb.NewFile(filename, b.buildXML()))
 	}
@@ -324,7 +324,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 
 // xmlName returns the user-visible filename for the message attachment that holds the form instance values
 func xmlName(t Template) string {
-	attachmentName := filepath.Base(t.ViewerURI)
+	attachmentName := filepath.Base(t.DisplayFormPath)
 	attachmentName = strings.TrimSuffix(attachmentName, filepath.Ext(attachmentName))
 	attachmentName = "RMS_Express_Form_" + attachmentName + ".xml"
 	if len(attachmentName) > 255 {

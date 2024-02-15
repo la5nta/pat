@@ -12,14 +12,25 @@ import (
 	"github.com/la5nta/pat/internal/directories"
 )
 
-// Template holds information about a Winlink form template
+// Template holds information about a Winlink template.
 type Template struct {
+	// The name of this template.
 	Name string `json:"name"`
+
+	// Absolute path to the template file represented by this struct.
+	//
+	// Note: The web gui uses relative paths, and for these instances the
+	// value is set accordingly.
 	Path string `json:"template_path"`
 
-	InitialURI      string `json:"-"`
-	ViewerURI       string `json:"-"`
-	ReplyTxtFileURI string `json:"-"`
+	// Absolute path to the optional HTML Form composer (aka "input form").
+	InputFormPath string `json:"-"`
+
+	// Absolute path to the optional HTML Form viewer (aka "display form").
+	DisplayFormPath string `json:"-"`
+
+	// Absolute path to the optional reply template.
+	ReplyTemplatePath string `json:"-"`
 }
 
 func readTemplate(path string, filesMap formFilesMap) (Template, error) {
@@ -33,31 +44,27 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 		Name: strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)),
 		Path: path,
 	}
+
+	resolveFileReference := func(kind string, ref string) string {
+		if ref == "" {
+			return ""
+		}
+		resolved := resolveFileReference(filesMap, filepath.Dir(template.Path), strings.TrimSpace(ref))
+		if resolved == "" {
+			debugName, _ := filepath.Rel(filepath.Join(template.Path, "..", ".."), template.Path)
+			debug.Printf("%s: failed to resolve referenced %s %q", debugName, kind, ref)
+		}
+		return resolved
+	}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		switch key, value, _ := strings.Cut(scanner.Text(), ":"); key {
-		case "Form":
-			// Form: <composer>,<viewer>
-			files := strings.Split(value, ",")
-			// Extend to absolute paths and add missing html extension
-			for i, name := range files {
-				name = strings.TrimSpace(name)
-				files[i] = resolveFileReference(filesMap, filepath.Dir(path), name)
-				if files[i] == "" {
-					debug.Printf("%s: failed to resolve referenced file %q", template.Path, name)
-				}
-			}
-			template.InitialURI = files[0]
-			if len(files) > 1 {
-				template.ViewerURI = files[1]
-			}
-		case "ReplyTemplate":
-			name := strings.TrimSpace(value)
-			template.ReplyTxtFileURI = resolveFileReference(filesMap, filepath.Dir(path), name)
-			if template.ReplyTxtFileURI == "" {
-				debug.Printf("%s: failed to resolve referenced reply template file %q", template.Path, name)
-				continue
-			}
+		case "Form": // Form: <input form>[,<display form>]
+			inputForm, displayForm, _ := strings.Cut(value, ",")
+			template.InputFormPath = resolveFileReference("input from", inputForm)
+			template.DisplayFormPath = resolveFileReference("display form", displayForm)
+		case "ReplyTemplate": // ReplyTemplate: <template>
+			template.ReplyTemplatePath = resolveFileReference("reply template", value)
 		}
 	}
 	return template, err

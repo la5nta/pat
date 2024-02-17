@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -426,51 +427,48 @@ func (m *Manager) buildFormFolder() (FormFolder, error) {
 }
 
 func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFilesMap) (FormFolder, error) {
-	rootPath = filepath.Clean(rootPath)
-	entries, err := os.ReadDir(rootPath)
-	if err != nil {
-		return FormFolder{}, err
-	}
-
 	folder := FormFolder{
 		Name:    filepath.Base(rootPath),
 		Path:    rootPath,
 		Forms:   []Template{},
 		Folders: []FormFolder{},
 	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			path := filepath.Join(rootPath, entry.Name())
-			subfolder, err := m.innerRecursiveBuildFormFolder(path, filesMap)
+	err := fs.WalkDir(os.DirFS(rootPath), ".", func(path string, d fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case path == ".":
+			return nil
+		case d.IsDir():
+			subfolder, err := m.innerRecursiveBuildFormFolder(filepath.Join(rootPath, path), filesMap)
 			if err != nil {
-				return folder, err
+				return err
 			}
 			folder.Folders = append(folder.Folders, subfolder)
 			folder.FormCount += subfolder.FormCount
-			continue
-		}
-		if !strings.EqualFold(filepath.Ext(entry.Name()), txtFileExt) {
-			continue
-		}
-		path := filepath.Join(rootPath, entry.Name())
-		tmpl, err := readTemplate(path, filesMap)
-		if err != nil {
-			debug.Printf("failed to load form file %q: %v", path, err)
-			continue
-		}
-		tmpl.Path = m.rel(tmpl.Path)
-		if tmpl.InputFormPath != "" || tmpl.DisplayFormPath != "" {
-			folder.Forms = append(folder.Forms, tmpl)
+			return nil
+		case !strings.EqualFold(filepath.Ext(d.Name()), txtFileExt):
+			return nil
+		default:
+			template, err := readTemplate(filepath.Join(rootPath, path), filesMap)
+			if err != nil {
+				debug.Printf("failed to load form file %q: %v", path, err)
+				return nil
+			}
+			// Relative paths for the JSON response
+			template.Path = m.rel(template.Path)
+			// Ignore templates without a input form (we don't support text-only templates in the web gui yet)
+			if template.InputFormPath == "" {
+				return nil
+			}
+			folder.Forms = append(folder.Forms, template)
 			folder.FormCount++
+			return nil
 		}
-	}
-	sort.Slice(folder.Folders, func(i, j int) bool {
-		return folder.Folders[i].Name < folder.Folders[j].Name
 	})
-	sort.Slice(folder.Forms, func(i, j int) bool {
-		return folder.Forms[i].Name < folder.Forms[j].Name
-	})
-	return folder, nil
+	sort.Slice(folder.Folders, func(i, j int) bool { return folder.Folders[i].Name < folder.Folders[j].Name })
+	sort.Slice(folder.Forms, func(i, j int) bool { return folder.Forms[i].Name < folder.Forms[j].Name })
+	return folder, err
 }
 
 // abs returns the absolute path of a path relative to m.FormsPath.

@@ -302,6 +302,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"UDay":      formatDay(now, time.UTC),
 
 		"GPS":                positionFmt(degreeMinute, nowPos),
+		"GPSValid":           validPos,
 		"GPS_DECIMAL":        positionFmt(decimal, nowPos),
 		"GPS_SIGNED_DECIMAL": positionFmt(signedDecimal, nowPos),
 		"GridSquare":         positionFmt(gridSquare, nowPos),
@@ -311,9 +312,6 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		// By reading the embedded javascript, they appear to be signed decimal.
 		"GPSLatitude":  fmt.Sprintf("%.4f", nowPos.Lat),
 		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
-		// TODO: Why a trailing space here?
-		// Some forms also adds a whitespace in their <Var > declaration, so we end up with two trailing spaces..
-		"GPSValid": fmt.Sprintf("%s ", validPos),
 
 		// TODO (other insertion tags found in Standard Forms):
 		// SeqNum

@@ -132,13 +132,24 @@ func (b messageBuilder) buildXML() []byte {
 
 func (b messageBuilder) buildAttachments() []*fbb.File {
 	var attachments []*fbb.File
-
-	// Add FormData.txt attachment if defined by the form
-	if v, ok := b.FormValues["attached_text"]; ok {
-		delete(b.FormValues, "attached_text") // Should not be included in the XML.
-		attachments = append(attachments, fbb.NewFile("FormData.txt", []byte(v)))
+	// Add optional text attachments defined by some forms as form values
+	// pairs in the format attached_textN/attached_fileN (N=0 is omitted).
+	for k := range b.FormValues {
+		if !strings.HasPrefix(k, "attached_text") {
+			continue
+		}
+		textKey := k
+		text := b.FormValues[textKey]
+		nameKey := strings.Replace(k, "attached_text", "attached_file", 1)
+		name, ok := b.FormValues[nameKey]
+		if !ok {
+			debug.Printf("%s defined, but corresponding filename element %q is not set", textKey, nameKey)
+			name = "FormData.txt" // Fallback (better than nothing)
+		}
+		attachments = append(attachments, fbb.NewFile(name, []byte(text)))
+		delete(b.FormValues, nameKey)
+		delete(b.FormValues, textKey)
 	}
-
 	// Add XML if a viewer is defined for this template
 	if b.Template.DisplayFormPath != "" {
 		filename := xmlName(b.Template)

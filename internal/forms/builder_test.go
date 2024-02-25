@@ -16,7 +16,7 @@ func TestInsertionTagReplacer(t *testing.T) {
 		GPSd:       cfg.GPSdConfig{Addr: gpsMockAddr},
 	}}
 	location = time.FixedZone("UTC+1", 1*60*60)
-	now = func() time.Time { return time.Date(1988, 3, 21, 00, 00, 00, 00, location).In(time.UTC) }
+	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }
 	tests := map[string]string{
 		"<ProgramVersion>": "Pat v1.0.0 (test)",
 		"<Callsign>":       "LA5NTA",
@@ -53,7 +53,7 @@ func TestInsertionTagReplacer(t *testing.T) {
 
 func TestBuildXML(t *testing.T) {
 	location = time.FixedZone("UTC+1", 1*60*60)
-	now = func() time.Time { return time.Date(1988, 3, 21, 00, 00, 00, 00, location).In(time.UTC) }
+	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }
 	b := messageBuilder{
 		FormsMgr: &Manager{config: Config{
 			MyCall:     "LA5NTA",

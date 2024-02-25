@@ -115,6 +115,9 @@ func (b messageBuilder) buildXML() []byte {
 		ReplyTemplate:      filename(b.Template.ReplyTemplatePath),
 	}
 	for k, v := range b.FormValues {
+		// Trim leading and trailing whitespace. Winlink Express does
+		// this, judging from the produced XML attachments.
+		v = strings.TrimSpace(v)
 		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})
 	}
 	// Sort vars by name to make sure the output is deterministic.

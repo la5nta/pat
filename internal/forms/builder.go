@@ -196,7 +196,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 				if a.Uppercase {
 					ans = strings.ToUpper(ans)
 				}
-				return b.FormsMgr.config.LineReader()
+				return ans
 			})
 			lineTmpl = promptSelects(lineTmpl, func(s Select) Option {
 				for {

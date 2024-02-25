@@ -38,7 +38,7 @@ func TestInsertionTagReplacer(t *testing.T) {
 		"<GridSquare>":         "JO29PJ",
 		"<Latitude>":           "59.4138",
 		"<Longitude>":          "5.2680",
-		"<GPSValid>":           "YES ", // This trailing space appears to be intentional,
+		"<GPSValid>":           "YES",
 		"<GPSLatitude>":        "59.4138",
 		"<GPSLongitude>":       "5.2680",
 	}
@@ -65,6 +65,7 @@ func TestBuildXML(t *testing.T) {
 		FormValues: map[string]string{
 			"var1": "foo",
 			"var2": "bar",
+			"var3": "  baz \t\n", // Leading and trailing whitespace trimmed
 		},
 	}
 	expect := []byte(`
@@ -82,6 +83,7 @@ func TestBuildXML(t *testing.T) {
           <variables>
             <var1>foo</var1>
             <var2>bar</var2>
+            <var3>baz</var3>
           </variables>
         </RMS_Express_Form>
 	`)

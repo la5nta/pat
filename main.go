@@ -377,10 +377,10 @@ func main() {
 			if config.VersionReportingDisabled {
 				return
 			}
-
-			for { // Check every 6 hours, but it won't post more frequent than 24h.
-				postVersionUpdate() // Ignore errors
-				time.Sleep(6 * time.Hour)
+			for {
+				postVersionUpdate()                  // 24 hour hold on success
+				checkPasswordRecoveryEmailIsSet(ctx) // 14 day hold on success
+				time.Sleep(6 * time.Hour)            // Retry every 6 hours
 			}
 		}()
 	}

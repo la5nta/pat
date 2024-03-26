@@ -154,6 +154,13 @@ var commands = []Command{
 		},
 	},
 	{
+		Str:        "account",
+		Desc:       "Get and set Winlink.org account settings.",
+		Usage:      accountUsage,
+		Example:    accountExample,
+		HandleFunc: accountHandle,
+	},
+	{
 		Str:        "configure",
 		Desc:       "Open configuration file for editing.",
 		HandleFunc: configureHandle,

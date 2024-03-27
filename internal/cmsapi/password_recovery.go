@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -14,14 +15,24 @@ const (
 	PathAccountPasswordRecoveryEmailSet = "/account/password/recovery/email/set"
 )
 
+type responseStatus struct {
+	ErrorCode string
+	Message   string
+}
+
+func (r responseStatus) errorOrNil() error {
+	if (r == responseStatus{}) {
+		return nil
+	}
+	return &r
+}
+
+func (r *responseStatus) Error() string { return r.Message }
+
 func PasswordRecoveryEmailGet(ctx context.Context, callsign, password string) (string, error) {
-	url := RootURL + PathAccountPasswordRecoveryEmailGet +
-		"?key=" + AccessKey +
-		"&callsign=" + url.QueryEscape(callsign) +
-		"&password=" + url.QueryEscape(password)
-	req, _ := http.NewRequest("GET", url, nil)
-	req = req.WithContext(ctx)
-	req.Header.Set("Accept", "application/json")
+	req := newJSONRequest("GET", PathAccountPasswordRecoveryEmailGet,
+		url.Values{"callsign": []string{callsign}, "password": []string{password}},
+		nil).WithContext(ctx)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
@@ -30,8 +41,14 @@ func PasswordRecoveryEmailGet(ctx context.Context, callsign, password string) (s
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("Unexpected status code %d", resp.StatusCode)
 	}
-	var obj struct{ RecoveryEmail string }
-	return obj.RecoveryEmail, json.NewDecoder(resp.Body).Decode(&obj)
+	var obj struct {
+		RecoveryEmail  string
+		ResponseStatus responseStatus
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
+		return "", err
+	}
+	return obj.RecoveryEmail, obj.ResponseStatus.errorOrNil()
 }
 
 func PasswordRecoveryEmailSet(ctx context.Context, callsign, password, email string) error {
@@ -39,14 +56,9 @@ func PasswordRecoveryEmailSet(ctx context.Context, callsign, password, email str
 	if err != nil {
 		panic(err)
 	}
-	url := RootURL + PathAccountPasswordRecoveryEmailSet +
-		"?key=" + AccessKey +
-		"&callsign=" + url.QueryEscape(callsign) +
-		"&password=" + url.QueryEscape(password)
-	req, _ := http.NewRequest("POST", url, bytes.NewReader(payload))
-	req = req.WithContext(ctx)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
+	req := newJSONRequest("POST", PathAccountPasswordRecoveryEmailSet,
+		url.Values{"callsign": []string{callsign}, "password": []string{password}},
+		bytes.NewReader(payload)).WithContext(ctx)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -55,5 +67,29 @@ func PasswordRecoveryEmailSet(ctx context.Context, callsign, password, email str
 	if resp.StatusCode/100 != 2 {
 		return fmt.Errorf("Unexpected status code %d", resp.StatusCode)
 	}
-	return nil
+	var obj struct{ ResponseStatus responseStatus }
+	if err := json.NewDecoder(resp.Body).Decode(&obj); err != nil {
+		return err
+	}
+	return obj.ResponseStatus.errorOrNil()
+}
+
+func newJSONRequest(method string, path string, queryParams url.Values, body io.Reader) *http.Request {
+	url, err := url.JoinPath(RootURL, path)
+	if err != nil {
+		panic(err)
+	}
+	url += "?key=" + AccessKey
+	if len(queryParams) > 0 {
+		url += "&" + queryParams.Encode()
+	}
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Accept", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req
 }

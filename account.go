@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
 	"strings"
 
 	"github.com/la5nta/pat/internal/cmsapi"
@@ -32,7 +32,8 @@ func accountHandle(ctx context.Context, args []string) {
 	switch cmd, args := shiftArgs(args); cmd {
 	case "password.recovery.email":
 		if err := passwordRecoveryEmailHandle(ctx, args); err != nil {
-			log.Fatal(err)
+			fmt.Println("ERROR:", err)
+			os.Exit(1)
 		}
 	default:
 		fmt.Println("Missing argument, try 'account help'.")
@@ -55,13 +56,13 @@ func passwordRecoveryEmailHandle(ctx context.Context, args []string) error {
 	arg, _ := shiftArgs(args)
 	if arg != "" {
 		if err := cmsapi.PasswordRecoveryEmailSet(ctx, mycall, password, arg); err != nil {
-			return err
+			return fmt.Errorf("failed to set value: %w", err)
 		}
 	}
 	email, err := cmsapi.PasswordRecoveryEmailGet(ctx, mycall, password)
 	switch {
 	case err != nil:
-		return err
+		return fmt.Errorf("failed to get value: %w", err)
 	case strings.TrimSpace(email) == "":
 		email = "[not set]"
 	}

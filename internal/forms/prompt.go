@@ -13,6 +13,7 @@ type Select struct {
 type Ask struct {
 	Prompt    string
 	Multiline bool
+	Uppercase bool
 }
 
 type Option struct {
@@ -28,7 +29,11 @@ func promptAsks(str string, promptFn func(Ask) string) string {
 			return str
 		}
 		replace, prompt, options := tokens[0][0], tokens[0][1], strings.TrimPrefix(tokens[0][2], ",")
-		a := Ask{Prompt: prompt, Multiline: strings.EqualFold(options, "MU")}
+		a := Ask{
+			Prompt:    prompt,
+			Multiline: strings.EqualFold(options, "MU"),
+			Uppercase: strings.EqualFold(options, "UP"),
+		}
 		ans := promptFn(a)
 		str = strings.Replace(str, replace, ans, 1)
 	}

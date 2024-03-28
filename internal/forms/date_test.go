@@ -6,7 +6,8 @@ import (
 )
 
 func TestDateFormat(t *testing.T) {
-	now := time.Date(2023, 12, 31, 23, 59, 59, 0, time.FixedZone("UTC-4", -4*60*60))
+	location = time.FixedZone("UTC-4", -4*60*60)
+	now := time.Date(2023, 12, 31, 23, 59, 59, 0, location)
 
 	tests := []struct {
 		fn     func(t time.Time) string

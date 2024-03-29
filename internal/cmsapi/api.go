@@ -5,7 +5,6 @@
 package cmsapi
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,6 +15,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/la5nta/pat/internal/buildinfo"
 )
 
 const (
@@ -36,43 +37,25 @@ type VersionAdd struct {
 }
 
 func (v VersionAdd) Post() error {
-	b, _ := json.Marshal(v)
-	buf := bytes.NewBuffer(b)
-
-	versionURL := RootURL + PathVersionAdd + "?key=" + AccessKey
-	req, _ := http.NewRequest("POST", versionURL, buf)
-	req.Header.Set("content-type", "application/json")
-	req.Header.Set("accept", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	req := newJSONRequest("POST", PathVersionAdd, nil, bodyJSON(v))
+	var resp struct{ ResponseStatus responseStatus }
+	if err := doJSON(req, &resp); err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	var response map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return err
-	}
-
-	if errMsg, ok := response["ErrorMessage"]; ok {
-		return fmt.Errorf("Winlink CMS Web Services: %s", errMsg)
-	}
-
-	return nil
+	return resp.ResponseStatus.errorOrNil()
 }
 
 func AccountExists(callsign string) (bool, error) {
-	accountURL := RootURL + PathAccountExists + "?key=" + AccessKey + "&callsign=" + url.QueryEscape(callsign)
-	req, _ := http.NewRequest("GET", accountURL, nil)
-	req.Header.Set("Accept", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	ctx := context.TODO()
+	params := url.Values{"callsign": []string{callsign}}
+	var resp struct {
+		CallsignExists bool
+		ResponseStatus responseStatus
+	}
+	if err := getJSON(ctx, PathAccountExists, params, &resp); err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
-	var obj struct{ CallsignExists bool }
-	return obj.CallsignExists, json.NewDecoder(resp.Body).Decode(&obj)
+	return resp.CallsignExists, resp.ResponseStatus.errorOrNil()
 }
 
 type GatewayStatus struct {
@@ -136,6 +119,7 @@ func GetGatewayStatus(ctx context.Context, mode string, historyHours int, servic
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", buildinfo.UserAgent())
 	resp, err := http.DefaultClient.Do(req)
 	switch {
 	case err != nil:

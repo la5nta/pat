@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/la5nta/pat/internal/buildinfo"
 )
 
 const (
@@ -87,6 +89,7 @@ func newJSONRequest(method string, path string, queryParams url.Values, body io.
 	if err != nil {
 		panic(err)
 	}
+	req.Header.Set("User-Agent", buildinfo.UserAgent())
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")

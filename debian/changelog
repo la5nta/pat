@@ -1,3 +1,14 @@
+pat (0.16.0) stable; urgency=medium
+
+  * Major overhaul of the template/forms engine (bug fixes and enhancements)
+  * Add low-level support for packet node traversal (connection pre-hook)
+  * Add support for administering Winlink password recovery email address
+  * Always auto-convert images when using CLI composer (remove prompt)
+  * Fix missing /tmp folder in Docker image
+  * Fix error handling in interactive command 'freq'
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 14 Apr 2024 12:43:32 +0200
+
 pat (0.15.1) stable; urgency=medium
 
   * Support config overrides using env variables

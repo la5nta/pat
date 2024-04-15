@@ -208,6 +208,7 @@ var fOptions struct {
 	Listen       string
 	MailboxPath  string
 	ConfigPath   string
+	PrehooksPath string
 	LogPath      string
 	EventLogPath string
 	FormsPath    string
@@ -225,11 +226,13 @@ func optionsSet() *pflag.FlagSet {
 	defaultMBox := filepath.Join(directories.DataDir(), "mailbox")
 	defaultFormsPath := filepath.Join(directories.DataDir(), "Standard_Forms")
 	defaultConfigPath := filepath.Join(directories.ConfigDir(), "config.json")
+	defaultPrehooksPath := filepath.Join(directories.ConfigDir(), "prehooks")
 	defaultLogPath := filepath.Join(directories.StateDir(), strings.ToLower(buildinfo.AppName+".log"))
 	defaultEventLogPath := filepath.Join(directories.StateDir(), "eventlog.json")
 	set.StringVar(&fOptions.MailboxPath, "mbox", defaultMBox, "Path to mailbox directory.")
 	set.StringVar(&fOptions.FormsPath, "forms", defaultFormsPath, "Path to forms directory.")
 	set.StringVar(&fOptions.ConfigPath, "config", defaultConfigPath, "Path to config file.")
+	set.StringVar(&fOptions.PrehooksPath, "prehooks", defaultPrehooksPath, "Path to prehooks")
 	set.StringVar(&fOptions.LogPath, "log", defaultLogPath, "Path to log file. The file is truncated on each startup.")
 	set.StringVar(&fOptions.EventLogPath, "event-log", defaultEventLogPath, "Path to event log file.")
 
@@ -307,6 +310,8 @@ func main() {
 	if _, ok := os.LookupEnv("GZIP_EXPERIMENT"); !ok {
 		os.Setenv("GZIP_EXPERIMENT", "1")
 	}
+
+	os.Setenv("PATH", fmt.Sprintf(`%s%c%s`, fOptions.PrehooksPath, os.PathListSeparator, os.Getenv("PATH")))
 
 	// Parse configuration file
 	var err error

@@ -591,26 +591,31 @@ function getConnectURL() { return $('#connectURLInput').val(); }
 function setConnectURL(url) { $('#connectURLInput').val(url); }
 
 function buildConnectURL() {
-  let url =
-    $('#transportSelect').val() + '://' + $('#addrInput').val() + '/' + $('#targetInput').val();
-
-  let params = '';
-
+  // Instead of building from scratch, we use the current URL as a starting
+  // point to retain URI parts not supported by the modal. The unsupported
+  // parts may originate from a connect alias or by manual edit of the URL
+  // field.
+  var current = getConnectURL()
+  let url = URI(current)
+    .protocol($('#transportSelect').val())
+    .hostname($('#addrInput').val())
+    .path($('#targetInput').val());
   if ($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
-    params += '&freq=' + $('#freqInput').val();
+    url = url.setQuery("freq", $('#freqInput').val());
+  } else {
+    url = url.removeQuery("freq");
   }
   if ($('#bandwidthInput').val()) {
-    params += '&bw=' + $('#bandwidthInput').val();
+    url = url.setQuery("bw", $('#bandwidthInput').val());
+  } else {
+    url = url.removeQuery("bw");
   }
   if ($('#radioOnlyInput').is(':checked')) {
-    params += '&radio_only=true';
+    url = url.setQuery("radio_only", "true");
+  } else {
+    url = url.removeQuery("radio_only");
   }
-
-  if (params) {
-    url += params.replace('&', '?');
-  }
-
-  return url;
+  return url.build();
 }
 
 function onConnectFreqChange() {

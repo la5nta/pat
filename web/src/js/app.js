@@ -580,9 +580,14 @@ function setConnectValues(url) {
   refreshExtraInputGroups();
   onConnectInputChange();
   onConnectFreqChange();
+  setConnectURL(url);
 }
 
-function getConnectURL() {
+function getConnectURL() { return $('#connectURLPreview').text(); }
+
+function setConnectURL(url) { $('#connectURLPreview').text(url); }
+
+function buildConnectURL() {
   let url =
     $('#transportSelect').val() + '://' + $('#addrInput').val() + '/' + $('#targetInput').val();
 
@@ -678,7 +683,7 @@ function onConnectBandwidthChange() {
 }
 
 function onConnectInputChange() {
-  $('#connectURLPreview').empty().append(getConnectURL());
+  setConnectURL(buildConnectURL());
 }
 
 function refreshExtraInputGroups() {

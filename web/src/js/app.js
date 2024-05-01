@@ -439,6 +439,9 @@ function initConnectModal() {
   $('#radioOnlyInput').change(onConnectInputChange);
   $('#addrInput').change(onConnectInputChange);
   $('#targetInput').change(onConnectInputChange);
+  $('#connectURLInput').change((e) => {
+    setConnectValues($(e.target).val())
+  });
   $('#updateRmslistButton').click((e) => {
     $(e.target).prop('disabled', true);
     updateRmslist(true);
@@ -583,9 +586,9 @@ function setConnectValues(url) {
   setConnectURL(url);
 }
 
-function getConnectURL() { return $('#connectURLPreview').text(); }
+function getConnectURL() { return $('#connectURLInput').val(); }
 
-function setConnectURL(url) { $('#connectURLPreview').text(url); }
+function setConnectURL(url) { $('#connectURLInput').val(url); }
 
 function buildConnectURL() {
   let url =

@@ -12,21 +12,13 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 
 	"github.com/la5nta/pat/internal/debug"
-	"github.com/la5nta/pat/internal/directories"
 	"golang.org/x/sync/errgroup"
 )
 
 var ErrConnNotWrapped = errors.New("connection not wrapped for prehook")
-
-func init() {
-	// Add {config-dir}/prehooks/ to PATH
-	prehooksPath := filepath.Join(directories.ConfigDir(), "prehooks")
-	os.Setenv("PATH", fmt.Sprintf(`%s%c%s`, prehooksPath, os.PathListSeparator, os.Getenv("PATH")))
-}
 
 type Script struct {
 	File string

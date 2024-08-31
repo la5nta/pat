@@ -69,6 +69,7 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 * KD8DRX - Will Davidson
 * KE8HMG - Andrew Huebner
 * KI7RMJ - Rainer Grosskopf
+* KM6LBU - Robert Hernandez
 * LA3QMA - Kai Günter Brandt
 * LA4TTA - Erlend Grimseid
 * LA5NTA - Martin Hebnes Pedersen

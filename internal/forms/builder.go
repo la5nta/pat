@@ -16,6 +16,7 @@ import (
 	"github.com/la5nta/wl2k-go/fbb"
 
 	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/pat/internal/editor"
 )
 
 // Message represents a concrete message compiled from a template
@@ -193,9 +194,19 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 		// Prompts (mostly found in text templates)
 		if b.Interactive {
 			lineTmpl = promptAsks(lineTmpl, func(a Ask) string {
-				// TODO: Handle a.Multiline as we do message body
-				fmt.Printf(a.Prompt + " ")
-				ans := b.FormsMgr.config.LineReader()
+				var ans string
+				if a.Multiline {
+					fmt.Println(a.Prompt + " (Press ENTER to start external editor)")
+					b.FormsMgr.config.LineReader()
+					var err error
+					ans, err = editor.EditText("")
+					if err != nil {
+						log.Fatalf("Failed to start text editor: %v", err)
+					}
+				} else {
+					fmt.Printf(a.Prompt + " ")
+					ans = b.FormsMgr.config.LineReader()
+				}
 				if a.Uppercase {
 					ans = strings.ToUpper(ans)
 				}

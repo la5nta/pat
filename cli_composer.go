@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/la5nta/wl2k-go/fbb"
+	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/spf13/pflag"
 
 	"github.com/la5nta/pat/internal/editor"
@@ -109,6 +110,7 @@ func composeMessage(ctx context.Context, args []string) {
 	ccs := set.StringArrayP("cc", "c", nil, "")
 	p2pOnly := set.BoolP("p2p-only", "", false, "")
 	template := set.StringP("template", "", "", "")
+	inReplyToPath := set.StringP("in-reply-to", "", "", "")
 	set.Parse(args)
 
 	// Remaining args are recipients
@@ -121,6 +123,16 @@ func composeMessage(ctx context.Context, args []string) {
 		recipients = append(recipients, r)
 	}
 
+	// Load in-reply-to message
+	var inReplyTo *fbb.Message
+	if path := *inReplyToPath; path != "" {
+		var err error
+		inReplyTo, err = mailbox.OpenMessage(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Check if condition are met for non-interactive compose.
 	if (len(*subject)+len(*attachments)+len(*ccs)+len(recipients)) > 0 && *template != "" {
 		noninteractiveComposeMessage(*from, *subject, *attachments, *ccs, recipients, *p2pOnly)
@@ -129,12 +141,12 @@ func composeMessage(ctx context.Context, args []string) {
 
 	// Use template?
 	if *template != "" {
-		interactiveComposeWithTemplate(*template, nil)
+		interactiveComposeWithTemplate(*template, inReplyTo)
 		return
 	}
 
 	// Interactive compose
-	interactiveComposeMessage(nil)
+	interactiveComposeMessage(inReplyTo)
 }
 
 func noninteractiveComposeMessage(from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
@@ -266,10 +278,10 @@ func composeFormReport(ctx context.Context, args []string) {
 	composeMessage(ctx, args)
 }
 
-func interactiveComposeWithTemplate(template string, replyTo *fbb.Message) {
-	msg := composeMessageHeader(replyTo)
+func interactiveComposeWithTemplate(template string, inReplyTo *fbb.Message) {
+	msg := composeMessageHeader(inReplyTo)
 
-	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject())
+	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject(), inReplyTo)
 	if err != nil {
 		log.Printf("failed to compose message for template: %v", err)
 		return

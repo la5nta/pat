@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -165,7 +164,7 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 	}
 
 	// Read the message body from stdin
-	body, _ := ioutil.ReadAll(os.Stdin)
+	body, _ := io.ReadAll(os.Stdin)
 	if len(body) == 0 {
 		// Yeah, I've spent way too much time using mail(1)
 		fmt.Fprint(os.Stderr, "Null message body; hope that's ok\n")

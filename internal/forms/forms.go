@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -308,7 +307,7 @@ func (m *Manager) downloadAndUnzipForms(ctx context.Context, downloadLink string
 		return fmt.Errorf("can't download update ZIP: %w", err)
 	}
 	defer resp.Body.Close()
-	f, err := ioutil.TempFile(os.TempDir(), "pat")
+	f, err := os.CreateTemp(os.TempDir(), "pat")
 	if err != nil {
 		return fmt.Errorf("can't create temp file for download: %w", err)
 	}

@@ -19,10 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/la5nta/pat/internal/buildinfo"
-
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/spf13/pflag"
+
+	"github.com/la5nta/pat/internal/buildinfo"
 )
 
 func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
@@ -185,60 +185,42 @@ func composeReplyMessage(replyMsg *fbb.Message) {
 	interactiveComposeMessage(replyMsg)
 }
 
+func composeBody(template string) (string, error) {
+	body, err := editTextWithEditor(template)
+	if err != nil {
+		return body, err
+	}
+	// An empty message body is illegal. Let's set a sane default.
+	if len(strings.TrimSpace(body)) == 0 {
+		body = "<No message body>\n"
+	}
+	return body, nil
+}
+
 func interactiveComposeMessage(replyMsg *fbb.Message) {
 	msg := composeMessageHeader(replyMsg)
 
-	// Read body
-	fmt.Printf(`Press ENTER to start composing the message body. `)
-	readLine()
-
-	f, err := ioutil.TempFile("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", buildinfo.AppName, time.Now().Unix())))
-	if err != nil {
-		log.Fatalf("Unable to prepare temporary file for body: %s", err)
-	}
-
+	// Body
+	var template bytes.Buffer
 	if replyMsg != nil {
-		fmt.Fprintf(f, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
+		fmt.Fprintf(&template, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
 		body, _ := replyMsg.Body()
-		orig := ">" + strings.ReplaceAll(
+		template.WriteString(">" + strings.ReplaceAll(
 			strings.TrimSpace(body),
 			"\n",
 			"\n>",
-		) + "\n"
-		f.Write([]byte(orig))
-		f.Sync()
+		) + "\n")
 	}
-
-	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
-	// Close the file before opening the editor.
-	f.Close()
-
-	cmd := exec.Command(EditorName(), f.Name())
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to start body editor: %s", err)
-	}
-
-	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0o666)
+	fmt.Printf(`Press ENTER to start composing the message body. `)
+	readLine()
+	body, err := composeBody(template.String())
 	if err != nil {
-		log.Fatalf("Unable to read temporary file from editor: %s", err)
+		log.Fatal(err)
 	}
+	msg.SetBody(body)
 
-	var buf bytes.Buffer
-	io.Copy(&buf, f)
-	msg.SetBody(buf.String())
-	f.Close()
-	os.Remove(f.Name())
-
-	// An empty message body is illegal. Let's set a sane default.
-	if msg.BodySize() == 0 {
-		msg.SetBody("<No message body>\n")
-	}
-
-	// END Read body
-
+	// Attachments
 	fmt.Print("\n")
-
 	for {
 		fmt.Print(`Attachment [empty when done]: `)
 		path := readLine()
@@ -290,6 +272,9 @@ func composeFormReport(ctx context.Context, args []string) {
 	}
 
 	msg.SetSubject(formMsg.Subject)
+	for _, f := range formMsg.Attachments {
+		msg.AddFile(f)
+	}
 
 	fmt.Println("================================================================")
 	fmt.Print("To: ")
@@ -299,17 +284,61 @@ func composeFormReport(ctx context.Context, args []string) {
 	fmt.Print("From: ")
 	fmt.Println(msg.From())
 	fmt.Println("Subject: " + msg.Subject())
+	fmt.Println("================================================================")
 	fmt.Println(formMsg.Body)
 	fmt.Println("================================================================")
-	fmt.Println("Press ENTER to post this message in the outbox, Ctrl-C to abort.")
-	fmt.Println("================================================================")
-	readLine()
-
-	msg.SetBody(formMsg.Body)
-
-	for _, f := range formMsg.Attachments {
-		msg.AddFile(f)
+L:
+	for {
+		fmt.Print("Post message to outbox? [Y,q,e,?]: ")
+		switch ans := readLine(); strings.ToLower(ans) {
+		case "", "y":
+			break L
+		case "e":
+			if formMsg.Body, err = composeBody(formMsg.Body); err != nil {
+				log.Fatal(err)
+			}
+			msg.SetBody(formMsg.Body)
+		case "q":
+			return
+		case "?":
+			fmt.Println("Y/y = Yes, post message to outbox.")
+			fmt.Println("e = Edit message body.")
+			fmt.Println("q = Quit, discarding the message.")
+		}
 	}
 
 	postMessage(msg)
+}
+
+func editTextWithEditor(template string) (string, error) {
+	f, err := os.CreateTemp("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", buildinfo.AppName, time.Now().Unix())))
+	if err != nil {
+		return template, fmt.Errorf("Unable to prepare temporary file for body: %w", err)
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
+
+	f.Write([]byte(template))
+	f.Sync()
+
+	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
+	// Close the file before opening the editor.
+	f.Close()
+
+	// Fire up the editor
+	cmd := exec.Command(EditorName(), f.Name())
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if err := cmd.Run(); err != nil {
+		return template, fmt.Errorf("Unable to start text editor: %w", err)
+	}
+
+	// Read back the edited file
+	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0o666)
+	if err != nil {
+		return template, fmt.Errorf("Unable to read temporary file from editor: %w", err)
+	}
+	defer f.Close()
+	defer os.Remove(f.Name())
+	body, err := io.ReadAll(f)
+	return string(body), err
 }

@@ -108,6 +108,7 @@ func composeMessage(ctx context.Context, args []string) {
 	attachments := set.StringArrayP("attachment", "a", nil, "")
 	ccs := set.StringArrayP("cc", "c", nil, "")
 	p2pOnly := set.BoolP("p2p-only", "", false, "")
+	template := set.StringP("template", "", "", "")
 	set.Parse(args)
 
 	// Remaining args are recipients
@@ -120,13 +121,20 @@ func composeMessage(ctx context.Context, args []string) {
 		recipients = append(recipients, r)
 	}
 
-	// Check if any args are set. If so, go non-interactive
-	// Otherwise, interactive
-	if (len(*subject) + len(*attachments) + len(*ccs) + len(recipients)) > 0 {
+	// Check if condition are met for non-interactive compose.
+	if (len(*subject)+len(*attachments)+len(*ccs)+len(recipients)) > 0 && *template != "" {
 		noninteractiveComposeMessage(*from, *subject, *attachments, *ccs, recipients, *p2pOnly)
-	} else {
-		interactiveComposeMessage(nil)
+		return
 	}
+
+	// Use template?
+	if *template != "" {
+		interactiveComposeWithTemplate(*template, nil)
+		return
+	}
+
+	// Interactive compose
+	interactiveComposeMessage(nil)
 }
 
 func noninteractiveComposeMessage(from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
@@ -254,15 +262,14 @@ func readLine() string {
 }
 
 func composeFormReport(ctx context.Context, args []string) {
-	var tmplPathArg string
+	log.Println("DEPRECATED: Use `compose --template` instead")
+	composeMessage(ctx, args)
+}
 
-	set := pflag.NewFlagSet("form", pflag.ExitOnError)
-	set.StringVar(&tmplPathArg, "template", "ICS USA Forms/ICS213", "")
-	set.Parse(args)
+func interactiveComposeWithTemplate(template string, replyTo *fbb.Message) {
+	msg := composeMessageHeader(replyTo)
 
-	msg := composeMessageHeader(nil)
-
-	formMsg, err := formsMgr.ComposeTemplate(tmplPathArg, msg.Subject())
+	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject())
 	if err != nil {
 		log.Printf("failed to compose message for template: %v", err)
 		return

@@ -88,6 +88,7 @@ var commands = []Command{
 			"\tIf options are passed, reads message from stdin similar to mail(1).",
 		Options: map[string]string{
 			"--from, -r":        "Address to send from. Default is your call from config or --mycall, but can be specified to use tactical addresses.",
+			"--template":        "Compose using template file. Uses the --forms directory as root for relative paths.",
 			"--subject, -s":     "Subject",
 			"--attachment , -a": "Attachment path (may be repeated)",
 			"--cc, -c":          "CC Address(es) (may be repeated)",
@@ -106,7 +107,7 @@ var commands = []Command{
 	{
 		Str:     "composeform",
 		Aliases: []string{"formPath"},
-		Desc:    "Post form-based report.",
+		Desc:    "Post form-based report. (DEPRECATED)",
 		Usage:   "[options]",
 		Options: map[string]string{
 			"--template": "path to the form template file. Uses the --forms directory as root. Defaults to 'ICS USA Forms/ICS213.txt'",

@@ -56,7 +56,7 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 		}
 		return resolved
 	}
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(newTrimBomReader(f))
 	for scanner.Scan() {
 		switch key, value, _ := strings.Cut(scanner.Text(), ":"); key {
 		case "Form": // Form: <input form>[,<display form>]

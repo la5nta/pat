@@ -1,9 +1,12 @@
 package forms
 
 import (
+	"bufio"
 	"bytes"
+	"io"
 	"log"
 	"os"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -23,4 +26,23 @@ func readFile(path string) (string, error) {
 
 func trimBom(p []byte) []byte {
 	return bytes.TrimLeftFunc(p, func(r rune) bool { return r == '\uFEFF' })
+}
+
+type trimBomReader struct {
+	r    *bufio.Reader
+	once sync.Once
+}
+
+func (r *trimBomReader) Read(p []byte) (int, error) {
+	r.once.Do(func() {
+		peek, _ := r.r.Peek(3)
+		if bytes.ContainsRune(peek, '\uFEFF') {
+			r.r.Discard(3)
+		}
+	})
+	return r.r.Read(p)
+}
+
+func newTrimBomReader(r io.Reader) io.Reader {
+	return &trimBomReader{r: bufio.NewReader(r)}
 }

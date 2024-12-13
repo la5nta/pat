@@ -180,7 +180,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 		debug.Printf("Defined %q=%q", k, v)
 	}
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(newTrimBomReader(f))
 
 	msg := Message{submitted: now()}
 	var inBody bool
@@ -276,7 +276,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			// TODO: Handle sequences
 		default:
 			if strings.TrimSpace(lineTmpl) != "" {
-				log.Printf("skipping unknown template line: '%s'", lineTmpl)
+				log.Printf("skipping unknown template line: '%q'", lineTmpl)
 			}
 		}
 	}

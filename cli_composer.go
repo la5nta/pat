@@ -13,15 +13,13 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/spf13/pflag"
 
-	"github.com/la5nta/pat/internal/buildinfo"
+	"github.com/la5nta/pat/internal/editor"
 )
 
 func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
@@ -185,7 +183,7 @@ func composeReplyMessage(replyMsg *fbb.Message) {
 }
 
 func composeBody(template string) (string, error) {
-	body, err := editTextWithEditor(template)
+	body, err := editor.EditText(template)
 	if err != nil {
 		return body, err
 	}
@@ -307,37 +305,4 @@ L:
 	}
 
 	postMessage(msg)
-}
-
-func editTextWithEditor(template string) (string, error) {
-	f, err := os.CreateTemp("", strings.ToLower(fmt.Sprintf("%s_new_%d.txt", buildinfo.AppName, time.Now().Unix())))
-	if err != nil {
-		return template, fmt.Errorf("Unable to prepare temporary file for body: %w", err)
-	}
-	defer f.Close()
-	defer os.Remove(f.Name())
-
-	f.Write([]byte(template))
-	f.Sync()
-
-	// Windows fix: Avoid 'cannot access the file because it is being used by another process' error.
-	// Close the file before opening the editor.
-	f.Close()
-
-	// Fire up the editor
-	cmd := exec.Command(EditorName(), f.Name())
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		return template, fmt.Errorf("Unable to start text editor: %w", err)
-	}
-
-	// Read back the edited file
-	f, err = os.OpenFile(f.Name(), os.O_RDWR, 0o666)
-	if err != nil {
-		return template, fmt.Errorf("Unable to read temporary file from editor: %w", err)
-	}
-	defer f.Close()
-	defer os.Remove(f.Name())
-	body, err := io.ReadAll(f)
-	return string(body), err
 }

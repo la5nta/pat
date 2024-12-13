@@ -12,10 +12,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +22,7 @@ import (
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
+	"github.com/la5nta/pat/internal/editor"
 	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
 
@@ -410,10 +409,7 @@ func configureHandle(ctx context.Context, args []string) {
 			log.Fatalf("Unable to write default config: %s", err)
 		}
 	}
-
-	cmd := exec.CommandContext(ctx, EditorName(), fOptions.ConfigPath)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
+	if err := editor.Open(fOptions.ConfigPath); err != nil {
 		log.Fatalf("Unable to start editor: %s", err)
 	}
 }
@@ -605,25 +601,6 @@ func extractMessageHandle(_ context.Context, args []string) {
 			}
 		}
 	}
-}
-
-func EditorName() string {
-	if e := os.Getenv("EDITOR"); e != "" {
-		return e
-	} else if e := os.Getenv("VISUAL"); e != "" {
-		return e
-	}
-
-	switch runtime.GOOS {
-	case "windows":
-		return "notepad"
-	case "linux":
-		if path, err := exec.LookPath("editor"); err == nil {
-			return path
-		}
-	}
-
-	return "vi"
 }
 
 func posReportHandle(ctx context.Context, args []string) {

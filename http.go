@@ -107,7 +107,7 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/connect_aliases", connectAliasesHandler).Methods("GET")
 	r.HandleFunc("/api/connect", ConnectHandler)
 	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalogHandler).Methods("GET")
-	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler).Methods("POST")
+	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler(mbox.MBoxPath)).Methods("POST")
 	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
 	r.HandleFunc("/api/formsUpdate", formsMgr.UpdateFormTemplatesHandler).Methods("POST")
@@ -710,10 +710,10 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "null")
 
 	box, mid, attachment := mux.Vars(r)["box"], mux.Vars(r)["mid"], mux.Vars(r)["attachment"]
-	composereply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
+	inReplyTo := r.URL.Query().Get("in-reply-to")
 	renderToHtml, _ := strconv.ParseBool(r.URL.Query().Get("rendertohtml"))
 
-	if composereply || renderToHtml {
+	if inReplyTo != "" || renderToHtml {
 		// no-store is needed for displaying and replying to Winlink form-based messages
 		w.Header().Set("Cache-Control", "no-store")
 	}
@@ -741,7 +741,18 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		formRendered, err := formsMgr.RenderForm(f.Data(), composereply)
+		var inReplyToMsg *fbb.Message
+		if inReplyTo != "" {
+			var err error
+			inReplyToMsg, err = mailbox.OpenMessage(path.Join(mbox.MBoxPath, inReplyTo+mailbox.Ext))
+			if err != nil {
+				err = fmt.Errorf("Failed to load in-reply-to message (%q): %v", inReplyTo, err)
+				log.Println(err)
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		formRendered, err := formsMgr.RenderForm(f.Data(), inReplyToMsg, inReplyTo)
 		if err != nil {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

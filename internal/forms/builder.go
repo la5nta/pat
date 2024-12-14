@@ -3,6 +3,7 @@ package forms
 import (
 	"bufio"
 	"context"
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -34,11 +35,11 @@ type Message struct {
 }
 
 type messageBuilder struct {
-	Interactive bool
-	IsReply     bool
-	Template    Template
-	FormValues  map[string]string
-	FormsMgr    *Manager
+	Interactive  bool
+	InReplyToMsg *fbb.Message
+	Template     Template
+	FormValues   map[string]string
+	FormsMgr     *Manager
 }
 
 // build returns message subject, body, and attachments for the given template and variable map
@@ -52,9 +53,22 @@ func (b messageBuilder) build() (Message, error) {
 	return msg, nil
 }
 
+// TODO: What are these "default form vars"? It looks to be a subset of the
+// official insertion tags, but there is no mention of these special vars in
+// the forms documentation. Consider doing insertion tag replacement with the
+// {var ...} pattern instead of this.
 func (b messageBuilder) setDefaultFormValues() {
-	if b.IsReply {
+	if b.InReplyToMsg != nil {
 		b.FormValues["msgisreply"] = "True"
+
+		// Here be dragons.
+		// Templates using this has a strange `Def: MsgOrignalBody=<var MsgOriginalBody>`.
+		// Maybe to force the inclusion of the original body in the XML? But
+		// why is it referenced as a variable and not the officially supported
+		// tag (i.e. `Def: MsgOriginalBody=<MsgOriginalBody>`)?
+		if _, ok := b.FormValues["msgoriginalbody"]; !ok {
+			b.FormValues["msgoriginalbody"], _ = b.InReplyToMsg.Body()
+		}
 	} else {
 		b.FormValues["msgisreply"] = "False"
 	}
@@ -175,7 +189,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 	}
 	defer f.Close()
 
-	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, "<", ">")
+	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, "<", ">")
 	replaceVars := variableReplacer("<", ">", b.FormValues)
 	addFormValue := func(k, v string) {
 		b.FormValues[strings.ToLower(k)] = v
@@ -283,7 +297,22 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			}
 		}
 	}
+	if b.InReplyToMsg != nil {
+		var buf bytes.Buffer
+		io.Copy(&buf, strings.NewReader(msg.Body))
+		writeMessageCitation(&buf, b.InReplyToMsg)
+		msg.Body = buf.String()
+	}
 	return msg, nil
+}
+
+func writeMessageCitation(w io.Writer, inReplyToMsg *fbb.Message) {
+	fmt.Fprintf(w, "--- %s %s wrote: ---\n", inReplyToMsg.Date(), inReplyToMsg.From().Addr)
+	body, _ := inReplyToMsg.Body()
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	for scanner.Scan() {
+		fmt.Fprintf(w, ">%s\n", scanner.Text())
+	}
 }
 
 // VariableReplacer returns a function that replaces the given key-value pairs.
@@ -292,7 +321,7 @@ func variableReplacer(tagStart, tagEnd string, vars map[string]string) func(stri
 }
 
 // InsertionTagReplacer returns a function that replaces the fixed set of insertion tags with their corresponding values.
-func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) string {
+func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, tagStart, tagEnd string) func(string) string {
 	now := now()
 	validPos := "NO"
 	nowPos, err := m.gpsPos()
@@ -309,7 +338,7 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 	}
 
 	// This list is based on RMSE_FORMS/insertion_tags.zip (copy in docs/) as well as searching Standard Forms's templates.
-	return placeholderReplacer(tagStart, tagEnd, map[string]string{
+	tags := map[string]string{
 		"MsgSender":      m.config.MyCall,
 		"Callsign":       m.config.MyCall,
 		"ProgramVersion": m.config.AppVersion,
@@ -337,6 +366,10 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
 
 		"InternetAvailable": internetAvailable,
+		
+		"MsgIsReply":           strings.Title(strconv.FormatBool(inReplyToMsg != nil)),
+		"MsgIsForward":         "False",
+		"MsgIsAcknowledgement": "False",
 
 		// TODO (other insertion tags found in Standard Forms):
 		// SeqNum
@@ -349,10 +382,32 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		// Speed  (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
 		// course (only in 'GENERAL Forms/GPS Position Report.txt' - but not included in produced message body)
 		// decimal_separator
+	}
+	if inReplyToMsg != nil {
+		tags["MsgOriginalSubject"] = inReplyToMsg.Subject()
+		tags["MsgOriginalSender"] = inReplyToMsg.From().Addr
+		tags["MsgOriginalBody"], _ = inReplyToMsg.Body()
+		tags["MsgOriginalID"] = inReplyToMsg.MID()
+		tags["MsgOriginalDate"] = formatDateTime(inReplyToMsg.Date())
 
-		// TODO: MsgOriginal* (see "RMSE_FORMS/insertion_tags.zip/Insertion Tags.txt")
-		//       This will require changing the IsReply/composereply boolean to a message reference.
-	})
+		// The documentation is not clear on these. Examples does not match the description.
+		tags["MsgOriginalUtcDate"] = formatDateUTC(inReplyToMsg.Date())
+		tags["MsgOriginalUtcTime"] = formatTimeUTC(inReplyToMsg.Date())
+		tags["MsgOriginalLocalDate"] = formatDate(inReplyToMsg.Date())
+		tags["MsgOriginalLocalTime"] = formatTime(inReplyToMsg.Date())
+		tags["MsgOriginalDTG"] = formatUDTG(inReplyToMsg.Date()) // Assuming UTC (as per example).
+
+		tags["MsgOriginalSize"] = fmt.Sprint(inReplyToMsg.BodySize()) // Assuming body size.
+		tags["MsgOriginalAttachmentCount"] = fmt.Sprint(len(inReplyToMsg.Files()))
+
+		for _, f := range inReplyToMsg.Files() {
+			if strings.HasPrefix(f.Name(), "RMS_Express_Form_") && strings.HasSuffix(f.Name(), ".xml") {
+				tags["MsgOriginalXML"] = string(f.Data())
+			}
+		}
+	}
+
+	return placeholderReplacer(tagStart, tagEnd, tags)
 }
 
 // xmlName returns the user-visible filename for the message attachment that holds the form instance values

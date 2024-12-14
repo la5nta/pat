@@ -23,7 +23,7 @@ import (
 	"github.com/la5nta/pat/internal/editor"
 )
 
-func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
+func composeMessageHeader(inReplyToMsg *fbb.Message) *fbb.Message {
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -34,13 +34,13 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	msg.SetFrom(from)
 
 	fmt.Print(`To`)
-	if replyMsg != nil {
-		fmt.Printf(" [%s]", replyMsg.From())
+	if inReplyToMsg != nil {
+		fmt.Printf(" [%s]", inReplyToMsg.From())
 	}
 	fmt.Printf(": ")
 	to := readLine()
-	if to == "" && replyMsg != nil {
-		msg.AddTo(replyMsg.From().String())
+	if to == "" && inReplyToMsg != nil {
+		msg.AddTo(inReplyToMsg.From().String())
 	} else {
 		for _, addr := range strings.FieldsFunc(to, SplitFunc) {
 			msg.AddTo(addr)
@@ -48,8 +48,8 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	}
 
 	ccCand := make([]fbb.Address, 0)
-	if replyMsg != nil {
-		for _, addr := range append(replyMsg.To(), replyMsg.Cc()...) {
+	if inReplyToMsg != nil {
+		for _, addr := range append(inReplyToMsg.To(), inReplyToMsg.Cc()...) {
 			if !addr.EqualString(fOptions.MyCall) {
 				ccCand = append(ccCand, addr)
 			}
@@ -57,12 +57,12 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	}
 
 	fmt.Printf("Cc")
-	if replyMsg != nil {
+	if inReplyToMsg != nil {
 		fmt.Printf(" %s", ccCand)
 	}
 	fmt.Print(`: `)
 	cc := readLine()
-	if cc == "" && replyMsg != nil {
+	if cc == "" && inReplyToMsg != nil {
 		for _, addr := range ccCand {
 			msg.AddCc(addr.String())
 		}
@@ -85,8 +85,8 @@ func composeMessageHeader(replyMsg *fbb.Message) *fbb.Message {
 	}
 
 	fmt.Print(`Subject: `)
-	if replyMsg != nil {
-		subject := strings.TrimSpace(strings.TrimPrefix(replyMsg.Subject(), "Re:"))
+	if inReplyToMsg != nil {
+		subject := strings.TrimSpace(strings.TrimPrefix(inReplyToMsg.Subject(), "Re:"))
 		subject = fmt.Sprintf("Re:%s", subject)
 		fmt.Println(subject)
 		msg.SetSubject(subject)
@@ -110,7 +110,7 @@ func composeMessage(ctx context.Context, args []string) {
 	ccs := set.StringArrayP("cc", "c", nil, "")
 	p2pOnly := set.BoolP("p2p-only", "", false, "")
 	template := set.StringP("template", "", "", "")
-	inReplyToPath := set.StringP("in-reply-to", "", "", "")
+	inReplyTo := set.StringP("in-reply-to", "", "", "")
 	set.Parse(args)
 
 	// Remaining args are recipients
@@ -124,10 +124,10 @@ func composeMessage(ctx context.Context, args []string) {
 	}
 
 	// Load in-reply-to message
-	var inReplyTo *fbb.Message
-	if path := *inReplyToPath; path != "" {
+	var inReplyToMsg *fbb.Message
+	if path := *inReplyTo; path != "" {
 		var err error
-		inReplyTo, err = mailbox.OpenMessage(path)
+		inReplyToMsg, err = mailbox.OpenMessage(path)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -141,12 +141,12 @@ func composeMessage(ctx context.Context, args []string) {
 
 	// Use template?
 	if *template != "" {
-		interactiveComposeWithTemplate(*template, inReplyTo)
+		interactiveComposeWithTemplate(*template, inReplyToMsg)
 		return
 	}
 
 	// Interactive compose
-	interactiveComposeMessage(inReplyTo)
+	interactiveComposeMessage(inReplyToMsg)
 }
 
 func noninteractiveComposeMessage(from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
@@ -198,8 +198,8 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 
 // This is currently an alias for interactiveComposeMessage but keeping as a separate
 // call path for the future
-func composeReplyMessage(replyMsg *fbb.Message) {
-	interactiveComposeMessage(replyMsg)
+func composeReplyMessage(inReplyToMsg *fbb.Message) {
+	interactiveComposeMessage(inReplyToMsg)
 }
 
 func composeBody(template string) (string, error) {
@@ -214,19 +214,13 @@ func composeBody(template string) (string, error) {
 	return body, nil
 }
 
-func interactiveComposeMessage(replyMsg *fbb.Message) {
-	msg := composeMessageHeader(replyMsg)
+func interactiveComposeMessage(inReplyToMsg *fbb.Message) {
+	msg := composeMessageHeader(inReplyToMsg)
 
 	// Body
 	var template bytes.Buffer
-	if replyMsg != nil {
-		fmt.Fprintf(&template, "--- %s %s wrote: ---\n", replyMsg.Date(), replyMsg.From().Addr)
-		body, _ := replyMsg.Body()
-		template.WriteString(">" + strings.ReplaceAll(
-			strings.TrimSpace(body),
-			"\n",
-			"\n>",
-		) + "\n")
+	if inReplyToMsg != nil {
+		writeMessageCitation(&template, inReplyToMsg)
 	}
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	readLine()
@@ -251,6 +245,15 @@ func interactiveComposeMessage(replyMsg *fbb.Message) {
 	}
 	fmt.Println(msg)
 	postMessage(msg)
+}
+
+func writeMessageCitation(w io.Writer, inReplyToMsg *fbb.Message) {
+	fmt.Fprintf(w, "--- %s %s wrote: ---\n", inReplyToMsg.Date(), inReplyToMsg.From().Addr)
+	body, _ := inReplyToMsg.Body()
+	scanner := bufio.NewScanner(strings.NewReader(body))
+	for scanner.Scan() {
+		fmt.Fprintf(w, ">%s\n", scanner.Text())
+	}
 }
 
 func addAttachmentFromPath(msg *fbb.Message, path string) error {
@@ -278,10 +281,10 @@ func composeFormReport(ctx context.Context, args []string) {
 	composeMessage(ctx, args)
 }
 
-func interactiveComposeWithTemplate(template string, inReplyTo *fbb.Message) {
-	msg := composeMessageHeader(inReplyTo)
+func interactiveComposeWithTemplate(template string, inReplyToMsg *fbb.Message) {
+	msg := composeMessageHeader(inReplyToMsg)
 
-	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject(), inReplyTo)
+	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject(), inReplyToMsg)
 	if err != nil {
 		log.Printf("failed to compose message for template: %v", err)
 		return
@@ -310,10 +313,10 @@ L:
 		case "", "y":
 			break L
 		case "e":
+			var err error
 			if formMsg.Body, err = composeBody(formMsg.Body); err != nil {
 				log.Fatal(err)
 			}
-			msg.SetBody(formMsg.Body)
 		case "q":
 			return
 		case "?":
@@ -322,6 +325,6 @@ L:
 			fmt.Println("q = Quit, discarding the message.")
 		}
 	}
-
+	msg.SetBody(formMsg.Body)
 	postMessage(msg)
 }

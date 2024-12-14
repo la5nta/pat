@@ -44,7 +44,7 @@ func TestInsertionTagReplacer(t *testing.T) {
 	}
 	for in, expect := range tests {
 		t.Run(in, func(t *testing.T) {
-			if out := insertionTagReplacer(m, "<", ">")(in); out != expect {
+			if out := insertionTagReplacer(m, nil, "<", ">")(in); out != expect {
 				t.Errorf("Expected %q, got %q", expect, out)
 			}
 		})

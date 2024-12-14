@@ -1294,7 +1294,7 @@ function displayMessage(elem) {
 
       //opens browser window for a form-based reply,
       // or does nothing if this is not a form-based message
-      showReplyForm(msg_url, data);
+      showReplyForm(currentFolder, mid, data);
     });
     $('#forward_btn').off('click');
     $('#forward_btn').click(function (evt) {
@@ -1349,7 +1349,8 @@ function formXmlToFormName(fileName) {
   return null;
 }
 
-function showReplyForm(orgMsgUrl, msg) {
+function showReplyForm(mbox, mid, msg) {
+  const orgMsgUrl = buildMessagePath(mbox, mid);
   for (let i = 0; msg.Files && i < msg.Files.length; i++) {
     const file = msg.Files[i];
     const formName = formXmlToFormName(file.Name);
@@ -1359,7 +1360,7 @@ function showReplyForm(orgMsgUrl, msg) {
     // retrieve form XML attachment and determine if it specifies a form-based reply
     const attachUrl = orgMsgUrl + '/' + file.Name;
     $.get(
-      attachUrl + '?rendertohtml=false&composereply=false',
+      attachUrl + '?rendertohtml=false',
       {},
       function (data) {
         let parser = new DOMParser();
@@ -1374,7 +1375,7 @@ function showReplyForm(orgMsgUrl, msg) {
           );
           if (replyTmpl && replyTmpl.stringValue) {
             window.setTimeout(startPollingFormData, 500);
-            open(attachUrl + '?rendertohtml=true&composereply=true');
+            open(attachUrl + '?rendertohtml=true&in-reply-to='+encodeURIComponent(mbox + "/" + mid));
           }
         }
       },

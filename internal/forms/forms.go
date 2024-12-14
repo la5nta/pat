@@ -26,6 +26,9 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/la5nta/wl2k-go/fbb"
+	"github.com/la5nta/wl2k-go/mailbox"
+
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
@@ -112,64 +115,77 @@ func (m *Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request)
 
 // PostFormDataHandler - When the user is done filling a form, the frontend posts the input fields to this handler,
 // which stores them in a map, so that other browser tabs can read the values back with GetFormDataHandler
-func (m *Manager) PostFormDataHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10e6); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	composeReply, _ := strconv.ParseBool(r.URL.Query().Get("composereply"))
-	templatePath := r.URL.Query().Get("template")
-	if templatePath == "" {
-		http.Error(w, "template query param missing", http.StatusBadRequest)
-		log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
-		return
-	}
-	templatePath = m.abs(templatePath)
-	// Make sure we don't escape FormsPath
-	if !directories.IsInPath(m.config.FormsPath, templatePath) {
-		http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
-		return
-	}
+func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseMultipartForm(10e6); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		inReplyTo := r.URL.Query().Get("in-reply-to")
+		templatePath := r.URL.Query().Get("template")
+		if templatePath == "" {
+			http.Error(w, "template query param missing", http.StatusBadRequest)
+			log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
+			return
+		}
+		templatePath = m.abs(templatePath)
+		// Make sure we don't escape FormsPath
+		if !directories.IsInPath(m.config.FormsPath, templatePath) {
+			http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
+			return
+		}
 
-	formInstanceKey, err := r.Cookie("forminstance")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("missing cookie %s %s", templatePath, r.URL)
-		return
-	}
-	fields := make(map[string]string, len(r.PostForm))
-	for key, values := range r.PostForm {
-		fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
-	}
+		formInstanceKey, err := r.Cookie("forminstance")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("missing cookie %s %s", templatePath, r.URL)
+			return
+		}
+		fields := make(map[string]string, len(r.PostForm))
+		for key, values := range r.PostForm {
+			fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
+		}
 
-	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
-	switch {
-	case os.IsNotExist(err):
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	case err != nil:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("failed to parse relevant form template (%q): %v", m.rel(templatePath), err)
-		return
-	}
-	msg, err := messageBuilder{
-		Template:    template,
-		FormValues:  fields,
-		Interactive: false,
-		IsReply:     composeReply,
-		FormsMgr:    m,
-	}.build()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
-	}
+		template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
+		switch {
+		case os.IsNotExist(err):
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		case err != nil:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("failed to parse relevant form template (%q): %v", m.rel(templatePath), err)
+			return
+		}
 
-	m.postedFormData.mu.Lock()
-	m.postedFormData.m[formInstanceKey.Value] = msg
-	m.postedFormData.mu.Unlock()
+		var inReplyToMsg *fbb.Message
+		if inReplyTo != "" {
+			var err error
+			inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				log.Printf("failed to load in-reply-to (%q): %v", inReplyTo, err)
+				return
+			}
+		}
+		msg, err := messageBuilder{
+			Template:     template,
+			FormValues:   fields,
+			Interactive:  false,
+			InReplyToMsg: inReplyToMsg,
+			FormsMgr:     m,
+		}.build()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+		}
 
-	m.cleanupOldFormData()
-	_, _ = io.WriteString(w, "<script>window.close()</script>")
+		m.postedFormData.mu.Lock()
+		m.postedFormData.m[formInstanceKey.Value] = msg
+		m.postedFormData.mu.Unlock()
+
+		m.cleanupOldFormData()
+		_, _ = io.WriteString(w, "<script>window.close()</script>")
+	}
 }
 
 // GetFormDataHandler is the counterpart to PostFormDataHandler. Returns the form field values to the frontend
@@ -227,7 +243,7 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	responseText, err := m.fillFormTemplate(formPath, "/api/form?"+r.URL.Query().Encode(), nil)
+	responseText, err := m.fillFormTemplate(formPath, nil, "/api/form?"+r.URL.Query().Encode(), nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
@@ -324,7 +340,7 @@ func (m *Manager) downloadAndUnzipForms(ctx context.Context, downloadLink string
 }
 
 // RenderForm finds the associated form and returns the filled-in form in HTML given the contents of a form attachment
-func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
+func (m *Manager) RenderForm(data []byte, inReplyToMsg *fbb.Message, inReplyToPath string) (string, error) {
 	type Node struct {
 		XMLName xml.Name
 		Content []byte `xml:",innerxml"`
@@ -362,7 +378,7 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 
 	filesMap := formFilesFromPath(m.config.FormsPath)
 	switch {
-	case composeReply:
+	case inReplyToPath != "":
 		replyTemplate := formParams["reply_template"]
 		if replyTemplate == "" {
 			return "", errors.New("missing reply_template tag in form XML for a reply message")
@@ -378,8 +394,8 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to read referenced reply template: %w", err)
 		}
-		submitURL := "/api/form?composereply=true&template=" + url.QueryEscape(m.rel(template.Path))
-		return m.fillFormTemplate(template.InputFormPath, submitURL, formVars)
+		submitURL := "/api/form?in-reply-to=" + url.QueryEscape(inReplyToPath) + "&template=" + url.QueryEscape(m.rel(template.Path))
+		return m.fillFormTemplate(template.InputFormPath, inReplyToMsg, submitURL, formVars)
 	default:
 		displayForm := formParams["display_form"]
 		if displayForm == "" {
@@ -393,14 +409,14 @@ func (m *Manager) RenderForm(data []byte, composeReply bool) (string, error) {
 		if path == "" {
 			return "", fmt.Errorf("display from not found: %q", displayForm)
 		}
-		return m.fillFormTemplate(path, "", formVars)
+		return m.fillFormTemplate(path, inReplyToMsg, "", formVars)
 	}
 }
 
 // ComposeTemplate composes a message from a template (templatePath) by prompting the user through stdio.
 //
 // It combines all data needed for the whole template-based message: subject, body, and attachments.
-func (m *Manager) ComposeTemplate(templatePath string, subject string) (Message, error) {
+func (m *Manager) ComposeTemplate(templatePath string, subject string, inReplyToMsg *fbb.Message) (Message, error) {
 	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
 	if err != nil {
 		return Message{}, err
@@ -412,10 +428,11 @@ func (m *Manager) ComposeTemplate(templatePath string, subject string) (Message,
 	}
 	fmt.Printf("Form '%s', version: %s\n", m.rel(template.Path), formValues["templateversion"])
 	return messageBuilder{
-		Template:    template,
-		FormValues:  formValues,
-		Interactive: true,
-		FormsMgr:    m,
+		Template:     template,
+		FormValues:   formValues,
+		Interactive:  true,
+		FormsMgr:     m,
+		InReplyToMsg: inReplyToMsg,
 	}.build()
 }
 
@@ -523,7 +540,7 @@ func (m *Manager) gpsPos() (gpsd.Position, error) {
 	return conn.NextPosTimeout(3 * time.Second)
 }
 
-func (m *Manager) fillFormTemplate(templatePath string, formDestURL string, formVars map[string]string) (string, error) {
+func (m *Manager) fillFormTemplate(templatePath string, inReplyToMsg *fbb.Message, formDestURL string, formVars map[string]string) (string, error) {
 	data, err := readFile(templatePath)
 	if err != nil {
 		return "", err
@@ -534,7 +551,7 @@ func (m *Manager) fillFormTemplate(templatePath string, formDestURL string, form
 	data = strings.ReplaceAll(data, "http://localhost:8001", formDestURL) // Some Canada BC forms are hardcoded to this URL
 
 	// Substitute insertion tags and variables
-	data = insertionTagReplacer(m, "{", "}")(data)
+	data = insertionTagReplacer(m, inReplyToMsg, "{", "}")(data)
 	data = variableReplacer("{", "}", formVars)(data)
 
 	return data, nil

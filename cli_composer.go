@@ -308,8 +308,8 @@ func interactiveComposeWithTemplate(template string, inReplyToMsg *fbb.Message) 
 L:
 	for {
 		fmt.Print("Post message to outbox? [Y,q,e,?]: ")
-		switch ans := readLine(); strings.ToLower(ans) {
-		case "", "y":
+		switch readLine() {
+		case "Y", "y", "":
 			break L
 		case "e":
 			var err error
@@ -319,9 +319,11 @@ L:
 		case "q":
 			return
 		case "?":
-			fmt.Println("Y/y = Yes, post message to outbox.")
-			fmt.Println("e = Edit message body.")
-			fmt.Println("q = Quit, discarding the message.")
+			fallthrough
+		default:
+			fmt.Println("y = post message to outbox")
+			fmt.Println("e = edit message body")
+			fmt.Println("q = quit, discarding the message")
 		}
 	}
 	msg.SetBody(formMsg.Body)

@@ -11,7 +11,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -41,7 +41,7 @@ func readMail(ctx context.Context) {
 
 		for {
 			// Fetch messages
-			msgs, err := mailbox.LoadMessageDir(path.Join(mailbox.UserPath(fOptions.MailboxPath, fOptions.MyCall), mailboxes[mailboxIdx]))
+			msgs, err := mailbox.LoadMessageDir(filepath.Join(mbox.MBoxPath, mailboxes[mailboxIdx]))
 			if err != nil {
 				log.Fatal(err)
 			} else if len(msgs) == 0 {
@@ -73,11 +73,26 @@ func readMail(ctx context.Context) {
 				}
 			}
 
-			// Reply?
-			fmt.Fprintf(w, "Reply (ctrl+c to quit) [y/N]: ")
-			ans := readLine()
-			if strings.EqualFold(ans, "y") {
-				composeReplyMessage(msgs[msgIdx])
+		L:
+			for {
+				fmt.Fprintf(w, "Action [C,r,e,q,?]: ")
+				switch readLine() {
+				case "C", "c", "":
+					break L
+				case "r":
+					composeReplyMessage(msgs[msgIdx])
+				case "e":
+					extractMessageHandle(ctx, []string{msgs[msgIdx].MID()})
+				case "q":
+					return
+				case "?":
+					fallthrough
+				default:
+					fmt.Fprintln(w, "c - continue")
+					fmt.Fprintln(w, "r - reply")
+					fmt.Fprintln(w, "e - extract (attachments)")
+					fmt.Fprintln(w, "q - quit")
+				}
 			}
 		}
 	}

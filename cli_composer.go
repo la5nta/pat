@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/la5nta/wl2k-go/fbb"
-	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/spf13/pflag"
 
 	"github.com/la5nta/pat/internal/editor"
@@ -127,7 +126,7 @@ func composeMessage(ctx context.Context, args []string) {
 	var inReplyToMsg *fbb.Message
 	if path := *inReplyTo; path != "" {
 		var err error
-		inReplyToMsg, err = mailbox.OpenMessage(path)
+		inReplyToMsg, err = openMessage(path)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"os"
@@ -88,7 +89,7 @@ var commands = []Command{
 			"\tIf options are passed, reads message from stdin similar to mail(1).",
 		Options: map[string]string{
 			"--from, -r":        "Address to send from. Default is your call from config or --mycall, but can be specified to use tactical addresses.",
-			"--in-reply-to":     "Compose in reply to given message (full path)",
+			"--in-reply-to":     "Compose in reply to given message (full path or mid)",
 			"--template":        "Compose using template file. Uses the --forms directory as root for relative paths.",
 			"--subject, -s":     "Subject",
 			"--attachment , -a": "Attachment path (may be repeated)",
@@ -130,7 +131,7 @@ var commands = []Command{
 	{
 		Str:        "extract",
 		Desc:       "Extract attachments from a message file.",
-		Usage:      "file",
+		Usage:      "[full path or mid]",
 		HandleFunc: extractMessageHandle,
 	},
 	{
@@ -586,21 +587,18 @@ func loadHamlibRigs() map[string]hamlib.VFO {
 
 func extractMessageHandle(_ context.Context, args []string) {
 	if len(args) == 0 || args[0] == "" {
-		panic("TODO: usage")
+		fmt.Println("Missing argument, try 'extract help'.")
+		os.Exit(1)
 	}
 
-	file, _ := os.Open(args[0])
-	defer file.Close()
-
-	msg := new(fbb.Message)
-	if err := msg.ReadFrom(file); err != nil {
+	msg, err := openMessage(args[0])
+	if err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println(msg)
-		for _, f := range msg.Files() {
-			if err := os.WriteFile(f.Name(), f.Data(), 0o664); err != nil {
-				log.Fatal(err)
-			}
+	}
+	fmt.Println(msg)
+	for _, f := range msg.Files() {
+		if err := os.WriteFile(f.Name(), f.Data(), 0o664); err != nil {
+			log.Fatal(err)
 		}
 	}
 }
@@ -705,4 +703,21 @@ func postMessage(msg *fbb.Message) {
 		log.Fatal(err)
 	}
 	fmt.Println("Message posted")
+}
+
+func openMessage(path string) (*fbb.Message, error) {
+	// Search if only MID is specified.
+	if filepath.Dir(path) == "." && filepath.Ext(path) == "" {
+		debug.Printf("openMessage(%q): Searching...", path)
+		path += mailbox.Ext
+		fs.WalkDir(os.DirFS(mbox.MBoxPath), ".", func(p string, d fs.DirEntry, err error) error {
+			if d.Name() != path {
+				return nil
+			}
+			debug.Printf("openMessage(%q): Found %q", d.Name(), p)
+			path = filepath.Join(mbox.MBoxPath, p)
+			return io.EOF
+		})
+	}
+	return mailbox.OpenMessage(path)
 }

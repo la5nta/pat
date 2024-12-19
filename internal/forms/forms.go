@@ -45,7 +45,8 @@ const (
 
 // Manager manages the forms subsystem
 type Manager struct {
-	config Config
+	config   Config
+	sequence Sequence
 
 	// postedFormData serves as an kv-store holding intermediate data for
 	// communicating form values submitted by the served HTML form files to
@@ -64,13 +65,15 @@ type Manager struct {
 
 // Config passes config options to the forms package
 type Config struct {
-	FormsPath  string
-	MyCall     string
-	Locator    string
-	AppVersion string
-	LineReader func() string
-	UserAgent  string
-	GPSd       cfg.GPSdConfig
+	FormsPath      string
+	SequencePath   string
+	SequenceFormat string
+	MyCall         string
+	Locator        string
+	AppVersion     string
+	LineReader     func() string
+	UserAgent      string
+	GPSd           cfg.GPSdConfig
 }
 
 // FormFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches
@@ -95,11 +98,14 @@ var client = httpClient{http.Client{Timeout: 10 * time.Second}}
 func NewManager(conf Config) *Manager {
 	_ = os.MkdirAll(conf.FormsPath, 0o755)
 	retval := &Manager{
-		config: conf,
+		config:   conf,
+		sequence: OpenSequence(conf.SequencePath),
 	}
 	retval.postedFormData.m = make(map[string]Message)
 	return retval
 }
+
+func (m *Manager) Close() error { m.sequence.Close(); return nil }
 
 // GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message

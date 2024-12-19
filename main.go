@@ -361,14 +361,17 @@ func main() {
 
 	// init forms subsystem
 	formsMgr = forms.NewManager(forms.Config{
-		FormsPath:  fOptions.FormsPath,
-		MyCall:     fOptions.MyCall,
-		Locator:    config.Locator,
-		AppVersion: buildinfo.AppName + " " + buildinfo.VersionStringShort(),
-		UserAgent:  buildinfo.UserAgent(),
-		LineReader: readLine,
-		GPSd:       config.GPSd,
+		FormsPath:      fOptions.FormsPath,
+		SequencePath:   filepath.Join(directories.StateDir(), "template-sequence-number.json"),
+		SequenceFormat: "%03d",
+		MyCall:         fOptions.MyCall,
+		Locator:        config.Locator,
+		AppVersion:     buildinfo.AppName + " " + buildinfo.VersionStringShort(),
+		UserAgent:      buildinfo.UserAgent(),
+		LineReader:     readLine,
+		GPSd:           config.GPSd,
 	})
+	defer formsMgr.Close()
 
 	// Make sure we clean up on exit, closing any open resources etc.
 	defer cleanup()

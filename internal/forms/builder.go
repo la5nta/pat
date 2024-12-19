@@ -2,8 +2,8 @@ package forms
 
 import (
 	"bufio"
-	"context"
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -190,6 +190,9 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 	defer f.Close()
 
 	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, "<", ">")
+	refreshInsertionTags := func() {
+		replaceInsertionTags = insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, "<", ">")
+	}
 	replaceVars := variableReplacer("<", ">", b.FormValues)
 	addFormValue := func(k, v string) {
 		b.FormValues[strings.ToLower(k)] = v
@@ -290,7 +293,28 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			// Yes/No – Specify whether user can edit.
 			// TODO: Disable editing of body in composer?
 		case "Seqinc":
-			// TODO: Handle sequences
+			value = strings.TrimSpace(value)
+			if value == "" {
+				value = "1"
+			}
+			incr, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				log.Printf("WARNING: failed to parse Seqinc value (%q): %v", value, err)
+			}
+			if _, err := b.FormsMgr.sequence.Incr(incr); err != nil {
+				return Message{}, err
+			}
+			refreshInsertionTags()
+		case "Seqset":
+			value = strings.TrimSpace(value)
+			num, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				log.Printf("WARNING: failed to parse Seqset value (%q): %v", value, err)
+			}
+			if _, err := b.FormsMgr.sequence.Set(num); err != nil {
+				return Message{}, err
+			}
+			refreshInsertionTags()
 		default:
 			if strings.TrimSpace(lineTmpl) != "" {
 				log.Printf("skipping unknown template line: '%q'", lineTmpl)
@@ -337,6 +361,11 @@ func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, tagStart, tagEn
 		internetAvailable = "YES"
 	}
 
+	seqNum, err := m.sequence.Load()
+	if err != nil {
+		debug.Printf("Error loading sequence number: %v", err)
+	}
+
 	// This list is based on RMSE_FORMS/insertion_tags.zip (copy in docs/) as well as searching Standard Forms's templates.
 	tags := map[string]string{
 		"MsgSender":      m.config.MyCall,
@@ -366,13 +395,14 @@ func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, tagStart, tagEn
 		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
 
 		"InternetAvailable": internetAvailable,
-		
+
 		"MsgIsReply":           strings.Title(strconv.FormatBool(inReplyToMsg != nil)),
 		"MsgIsForward":         "False",
 		"MsgIsAcknowledgement": "False",
 
+		"SeqNum": fmt.Sprintf(m.config.SequenceFormat, seqNum),
+
 		// TODO (other insertion tags found in Standard Forms):
-		// SeqNum
 		// FormFolder
 		// MsgTo
 		// MsgCc

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/textproto"
@@ -369,7 +370,13 @@ func isInternetAvailable() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, "HEAD", "https://www.google.com", nil)
-	_, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	debug.Printf("Internet available: %v (%v)", err == nil, err)
-	return err == nil
+	if err != nil {
+		return false
+	}
+	// Be nice, read the response body and close it.
+	io.Copy(io.Discard, resp.Body)
+	resp.Body.Close()
+	return true
 }

@@ -2,9 +2,11 @@ package forms
 
 import (
 	"bufio"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"log"
+	"net/http"
 	"net/textproto"
 	"os"
 	"path/filepath"
@@ -299,6 +301,12 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		validPos = "YES"
 		debug.Printf("GPSd position: %s", positionFmt(signedDecimal, nowPos))
 	}
+
+	internetAvailable := "NO"
+	if isInternetAvailable() {
+		internetAvailable = "YES"
+	}
+
 	// This list is based on RMSE_FORMS/insertion_tags.zip (copy in docs/) as well as searching Standard Forms's templates.
 	return placeholderReplacer(tagStart, tagEnd, map[string]string{
 		"MsgSender":      m.config.MyCall,
@@ -327,10 +335,11 @@ func insertionTagReplacer(m *Manager, tagStart, tagEnd string) func(string) stri
 		"GPSLatitude":  fmt.Sprintf("%.4f", nowPos.Lat),
 		"GPSLongitude": fmt.Sprintf("%.4f", nowPos.Lon),
 
+		"InternetAvailable": internetAvailable,
+
 		// TODO (other insertion tags found in Standard Forms):
 		// SeqNum
 		// FormFolder
-		// InternetAvailable
 		// MsgTo
 		// MsgCc
 		// MsgSubject
@@ -354,4 +363,13 @@ func xmlName(t Template) string {
 		attachmentName = strings.TrimPrefix(attachmentName, "RMS_Express_Form_")
 	}
 	return attachmentName
+}
+
+func isInternetAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, "HEAD", "https://www.google.com", nil)
+	_, err := http.DefaultClient.Do(req)
+	debug.Printf("Internet available: %v (%v)", err == nil, err)
+	return err == nil
 }

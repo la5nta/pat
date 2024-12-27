@@ -63,6 +63,11 @@ type Manager struct {
 	}
 }
 
+func (m *Manager) SeqSet(v int) error {
+	_, err := m.sequence.Set(int64(v))
+	return err
+}
+
 // Config passes config options to the forms package
 type Config struct {
 	FormsPath      string

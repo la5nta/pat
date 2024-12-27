@@ -148,12 +148,20 @@ var commands = []Command{
 	},
 	{
 		Str:  "updateforms",
-		Desc: "Download the latest form templates from winlink.org.",
+		Desc: "Download the latest form templates. (DEPRECATED)",
 		HandleFunc: func(ctx context.Context, args []string) {
+			log.Println("DEPRECATED: Use `templates update` instead")
 			if _, err := formsMgr.UpdateFormTemplates(ctx); err != nil {
 				log.Printf("%v", err)
 			}
 		},
+	},
+	{
+		Str:        "templates",
+		Desc:       "Manage message templates and HTML forms.",
+		Usage:      templatesUsage,
+		Example:    templatesExample,
+		HandleFunc: templatesHandle,
 	},
 	{
 		Str:        "account",

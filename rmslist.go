@@ -144,7 +144,7 @@ func ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS)
 		return nil, err
 	}
 
-	var slice = []RMS{}
+	slice := []RMS{}
 	for _, gw := range status.Gateways {
 		for _, channel := range gw.Channels {
 			r := RMS{
@@ -181,11 +181,12 @@ func toURL(gc cmsapi.GatewayChannel, targetCall string) *url.URL {
 func addBandwidth(gc cmsapi.GatewayChannel, chURL *url.URL) {
 	bw := ""
 	modeF := strings.Fields(gc.SupportedModes)
-	if modeF[0] == "ARDOP" {
+	switch modeF[0] {
+	case "ARDOP":
 		if len(modeF) > 1 {
 			bw = modeF[1] + "MAX"
 		}
-	} else if modeF[0] == "VARA" {
+	case "VARA":
 		if len(modeF) > 1 && modeF[1] == "FM" {
 			// VARA FM should not set bandwidth in connect URL or sent over the command port,
 			// it's set in the VARA Setup dialog

@@ -38,7 +38,7 @@ func (p *PromptHub) loop() {
 	p.c = make(chan *Prompt)
 	p.rc = make(chan PromptResponse)
 	for prompt := range p.c {
-		timeout := time.After(prompt.Deadline.Sub(time.Now()))
+		timeout := time.After(time.Until(prompt.Deadline))
 		select {
 		case <-timeout:
 			prompt.resp <- PromptResponse{ID: prompt.ID, Err: fmt.Errorf("deadline reached")}

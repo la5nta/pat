@@ -448,15 +448,15 @@ func bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	mode := strings.ToLower(req.FormValue("mode"))
 	resp := BandwidthResponse{Mode: mode, Bandwidths: []string{}}
-	switch {
-	case mode == MethodArdop:
+	switch mode {
+	case MethodArdop:
 		for _, bw := range ardop.Bandwidths() {
 			resp.Bandwidths = append(resp.Bandwidths, bw.String())
 		}
 		if bw := config.Ardop.ARQBandwidth; !bw.IsZero() {
 			resp.Default = bw.String()
 		}
-	case mode == MethodVaraHF:
+	case MethodVaraHF:
 		resp.Bandwidths = vara.Bandwidths()
 		if bw := config.VaraHF.Bandwidth; bw != 0 {
 			resp.Default = fmt.Sprintf("%d", bw)

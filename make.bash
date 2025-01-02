@@ -2,6 +2,7 @@
 set -e
 
 export GO111MODULE=on
+export GOPROXY=direct
 
 if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
 if [ -d $CGO_ENABLED ]; then CGO_ENABLED=$(go env CGO_ENABLED); else OS=$CGO_ENABLED; fi

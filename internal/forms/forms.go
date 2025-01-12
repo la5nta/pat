@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/la5nta/wl2k-go/fbb"
@@ -574,7 +575,15 @@ func (m *Manager) getFormsVersion() string {
 		debug.Printf("failed to open version file: %v", err)
 		return "unknown"
 	}
-	return strings.TrimSpace(str)
+	// Drop any whitespace in the string
+	// (version 1.1.6.0 was released as `1.1.6\t.0`).
+	str = strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, str)
+	return str
 }
 
 func (m *Manager) cleanupOldFormData() {

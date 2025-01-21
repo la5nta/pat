@@ -159,11 +159,16 @@ func (b messageBuilder) buildAttachments() []*fbb.File {
 		if !strings.HasPrefix(k, "attached_text") {
 			continue
 		}
+		if strings.TrimSpace(b.FormValues[k]) == "" {
+			// Some forms set this key as empty, meaning no real attachment.
+			debug.Printf("Ignoring empty text attachment %q: %q", k, b.FormValues[k])
+			continue
+		}
 		textKey := k
 		text := b.FormValues[textKey]
 		nameKey := strings.Replace(k, "attached_text", "attached_file", 1)
-		name, ok := b.FormValues[nameKey]
-		if !ok {
+		name := strings.TrimSpace(b.FormValues[nameKey])
+		if name == "" {
 			debug.Printf("%s defined, but corresponding filename element %q is not set", textKey, nameKey)
 			name = "FormData.txt" // Fallback (better than nothing)
 		}

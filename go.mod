@@ -9,7 +9,7 @@ require (
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/harenber/ptc-go/v2 v2.2.3
+	github.com/harenber/ptc-go/v2 v2.2.4
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/la5nta/wl2k-go v0.11.8

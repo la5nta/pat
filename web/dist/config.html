@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- 
+  Configuration properties are defined in cfg/config.go and served by the backend as JSON.
+    
+  To add a new property to the web UI:
+  1. Add form field in this HTML (inside configForm)
+  2. Add field handling in config.js (load+save)
+  3. Add JSON tag to field in cfg/config.go struct
+  -->
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{.AppName}} - Configuration</title>
+  <link href="../dist/css/style.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">
+          <span class="btn status-light btn-success"></span> Configuration
+        </a>
+      </div>
+      <div class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+          <li><a href="/ui">Back to Mailbox</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="margin-top: 60px">
+    <div class="row">
+      <div class="col-md-10 col-md-offset-1">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Configuration</h3>
+          </div>
+          <div class="panel-body">
+            <form id="configForm">
+              <!-- General Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">General</h3>
+                  </div>
+                  <div class="panel-body">
+
+                    <div class="form-group">
+                      <label for="mycall">Callsign <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" id="mycall" name="mycall" required pattern="[A-Z0-9]{3,7}"
+                        oninput="this.value = this.value.toUpperCase()">
+                      <small class="form-text text-muted">This field is required. Valid amateur radio callsign
+                        (uppercase only)</small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="locator">Maidenhead Locator <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" id="locator" name="locator" required
+                        pattern="[A-Ra-r]{2}[0-9]{2}[A-Xa-x]{2}">
+                      <small class="form-text text-muted">This field is required. 4-6 character grid locator</small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="secure_login_password">Secure Login Password (optional)</label>
+                      <input type="text" class="form-control" id="secure_login_password" name="secure_login_password"
+                        autocomplete="off">
+                      <small class="form-text text-muted">
+                        Used for secure login challenges. Leave empty for new accounts (created on first connection with
+                        a new callsign) - a password will be generated and emailed to you.
+                      </small>
+                      <small class="form-text text-danger">Important: Write down the password emailed after first
+                        connection and keep it safe - this is your only copy!</small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="auxiliary_addresses">Auxiliary Addresses</label>
+                      <input type="text" class="form-control" id="auxiliary_addresses"
+                        placeholder="Callsign:Password (optional)" autocomplete="off">
+                      <small class="form-text text-muted">Callsigns to fetch email on behalf of. Use "callsign:password"
+                        format. Password defaults to Secure Login Password if omitted.</small>
+                    </div>
+
+                    <div class="panel-group" style="margin-top: 20px;">
+                      <div class="panel panel-default">
+                        <div class="panel-heading">
+                          <h4 class="panel-title">
+                            <a data-toggle="collapse" href="#aliasesCollapse">Connect Aliases <small>(click to
+                                expand)</small></a>
+                          </h4>
+                        </div>
+                        <div id="aliasesCollapse" class="panel-collapse collapse">
+                          <div class="panel-body">
+                            <div id="aliasesContainer">
+                              <div class="form-inline alias-row" style="margin-bottom: 10px;">
+                                <input type="text" class="form-control alias-key" placeholder="Alias name"
+                                  style="width: 200px;">
+                                <input type="text" class="form-control alias-value" placeholder="Connection URL"
+                                  style="width: 400px; margin-left: 10px;">
+                                <button class="btn btn-danger btn-sm delete-alias" style="margin-left: 10px;">
+                                  <span class="glyphicon glyphicon-remove"></span>
+                                </button>
+                              </div>
+                            </div>
+                            <button id="addAlias" class="btn btn-success btn-sm" style="margin-top: 10px;">
+                              <span class="glyphicon glyphicon-plus"></span> Add Alias
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- /General Configuration -->
+
+                <!-- Transports Configuration -->
+                <div class="panel-group" style="margin-top: 20px;">
+                  <div class="panel panel-default">
+                    <div class="panel-heading">
+                      <h3 class="panel-title">Transports</h3>
+                    </div>
+                    <div class="panel-body">
+
+                      <div class="panel-group">
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#ardopCollapse">ARDOP</a>
+                            </h4>
+                          </div>
+                          <div id="ardopCollapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="ardop"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="ardop_addr">TNC Address</label>
+                                <input type="text" class="form-control" id="ardop_addr" placeholder="localhost:8515"
+                                  name="ardop_addr">
+                              </div>
+                              <div class="form-group">
+                                <label for="ardop_arq_bandwidth">ARQ Bandwidth</label>
+                                <select class="form-control" id="ardop_arq_bandwidth" name="ardop_arq_bandwidth">
+                                  <option value="200MAX">200 Hz MAX</option>
+                                  <option value="500MAX">500 Hz MAX</option>
+                                  <option value="1000MAX">1000 Hz MAX</option>
+                                  <option value="2000MAX">2000 Hz MAX</option>
+                                  <option value="200FORCED">200 Hz FORCED</option>
+                                  <option value="500FORCED">500 Hz FORCED</option>
+                                  <option value="1000FORCED">1000 Hz FORCED</option>
+                                  <option value="2000FORCED">2000 Hz FORCED</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="ardop_cwid_enabled" name="ardop_cwid_enabled"> Enable CW ID
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="ardop_beacon_interval">Beacon Interval (seconds)</label>
+                                <input type="number" class="form-control" id="ardop_beacon_interval"
+                                  name="ardop_beacon_interval" min="0" value="0">
+                              </div>
+                              <div class="form-group">
+                                <label for="ardop_rig">Rig</label>
+                                <select class="form-control rig-select" id="ardop_rig" name="ardop_rig">
+                                  <option value="">None</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="ardop_ptt_ctrl" name="ardop_ptt_ctrl"> PTT Control
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#pactorCollapse">PACTOR</a>
+                            </h4>
+                          </div>
+                          <div id="pactorCollapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="pactor"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="pactor_path">TNC Path</label>
+                                <input type="text" class="form-control" id="pactor_path" placeholder="/dev/ttyUSB0"
+                                  name="pactor_path">
+                              </div>
+                              <div class="form-group">
+                                <label for="pactor_baudrate">Baud Rate</label>
+                                <input type="number" class="form-control" id="pactor_baudrate" placeholder="57600"
+                                  name="pactor_baudrate">
+                              </div>
+                              <div class="form-group">
+                                <label for="pactor_init_script">Init Script Path</label>
+                                <input type="text" class="form-control" id="pactor_init_script"
+                                  name="pactor_init_script" placeholder="/path/to/init.sh">
+                                <small class="form-text text-muted">Optional script to initialize TNC</small>
+                              </div>
+                              <div class="form-group">
+                                <label for="pactor_rig">Rig</label>
+                                <select class="form-control rig-select" id="pactor_rig" name="pactor_rig">
+                                  <option value="">None</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="pactor_ptt_ctrl" name="pactor_ptt_ctrl"> PTT Control
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#varaHfCollapse">Vara HF</a>
+                            </h4>
+                          </div>
+                          <div id="varaHfCollapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="varahf"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_hf_addr">Modem Address</label>
+                                <input type="text" class="form-control" id="vara_hf_addr" placeholder="localhost:8300"
+                                  name="vara_hf_addr">
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_hf_bandwidth">Bandwidth</label>
+                                <select class="form-control" id="vara_hf_bandwidth" name="vara_hf_bandwidth">
+                                  <option value="500">500 Hz</option>
+                                  <option value="2300">2300 Hz</option>
+                                  <option value="2750">2750 Hz</option>
+                                </select>
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_hf_rig">Rig</label>
+                                <select class="form-control rig-select" id="vara_hf_rig" name="vara_hf_rig">
+                                  <option value="">None</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="vara_hf_ptt_ctrl" name="vara_hf_ptt_ctrl"> PTT Control
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#varaFmCollapse">Vara FM</a>
+                            </h4>
+                          </div>
+                          <div id="varaFmCollapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="varafm"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_fm_addr">Modem Address</label>
+                                <input type="text" class="form-control" id="vara_fm_addr" placeholder="localhost:8300"
+                                  name="vara_fm_addr">
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_fm_bandwidth">Bandwidth</label>
+                                <select class="form-control" id="vara_fm_bandwidth" name="vara_fm_bandwidth">
+                                  <option value="6250">6250 Hz</option>
+                                  <option value="12500">12500 Hz</option>
+                                </select>
+                              </div>
+                              <div class="form-group">
+                                <label for="vara_fm_rig">Rig</label>
+                                <select class="form-control rig-select" id="vara_fm_rig" name="vara_fm_rig">
+                                  <option value="">None</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="vara_fm_ptt_ctrl" name="vara_fm_ptt_ctrl"> PTT Control
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#telnetCollapse">Telnet</a>
+                            </h4>
+                          </div>
+                          <div id="telnetCollapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="telnet"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="telnet_listen_addr">Listen Address</label>
+                                <input type="text" class="form-control" id="telnet_listen_addr" placeholder=":8774"
+                                  name="telnet_listen_addr">
+                                <small class="form-text text-muted">Network address to listen for telnet-p2p connections
+                                  (e.g. ":8774" for all interfaces port 8774)</small>
+                              </div>
+                              <div class="form-group">
+                                <label for="telnet_password">Password</label>
+                                <input type="password" class="form-control" id="telnet_password" name="telnet_password"
+                                  autocomplete="new-password">
+                                <small class="form-text text-muted">Authentication password for incoming telnet-p2p
+                                  connections</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="panel panel-default">
+                          <div class="panel-heading">
+                            <h4 class="panel-title">
+                              <a data-toggle="collapse" href="#ax25Collapse">AX.25</a>
+                            </h4>
+                          </div>
+                          <div id="ax25Collapse" class="panel-collapse collapse">
+                            <div class="panel-body">
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" name="listen_methods[]" value="ax25"> Listen for inbound P2P
+                                  traffic
+                                </label>
+                              </div>
+                              <div class="form-group">
+                                <label for="ax25_beacon_interval">Beacon Interval (seconds)</label>
+                                <input type="number" class="form-control" id="ax25_beacon_interval"
+                                  name="ax25_beacon_interval" min="0" value="3600">
+                                <small class="form-text text-muted">Seconds between beacon frames when listening (0 =
+                                  disabled). Example: 3600 = hourly</small>
+                              </div>
+                              <div class="form-group">
+                                <label for="ax25_beacon_message">Beacon Message</label>
+                                <input type="text" class="form-control" id="ax25_beacon_message"
+                                  name="ax25_beacon_message" value="Winlink P2P">
+                                <small class="form-text text-muted">Content of the beacon message</small>
+                              </div>
+                              <div class="form-group">
+                                <label for="ax25_beacon_dest">Beacon Destination</label>
+                                <input type="text" class="form-control" id="ax25_beacon_dest" name="ax25_beacon_dest"
+                                  value="IDENT">
+                                <small class="form-text text-muted">Destination callsign for beacon frames (typically
+                                  "IDENT")</small>
+                              </div>
+                              <div class="form-group">
+                                <label for="ax25_engine">Engine</label>
+                                <select class="form-control" id="ax25_engine" name="ax25_engine">
+                                  <option value="linux">Linux</option>
+                                  <option value="agwpe">AGWPE</option>
+                                  <option value="serial-tnc">Serial TNC</option>
+                                </select>
+                              </div>
+                              <div class="form-group">
+                                <label for="ax25_rig">Rig</label>
+                                <select class="form-control rig-select" id="ax25_rig" name="ax25_rig">
+                                  <option value="">None</option>
+                                </select>
+                              </div>
+                              <div class="checkbox">
+                                <label>
+                                  <input type="checkbox" id="ax25_ptt_ctrl" name="ax25_ptt_ctrl"> PTT Control
+                                </label>
+                              </div>
+                              <small class="form-text text-muted">Linux (kernel AX.25), AGWPE (AGWPE-compatible TNC),
+                                Serial-TNC (direct serial connection)</small>
+                            </div>
+
+                            <div class="panel-group">
+                              <div class="panel panel-default ax25-engine-config" data-engine="linux">
+                                <div class="panel-heading">
+                                  <h5 class="panel-title">
+                                    <a data-toggle="collapse" href="#ax25LinuxConfig">Linux</a>
+                                  </h5>
+                                </div>
+                                <div id="ax25LinuxConfig" class="panel-collapse collapse in">
+                                  <div class="panel-body">
+                                    <div class="form-group">
+                                      <label for="ax25_linux_port">AX.25 Port</label>
+                                      <input type="text" class="form-control" id="ax25_linux_port" placeholder="wl2k"
+                                        name="ax25_linux_port">
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="panel panel-default ax25-engine-config" data-engine="agwpe">
+                                <div class="panel-heading">
+                                  <h5 class="panel-title">
+                                    <a data-toggle="collapse" href="#ax25AGWPEConfig">AGWPE</a>
+                                  </h5>
+                                </div>
+                                <div id="ax25AGWPEConfig" class="panel-collapse collapse in">
+                                  <div class="panel-body">
+                                    <div class="form-group">
+                                      <label for="agwpe_addr">AGWPE Address</label>
+                                      <input type="text" class="form-control" id="agwpe_addr"
+                                        placeholder="localhost:8000" name="agwpe_addr">
+                                    </div>
+                                    <div class="form-group">
+                                      <label for="agwpe_radio_port">Radio Port</label>
+                                      <input type="number" class="form-control" id="agwpe_radio_port" min="0" max="3"
+                                        value="0" name="agwpe_radio_port">
+                                      <small class="form-text text-muted">AGWPE radio port number (0-3)</small>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="panel panel-default ax25-engine-config" data-engine="serial-tnc">
+                                <div class="panel-heading">
+                                  <h5 class="panel-title">
+                                    <a data-toggle="collapse" href="#ax25SerialTNCConfig">Serial TNC</a>
+                                  </h5>
+                                </div>
+                                <div id="ax25SerialTNCConfig" class="panel-collapse collapse in">
+                                  <div class="panel-body">
+                                    <div class="form-group">
+                                      <label for="serial_tnc_path">Device Path</label>
+                                      <input type="text" class="form-control" id="serial_tnc_path"
+                                        placeholder="/dev/ttyUSB0" name="serial_tnc_path">
+                                    </div>
+                                    <div class="form-group">
+                                      <label for="serial_tnc_baud">Serial Baud Rate</label>
+                                      <input type="number" class="form-control" id="serial_tnc_baud" value="9600"
+                                        name="serial_tnc_baud">
+                                    </div>
+                                    <div class="form-group">
+                                      <label for="serial_tnc_type">TNC Type</label>
+                                      <select class="form-control" id="serial_tnc_type" name="serial_tnc_type">
+                                        <option value="kenwood">Kenwood</option>
+                                        <option value="generic">Generic</option>
+                                      </select>
+                                    </div>
+                                    <div class="form-group">
+                                      <label for="serial_tnc_hbaud">Packet Baud Rate</label>
+                                      <select class="form-control" id="serial_tnc_hbaud" name="serial_tnc_hbaud">
+                                        <option value="1200">1200 baud</option>
+                                        <option value="9600">9600 baud</option>
+                                      </select>
+                                      <small class="form-text text-muted">Packet connection speed (1200 or 9600
+                                        baud)</small>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- /Transports Configuration -->
+
+              <!-- Rig Control Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">Rig Control</h3>
+                  </div>
+                  <div class="panel-body">
+                    <div class="panel-group">
+                      <div class="panel panel-default">
+                        <div class="panel-heading">
+                          <h4 class="panel-title">
+                            <a data-toggle="collapse" href="#rigControlCollapse">Hamlib rigs <small>(click to
+                                expand)</small></a>
+                          </h4>
+                        </div>
+                        <div id="rigControlCollapse" class="panel-collapse collapse">
+                          <div class="panel-body">
+                            <div class="alert alert-info">
+                              <p>Configure your radio equipment connections here. For rig control, we recommend using
+                                the TCP connection type to connect to <code>rigctld</code> from Hamlib - this provides
+                                the most reliable interface for most modern radios.</p>
+
+                              <p>The rigs you configure here will appear in the "Rig" dropdown menus found in each
+                                transport's configuration section. A single rig configuration can be shared by multiple
+                                transports simultaneously, allowing different communication methods (e.g. ARDOP and VARA
+                                HF) to use the same radio equipment without configuration duplication.</p>
+
+                              <p>Please note: The TCP option connects to a <code>rigctld</code> instance that must be
+                                running when using rig control features. You can configure the connection now but ensure
+                                rigctld is properly set up and started before attempting to use it. Direct serial
+                                connection requires advanced setup and involves building from source.</p>
+                            </div>
+                            <div id="rigsContainer">
+                              <div class="rig-row" style="margin-bottom: 20px;">
+                                <div class="form-group">
+                                  <label>Rig Name <small class="text-muted">(reference name)</small></label>
+                                  <input type="text" class="form-control rig-name" placeholder="My IC-7300"
+                                    style="width: 100%">
+                                </div>
+
+                                <div class="row">
+                                  <div class="col-md-3">
+                                    <div class="form-group">
+                                      <label>Connection Type</label>
+                                      <select class="form-control rig-network" style="width: 100%">
+                                        <option value="tcp">TCP</option>
+                                        <option value="serial">Serial</option>
+                                      </select>
+                                      <small class="text-muted">TCP for rigctld (recommended)</small>
+                                    </div>
+                                  </div>
+
+                                  <div class="col-md-5">
+                                    <div class="form-group">
+                                      <label>Address/Port</label>
+                                      <input type="text" class="form-control rig-address"
+                                        placeholder="192.168.1.100:4532 or /dev/ttyUSB0" style="width: 100%">
+                                      <small class="text-muted">TCP: host:port<br>Serial: device path</small>
+                                    </div>
+                                  </div>
+
+                                  <div class="col-md-3">
+                                    <div class="form-group">
+                                      <label>Default VFO</label>
+                                      <select class="form-control rig-vfo" style="width: 100%">
+                                        <option value="">Default</option>
+                                        <option value="A">VFO A</option>
+                                        <option value="B">VFO B</option>
+                                      </select>
+                                      <small class="text-muted">Most rigs use VFO A</small>
+                                    </div>
+                                  </div>
+                                </div>
+                                <button class="btn btn-danger btn-sm delete-rig"
+                                  style="margin-left: 10px; margin-top: 10px;">
+                                  <span class="glyphicon glyphicon-remove"></span>
+                                </button>
+                              </div>
+                            </div>
+                            <button id="addRig" class="btn btn-success btn-sm" style="margin-top: 10px;" type="button">
+                              <span class="glyphicon glyphicon-plus"></span> Add Rig
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- /Rig Control Configuration -->
+
+
+              <!-- GPSd Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">GPSd Configuration</h3>
+                  </div>
+                  <div class="panel-body">
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="gpsd_enable_http" name="gpsd_enable_http">
+                        Enable GPSd HTTP Proxy
+                        <small class="form-text text-muted text-danger">Caution: Exposes GPS position to anyone
+                          accessing the web interface</small>
+                      </label>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="gpsd_allow_forms" name="gpsd_allow_forms">
+                        Allow Forms GPS Access
+                        <small class="form-text text-muted text-danger">Caution: Automatically injects GPS position into
+                          forms without explicit consent</small>
+                      </label>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="gpsd_use_server_time" name="gpsd_use_server_time">
+                        Use Server Time
+                        <small class="form-text text-muted">Use server time instead of GPS device timestamp</small>
+                      </label>
+                    </div>
+                    <div class="form-group">
+                      <label for="gpsd_addr">Server Address</label>
+                      <input type="text" class="form-control" id="gpsd_addr" placeholder="localhost:2947"
+                        name="gpsd_addr">
+                      <small class="form-text text-muted">GPSd server address (e.g. localhost:2947)</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- /GPSd Configuration -->
+
+              <!-- Schedule Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">Schedule (Cron Jobs)</h3>
+                  </div>
+                  <div class="panel-body">
+                    <div class="alert alert-info">
+                      <strong>Format:</strong> cron(5) schedule followed by command<br>
+                      Example: <code>@hourly connect telnet</code> or <code>0 3 * * * freq ardop:5350</code>
+                    </div>
+                    <div id="scheduleContainer">
+                      <div class="form-group schedule-row" style="margin-bottom: 10px;">
+                        <div class="input-group">
+                          <input type="text" class="form-control schedule-expr" placeholder="* * * * *"
+                            style="width: 200px;">
+                          <input type="text" class="form-control schedule-cmd" placeholder="command"
+                            style="width: 400px; margin-left: 10px;">
+                          <button class="btn btn-danger btn-sm delete-schedule" style="margin-left: 10px;">
+                            <span class="glyphicon glyphicon-remove"></span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <button id="addSchedule" class="btn btn-success btn-sm" style="margin-top: 10px;">
+                      <span class="glyphicon glyphicon-plus"></span> Add Schedule
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- /Schedule Configuration -->
+
+              <!-- Submit button -->
+              <div class="form-group form-actions" style="margin-top: 30px;">
+                <div class="pull-right">
+                  <button type="button" class="btn btn-default" onclick="window.location.reload()">Revert</button>
+                  <button type="submit" form="configForm" class="btn btn-primary" style="margin-left: 10px;">Save
+                    Changes</button>
+                </div>
+                <span id="statusMessage" class="text-muted" style="margin-left: 10px;"></span>
+              </div>
+              <!-- /Submit button -->
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Restart notice modal -->
+  <div class="modal fade" id="restartNotice" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Restart Required</h4>
+        </div>
+        <div class="modal-body">
+          <p>Configuration changes have been saved successfully.</p>
+          <p class="text-warning"><strong>Note:</strong> Some changes will not take effect until the application is
+            restarted.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../dist/js/config.js"></script>
+</body>
+
+</html>

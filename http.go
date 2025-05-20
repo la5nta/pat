@@ -31,6 +31,7 @@ import (
 
 	"github.com/la5nta/wl2k-go/transport/ardop"
 
+	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
@@ -123,10 +124,12 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/current_gps_position", positionHandler).Methods("GET")
 	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
+	r.HandleFunc("/api/config", configHandler).Methods("GET", "PUT")
 
 	r.PathPrefix("/dist/").Handler(distHandler())
 	r.HandleFunc("/ws", wsHandler)
-	r.HandleFunc("/ui", uiHandler()).Methods("GET")
+	r.HandleFunc("/ui", uiHandler("dist/index.html")).Methods("GET")
+	r.HandleFunc("/ui/config", uiHandler("dist/config.html")).Methods("GET")
 	r.HandleFunc("/", rootHandler).Methods("GET")
 
 	websocketHub = NewWSHub()
@@ -382,12 +385,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	websocketHub.Handle(conn)
 }
 
-func uiHandler() http.HandlerFunc {
-	const indexPath = "dist/index.html"
-	templateFunc := func() ([]byte, error) { return fs.ReadFile(staticContent, indexPath) }
+func uiHandler(templatePath string) http.HandlerFunc {
+	templateFunc := func() ([]byte, error) { return fs.ReadFile(staticContent, templatePath) }
 	if target := devServerAddr(); target != "" {
 		templateFunc = func() ([]byte, error) {
-			resp, err := http.Get(target + "/" + indexPath)
+			resp, err := http.Get(target + "/" + templatePath)
 			if err != nil {
 				return nil, fmt.Errorf("dev server not reachable: %w", err)
 			}
@@ -396,7 +398,12 @@ func uiHandler() http.HandlerFunc {
 		}
 	}
 
-	return func(w http.ResponseWriter, _ *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Redirect to config if no callsign is set and we're not already on config page
+		if fOptions.MyCall == "" && r.URL.Path != "/ui/config" {
+			http.Redirect(w, r, "/ui/config", http.StatusFound)
+			return
+		}
 		data, err := templateFunc()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -765,6 +772,42 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		http.NotFound(w, r)
 	}
+}
+
+func configHandler(w http.ResponseWriter, r *http.Request) {
+	const RedactedPassword = "[REDACTED]"
+
+	currentConfig, err := LoadConfig(fOptions.ConfigPath, cfg.DefaultConfig)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if r.Method == "GET" {
+		if currentConfig.SecureLoginPassword != "" {
+			// Redact password before sending over unsafe channel.
+			currentConfig.SecureLoginPassword = RedactedPassword
+		}
+		json.NewEncoder(w).Encode(currentConfig)
+		return
+	}
+
+	var newConfig cfg.Config
+	if err := json.NewDecoder(r.Body).Decode(&newConfig); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Reset redacted password if it was unmodified (to retain old value)
+	if newConfig.SecureLoginPassword == RedactedPassword {
+		newConfig.SecureLoginPassword = currentConfig.SecureLoginPassword
+	}
+
+	if err := WriteConfig(newConfig, fOptions.ConfigPath); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	_ = json.NewEncoder(w).Encode("OK")
 }
 
 // toHTML takes the given body and turns it into proper html with

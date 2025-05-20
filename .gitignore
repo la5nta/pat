@@ -2,3 +2,4 @@
 pat
 pat*.pkg
 docker-data/
+.aider*

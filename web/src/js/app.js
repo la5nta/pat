@@ -55,7 +55,11 @@ $(document).ready(function () {
       if (!$this.hasClass('active')) {
         $this.addClass('active');
       }
-      e.preventDefault();
+
+      // Only prevent default if it's NOT the Configuration link
+      if (!$this.find('a[href="/ui/config"]').length) {
+        e.preventDefault();
+      }
     });
 
     $('.nav :not(.dropdown) a').on('click', function () {

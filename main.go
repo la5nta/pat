@@ -345,7 +345,9 @@ func main() {
 	// Read command line options from config if unset
 	if fOptions.MyCall == "" && config.MyCall == "" {
 		fmt.Fprint(os.Stderr, "Missing mycall\n")
-		os.Exit(1)
+		if cmd.Str != "http" {
+			os.Exit(1)
+		}
 	} else if fOptions.MyCall == "" {
 		fOptions.MyCall = config.MyCall
 	}

@@ -36,7 +36,11 @@ module.exports = (env, argv) => {
     },
 
     // entry files to compile (relative to the base dir)
-    entry: ['./js/app.js', './scss/app.scss'],
+    entry: {
+        app: './js/app.js',
+        config: './js/config.js',
+        styles: './scss/app.scss'
+    },
 
     // enable development source maps
     // * will be overwritten by 'source-maps' in production mode
@@ -45,7 +49,7 @@ module.exports = (env, argv) => {
     // path to store compiled JS bundle
     output: {
       // bundle relative name
-      filename: 'js/app.js',
+      filename: 'js/[name].js',
       // base build directory
       path: path.resolve(__dirname, 'dist'),
       // path to build relative asset links
@@ -63,6 +67,7 @@ module.exports = (env, argv) => {
       new CopyPlugin([
         { from: 'static', to: 'static' },
         { from: 'index.html', to: 'index.html' },
+        { from: 'config.html', to: 'config.html' },
       ]),
 
       // image optimization

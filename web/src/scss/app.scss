@@ -329,3 +329,18 @@ input[type='radio'] {
   top: 0;
   background: #eee;
 }
+
+.checkbox-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.checkbox-list-items {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.checkbox-list-items li {
+  margin-bottom: 5px;
+}

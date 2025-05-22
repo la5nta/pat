@@ -143,16 +143,29 @@
             </div>
             <form onsubmit="return false">
               <div class="modal-body">
+                <!-- Password input -->
                 <input
                   type="password"
-                  id="promptResponseValue"
-                  name="response"
-                  class="form-control"
+                  id="promptPasswordInput"
+                  class="form-control prompt-input"
                   placeholder=""
+                  style="display:none"
                 />
+              
+                <!-- Multi-select input -->
+                <div id="promptMultiSelectInput" class="prompt-input" style="display:none">
+                  <div class="checkbox-list">
+                    <div class="checkbox-list-items">
+                    </div>
+                  </div>
+                </div>
+
                 <input type="hidden" id="promptID" name="id" class="form-control" placeholder="" />
               </div>
               <div class="modal-footer">
+                <button type="button" class="btn btn-default pull-left" id="selectAllToggle">
+                  Select All
+                </button>
                 <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                 <input type="submit" value="OK" class="btn btn-primary" id="promptOkButton" />
               </div>

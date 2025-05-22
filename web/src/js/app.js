@@ -1078,21 +1078,90 @@ function initConsole() {
 function processPromptQuery(p) {
   console.log(p);
 
-  if (p.kind != 'password') {
-    console.log('Ignoring unsupported prompt of kind: ' + p.kind);
-    return;
-  }
-
   $('#promptID').val(p.id);
-  $('#promptResponseValue').val('');
   $('#promptMessage').text(p.message);
   $('#promptOkButton').click(postPromptResponse);
+
+  // Hide all prompt inputs
+  $('.prompt-input').hide();
+
+  // Show relevant input based on type
+  switch(p.kind) {
+    case 'password':
+      $('#promptPasswordInput').show().val('');
+      break;
+      
+    case 'multi-select':
+      const container = $('#promptMultiSelectInput .checkbox-list-items');
+      container.empty();
+      $('#promptMultiSelectInput').show();
+      
+      // Initialize select all toggle button behavior
+      let allSelected = container.find('input[type="checkbox"]:checked').length > 0;
+      $('#selectAllToggle').off('click').on('click', function() {
+        allSelected = !allSelected;
+        container.find('input[type="checkbox"]').prop('checked', allSelected);
+        $(this).text(allSelected ? 'Deselect All' : 'Select All'
+        );
+        $(this).blur(); // Remove focus/active state from button after click
+      });
+
+      // Create an unordered list
+      const ul = $('<ul>').addClass('checkbox-list-items');
+
+      // Add handler to update "Select All" state when individual checkboxes change
+      container.on('change', 'input[type="checkbox"]', function() {
+        allSelected = container.find('input[type="checkbox"]:checked').length === container.find('input[type="checkbox"]').length;
+        $('#selectAllToggle').text(container.find('input[type="checkbox"]:checked').length > container.find('input[type="checkbox"]').length / 2 ? 'Deselect All' : 'Select All'
+        );
+      });
+      
+      // Add checkbox for each option as list items
+      p.options.forEach(opt => {
+        const li = $('<li>');
+        const label = $('<label>').addClass('checkbox-item');
+        const input = $('<input>').attr({
+          type: 'checkbox',
+          value: opt.value,
+          checked: opt.checked
+        });
+        label.append(input);
+        label.append(` ${opt.desc || opt.value} (${opt.value})`);
+        li.append(label);
+        ul.append(li);
+      });
+      
+      container.append(ul);
+
+      // Set initial toggle button state based on number of checked boxes
+      const checkedCount = container.find('input[type="checkbox"]:checked').length;
+      const totalCount = container.find('input[type="checkbox"]').length;
+      $('#selectAllToggle').text(checkedCount > totalCount / 2 ? 'Deselect All' : 'Select All');
+      break;
+
+    default:
+      console.log('Ignoring unsupported prompt kind:', p.kind);
+      return;
+  }
+
   $('#promptModal').modal('show');
 }
 
 function postPromptResponse() {
   const id = $('#promptID').val();
-  const value = $('#promptResponseValue').val();
+  let value = '';
+
+  // Get value from visible input
+  if($('#promptPasswordInput').is(':visible')) {
+    value = $('#promptPasswordInput').val();
+  } else if($('#promptMultiSelectInput').is(':visible')) {
+    // Get all checked boxes and join their values with commas
+    value = $('#promptMultiSelectInput input:checked')
+            .map(function() { return $(this).val(); })
+            .get()
+            .join(',');
+  }
+
   $('#promptModal').modal('hide');
   ws.send(
     JSON.stringify({

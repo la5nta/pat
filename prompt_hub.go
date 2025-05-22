@@ -2,19 +2,36 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/howeyc/gopass"
 )
 
+type PromptKind string
+
+const (
+	PromptKindPassword    PromptKind = "password"
+	PromptKindMultiSelect PromptKind = "multi-select"
+)
+
 type Prompt struct {
 	resp     chan PromptResponse
 	cancel   chan struct{}
-	ID       string    `json:"id"`
-	Kind     string    `json:"kind"`
-	Deadline time.Time `json:"deadline"`
-	Message  string    `json:"message"`
+	ID       string         `json:"id"`
+	Kind     PromptKind     `json:"kind"`
+	Deadline time.Time      `json:"deadline"`
+	Message  string         `json:"message"`
+	Options  []PromptOption `json:"options,omitempty"` // For multi-select
+}
+
+type PromptOption struct {
+	Value   string `json:"value"`
+	Desc    string `json:"desc,omitempty"`
+	Checked bool   `json:"checked"`
 }
 
 type PromptResponse struct {
@@ -63,13 +80,14 @@ func (p *PromptHub) Respond(id, value string, err error) {
 	}
 }
 
-func (p *PromptHub) Prompt(kind, message string) <-chan PromptResponse {
+func (p *PromptHub) Prompt(kind PromptKind, message string, options ...PromptOption) <-chan PromptResponse {
 	prompt := &Prompt{
 		resp:     make(chan PromptResponse),
 		cancel:   make(chan struct{}), // Closed on cancel (e.g. prompt response received)
 		ID:       fmt.Sprint(time.Now().UnixNano()),
 		Kind:     kind,
 		Message:  message,
+		Options:  options,
 		Deadline: time.Now().Add(time.Minute),
 	}
 	p.c <- prompt
@@ -83,19 +101,41 @@ func (p *PromptHub) Prompt(kind, message string) <-chan PromptResponse {
 }
 
 func (p *PromptHub) promptTerminal(prompt Prompt) {
+	q := make(chan struct{}, 1)
+	defer close(q)
+	go func() {
+		select {
+		case <-prompt.cancel:
+			fmt.Printf(" Prompt Aborted - Press ENTER to continue...")
+		case <-q:
+			return
+		}
+	}()
+
 	switch prompt.Kind {
-	case "password":
-		q := make(chan struct{}, 1)
-		go func() {
-			select {
-			case <-prompt.cancel:
-				fmt.Printf(" Prompt Aborted - Press ENTER to continue...")
-			case <-q:
-				return
+	case PromptKindMultiSelect:
+		fmt.Println(prompt.Message + ":")
+		answers := map[string]PromptOption{}
+		for idx, opt := range prompt.Options {
+			answers[strconv.Itoa(idx+1)] = opt
+			answers[opt.Value] = opt
+			fmt.Printf("  %d: %s (%s)\n", idx+1, opt.Desc, opt.Value)
+		}
+
+		fmt.Printf("Select [1-%d, ...]: ", len(prompt.Options))
+		ans := strings.FieldsFunc(readLine(), func(r rune) bool { return r == ' ' || r == ',' })
+		var selected []string
+		for _, str := range ans {
+			opt, ok := answers[str]
+			if !ok {
+				log.Printf("Skipping unknown option %q", str)
+				continue
 			}
-		}()
+			selected = append(selected, opt.Value)
+		}
+		p.Respond(prompt.ID, strings.Join(selected, ","), nil)
+	case PromptKindPassword:
 		passwd, err := gopass.GetPasswdPrompt(prompt.Message+": ", true, os.Stdin, os.Stdout)
-		q <- struct{}{}
 		p.Respond(prompt.ID, string(passwd), err)
 	default:
 		panic(prompt.Kind + " prompt not implemented")

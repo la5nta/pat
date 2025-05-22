@@ -102,7 +102,7 @@ func sessionExchange(conn net.Conn, targetCall string, master bool) error {
 				return config.SecureLoginPassword, nil
 			}
 		}
-		resp := <-promptHub.Prompt("password", "Enter secure login password for "+addr.String())
+		resp := <-promptHub.Prompt(PromptKindPassword, "Enter secure login password for "+addr.String())
 		return resp.Value, resp.Err
 	})
 

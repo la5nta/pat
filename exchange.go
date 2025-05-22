@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -61,6 +62,60 @@ func (m NotifyMBox) ProcessInbound(msgs ...*fbb.Message) error {
 		})
 	}
 	return nil
+}
+
+func (m NotifyMBox) GetInboundAnswers(p []fbb.Proposal) []fbb.ProposalAnswer {
+	answers := make([]fbb.ProposalAnswer, len(p))
+	var outsideLimit bool
+	for idx, p := range p {
+		answers[idx] = m.GetInboundAnswer(p)
+		outsideLimit = outsideLimit || p.CompressedSize() >= config.AutoDownloadSizeLimit
+	}
+	if !outsideLimit || config.AutoDownloadSizeLimit < 0 {
+		// All proposals are within the prompt limit. Go ahead.
+		return answers
+	}
+
+	// Build multi-select build options for those accepted by the mailbox handler.
+	var options []PromptOption
+	for idx, p := range p {
+		if answers[idx] != fbb.Accept {
+			continue
+		}
+		answers[idx] = fbb.Defer // Defer unless user explicitly accepts through prompt answer.
+		sender, subject := "Unkown sender", "Unknown subject"
+		if pm := p.PendingMessage(); pm != nil {
+			sender, subject = pm.From.String(), pm.Subject
+		}
+		desc := fmt.Sprintf("%s (%d bytes): %s", sender, p.CompressedSize(), subject)
+		options = append(options, PromptOption{Value: p.MID(), Desc: desc, Checked: p.CompressedSize() < config.AutoDownloadSizeLimit})
+	}
+
+	// Prompt the user
+	ans := <-promptHub.Prompt(PromptKindMultiSelect, "Select messages for download", options...)
+
+	// If timeout was reached, use our default values to fill in for the user
+	if ans.Err == context.DeadlineExceeded {
+		var checked []string
+		for _, opt := range options {
+			if opt.Checked {
+				checked = append(checked, opt.Value)
+			}
+		}
+		ans.Value = strings.Join(checked, ",")
+	}
+
+	// For each mid in answer, search the proposals and update answer to Accept.
+	for _, val := range strings.Split(ans.Value, ",") {
+		for idx, p := range p {
+			if p.MID() != val {
+				continue
+			}
+			answers[idx] = fbb.Accept
+		}
+	}
+
+	return answers
 }
 
 func sessionExchange(conn net.Conn, targetCall string, master bool) error {

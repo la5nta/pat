@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/howeyc/gopass"
+	"github.com/la5nta/pat/internal/debug"
 )
 
 type PromptKind string
@@ -55,18 +57,23 @@ func (p *PromptHub) loop() {
 	p.c = make(chan *Prompt)
 	p.rc = make(chan PromptResponse)
 	for prompt := range p.c {
+		debug.Printf("New prompt: %#v", prompt)
 		timeout := time.After(time.Until(prompt.Deadline))
 		select {
 		case <-timeout:
-			prompt.resp <- PromptResponse{ID: prompt.ID, Err: fmt.Errorf("deadline reached")}
+			debug.Printf("Prompt timeout")
+			prompt.resp <- PromptResponse{ID: prompt.ID, Err: context.DeadlineExceeded}
 			close(prompt.cancel)
 		case resp := <-p.rc:
+			debug.Printf("Prompt resp: %#v", resp)
 			if resp.ID != prompt.ID {
 				continue
 			}
 			select {
 			case prompt.resp <- resp:
+				debug.Printf("Prompt resp delivered")
 			default:
+				debug.Printf("Prompt resp discarded")
 			}
 			close(prompt.cancel)
 		}
@@ -123,7 +130,7 @@ func (p *PromptHub) promptTerminal(prompt Prompt) {
 		}
 
 		fmt.Printf("Select [1-%d, ...]: ", len(prompt.Options))
-		ans := strings.FieldsFunc(readLine(), func(r rune) bool { return r == ' ' || r == ',' })
+		ans := strings.FieldsFunc(readLine(), SplitFunc)
 		var selected []string
 		for _, str := range ans {
 			opt, ok := answers[str]

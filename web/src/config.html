@@ -85,6 +85,15 @@
                         format. Password defaults to Secure Login Password if omitted.</small>
                     </div>
 
+                    <div class="form-group">
+                      <label for="auto_download_limit">Auto Download Size Limit</label>
+                      <div class="input-group">
+                        <input type="number" class="form-control" id="auto_download_limit" name="auto_download_limit" min="-1" step="1" pattern="\d*">
+                        <span class="input-group-addon">bytes</span>
+                      </div>
+                      <small class="form-text text-muted">Maximum size in bytes for automatic message downloads. Messages larger than this will prompt for download. Use -1 for no limit.</small>
+                    </div>
+
                     <div class="panel-group" style="margin-top: 20px;">
                       <div class="panel panel-default">
                         <div class="panel-heading">

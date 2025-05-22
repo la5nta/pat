@@ -22,6 +22,7 @@ $(document).ready(function() {
       originalConfig = JSON.parse(JSON.stringify(config)); // Deep clone
       $('#mycall').val(config.mycall || '');
       $('#locator').val(config.locator || '');
+      $('#auto_download_limit').val(typeof config.auto_download_size_limit === 'number' ? config.auto_download_size_limit : -1);
       $('#secure_login_password').val(config.secure_login_password ? '[REDACTED]' : '')
         .on('focus', function() {
           if (originalConfig.secure_login_password && $(this).val() === '[REDACTED]') {
@@ -165,6 +166,7 @@ $(document).ready(function() {
     updatedConfig.mycall = $('#mycall').val();
     updatedConfig.locator = $('#locator').val();
     updatedConfig.secure_login_password = $('#secure_login_password').val() || originalConfig.secure_login_password;
+    updatedConfig.auto_download_size_limit = $('#auto_download_limit').val() === '' ? -1 : parseInt($('#auto_download_limit').val());
     
     // Auxiliary Addresses - store as direct strings
     updatedConfig.auxiliary_addresses = $('#auxiliary_addresses').tokenfield('getTokens')

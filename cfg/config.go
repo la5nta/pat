@@ -61,6 +61,14 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
+	// Message size limit (in bytes) for automatic download of pending messages.
+	//
+	// When receiving messages larger than this limit, the user will be prompted
+	// with the option to defer the download to a later session.
+	//
+	// Negative value means no limit.
+	AutoDownloadSizeLimit int `json:"auto_download_size_limit"`
+
 	// List of service codes for rmslist (defaults to PUBLIC)
 	ServiceCodes []string `json:"service_codes"`
 
@@ -121,6 +129,25 @@ type Config struct {
 	//
 	// Set to true if you don't want your information sent.
 	VersionReportingDisabled bool `json:"version_reporting_disabled"`
+}
+
+func (c *Config) UnmarshalJSON(b []byte) error {
+	type aliased Config
+	tmp := struct {
+		aliased
+		// Default to -1 if omitted (legacy configs)
+		AutoDownloadSizeLimit *int `json:"auto_download_size_limit"`
+	}{}
+	if err := json.Unmarshal(b, &tmp); err != nil {
+		return err
+	}
+	if ptr := tmp.AutoDownloadSizeLimit; ptr == nil {
+		tmp.aliased.AutoDownloadSizeLimit = -1
+	} else {
+		tmp.aliased.AutoDownloadSizeLimit = *tmp.AutoDownloadSizeLimit
+	}
+	*c = Config(tmp.aliased)
+	return nil
 }
 
 type HamlibConfig struct {
@@ -314,9 +341,10 @@ type GPSdConfig struct {
 }
 
 var DefaultConfig = Config{
-	MOTD:         []string{"Open source Winlink client - getpat.io"},
-	AuxAddrs:     []AuxAddr{},
-	ServiceCodes: []string{"PUBLIC"},
+	MOTD:                  []string{"Open source Winlink client - getpat.io"},
+	AuxAddrs:              []AuxAddr{},
+	ServiceCodes:          []string{"PUBLIC"},
+	AutoDownloadSizeLimit: -1,
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k",
 	},

@@ -12,7 +12,7 @@ require (
 	github.com/harenber/ptc-go/v2 v2.2.4
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/la5nta/wl2k-go v0.11.10
+	github.com/la5nta/wl2k-go v0.12.0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/n8jja/Pat-Vara v1.1.4
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646

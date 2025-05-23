@@ -10,7 +10,6 @@ let connectAliases;
 let mycall = '';
 let formsCatalog;
 
-const uploadFiles = new Array();
 let statusPopoverDiv;
 const statusPos = $('#pos_status');
 
@@ -268,7 +267,7 @@ function initComposeModal() {
   };
   $('#msg_to').tokenfield(tokenfieldConfig);
   $('#msg_cc').tokenfield(tokenfieldConfig);
-  $('#composer').on('change', '.btn-file :file', previewAttachmentFiles);
+  $('#composer').on('change', '.btn-file :file', handleFileSelection);
   $('#composer').on('hidden.bs.modal', forgetFormData);
 
   $('#composer_error').hide();
@@ -279,11 +278,12 @@ function initComposeModal() {
 
   $('#composer_form').submit(function (e) {
     const form = $('#composer_form');
+    const formData = new FormData(form[0]);
+    
     const d = new Date().toJSON();
-    $('#msg_form_date').remove();
-    form.append('<input id="msg_form_date" type="hidden" name="date" value="' + d + '">');
+    formData.append('date', d);
 
-    // Set some defaults that makes the message pass validation (as Winlink Express does)
+    // Set some defaults that makes the message pass validation
     if ($('#msg_body').val().length == 0) {
       $('#msg_body').val('<No message body>');
     }
@@ -294,7 +294,7 @@ function initComposeModal() {
     $.ajax({
       url: '/api/mailbox/out',
       method: 'POST',
-      data: new FormData(form[0]),
+      data: formData,
       processData: false,
       contentType: false,
       success: function (result) {
@@ -814,36 +814,89 @@ function postPosition() {
   });
 }
 
+// Handle file selection and deduplication
+function handleFileSelection() {
+  const fileInput = this;
+  const dt = new DataTransfer();
+  let storedFiles = [];
+  let filesProcessed = 0;
+  const totalFiles = this.files.length;
+
+  // Get previously stored files from data attribute  
+  try {
+    storedFiles = JSON.parse(fileInput.dataset.storedFiles || '[]');
+    
+    // First add all previously stored files to DataTransfer
+    storedFiles.forEach(fileInfo => {
+      const byteString = atob(fileInfo.content.split(',')[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: fileInfo.type });
+      const file = new File([blob], fileInfo.name, { type: fileInfo.type });
+      dt.items.add(file);
+    });
+  } catch (e) {
+    console.error("Error parsing stored files:", e);
+  }
+
+  // Process newly selected files
+  Array.from(this.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // Add to stored files array
+      storedFiles.push({
+        name: file.name,
+        type: file.type,
+        content: e.target.result
+      });
+      
+      // Update dataset
+      fileInput.dataset.storedFiles = JSON.stringify(storedFiles);
+      
+      // Add to DataTransfer
+      dt.items.add(file);
+      
+      filesProcessed++;
+      
+      // Only update input files and preview when ALL files are processed
+      if (filesProcessed === totalFiles) {
+        fileInput.files = dt.files;
+        previewAttachmentFiles.call(fileInput);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Display file previews
 function previewAttachmentFiles() {
-  const files = $(this).get(0).files;
-  let attachments = $('#composer_attachments');
-  for (let i = 0; i < files.length; i++) {
-    let file = files.item(i);
+  const attachments = $('#composer_attachments');
+  attachments.empty();
 
-    uploadFiles[uploadFiles.length] = file;
-
+  for (let i = 0; i < this.files.length; i++) {
+    const file = this.files[i];
+    
     if (isImageSuffix(file.name)) {
       const reader = new FileReader();
       reader.onload = function (e) {
         attachments.append(
-          '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
-            '<img src="' +
-            e.target.result +
-            '" alt="' +
-            file.name +
-            '">' +
-            '</a></div>'
+          '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn">' +
+          '<span class="glyphicon glyphicon-paperclip"></span> ' +
+          '<img src="' + e.target.result + '" alt="' + file.name + '">' +
+          '</a></div>'
         );
       };
       reader.readAsDataURL(file);
     } else {
       attachments.append(
-        '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
-          file.name +
-          '<br>(' +
-          file.size +
-          ' bytes)' +
-          '</a></div>'
+        '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn">' +
+        '<span class="glyphicon glyphicon-paperclip"></span> ' +
+        file.name +
+        '<br>(' + file.size + ' bytes)' +
+        '</a></div>'
       );
     }
   }
@@ -921,9 +974,6 @@ function closeComposer(clear) {
     $('#msg_to').tokenfield('setTokens', []);
     $('#msg_cc').tokenfield('setTokens', []);
     $('#composer_form')[0].reset();
-
-    // Clear uploadFiles array
-    uploadFiles.length = 0;
 
     // Attachment previews
     $('#composer_attachments').empty();
@@ -1377,11 +1427,13 @@ function displayMessage(elem) {
       $('#msg_body')[0].setSelectionRange(0, 0);
 
       // Add attachments
-      const attachments = $('#composer_attachments');
-      attachments.empty();
+      $('#composer_attachments').empty();
+      const fileInput = $('#msg_attachments_input')[0];
+      const dt = new DataTransfer();
+      
       if (data.Files) {
+        let filesProcessed = 0;
         data.Files.forEach(file => {
-          // Add each attachment to the form data
           $.ajax({
             url: msg_url + '/' + file.Name,
             method: 'GET',
@@ -1389,30 +1441,13 @@ function displayMessage(elem) {
               responseType: 'blob'
             },
             success: function(blob) {
-              // Create a File object from the blob
               const f = new File([blob], file.Name, {type: blob.type});
-              uploadFiles.push(f);
-
-              // Add visual preview
-              if (isImageSuffix(file.Name)) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                  attachments.append(
-                    '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn">' +
-                    '<span class="glyphicon glyphicon-paperclip"></span> ' +
-                    '<img src="' + e.target.result + '" alt="' + file.Name + '">' +
-                    '</a></div>'
-                  );
-                };
-                reader.readAsDataURL(f);
-              } else {
-                attachments.append(
-                  '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn">' +
-                  '<span class="glyphicon glyphicon-paperclip"></span> ' +
-                  file.Name +
-                  '<br>(' + file.Size + ' bytes)' +
-                  '</a></div>'
-                );
+              dt.items.add(f);
+              filesProcessed++;
+              
+              if (filesProcessed === data.Files.length) {
+                fileInput.files = dt.files;
+                previewAttachmentFiles.call(fileInput);
               }
             }
           });

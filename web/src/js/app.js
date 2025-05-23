@@ -258,6 +258,7 @@ function writeFormDataToComposer(data) {
 
 function initComposeModal() {
   $('#compose_btn').click(function (evt) {
+    closeComposer(true); // Clear everything when opening a new compose
     $('#composer').modal('toggle');
   });
   const tokenfieldConfig = {
@@ -921,6 +922,9 @@ function closeComposer(clear) {
     $('#msg_cc').tokenfield('setTokens', []);
     $('#composer_form')[0].reset();
 
+    // Clear uploadFiles array
+    uploadFiles.length = 0;
+
     // Attachment previews
     $('#composer_attachments').empty();
 
@@ -1371,6 +1375,50 @@ function displayMessage(elem) {
       $('#msg_subject').val('Fw: ' + data.Subject);
       $('#msg_body').val(quoteMsg(data));
       $('#msg_body')[0].setSelectionRange(0, 0);
+
+      // Add attachments
+      const attachments = $('#composer_attachments');
+      attachments.empty();
+      if (data.Files) {
+        data.Files.forEach(file => {
+          // Add each attachment to the form data
+          $.ajax({
+            url: msg_url + '/' + file.Name,
+            method: 'GET',
+            xhrFields: {
+              responseType: 'blob'
+            },
+            success: function(blob) {
+              // Create a File object from the blob
+              const f = new File([blob], file.Name, {type: blob.type});
+              uploadFiles.push(f);
+
+              // Add visual preview
+              if (isImageSuffix(file.Name)) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                  attachments.append(
+                    '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn">' +
+                    '<span class="glyphicon glyphicon-paperclip"></span> ' +
+                    '<img src="' + e.target.result + '" alt="' + file.Name + '">' +
+                    '</a></div>'
+                  );
+                };
+                reader.readAsDataURL(f);
+              } else {
+                attachments.append(
+                  '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn">' +
+                  '<span class="glyphicon glyphicon-paperclip"></span> ' +
+                  file.Name +
+                  '<br>(' + file.Size + ' bytes)' +
+                  '</a></div>'
+                );
+              }
+            }
+          });
+        });
+      }
+
       $('#composer').modal('show');
       $('#msg_to-tokenfield').focus();
     });

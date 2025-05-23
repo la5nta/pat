@@ -75,12 +75,12 @@ func readMail(ctx context.Context) {
 
 		L:
 			for {
-				fmt.Fprintf(w, "Action [C,r,e,q,?]: ")
-				switch readLine() {
+				fmt.Fprintf(w, "Action [C,r,ra,e,q,?]: ")
+				switch ans := readLine(); ans {
 				case "C", "c", "":
 					break L
-				case "r":
-					composeReplyMessage(msgs[msgIdx])
+				case "r", "ra":
+					composeReplyMessage(msgs[msgIdx], ans == "ra")
 				case "e":
 					extractMessageHandle(ctx, []string{msgs[msgIdx].MID()})
 				case "q":
@@ -88,10 +88,11 @@ func readMail(ctx context.Context) {
 				case "?":
 					fallthrough
 				default:
-					fmt.Fprintln(w, "c - continue")
-					fmt.Fprintln(w, "r - reply")
-					fmt.Fprintln(w, "e - extract (attachments)")
-					fmt.Fprintln(w, "q - quit")
+					fmt.Fprintln(w, "c  - continue")
+					fmt.Fprintln(w, "r  - reply")
+					fmt.Fprintln(w, "ra - reply all")
+					fmt.Fprintln(w, "e  - extract (attachments)")
+					fmt.Fprintln(w, "q  - quit")
 				}
 			}
 		}

@@ -306,6 +306,15 @@ body > .container {
   margin-bottom: -10px;
 }
 
+/* Icon modifications */
+.icon-flip {
+  transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -webkit-transform: scaleX(-1);
+  -ms-transform: scaleX(-1);
+}
+
+
 #composer_error {
   font-size: 12px;
   margin: 5px 0px;

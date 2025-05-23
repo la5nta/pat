@@ -1357,24 +1357,11 @@ function displayMessage(elem) {
     }
     $('#reply_btn').off('click');
     $('#reply_btn').click(function (evt) {
-      $('#message_view').modal('hide');
+      handleReply(false);
+    });
 
-      $('#msg_to').tokenfield('setTokens', [data.From.Addr]);
-      $('#msg_cc').tokenfield('setTokens', replyCarbonCopyList(data));
-      if (data.Subject.lastIndexOf('Re:', 0) != 0) {
-        $('#msg_subject').val('Re: ' + data.Subject);
-      } else {
-        $('#msg_subject').val(data.Subject);
-      }
-      $('#msg_body').val('\n\n' + quoteMsg(data));
-
-      $('#composer').modal('show');
-      $('#msg_body').focus();
-      $('#msg_body')[0].setSelectionRange(0, 0);
-
-      //opens browser window for a form-based reply,
-      // or does nothing if this is not a form-based message
-      showReplyForm(currentFolder, mid, data);
+    $('#reply_all_btn').click(function (evt) {
+      handleReply(true); 
     });
     $('#forward_btn').off('click');
     $('#forward_btn').click(function (evt) {
@@ -1401,6 +1388,28 @@ function displayMessage(elem) {
       $('#archive_btn').parent().hide();
     } else {
       $('#archive_btn').parent().show();
+    }
+
+    // Add reply handling function
+    function handleReply(replyAll) {
+      $('#message_view').modal('hide');
+
+      $('#msg_to').tokenfield('setTokens', [data.From.Addr]);
+      $('#msg_cc').tokenfield('setTokens', replyAll ? replyCarbonCopyList(data) : []);
+      if (data.Subject.lastIndexOf('Re:', 0) != 0) {
+        $('#msg_subject').val('Re: ' + data.Subject);
+      } else {
+        $('#msg_subject').val(data.Subject);
+      }
+      $('#msg_body').val('\n\n' + quoteMsg(data));
+
+      $('#composer').modal('show');
+      $('#msg_body').focus();
+      $('#msg_body')[0].setSelectionRange(0, 0);
+
+      // opens browser window for a form-based reply,
+      // or does nothing if this is not a form-based message
+      showReplyForm(currentFolder, mid, data);
     }
 
     view.show();

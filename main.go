@@ -90,6 +90,7 @@ var commands = []Command{
 		Options: map[string]string{
 			"--from, -r":        "Address to send from. Default is your call from config or --mycall, but can be specified to use tactical addresses.",
 			"--in-reply-to":     "Compose in reply to given message (full path or mid)",
+			"--reply-all":       "Reply to all (only applicable in combination with --in-reply-to)",
 			"--template":        "Compose using template file. Uses the --forms directory as root for relative paths.",
 			"--subject, -s":     "Subject",
 			"--attachment , -a": "Attachment path (may be repeated)",

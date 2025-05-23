@@ -22,7 +22,7 @@ import (
 	"github.com/la5nta/pat/internal/editor"
 )
 
-func composeMessageHeader(inReplyToMsg *fbb.Message) *fbb.Message {
+func composeMessageHeader(inReplyToMsg *fbb.Message, replyAll bool) *fbb.Message {
 	msg := fbb.NewMessage(fbb.Private, fOptions.MyCall)
 
 	fmt.Printf(`From [%s]: `, fOptions.MyCall)
@@ -47,7 +47,7 @@ func composeMessageHeader(inReplyToMsg *fbb.Message) *fbb.Message {
 	}
 
 	ccCand := make([]fbb.Address, 0)
-	if inReplyToMsg != nil {
+	if inReplyToMsg != nil && replyAll {
 		for _, addr := range append(inReplyToMsg.To(), inReplyToMsg.Cc()...) {
 			if !addr.EqualString(fOptions.MyCall) {
 				ccCand = append(ccCand, addr)
@@ -110,6 +110,7 @@ func composeMessage(ctx context.Context, args []string) {
 	p2pOnly := set.BoolP("p2p-only", "", false, "")
 	template := set.StringP("template", "", "", "")
 	inReplyTo := set.StringP("in-reply-to", "", "", "")
+	replyAll := set.BoolP("reply-all", "", false, "")
 	set.Parse(args)
 
 	// Remaining args are recipients
@@ -140,12 +141,12 @@ func composeMessage(ctx context.Context, args []string) {
 
 	// Use template?
 	if *template != "" {
-		interactiveComposeWithTemplate(*template, inReplyToMsg)
+		interactiveComposeWithTemplate(*template, inReplyToMsg, *replyAll)
 		return
 	}
 
 	// Interactive compose
-	interactiveComposeMessage(inReplyToMsg)
+	interactiveComposeMessage(inReplyToMsg, *replyAll)
 }
 
 func noninteractiveComposeMessage(from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
@@ -197,8 +198,8 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 
 // This is currently an alias for interactiveComposeMessage but keeping as a separate
 // call path for the future
-func composeReplyMessage(inReplyToMsg *fbb.Message) {
-	interactiveComposeMessage(inReplyToMsg)
+func composeReplyMessage(inReplyToMsg *fbb.Message, replyAll bool) {
+	interactiveComposeMessage(inReplyToMsg, replyAll)
 }
 
 func composeBody(template string) (string, error) {
@@ -213,8 +214,8 @@ func composeBody(template string) (string, error) {
 	return body, nil
 }
 
-func interactiveComposeMessage(inReplyToMsg *fbb.Message) {
-	msg := composeMessageHeader(inReplyToMsg)
+func interactiveComposeMessage(inReplyToMsg *fbb.Message, replyAll bool) {
+	msg := composeMessageHeader(inReplyToMsg, replyAll)
 
 	// Body
 	var template bytes.Buffer
@@ -280,8 +281,8 @@ func composeFormReport(ctx context.Context, args []string) {
 	composeMessage(ctx, args)
 }
 
-func interactiveComposeWithTemplate(template string, inReplyToMsg *fbb.Message) {
-	msg := composeMessageHeader(inReplyToMsg)
+func interactiveComposeWithTemplate(template string, inReplyToMsg *fbb.Message, replyAll bool) {
+	msg := composeMessageHeader(inReplyToMsg, replyAll)
 
 	formMsg, err := formsMgr.ComposeTemplate(template, msg.Subject(), inReplyToMsg)
 	if err != nil {

@@ -315,6 +315,14 @@ body > .container {
 }
 
 
+.composer-field .form-control,
+.composer-field .tokenfield.form-control {
+  max-height: 7em;  /* Approximately 4-5 lines of text */
+  height: auto !important;
+  min-height: 30px;
+  overflow-y: auto;
+}
+
 #composer_error {
   font-size: 12px;
   margin: 5px 0px;

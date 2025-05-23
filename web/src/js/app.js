@@ -769,11 +769,18 @@ function handleGeolocationError(error) {
 }
 
 function updatePositionGeolocation(pos) {
-  const d = new Date(pos.timestamp);
+  let d;
+  if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+    // Safari detected - use current browser time instead of GPS time
+    // Ref https://openradar.appspot.com/9246279
+    d = new Date();
+  } else {
+    d = new Date(pos.timestamp);
+  }
   statusPos.html('Last position update ' + dateFormat(d) + '...');
   $('#pos_lat').val(pos.coords.latitude);
   $('#pos_long').val(pos.coords.longitude);
-  $('#pos_ts').val(pos.timestamp);
+  $('#pos_ts').val(d.getTime());
 }
 
 function updatePositionGPS(pos) {

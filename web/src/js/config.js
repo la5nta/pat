@@ -2,7 +2,6 @@ import 'jquery';
 import 'bootstrap/dist/js/bootstrap';
 import 'bootstrap-select';
 import 'bootstrap-tokenfield';
-import URI from 'urijs';
 
 $(document).ready(function() {
   // Initialize Bootstrap Select components and tokenfield
@@ -38,13 +37,13 @@ $(document).ready(function() {
       // Populate auxiliary addresses as direct strings
       const auxAddrs = (config.auxiliary_addresses || [])
         .filter(addr => addr && addr.trim()) // Filter empty/whitespace strings
-        .map(addr => ({value: addr, label: addr}));
+        .map(addr => ({ value: addr, label: addr }));
       $('#auxiliary_addresses').tokenfield('setTokens', auxAddrs);
 
       // Populate rig selects
       // Initialize rig selects with any existing config
       updateRigSelects();
-      
+
       // Populate transport configs
       $('#ardop_addr').val((config.ardop && config.ardop.addr) || '');
       // Convert bandwidth object to string format
@@ -60,7 +59,7 @@ $(document).ready(function() {
       $('#vara_fm_bandwidth').val((config.varafm && config.varafm.bandwidth && config.varafm.bandwidth.toString()) || '');
       $('#vara_fm_addr').val((config.varafm && config.varafm.addr) || '');
       $('#vara_fm_bandwidth').val((config.varafm && config.varafm.bandwidth && config.varafm.bandwidth.toString()) || '');
-      
+
       // Populate AX25 config
       // Populate transport rig selections
       $('#ardop_rig').val((config.ardop && config.ardop.rig) || '');
@@ -83,7 +82,7 @@ $(document).ready(function() {
       $('input[name="listen_methods[]"]').each(function() {
         $(this).prop('checked', listenMethods.includes($(this).val()));
       });
-      
+
       const ax25Config = config.ax25 || {};
       // Initialize all engine configs as collapsed first
       $('.ax25-engine-config .panel-collapse').collapse('hide');
@@ -99,19 +98,19 @@ $(document).ready(function() {
       $('#ax25_beacon_interval').val((config.ax25 && config.ax25.beacon && config.ax25.beacon.every) || '');
       $('#ax25_beacon_message').val((config.ax25 && config.ax25.beacon && config.ax25.beacon.message) || '');
       $('#ax25_beacon_dest').val((config.ax25 && config.ax25.beacon && config.ax25.beacon.destination) || '');
-      
+
       // Populate GPSd config
       $('#gpsd_enable_http').prop('checked', (config.gpsd && config.gpsd.enable_http) || false);
       $('#gpsd_allow_forms').prop('checked', (config.gpsd && config.gpsd.allow_forms) || false);
       $('#gpsd_use_server_time').prop('checked', (config.gpsd && config.gpsd.use_server_time) || false);
       $('#gpsd_addr').val((config.gpsd && config.gpsd.addr) || '');
-      
+
       // Populate Hamlib rigs
       const rigs = config.hamlib_rigs || {};
       const rigsContainer = $('#rigsContainer');
       const rigTemplate = $('.rig-row').first().clone();
       rigsContainer.empty();
-      
+
       Object.entries(rigs).forEach(([name, rig]) => {
         const row = rigTemplate.clone();
         const nameInput = row.find('.rig-name').val(name);
@@ -120,26 +119,26 @@ $(document).ready(function() {
         row.find('.rig-address').val(rig.address || '');
         rigsContainer.append(row);
       });
-      
+
       if (Object.keys(rigs).length === 0) {
         rigsContainer.append(rigTemplate.clone());
       }
-      
+
       updateRigSelects(); // Refresh rig dropdowns with loaded data
-      
+
       // Populate connect aliases
       const aliases = config.connect_aliases || {};
       const container = $('#aliasesContainer');
       const templateRow = $('.alias-row').first().clone(); // Cache template before emptying
       container.empty();
-      
+
       Object.entries(aliases).forEach(([key, value]) => {
         const row = templateRow.clone();
         row.find('.alias-key').val(key);
         row.find('.alias-value').val(value);
         container.append(row);
       });
-      
+
       // Always add at least one empty row
       if (Object.keys(aliases).length === 0) {
         container.append(templateRow.clone());
@@ -153,21 +152,21 @@ $(document).ready(function() {
   // Handle form submission
   $('#configForm').submit(function(e) {
     e.preventDefault();
-    
+
     // Create working copy from original
     const updatedConfig = JSON.parse(JSON.stringify(originalConfig));
-    
+
     // Update listen methods from checkboxes
     updatedConfig.listen = $('input[name="listen_methods[]"]:checked').map(function() {
       return $(this).val();
     }).get();
-    
+
     // Update GUI-managed fields
     updatedConfig.mycall = $('#mycall').val();
     updatedConfig.locator = $('#locator').val();
     updatedConfig.secure_login_password = $('#secure_login_password').val() || originalConfig.secure_login_password;
     updatedConfig.auto_download_size_limit = $('#auto_download_limit').val() === '' ? -1 : parseInt($('#auto_download_limit').val());
-    
+
     // Auxiliary Addresses - store as direct strings
     updatedConfig.auxiliary_addresses = $('#auxiliary_addresses').tokenfield('getTokens')
       .filter(t => t.value.trim()) // Filter out empty tokens
@@ -181,7 +180,7 @@ $(document).ready(function() {
         const val = $('#ardop_arq_bandwidth').val();
         if (!val) return {};
         const match = val.match(/(\d+)(MAX|FORCED)/);
-        return match ? { 
+        return match ? {
           Max: parseInt(match[1], 10),
           Forced: match[2] === 'FORCED'
         } : {};
@@ -193,71 +192,71 @@ $(document).ready(function() {
     };
     // Merge pactor config with existing values
     updatedConfig.pactor = {
-        ...originalConfig.pactor,
-        path: $('#pactor_path').val(),
-        baudrate: parseInt($('#pactor_baudrate').val(), 10),
-        rig: $('#pactor_rig').val() || '',
-        ptt_ctrl: $('#pactor_ptt_ctrl').is(':checked')
+      ...originalConfig.pactor,
+      path: $('#pactor_path').val(),
+      baudrate: parseInt($('#pactor_baudrate').val(), 10),
+      rig: $('#pactor_rig').val() || '',
+      ptt_ctrl: $('#pactor_ptt_ctrl').is(':checked')
     };
     // Merge varahf config with existing values
     updatedConfig.varahf = {
-        ...originalConfig.varahf,
-        addr: $('#vara_hf_addr').val(),
-        bandwidth: parseInt($('#vara_hf_bandwidth').val(), 10),
-        rig: $('#vara_hf_rig').val() || '',
-        ptt_ctrl: $('#vara_hf_ptt_ctrl').is(':checked')
+      ...originalConfig.varahf,
+      addr: $('#vara_hf_addr').val(),
+      bandwidth: parseInt($('#vara_hf_bandwidth').val(), 10),
+      rig: $('#vara_hf_rig').val() || '',
+      ptt_ctrl: $('#vara_hf_ptt_ctrl').is(':checked')
     };
     // Merge varafm config with existing values
     updatedConfig.varafm = {
-        ...originalConfig.varafm,
-        addr: $('#vara_fm_addr').val(),
-        bandwidth: parseInt($('#vara_fm_bandwidth').val(), 10),
-        rig: $('#vara_fm_rig').val() || '',
-        ptt_ctrl: $('#vara_fm_ptt_ctrl').is(':checked')
+      ...originalConfig.varafm,
+      addr: $('#vara_fm_addr').val(),
+      bandwidth: parseInt($('#vara_fm_bandwidth').val(), 10),
+      rig: $('#vara_fm_rig').val() || '',
+      ptt_ctrl: $('#vara_fm_ptt_ctrl').is(':checked')
     };
     // Merge telnet config with existing values
     updatedConfig.telnet = {
-        ...originalConfig.telnet,
-        listen_addr: $('#telnet_listen_addr').val(),
-        password: $('#telnet_password').val()
+      ...originalConfig.telnet,
+      listen_addr: $('#telnet_listen_addr').val(),
+      password: $('#telnet_password').val()
     };
     updatedConfig.ax25 = {
-        ...originalConfig.ax25,
-        engine: $('#ax25_engine').val(),
-        rig: $('#ax25_rig').val() || '',
-        ptt_ctrl: $('#ax25_ptt_ctrl').is(':checked'),
-        beacon: {
-            ...(originalConfig.ax25 && originalConfig.ax25.beacon) || {}, // Preserve existing beacon fields
-            every: parseInt($('#ax25_beacon_interval').val(), 10),
-            message: $('#ax25_beacon_message').val(),
-            destination: $('#ax25_beacon_dest').val()
-        }
+      ...originalConfig.ax25,
+      engine: $('#ax25_engine').val(),
+      rig: $('#ax25_rig').val() || '',
+      ptt_ctrl: $('#ax25_ptt_ctrl').is(':checked'),
+      beacon: {
+        ...(originalConfig.ax25 && originalConfig.ax25.beacon) || {}, // Preserve existing beacon fields
+        every: parseInt($('#ax25_beacon_interval').val(), 10),
+        message: $('#ax25_beacon_message').val(),
+        destination: $('#ax25_beacon_dest').val()
+      }
     };
     // Merge ax25linux config with existing values
     updatedConfig.ax25linux = {
-        ...originalConfig.ax25linux,
-        port: $('#ax25_linux_port').val()
+      ...originalConfig.ax25linux,
+      port: $('#ax25_linux_port').val()
     };
     // Merge agwpe config with existing values
     updatedConfig.agwpe = {
-        ...originalConfig.agwpe,
-        addr: $('#agwpe_addr').val(),
-        radio_port: parseInt($('#agwpe_radio_port').val(), 10)
+      ...originalConfig.agwpe,
+      addr: $('#agwpe_addr').val(),
+      radio_port: parseInt($('#agwpe_radio_port').val(), 10)
     };
     // Merge serial_tnc config with existing values
     updatedConfig.serial_tnc = {
-        ...originalConfig.serial_tnc,
-        path: $('#serial_tnc_path').val(),
-        serial_baud: parseInt($('#serial_tnc_baud').val(), 10),
-        type: $('#serial_tnc_type').val(),
-        hbaud: parseInt($('#serial_tnc_hbaud').val(), 10)
+      ...originalConfig.serial_tnc,
+      path: $('#serial_tnc_path').val(),
+      serial_baud: parseInt($('#serial_tnc_baud').val(), 10),
+      type: $('#serial_tnc_type').val(),
+      hbaud: parseInt($('#serial_tnc_hbaud').val(), 10)
     };
     updatedConfig.gpsd = {
-        ...originalConfig.gpsd,
-        enable_http: $('#gpsd_enable_http').is(':checked'),
-        allow_forms: $('#gpsd_allow_forms').is(':checked'),
-        use_server_time: $('#gpsd_use_server_time').is(':checked'),
-        addr: $('#gpsd_addr').val()
+      ...originalConfig.gpsd,
+      enable_http: $('#gpsd_enable_http').is(':checked'),
+      allow_forms: $('#gpsd_allow_forms').is(':checked'),
+      use_server_time: $('#gpsd_use_server_time').is(':checked'),
+      addr: $('#gpsd_addr').val()
     };
 
 
@@ -267,7 +266,7 @@ $(document).ready(function() {
       const name = $(this).find('.rig-name').val();
       const network = $(this).find('.rig-network').val();
       const address = $(this).find('.rig-address').val();
-      
+
       if (name && address) {
         updatedConfig.hamlib_rigs[name] = {
           address: address,
@@ -338,14 +337,14 @@ $(document).ready(function() {
   $('#rigsContainer').on('click', '.delete-rig', function() {
     $(this).closest('.rig-row').remove();
   });
-  
+
   function updateRigSelects() {
     const rigNames = [];
     $('.rig-row .rig-name').each(function() {
       const name = $(this).val();
       if (name) rigNames.push(name);
     });
-    
+
     $('.rig-select').each(function() {
       $(this).empty().append($('<option>').val('').text('None'));
       rigNames.forEach(name => {
@@ -365,7 +364,7 @@ $(document).ready(function() {
   $('#aliasesContainer').on('click', '.delete-alias', function() {
     $(this).closest('.alias-row').remove();
   });
-  
+
   $('#addAlias').click(function() {
     const newRow = $('.alias-row').first().clone();
     newRow.find('input').val('');

@@ -13,21 +13,21 @@ let formsCatalog;
 let statusPopoverDiv;
 const statusPos = $('#pos_status');
 
-$(document).ready(function () {
+$(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
 
-  $(function () {
+  $(function() {
     initStatusPopover();
 
     // Setup actions
     $('#connect_btn').click(connect);
-    $('#connectForm input').keypress(function (e) {
+    $('#connectForm input').keypress(function(e) {
       if (e.which == 13) {
         connect();
         return false;
       }
     });
-    $('#connectForm input').keyup(function (e) {
+    $('#connectForm input').keyup(function(e) {
       onConnectInputChange();
     });
     $('#pos_btn').click(postPosition);
@@ -36,19 +36,19 @@ $(document).ready(function () {
     initComposeModal();
 
     // Setup folder navigation
-    $('#inbox_tab').click(function (evt) {
+    $('#inbox_tab').click(function(evt) {
       displayFolder('in');
     });
-    $('#outbox_tab').click(function (evt) {
+    $('#outbox_tab').click(function(evt) {
       displayFolder('out');
     });
-    $('#sent_tab').click(function (evt) {
+    $('#sent_tab').click(function(evt) {
       displayFolder('sent');
     });
-    $('#archive_tab').click(function (evt) {
+    $('#archive_tab').click(function(evt) {
       displayFolder('archive');
     });
-    $('.navbar li').click(function (e) {
+    $('.navbar li').click(function(e) {
       $('.navbar li.active').removeClass('active');
       const $this = $(this);
       if (!$this.hasClass('active')) {
@@ -61,26 +61,26 @@ $(document).ready(function () {
       }
     });
 
-    $('.nav :not(.dropdown) a').on('click', function () {
+    $('.nav :not(.dropdown) a').on('click', function() {
       if ($('.navbar-toggle').css('display') != 'none') {
         $('.navbar-toggle').trigger('click');
       }
     });
 
-    $('#posModal').on('shown.bs.modal', function (e) {
+    $('#posModal').on('shown.bs.modal', function(e) {
       $.ajax({
         url: '/api/current_gps_position',
         dataType: 'json',
-        beforeSend: function () {
+        beforeSend: function() {
           statusPos.html('Checking if GPS device is available');
         },
-        success: function (gpsData) {
+        success: function(gpsData) {
           statusPos.html('GPS position received');
 
           statusPos.html('<strong>Waiting for position form GPS device...</strong>');
           updatePositionGPS(gpsData);
         },
-        error: function (jqXHR, textStatus, errorThrown) {
+        error: function(jqXHR, textStatus, errorThrown) {
           statusPos.html('GPS device not available!');
 
           if (navigator.geolocation) {
@@ -98,7 +98,7 @@ $(document).ready(function () {
       });
     });
 
-    $('#posModal').on('hidden.bs.modal', function (e) {
+    $('#posModal').on('hidden.bs.modal', function(e) {
       if (navigator.geolocation) {
         navigator.geolocation.clearWatch(posId);
       }
@@ -124,7 +124,7 @@ function initNotifications() {
       .html('Not supported by this browser.');
     return;
   }
-  Notification.requestPermission(function (permission) {
+  Notification.requestPermission(function(permission) {
     if (permission === 'granted') {
       showGUIStatus(statusPopoverDiv.find('#notifications_error'), false);
     } else if (isInsecureOrigin()) {
@@ -169,7 +169,7 @@ function updateProgress(p) {
   }
 
   if ($('#navbar_progress').is(':visible') && p.done) {
-    window.setTimeout(function () {
+    window.setTimeout(function() {
       if (!cancelCloseTimer) {
         $('#navbar_progress').fadeOut(500);
       }
@@ -196,7 +196,7 @@ function initStatusPopover() {
 
   // Bind click on navbar-brand
   $('#gui_status_light').unbind();
-  $('.navbar-brand').click(function (e) {
+  $('.navbar-brand').click(function(e) {
     $('#gui_status_light').popover('toggle');
   });
 }
@@ -224,7 +224,7 @@ function pollFormData() {
     method: 'GET',
     url: '/api/form',
     dataType: 'json',
-    success: function (data) {
+    success: function(data) {
       // TODO: Should verify forminstance key in case of multi-user scenario
       console.log('done polling');
       console.log(data);
@@ -232,7 +232,7 @@ function pollFormData() {
         writeFormDataToComposer(data);
       }
     },
-    error: function () {
+    error: function() {
       if (!$('#composer').hasClass('hidden')) {
         // TODO: Consider replacing this polling mechanism with a WS message (push)
         pollTimer = window.setTimeout(pollFormData, 1000);
@@ -256,7 +256,7 @@ function writeFormDataToComposer(data) {
 }
 
 function initComposeModal() {
-  $('#compose_btn').click(function (evt) {
+  $('#compose_btn').click(function(evt) {
     closeComposer(true); // Clear everything when opening a new compose
     $('#composer').modal('toggle');
   });
@@ -272,14 +272,14 @@ function initComposeModal() {
 
   $('#composer_error').hide();
 
-  $('#compose_cancel').click(function (evt) {
+  $('#compose_cancel').click(function(evt) {
     closeComposer(true);
   });
 
-  $('#composer_form').submit(function (e) {
+  $('#composer_form').submit(function(e) {
     const form = $('#composer_form');
     const formData = new FormData(form[0]);
-    
+
     const d = new Date().toJSON();
     formData.append('date', d);
 
@@ -297,14 +297,14 @@ function initComposeModal() {
       data: formData,
       processData: false,
       contentType: false,
-      success: function (result) {
+      success: function(result) {
         // Clear stored files data
         $('#msg_attachments_input')[0].dataset.storedFiles = '[]';
         $('#composer').modal('hide');
         closeComposer(true);
         alert(result);
       },
-      error: function (error) {
+      error: function(error) {
         $('#composer_error').html(error.responseText);
         $('#composer_error').show();
       },
@@ -315,10 +315,10 @@ function initComposeModal() {
 
 function initForms() {
   $.getJSON('/api/formcatalog')
-    .done(function (data) {
+    .done(function(data) {
       initFormSelect(data);
     })
-    .fail(function (data) {
+    .fail(function(data) {
       initFormSelect(null);
     });
 }
@@ -332,8 +332,8 @@ function initFormSelect(data) {
   ) {
     $('#formsVersion').html(
       '<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">' +
-        data.version +
-        '</a>)</span>'
+      data.version +
+      '</a>)</span>'
     );
     $('#updateFormsVersion').html(data.version);
     $('#formsRootFolderName').text(data.path);
@@ -393,7 +393,7 @@ function appendFormFolder(rootId, data) {
 			<div class="accordion" id="${rootAcc}">
 			</div>
 			`);
-    data.folders.forEach(function (folder) {
+    data.folders.forEach(function(folder) {
       if (folder.form_count > 0) {
         const folderNameId = rootId + folder.name.replace(/\s/g, '_').replace(/&/g, 'and');
         const cardBodyId = folderNameId + 'Body';
@@ -457,7 +457,7 @@ function initConnectModal() {
   $('#modeSearchSelect').change(updateRmslist);
   $('#bandSearchSelect').change(updateRmslist);
 
-  $('#transportSelect').change(function (e) {
+  $('#transportSelect').change(function(e) {
     $('#bandwidthInput').val('').change();
     refreshExtraInputGroups();
     onConnectInputChange();
@@ -482,7 +482,7 @@ function initConnectModal() {
     updateRmslist();
   });
   let url = localStorage.getItem('pat_connect_url');
-  if( url != null ) {
+  if (url != null) {
     setConnectValues(url);
   }
   refreshExtraInputGroups();
@@ -504,7 +504,7 @@ function updateRmslist(forceDownload) {
     url: '/api/rmslist',
     dataType: 'json',
     data: params,
-    success: function (data) {
+    success: function(data) {
       tbody.empty();
       data.forEach((rms) => {
         let tr = $('<tr>')
@@ -524,16 +524,16 @@ function updateRmslist(forceDownload) {
 }
 
 function updateConnectAliases() {
-  $.getJSON('/api/connect_aliases', function (data) {
+  $.getJSON('/api/connect_aliases', function(data) {
     connectAliases = data;
 
     const select = $('#aliasSelect');
-    Object.keys(data).forEach(function (key) {
+    Object.keys(data).forEach(function(key) {
       select.append('<option>' + key + '</option>');
     });
 
-    select.change(function () {
-      $('#aliasSelect option:selected').each(function () {
+    select.change(function() {
+      $('#aliasSelect option:selected').each(function() {
         const alias = $(this).text();
         const url = connectAliases[$(this).text()];
         setConnectValues(url);
@@ -740,12 +740,12 @@ function populateBandwidths(transport) {
     method: 'GET',
     url: `/api/bandwidths?mode=${transport}`,
     dataType: 'json',
-    success: function (data) {
+    success: function(data) {
       if (data.bandwidths.length === 0) {
-	return;
+        return;
       }
       if (selected === undefined) {
-         selected = data.default;
+        selected = data.default;
       }
       data.bandwidths.forEach((bw) => {
         const option = $(`<option value="${bw}">${bw}</option>`);
@@ -754,7 +754,7 @@ function populateBandwidths(transport) {
       });
       select.val(selected).change();
     },
-    complete: function (xhr) {
+    complete: function(xhr) {
       select.attr('x-for-transport', transport);
       div.toggle(select.find('option').length > 0);
       select.prop('disabled', false);
@@ -806,11 +806,11 @@ function postPosition() {
     data: JSON.stringify(pos),
     contentType: 'application/json',
     type: 'POST',
-    success: function (resp) {
+    success: function(resp) {
       $('#posModal').modal('toggle');
       alert(resp);
     },
-    error: function (xhr, st, resp) {
+    error: function(xhr, st, resp) {
       alert(resp + ': ' + xhr.responseText);
     },
   });
@@ -824,10 +824,10 @@ function handleFileSelection() {
   let filesProcessed = 0;
   const totalFiles = this.files.length;
 
-  // Get previously stored files from data attribute  
+  // Get previously stored files from data attribute
   try {
     storedFiles = JSON.parse(fileInput.dataset.storedFiles || '[]');
-    
+
     // First add all previously stored files to DataTransfer
     storedFiles.forEach(fileInfo => {
       const byteString = atob(fileInfo.content.split(',')[1]);
@@ -854,15 +854,15 @@ function handleFileSelection() {
         type: file.type,
         content: e.target.result
       });
-      
+
       // Update dataset
       fileInput.dataset.storedFiles = JSON.stringify(storedFiles);
-      
+
       // Add to DataTransfer
       dt.items.add(file);
-      
+
       filesProcessed++;
-      
+
       // Only update input files and preview when ALL files are processed
       if (filesProcessed === totalFiles) {
         fileInput.files = dt.files;
@@ -897,8 +897,8 @@ function previewAttachmentFiles() {
       // Remove file from DataTransfer
       const dt = new DataTransfer();
       const files = this.files;
-      for(let i = 0; i < files.length; i++) {
-        if(files[i].name !== file.name) {
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].name !== file.name) {
           dt.items.add(files[i]);
         }
       }
@@ -909,7 +909,7 @@ function previewAttachmentFiles() {
 
     if (isImageSuffix(file.name)) {
       const reader = new FileReader();
-      reader.onload = function (e) {
+      reader.onload = function(e) {
         link.empty() // Clear any existing content
           .append(removeBtn)
           .append($('<span class="filesize">').text(formatFileSize(file.size)))
@@ -945,7 +945,7 @@ function alert(msg) {
   div.empty();
   div.append('<span class="navbar-text status-text">' + msg + '</p>');
   div.show();
-  window.setTimeout(function () {
+  window.setTimeout(function() {
     div.fadeOut(500);
   }, 5000);
 }
@@ -954,7 +954,7 @@ function updateStatus(data) {
   const st = $('#status_text');
   st.empty().off('click').attr('data-toggle', 'tooltip').attr('data-placement', 'bottom').tooltip();
 
-  const onDisconnect = function () {
+  const onDisconnect = function() {
     st.tooltip('hide');
     disconnect(false, () => {
       // This will be reset by the next updateStatus when the session is aborted
@@ -1021,25 +1021,25 @@ function connect(evt) {
   localStorage.setItem('pat_connect_url', url);
   $('#connectModal').modal('hide');
 
-  $.getJSON('/api/connect?url=' + encodeURIComponent(url), function (data) {
+  $.getJSON('/api/connect?url=' + encodeURIComponent(url), function(data) {
     if (data.NumReceived == 0) {
-      window.setTimeout(function () {
+      window.setTimeout(function() {
         alert('No new messages.');
       }, 1000);
     }
-  }).fail(function () {
+  }).fail(function() {
     alert('Connect failed. See console for detailed information.');
   });
 }
 
 function disconnect(dirty, successHandler) {
   if (successHandler === undefined) {
-    successHandler = () => {};
+    successHandler = () => { };
   }
   $.post(
     '/api/disconnect?dirty=' + dirty,
     {},
-    function (response) {
+    function(response) {
       successHandler();
     },
     'json'
@@ -1052,25 +1052,25 @@ function updateGUIStatus() {
     .find('.panel-info')
     .not('.hidden')
     .not('.ignore-status')
-    .each(function (i) {
+    .each(function(i) {
       color = 'info';
     });
   statusPopoverDiv
     .find('.panel-warning')
     .not('.hidden')
     .not('.ignore-status')
-    .each(function (i) {
+    .each(function(i) {
       color = 'warning';
     });
   statusPopoverDiv
     .find('.panel-danger')
     .not('.hidden')
     .not('.ignore-status')
-    .each(function (i) {
+    .each(function(i) {
       color = 'danger';
     });
   $('#gui_status_light')
-    .removeClass(function (index, className) {
+    .removeClass(function(index, className) {
       return (className.match(/(^|\s)btn-\S+/g) || []).join(' ');
     })
     .addClass('btn-' + color);
@@ -1115,13 +1115,13 @@ let ws;
 function initConsole() {
   if ('WebSocket' in window) {
     ws = new WebSocket(wsURL);
-    ws.onopen = function (evt) {
+    ws.onopen = function(evt) {
       console.log('Websocket opened');
       showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
       showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
       $('#console').empty();
     };
-    ws.onmessage = function (evt) {
+    ws.onmessage = function(evt) {
       const msg = JSON.parse(evt.data);
       if (msg.MyCall) {
         mycall = msg.MyCall;
@@ -1151,12 +1151,12 @@ function initConsole() {
         ws.send(JSON.stringify({ Pong: true }));
       }
     };
-    ws.onclose = function (evt) {
+    ws.onclose = function(evt) {
       console.log('Websocket closed');
       showGUIStatus(statusPopoverDiv.find('#websocket_error'), true);
       showGUIStatus(statusPopoverDiv.find('#webserver_info'), false);
       $('#status_text').empty();
-      window.setTimeout(function () {
+      window.setTimeout(function() {
         initConsole();
       }, 1000);
     };
@@ -1178,16 +1178,16 @@ function processPromptQuery(p) {
   $('.prompt-input').hide();
 
   // Show relevant input based on type
-  switch(p.kind) {
+  switch (p.kind) {
     case 'password':
       $('#promptPasswordInput').show().val('');
       break;
-      
+
     case 'multi-select':
       const container = $('#promptMultiSelectInput .checkbox-list-items');
       container.empty();
       $('#promptMultiSelectInput').show();
-      
+
       // Initialize select all toggle button behavior
       let allSelected = container.find('input[type="checkbox"]:checked').length > 0;
       $('#selectAllToggle').off('click').on('click', function() {
@@ -1207,7 +1207,7 @@ function processPromptQuery(p) {
         $('#selectAllToggle').text(container.find('input[type="checkbox"]:checked').length > container.find('input[type="checkbox"]').length / 2 ? 'Deselect All' : 'Select All'
         );
       });
-      
+
       // Add checkbox for each option as list items
       p.options.forEach(opt => {
         const li = $('<li>');
@@ -1222,7 +1222,7 @@ function processPromptQuery(p) {
         li.append(label);
         ul.append(li);
       });
-      
+
       container.append(ul);
 
       // Set initial toggle button state based on number of checked boxes
@@ -1244,14 +1244,14 @@ function postPromptResponse() {
   let value = '';
 
   // Get value from visible input
-  if($('#promptPasswordInput').is(':visible')) {
+  if ($('#promptPasswordInput').is(':visible')) {
     value = $('#promptPasswordInput').val();
-  } else if($('#promptMultiSelectInput').is(':visible')) {
+  } else if ($('#promptMultiSelectInput').is(':visible')) {
     // Get all checked boxes and join their values with commas
     value = $('#promptMultiSelectInput input:checked')
-            .map(function() { return $(this).val(); })
-            .get()
-            .join(',');
+      .map(function() { return $(this).val(); })
+      .get()
+      .join(',');
   }
 
   $('#promptModal').modal('hide');
@@ -1276,9 +1276,9 @@ const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx]
 const comparer = (idx, asc) => (a, b) =>
   ((v1, v2) =>
     v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2))(
-    getCellValue(asc ? a : b, idx),
-    getCellValue(asc ? b : a, idx)
-  );
+      getCellValue(asc ? a : b, idx),
+      getCellValue(asc ? b : a, idx)
+    );
 
 let currentFolder;
 
@@ -1291,16 +1291,16 @@ function displayFolder(dir) {
   table.empty();
   table.append(
     '<thead><tr><th></th><th>Subject</th>' +
-      '<th>' +
-      (is_from ? 'From' : 'To') +
-      '</th>' +
-      (is_from ? '' : '<th>P2P</th>') +
-      '<th>Date</th><th>Message ID</th></tr></thead><tbody></tbody>'
+    '<th>' +
+    (is_from ? 'From' : 'To') +
+    '</th>' +
+    (is_from ? '' : '<th>P2P</th>') +
+    '<th>Date</th><th>Message ID</th></tr></thead><tbody></tbody>'
   );
 
   const tbody = $('#folder table tbody');
 
-  $.getJSON('/api/mailbox/' + dir, function (data) {
+  $.getJSON('/api/mailbox/' + dir, function(data) {
     for (let i = 0; i < data.length; i++) {
       const msg = data[i];
 
@@ -1328,7 +1328,7 @@ function displayFolder(dir) {
 
       const elem = $(html);
       tbody.append(elem);
-      elem.click(function (evt) {
+      elem.click(function(evt) {
         displayMessage($(this));
       });
     }
@@ -1354,7 +1354,7 @@ function displayMessage(elem) {
   const mid = elem.attr('ID');
   const msg_url = buildMessagePath(currentFolder, mid);
 
-  $.getJSON(msg_url, function (data) {
+  $.getJSON(msg_url, function(data) {
     elem.attr('class', 'info');
 
     const view = $('#message_view');
@@ -1385,11 +1385,11 @@ function displayMessage(elem) {
 
     const attachments = view.find('#attachments');
     attachments.empty();
-    
+
     // Add a row container
     const row = $('<div class="row"></div>');
     attachments.append(row);
-    
+
     if (!data.Files) {
       attachments.hide();
     } else {
@@ -1419,10 +1419,10 @@ function displayMessage(elem) {
       } else if (formName) {
         attachments.append(
           '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
-            attachUrl +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit"></span> ' +
-            formName +
-            '</a></div>'
+          attachUrl +
+          '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit"></span> ' +
+          formName +
+          '</a></div>'
         );
       } else {
         link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
@@ -1436,15 +1436,15 @@ function displayMessage(elem) {
       }
     }
     $('#reply_btn').off('click');
-    $('#reply_btn').click(function (evt) {
+    $('#reply_btn').click(function(evt) {
       handleReply(false);
     });
 
-    $('#reply_all_btn').click(function (evt) {
-      handleReply(true); 
+    $('#reply_all_btn').click(function(evt) {
+      handleReply(true);
     });
     $('#forward_btn').off('click');
-    $('#forward_btn').click(function (evt) {
+    $('#forward_btn').click(function(evt) {
       $('#message_view').modal('hide');
 
       $('#msg_to').tokenfield('setTokens', '');
@@ -1456,7 +1456,7 @@ function displayMessage(elem) {
       $('#composer_attachments').empty();
       const fileInput = $('#msg_attachments_input')[0];
       const dt = new DataTransfer();
-      
+
       if (data.Files) {
         let filesProcessed = 0;
         data.Files.forEach(file => {
@@ -1467,10 +1467,10 @@ function displayMessage(elem) {
               responseType: 'blob'
             },
             success: function(blob) {
-              const f = new File([blob], file.Name, {type: blob.type});
+              const f = new File([blob], file.Name, { type: blob.type });
               dt.items.add(f);
               filesProcessed++;
-              
+
               if (filesProcessed === data.Files.length) {
                 fileInput.files = dt.files;
                 previewAttachmentFiles.call(fileInput);
@@ -1484,11 +1484,11 @@ function displayMessage(elem) {
       $('#msg_to-tokenfield').focus();
     });
     $('#delete_btn').off('click');
-    $('#delete_btn').click(function (evt) {
+    $('#delete_btn').click(function(evt) {
       deleteMessage(currentFolder, mid);
     });
     $('#archive_btn').off('click');
-    $('#archive_btn').click(function (evt) {
+    $('#archive_btn').click(function(evt) {
       archiveMessage(currentFolder, mid);
     });
 
@@ -1525,7 +1525,7 @@ function displayMessage(elem) {
     $('#message_view').modal('show');
     let mbox = currentFolder;
     if (!data.Read) {
-      window.setTimeout(function () {
+      window.setTimeout(function() {
         setRead(mbox, data.MID);
       }, 2000);
     }
@@ -1560,7 +1560,7 @@ function showReplyForm(mbox, mid, msg) {
     $.get(
       attachUrl + '?rendertohtml=false',
       {},
-      function (data) {
+      function(data) {
         let parser = new DOMParser();
         let xmlDoc = parser.parseFromString(data, 'text/xml');
         if (xmlDoc) {
@@ -1573,7 +1573,7 @@ function showReplyForm(mbox, mid, msg) {
           );
           if (replyTmpl && replyTmpl.stringValue) {
             window.setTimeout(startPollingFormData, 500);
-            open(attachUrl + '?rendertohtml=true&in-reply-to='+encodeURIComponent(mbox + "/" + mid));
+            open(attachUrl + '?rendertohtml=true&in-reply-to=' + encodeURIComponent(mbox + "/" + mid));
           }
         }
       },
@@ -1623,27 +1623,27 @@ function archiveMessage(box, mid) {
     },
     contentType: 'application/json',
     type: 'POST',
-    success: function (resp) {
+    success: function(resp) {
       $('#message_view').modal('hide');
       alert('Message archived');
     },
-    error: function (xhr, st, resp) {
+    error: function(xhr, st, resp) {
       alert(resp + ': ' + xhr.responseText);
     },
   });
 }
 
 function deleteMessage(box, mid) {
-  $('#confirm_delete').on('click', '.btn-ok', function (e) {
+  $('#confirm_delete').on('click', '.btn-ok', function(e) {
     $('#message_view').modal('hide');
     const $modalDiv = $(e.delegateTarget);
     $.ajax(buildMessagePath(box, mid), {
       type: 'DELETE',
-      success: function (resp) {
+      success: function(resp) {
         $modalDiv.modal('hide');
         alert('Message deleted');
       },
-      error: function (xhr, st, resp) {
+      error: function(xhr, st, resp) {
         $modalDiv.modal('hide');
         alert(resp + ': ' + xhr.responseText);
       },
@@ -1659,8 +1659,8 @@ function setRead(box, mid) {
     data: JSON.stringify(data),
     contentType: 'application/json',
     type: 'POST',
-    success: function (resp) {},
-    error: function (xhr, st, resp) {
+    success: function(resp) { },
+    error: function(xhr, st, resp) {
       alert(resp + ': ' + xhr.responseText);
     },
   });

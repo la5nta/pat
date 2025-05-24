@@ -886,15 +886,6 @@ function previewAttachmentFiles() {
     const col = $('<div class="col-xs-6 col-md-3"></div>');
     const link = $('<a class="attachment-preview"></a>');
 
-    function formatFileSize(bytes) {
-      if (bytes >= 1024 * 1024) {
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-      } else if (bytes >= 1024) {
-        return (bytes / 1024).toFixed(1) + ' KB';
-      }
-      return bytes + ' B';
-    }
-
     if (isImageSuffix(file.name)) {
       const reader = new FileReader();
       reader.onload = function (e) {
@@ -1370,6 +1361,11 @@ function displayMessage(elem) {
 
     const attachments = view.find('#attachments');
     attachments.empty();
+    
+    // Add a row container
+    const row = $('<div class="row"></div>');
+    attachments.append(row);
+    
     if (!data.Files) {
       attachments.hide();
     } else {
@@ -1384,24 +1380,18 @@ function displayMessage(elem) {
       }
       const attachUrl = msg_url + '/' + file.Name + '?rendertohtml=' + renderToHtml;
 
+      const col = $('<div class="col-xs-6 col-md-3"></div>');
+      const link = $('<a class="attachment-preview"></a>');
+
       if (isImageSuffix(file.Name)) {
-        attachments.append(
-          '<div class="col-xs-6 col-md-3"><a class="thumbnail" target="_blank" href="' +
-            msg_url +
-            '/' +
-            file.Name +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
-            (file.Size / 1024).toFixed(2) +
-            'kB' +
-            '<img src="' +
-            msg_url +
-            '/' +
-            file.Name +
-            '" alt="' +
-            file.Name +
-            '">' +
-            '</a></div>'
+        link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
+        link.html(
+          '<span class="filesize">' + formatFileSize(file.Size) + ' </span>' +
+          '<span class="glyphicon glyphicon-paperclip"></span> ' +
+          '<img src="' + msg_url + '/' + file.Name + '" alt="' + file.Name + '">'
         );
+        col.append(link);
+        attachments.append(col);
       } else if (formName) {
         attachments.append(
           '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
@@ -1411,18 +1401,14 @@ function displayMessage(elem) {
             '</a></div>'
         );
       } else {
-        attachments.append(
-          '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
-            msg_url +
-            '/' +
-            file.Name +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-paperclip"></span> ' +
-            file.Name +
-            '<br>(' +
-            file.Size +
-            ' bytes)' +
-            '</a></div>'
+        link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
+        link.html(
+          '<span class="filesize">' + formatFileSize(file.Size) + ' </span>' +
+          '<span class="glyphicon glyphicon-paperclip"></span> ' +
+          '<br><span class="filename">' + file.Name + '</span>'
         );
+        col.append(link);
+        attachments.append(col);
       }
     }
     $('#reply_btn').off('click');
@@ -1686,6 +1672,15 @@ function dateFormat(previous) {
   } else {
     return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
   }
+}
+
+function formatFileSize(bytes) {
+  if (bytes >= 1024 * 1024) {
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  } else if (bytes >= 1024) {
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
+  return bytes + ' B';
 }
 
 function buildMessagePath(folder, mid) {

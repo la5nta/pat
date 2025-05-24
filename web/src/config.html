@@ -105,14 +105,24 @@
                         <div id="aliasesCollapse" class="panel-collapse collapse">
                           <div class="panel-body">
                             <div id="aliasesContainer">
-                              <div class="form-inline alias-row" style="margin-bottom: 10px;">
-                                <input type="text" class="form-control alias-key" placeholder="Alias name"
-                                  style="width: 200px;">
-                                <input type="text" class="form-control alias-value" placeholder="Connection URL"
-                                  style="width: 400px; margin-left: 10px;">
-                                <button class="btn btn-danger btn-sm delete-alias" style="margin-left: 10px;">
-                                  <span class="glyphicon glyphicon-remove"></span>
-                                </button>
+                              <div class="alias-row" style="margin-bottom: 15px;">
+                                <div class="row">
+                                  <div class="col-sm-4">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                      <input type="text" class="form-control alias-key" placeholder="Alias name">
+                                    </div>
+                                  </div>
+                                  <div class="col-sm-7">
+                                    <div class="form-group" style="margin-bottom: 10px;">
+                                      <input type="text" class="form-control alias-value" placeholder="Connection URL">
+                                    </div>
+                                  </div>
+                                  <div class="col-sm-1">
+                                    <button class="btn btn-danger btn-sm delete-alias">
+                                      <span class="glyphicon glyphicon-remove"></span>
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                             <button id="addAlias" class="btn btn-success btn-sm" style="margin-top: 10px;">
@@ -638,15 +648,23 @@
                       Example: <code>@hourly connect telnet</code> or <code>0 3 * * * freq ardop:5350</code>
                     </div>
                     <div id="scheduleContainer">
-                      <div class="form-group schedule-row" style="margin-bottom: 10px;">
-                        <div class="input-group">
-                          <input type="text" class="form-control schedule-expr" placeholder="* * * * *"
-                            style="width: 200px;">
-                          <input type="text" class="form-control schedule-cmd" placeholder="command"
-                            style="width: 400px; margin-left: 10px;">
-                          <button class="btn btn-danger btn-sm delete-schedule" style="margin-left: 10px;">
-                            <span class="glyphicon glyphicon-remove"></span>
-                          </button>
+                      <div class="schedule-row" style="margin-bottom: 15px;">
+                        <div class="row">
+                          <div class="col-sm-3">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                              <input type="text" class="form-control schedule-expr" placeholder="* * * * *">
+                            </div>
+                          </div>
+                          <div class="col-sm-8">
+                            <div class="form-group" style="margin-bottom: 10px;">
+                              <input type="text" class="form-control schedule-cmd" placeholder="command">
+                            </div>
+                          </div>
+                          <div class="col-sm-1">
+                            <button class="btn btn-danger btn-sm delete-schedule">
+                              <span class="glyphicon glyphicon-remove"></span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -298,6 +298,8 @@ function initComposeModal() {
       processData: false,
       contentType: false,
       success: function (result) {
+        // Clear stored files data
+        $('#msg_attachments_input')[0].dataset.storedFiles = '[]';
         $('#composer').modal('hide');
         closeComposer(true);
         alert(result);
@@ -1008,6 +1010,7 @@ function closeComposer(clear) {
 
     // Attachment input field
     let attachments = $('#msg_attachments_input');
+    attachments[0].dataset.storedFiles = '[]';
     attachments.replaceWith((attachments = attachments.clone(true)));
   }
   $('#composer').modal('hide');

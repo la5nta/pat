@@ -298,18 +298,22 @@ body > .container {
   }
 
   .filename {
-    display: block;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;  /* Show max 3 lines */
+    -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 4px;
+    word-wrap: break-word;
+    text-align: left;
   }
 
   .filesize {
     color: #777;
     font-size: 0.9em;
-    margin-left: 4px;
-    margin-right: 12px;
+    margin-left: 0;
+    margin-right: 4px;
+    float: left;
   }
 
   img {

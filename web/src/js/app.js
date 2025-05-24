@@ -886,22 +886,43 @@ function previewAttachmentFiles() {
     const col = $('<div class="col-xs-6 col-md-3"></div>');
     const link = $('<a class="attachment-preview"></a>');
 
+    // Add remove button - append it directly to avoid event binding issues
+    const removeBtn = $('<button type="button" class="close remove-attachment" aria-label="Remove">' +
+      '<span aria-hidden="true">&times;</span></button>');
+    removeBtn.click((e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event from bubbling up
+      // Remove file from DataTransfer
+      const dt = new DataTransfer();
+      const files = this.files;
+      for(let i = 0; i < files.length; i++) {
+        if(files[i].name !== file.name) {
+          dt.items.add(files[i]);
+        }
+      }
+      this.files = dt.files;
+      // Remove preview
+      col.remove();
+    });
+
     if (isImageSuffix(file.name)) {
       const reader = new FileReader();
       reader.onload = function (e) {
-        link.html(
-          '<span class="filesize">' + formatFileSize(file.size) + ' </span>' +
-          '<span class="glyphicon glyphicon-paperclip"></span> ' +
-          '<img src="' + e.target.result + '" alt="' + file.name + '">'
-        );
+        link.empty() // Clear any existing content
+          .append(removeBtn)
+          .append($('<span class="filesize">').text(formatFileSize(file.size)))
+          .append($('<img>').attr({
+            src: e.target.result,
+            alt: file.name
+          }));
       };
       reader.readAsDataURL(file);
     } else {
-      link.html(
-        '<span class="filesize">' + formatFileSize(file.size) + ' </span>' +
-        '<span class="glyphicon glyphicon-paperclip"></span> ' +
-        '<br><span class="filename">' + file.name + '</span>'
-      );
+      link.empty() // Clear any existing content
+        .append(removeBtn)
+        .append($('<span class="filesize">').text(formatFileSize(file.size)))
+        .append('<br>')
+        .append($('<span class="filename">').text(file.name));
     }
 
     col.append(link);
@@ -1386,7 +1407,7 @@ function displayMessage(elem) {
       if (isImageSuffix(file.Name)) {
         link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
         link.html(
-          '<span class="filesize">' + formatFileSize(file.Size) + ' </span>' +
+          '<span class="filesize">' + formatFileSize(file.Size) + '</span>' +
           '<span class="glyphicon glyphicon-paperclip"></span> ' +
           '<img src="' + msg_url + '/' + file.Name + '" alt="' + file.Name + '">'
         );
@@ -1403,7 +1424,7 @@ function displayMessage(elem) {
       } else {
         link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
         link.html(
-          '<span class="filesize">' + formatFileSize(file.Size) + ' </span>' +
+          '<span class="filesize">' + formatFileSize(file.Size) + '</span>' +
           '<span class="glyphicon glyphicon-paperclip"></span> ' +
           '<br><span class="filename">' + file.Name + '</span>'
         );

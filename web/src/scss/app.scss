@@ -288,6 +288,14 @@ body > .container {
   border-radius: 4px;
   text-decoration: none;
   background: white;
+  position: relative;
+
+  .close {
+    position: absolute;
+    right: 8px;
+    top: 6px;
+    margin-left: 5px;
+  }
 
   .filename {
     display: block;
@@ -301,6 +309,7 @@ body > .container {
     color: #777;
     font-size: 0.9em;
     margin-left: 4px;
+    margin-right: 12px;
   }
 
   img {

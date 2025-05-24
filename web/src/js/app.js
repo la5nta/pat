@@ -876,29 +876,45 @@ function previewAttachmentFiles() {
   const attachments = $('#composer_attachments');
   attachments.empty();
 
+  // Add a row container
+  const row = $('<div class="row"></div>');
+  attachments.append(row);
+
   for (let i = 0; i < this.files.length; i++) {
     const file = this.files[i];
-    
+
+    const col = $('<div class="col-xs-6 col-md-3"></div>');
+    const link = $('<a class="attachment-preview"></a>');
+
+    function formatFileSize(bytes) {
+      if (bytes >= 1024 * 1024) {
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      } else if (bytes >= 1024) {
+        return (bytes / 1024).toFixed(1) + ' KB';
+      }
+      return bytes + ' B';
+    }
+
     if (isImageSuffix(file.name)) {
       const reader = new FileReader();
       reader.onload = function (e) {
-        attachments.append(
-          '<div class="col-xs-6 col-md-3"><a class="thumbnail" href="#" class="btn btn-default navbar-btn">' +
+        link.html(
+          '<span class="filesize">' + formatFileSize(file.size) + ' </span>' +
           '<span class="glyphicon glyphicon-paperclip"></span> ' +
-          '<img src="' + e.target.result + '" alt="' + file.name + '">' +
-          '</a></div>'
+          '<img src="' + e.target.result + '" alt="' + file.name + '">'
         );
       };
       reader.readAsDataURL(file);
     } else {
-      attachments.append(
-        '<div class="col-xs-6 col-md-3"><a href="#" class="btn btn-default navbar-btn">' +
+      link.html(
+        '<span class="filesize">' + formatFileSize(file.size) + ' </span>' +
         '<span class="glyphicon glyphicon-paperclip"></span> ' +
-        file.name +
-        '<br>(' + file.size + ' bytes)' +
-        '</a></div>'
+        '<br><span class="filename">' + file.name + '</span>'
       );
     }
+
+    col.append(link);
+    row.append(col);
   }
 }
 

@@ -280,6 +280,40 @@ body > .container {
 }
 
 /* Attachment add */
+.attachment-preview {
+  display: block;
+  padding: 10px;
+  margin: 2px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-decoration: none;
+  background: white;
+
+  .filename {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 4px;
+  }
+
+  .filesize {
+    color: #777;
+    font-size: 0.9em;
+    margin-left: 4px;
+  }
+
+  img {
+    max-width: 100%;
+    margin-top: 5px;
+  }
+}
+
+#composer_attachments .row {
+  margin-left: -2px;
+  margin-right: -2px;
+}
+
 .btn-file {
   position: relative;
   overflow: hidden;

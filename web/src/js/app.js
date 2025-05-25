@@ -15,6 +15,9 @@ const statusPos = $('#pos_status');
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+  
+  // Ensure prompt modal appears on top
+  $('#promptModal').css('z-index', 1050);
 
   $(function() {
     initStatusPopover();
@@ -1170,6 +1173,12 @@ function initConsole() {
 function processPromptQuery(p) {
   console.log(p);
 
+  // Close any open modals first
+  $('.modal').modal('hide');
+  // Remove any stuck backdrops
+  $('.modal-backdrop').remove();
+  $('body').removeClass('modal-open');
+
   $('#promptID').val(p.id);
   $('#promptMessage').text(p.message);
   $('#promptOkButton').click(postPromptResponse);
@@ -1236,7 +1245,23 @@ function processPromptQuery(p) {
       return;
   }
 
-  $('#promptModal').modal('show');
+  // Show modal with error handling
+  try {
+    $('#promptModal').modal({
+      backdrop: 'static', // Prevent closing by clicking outside
+      keyboard: false,    // Prevent closing with keyboard
+      show: true
+    });
+  } catch (e) {
+    console.error('Failed to show prompt modal:', e);
+    // Attempt recovery
+    $('.modal-backdrop').remove();
+    $('body').removeClass('modal-open');
+    $('#promptModal').modal('hide');
+    setTimeout(() => {
+      $('#promptModal').modal('show');
+    }, 100);
+  }
 }
 
 function postPromptResponse() {

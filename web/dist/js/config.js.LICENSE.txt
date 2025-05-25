@@ -23,47 +23,6 @@
  */
 
 /*!
- * URI.js - Mutating URLs
- *
- * Version: 1.19.10
- *
- * Author: Rodney Rehm
- * Web: http://medialize.github.io/URI.js/
- *
- * Licensed under
- *   MIT License http://www.opensource.org/licenses/mit-license
- *
- */
-
-/*!
- * URI.js - Mutating URLs
- * IPv6 Support
- *
- * Version: 1.19.10
- *
- * Author: Rodney Rehm
- * Web: http://medialize.github.io/URI.js/
- *
- * Licensed under
- *   MIT License http://www.opensource.org/licenses/mit-license
- *
- */
-
-/*!
- * URI.js - Mutating URLs
- * Second Level Domain (SLD) Support
- *
- * Version: 1.19.10
- *
- * Author: Rodney Rehm
- * Web: http://medialize.github.io/URI.js/
- *
- * Licensed under
- *   MIT License http://www.opensource.org/licenses/mit-license
- *
- */
-
-/*!
  * bootstrap-tokenfield
  * https://github.com/sliptree/bootstrap-tokenfield
  * Copyright 2013-2014 Sliptree and other contributors; Licensed MIT
@@ -82,5 +41,3 @@
  *
  * Date: 2021-03-02T17:08Z
  */
-
-/*! https://mths.be/punycode v1.4.0 by @mathias */

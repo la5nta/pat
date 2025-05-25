@@ -315,6 +315,7 @@ func postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if v := r.Form["p2ponly"]; len(v) == 1 && v[0] != "" {
 		msg.Header.Set("X-P2POnly", "true")
+		msg.Header.Set("X-P2P", "true")
 	}
 	if v := r.Form["date"]; len(v) == 1 {
 		t, err := time.Parse(time.RFC3339, v[0])

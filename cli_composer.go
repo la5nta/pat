@@ -77,6 +77,7 @@ func composeMessageHeader(inReplyToMsg *fbb.Message, replyAll bool) *fbb.Message
 		ans := readLine()
 		if strings.EqualFold("y", ans) {
 			msg.Header.Set("X-P2POnly", "true")
+			msg.Header.Set("X-P2P", "true")
 		}
 	case 0:
 		fmt.Println("Message must have at least one recipient")
@@ -191,6 +192,7 @@ func noninteractiveComposeMessage(from string, subject string, attachments []str
 	msg.SetBody(string(body))
 	if p2pOnly {
 		msg.Header.Set("X-P2POnly", "true")
+		msg.Header.Set("X-P2P", "true")
 	}
 
 	postMessage(msg)

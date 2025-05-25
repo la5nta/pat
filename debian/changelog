@@ -1,3 +1,25 @@
+pat (0.17.0) stable; urgency=medium
+
+  * Add Configuration page to web GUI
+  * Add optional message download prompting with size limits
+  * Add Reply All message action
+  * Major improvements to attachment handling:
+    - Include attachments when forwarding messages
+    - Add button to remove attachments
+    - Fix attachments not retained when adding more to the same message
+    - Improve attachment layout
+  * Templates:
+    - Add support for multi-line prompt in text templates
+    - Add CLI command 'templates' for managing forms/templates
+    - Add support for template sequence numbers
+    - Fix UTF-8 BOM handling in templates
+    - Fix empty attached_text form values panic
+  * Fix Safari GPS timestamp issues
+  * Fix AGWPE timeout issues
+  * Fix FBB protocol turnover handling when all messages are deferred and/or rejected
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sun, 25 May 2025 19:04:16 +0200
+
 pat (0.16.0) stable; urgency=medium
 
   * Major overhaul of the template/forms engine (bug fixes and enhancements)

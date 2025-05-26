@@ -41,10 +41,11 @@ func TestInsertionTagReplacer(t *testing.T) {
 		"<GPSValid>":           "YES",
 		"<GPSLatitude>":        "59.4138",
 		"<GPSLongitude>":       "5.2680",
+		"<FormFolder>":         "/api/forms/some-folder",
 	}
 	for in, expect := range tests {
 		t.Run(in, func(t *testing.T) {
-			if out := insertionTagReplacer(m, nil, "<", ">")(in); out != expect {
+			if out := insertionTagReplacer(m, nil, "some-folder/template.txt", "<", ">")(in); out != expect {
 				t.Errorf("Expected %q, got %q", expect, out)
 			}
 		})

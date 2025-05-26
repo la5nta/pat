@@ -111,6 +111,7 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler(mbox.MBoxPath)).Methods("POST")
 	r.HandleFunc("/api/form", formsMgr.GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", formsMgr.GetFormTemplateHandler).Methods("GET")
+	r.PathPrefix("/api/forms/").Handler(http.StripPrefix("/api/forms/", http.HandlerFunc(formsMgr.GetFormAssetHandler))).Methods("GET")
 	r.HandleFunc("/api/formsUpdate", formsMgr.UpdateFormTemplatesHandler).Methods("POST")
 	r.HandleFunc("/api/disconnect", DisconnectHandler)
 	r.HandleFunc("/api/mailbox/{box}", mailboxHandler).Methods("GET")

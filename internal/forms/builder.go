@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -194,9 +195,9 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 	}
 	defer f.Close()
 
-	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, "<", ">")
+	replaceInsertionTags := insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, path, "<", ">")
 	refreshInsertionTags := func() {
-		replaceInsertionTags = insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, "<", ">")
+		replaceInsertionTags = insertionTagReplacer(b.FormsMgr, b.InReplyToMsg, path, "<", ">")
 	}
 	replaceVars := variableReplacer("<", ">", b.FormValues)
 	addFormValue := func(k, v string) {
@@ -350,7 +351,7 @@ func variableReplacer(tagStart, tagEnd string, vars map[string]string) func(stri
 }
 
 // InsertionTagReplacer returns a function that replaces the fixed set of insertion tags with their corresponding values.
-func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, tagStart, tagEnd string) func(string) string {
+func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, templatePath string, tagStart, tagEnd string) func(string) string {
 	now := now()
 	validPos := "NO"
 	nowPos, err := m.gpsPos()
@@ -407,8 +408,9 @@ func insertionTagReplacer(m *Manager, inReplyToMsg *fbb.Message, tagStart, tagEn
 
 		"SeqNum": fmt.Sprintf(m.config.SequenceFormat, seqNum),
 
+		"FormFolder": path.Join("/api/forms/", filepath.Dir(m.rel(templatePath))),
+
 		// TODO (other insertion tags found in Standard Forms):
-		// FormFolder
 		// MsgTo
 		// MsgCc
 		// MsgSubject

@@ -224,6 +224,19 @@ func (m *Manager) GetPostedFormData(key string) (Message, bool) {
 	return v, ok
 }
 
+// GetFormAssetHandler serves files referenced by HTML forms (through {FormFolder}).
+//
+// It's primary use case is to load stylesheets and smilar resources.
+func (m *Manager) GetFormAssetHandler(w http.ResponseWriter, r *http.Request) {
+	path := m.abs(r.URL.Path)
+	// Make sure we don't escape FormsPath
+	if !directories.IsInPath(m.config.FormsPath, path) {
+		http.Error(w, fmt.Sprintf("%s escapes forms directory", path), http.StatusForbidden)
+		return
+	}
+	http.ServeFile(w, r, path)
+}
+
 // GetFormTemplateHandler serves a template's HTML form (filled-in with instance values)
 func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	templatePath := r.URL.Query().Get("template")
@@ -563,7 +576,7 @@ func (m *Manager) fillFormTemplate(templatePath string, inReplyToMsg *fbb.Messag
 	data = strings.ReplaceAll(data, "http://localhost:8001", formDestURL) // Some Canada BC forms are hardcoded to this URL
 
 	// Substitute insertion tags and variables
-	data = insertionTagReplacer(m, inReplyToMsg, "{", "}")(data)
+	data = insertionTagReplacer(m, inReplyToMsg, templatePath, "{", "}")(data)
 	data = variableReplacer("{", "}", formVars)(data)
 
 	return data, nil

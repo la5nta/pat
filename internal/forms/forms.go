@@ -7,6 +7,7 @@
 package forms
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"encoding/xml"
@@ -125,14 +126,11 @@ func (m *Manager) GetFormsCatalogHandler(w http.ResponseWriter, r *http.Request)
 	_ = json.NewEncoder(w).Encode(formFolder)
 }
 
-// PostFormDataHandler - When the user is done filling a form, the frontend posts the input fields to this handler,
-// which stores them in a map, so that other browser tabs can read the values back with GetFormDataHandler
+// PostFormDataHandler handles both HTML form submissions and text-only template submissions.
+// The handler detects the content type and processes accordingly, storing the results in
+// the forms map for retrieval by other browser tabs.
 func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseMultipartForm(10e6); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		inReplyTo := r.URL.Query().Get("in-reply-to")
 		templatePath := r.URL.Query().Get("template")
 		if templatePath == "" {
@@ -140,6 +138,41 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 			log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
 			return
 		}
+		formInstanceKey, err := r.Cookie("forminstance")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("missing cookie %s %s", templatePath, r.URL)
+			return
+		}
+
+		var formValues, promptResponses map[string]string
+		switch contentType := r.Header.Get("Content-Type"); {
+		case strings.HasPrefix(contentType, "multipart/form-data"):
+			// Process HTML form submission
+			if err := r.ParseMultipartForm(10e6); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			formValues = make(map[string]string, len(r.PostForm))
+			for key, values := range r.PostForm {
+				formValues[strings.TrimSpace(strings.ToLower(key))] = values[0]
+			}
+		case strings.HasPrefix(contentType, "application/json"):
+			// Process JSON template submission (from builtin text-only template editor)
+			var payload struct {
+				Responses map[string]string `json:"responses"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			formValues = map[string]string{"templateversion": m.getFormsVersion()}
+			promptResponses = payload.Responses
+		default:
+			http.Error(w, "unsupported content type", http.StatusBadRequest)
+			return
+		}
+
 		templatePath = m.abs(templatePath)
 		// Make sure we don't escape FormsPath
 		if !directories.IsInPath(m.config.FormsPath, templatePath) {
@@ -147,18 +180,8 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 			return
 		}
 
-		formInstanceKey, err := r.Cookie("forminstance")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			log.Printf("missing cookie %s %s", templatePath, r.URL)
-			return
-		}
-		fields := make(map[string]string, len(r.PostForm))
-		for key, values := range r.PostForm {
-			fields[strings.TrimSpace(strings.ToLower(key))] = values[0]
-		}
-
-		template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
+		// Load template
+		template, err := readTemplate(m.abs(templatePath), formFilesFromPath(m.config.FormsPath))
 		switch {
 		case os.IsNotExist(err):
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -169,6 +192,7 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 			return
 		}
 
+		// Load optional in-reply-to message
 		var inReplyToMsg *fbb.Message
 		if inReplyTo != "" {
 			var err error
@@ -179,23 +203,28 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 				return
 			}
 		}
+
+		// Build message
 		msg, err := messageBuilder{
-			Template:     template,
-			FormValues:   fields,
-			Interactive:  false,
-			InReplyToMsg: inReplyToMsg,
-			FormsMgr:     m,
+			Template:        template,
+			FormValues:      formValues,
+			PromptResponses: promptResponses, // This is for text-only templates only
+			Interactive:     false,
+			InReplyToMsg:    inReplyToMsg,
+			FormsMgr:        m,
 		}.build()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			log.Printf("%s %s: %s", r.Method, r.URL.Path, err)
+			return
 		}
 
+		// Save the result for the front-end to retrieve
 		m.postedFormData.mu.Lock()
 		m.postedFormData.m[formInstanceKey.Value] = msg
 		m.postedFormData.mu.Unlock()
-
 		m.cleanupOldFormData()
+
 		_, _ = io.WriteString(w, "<script>window.close()</script>")
 	}
 }
@@ -237,6 +266,53 @@ func (m *Manager) GetFormAssetHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
+// GetTemplateDataHandler serves partially processed template content.
+//
+// It's primary use case is to provide template files to the text-only template editor.
+func (m *Manager) GetTemplateDataHandler(mboxRoot string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		templatePath := r.URL.Query().Get("template")
+		// Make sure we don't escape FormsPath
+		if !directories.IsInPath(m.config.FormsPath, m.abs(templatePath)) {
+			http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
+			return
+		}
+		template, err := readTemplate(m.abs(templatePath), formFilesFromPath(m.config.FormsPath))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		// Load optional in-reply-to message
+		var inReplyToMsg *fbb.Message
+		if inReplyTo := r.URL.Query().Get("in-reply-to"); inReplyTo != "" {
+			var err error
+			inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				log.Printf("failed to load in-reply-to (%q): %v", inReplyTo, err)
+				return
+			}
+		}
+
+		// Open the template
+		f, err := os.Open(template.Path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer f.Close()
+
+		// Process insertion tags (for preview)
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, newTrimBomReader(f)); err != nil {
+			panic(err)
+		}
+		text := insertionTagReplacer(m, inReplyToMsg, templatePath, "<", ">")(buf.String())
+
+		io.WriteString(w, text)
+	}
+}
+
 // GetFormTemplateHandler serves a template's HTML form (filled-in with instance values)
 func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
 	templatePath := r.URL.Query().Get("template")
@@ -264,7 +340,8 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 	}
 	formPath := template.InputFormPath
 	if formPath == "" {
-		http.Error(w, "requested template does not provide a HTML form", http.StatusNotFound)
+		// This is a text-only template. Redirect to template editor.
+		http.Redirect(w, r, "/ui/template?"+r.URL.Query().Encode(), http.StatusFound)
 		return
 	}
 
@@ -498,10 +575,6 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFi
 			}
 			// Relative paths for the JSON response
 			template.Path = m.rel(template.Path)
-			// Ignore templates without a input form (we don't support text-only templates in the web gui yet)
-			if template.InputFormPath == "" {
-				return nil
-			}
 			folder.Forms = append(folder.Forms, template)
 			folder.FormCount++
 			return nil

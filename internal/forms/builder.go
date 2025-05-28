@@ -40,6 +40,7 @@ type messageBuilder struct {
 	InReplyToMsg *fbb.Message
 	Template     Template
 	FormValues   map[string]string
+	PromptResponses    map[string]string
 	FormsMgr     *Manager
 }
 
@@ -216,6 +217,11 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 		// Insertion tags and variables
 		lineTmpl = replaceInsertionTags(lineTmpl)
 		lineTmpl = replaceVars(lineTmpl)
+
+		// Prompt responses already provided (from text template editor in frontend)
+		for search, replace := range b.PromptResponses {
+			lineTmpl = strings.Replace(lineTmpl, search, replace, 1)
+		}
 
 		// Prompts (mostly found in text templates)
 		if b.Interactive {

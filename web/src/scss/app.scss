@@ -416,6 +416,23 @@ input[type='radio'] {
   padding-left: 15px;
 }
 
+.folder-content {
+  padding-left: 15px;
+}
+
+#selectForm .modal-header .container {
+  padding: 0;
+  width: 100%;
+}
+
+#selectForm .modal-header .row {
+  margin: 0;
+}
+
+#selectForm .modal-header .col {
+  padding: 0;
+}
+
 .folder-toggle {
   width: 100%;
   text-align: left;
@@ -439,4 +456,30 @@ input[type='radio'] {
 
 .form-item {
   margin: 5px 0;
+}
+
+.search-container {
+  position: relative;
+  margin: 20px 0 2px 0;
+  max-width: 30ch;
+}
+
+#formSearchInput {
+  width: 100%;
+  padding-right: 30px; /* Make room for the clear button */
+}
+
+.search-clear {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border: none;
+  background: none;
+  color: #999;
+  padding: 0 10px;
+}
+
+.search-clear:hover {
+  color: #666;
 }

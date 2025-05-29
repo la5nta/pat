@@ -15,7 +15,7 @@ const statusPos = $('#pos_status');
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
-  
+
   // Ensure prompt modal appears on top
   $('#promptModal').css('z-index', 1050);
 
@@ -320,10 +320,56 @@ function initForms() {
   $.getJSON('/api/formcatalog')
     .done(function(data) {
       initFormSelect(data);
+      // Add search handlers
+      $('#formSearchInput').on('input', function() {
+        filterForms($(this).val().toLowerCase());
+      });
+
+      $('#clearSearchButton').click(function() {
+        $('#formSearchInput').val('');
+        filterForms('');
+      });
     })
     .fail(function(data) {
       initFormSelect(null);
     });
+}
+
+function filterForms(searchTerm) {
+  let visibleCount = 0;
+
+  // Search through all form items
+  $('.form-item').each(function() {
+    const formDiv = $(this);
+    const templatePath = formDiv.data('template-path') || '';
+    const isMatch = templatePath.toLowerCase().includes(searchTerm);
+
+    // Show/hide the form item
+    formDiv.css('display', isMatch ? '' : 'none');
+    if (isMatch) visibleCount++;
+  });
+
+  // Show/hide folders based on whether they have visible forms
+  $('.folder-container').each(function() {
+    const folder = $(this);
+    const hasVisibleForms = folder.find('.form-item').filter(function() {
+      return $(this).css('display') !== 'none';
+    }).length > 0;
+    folder.css('display', hasVisibleForms ? '' : 'none');
+  });
+
+  // Auto-expand/collapse based on result count
+  if (visibleCount < 20) {
+    // Expand when few results
+    $('.folder-toggle.collapsed').each(function() {
+      $(this).click();
+    });
+  } else {
+    // Collapse when many results
+    $('.folder-toggle:not(.collapsed)').each(function() {
+      $(this).click();
+    });
+  }
 }
 
 function initFormSelect(data) {
@@ -391,24 +437,21 @@ function deleteCookie(cname) {
 
 function appendFormFolder(rootId, data, level = 0) {
   if (!data.folders && !data.forms) return;
-  
+
   const container = $(`#${rootId}`);
-  
-  // Create a unique ID for this level's accordion
-  const folderId = `folder-${level}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   // Handle folders
   if (data.folders && data.folders.length > 0) {
     data.folders.forEach(function(folder) {
       if (folder.form_count > 0) {
         // Create unique IDs for this folder
         const folderContentId = `folder-content-${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Create the folder structure
         const folderDiv = $(`
           <div class="folder-container ${level > 0 ? 'nested-folder' : ''}">
-            <button class="btn btn-secondary folder-toggle mb-2 collapsed" 
-                    data-toggle="collapse" 
+            <button class="btn btn-secondary folder-toggle mb-2 collapsed"
+                    data-toggle="collapse"
                     data-target="#${folderContentId}">
               ${folder.name}
             </button>
@@ -417,15 +460,15 @@ function appendFormFolder(rootId, data, level = 0) {
             </div>
           </div>
         `);
-        
+
         container.append(folderDiv);
-        
+
         // Recursively add sub-folders and forms
         appendFormFolder(`${folderContentId} .folder-content`, folder, level + 1);
       }
     });
   }
-  
+
   // Handle forms at this level
   if (data.forms && data.forms.length > 0) {
     const formsContainer = $('<div class="forms-container"></div>');
@@ -436,10 +479,11 @@ function appendFormFolder(rootId, data, level = 0) {
             ${form.name}
           </button>
         </div>
-      `);
-      
-      const path = encodeURIComponent(form.template_path);
-      formDiv.find('button').on('click', () => onFormLaunching(`/api/forms?template=${path}`));
+      `).data('template-path', form.template_path);
+
+      formDiv.find('button').on('click', () =>
+        onFormLaunching(`/api/forms?template=${encodeURIComponent(form.template_path)}`)
+      );
       formsContainer.append(formDiv);
     });
     container.append(formsContainer);

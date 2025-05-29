@@ -487,7 +487,7 @@ func (m *Manager) innerRecursiveBuildFormFolder(rootPath string, filesMap formFi
 			}
 			folder.Folders = append(folder.Folders, subfolder)
 			folder.FormCount += subfolder.FormCount
-			return nil
+			return fs.SkipDir
 		case !strings.EqualFold(filepath.Ext(d.Name()), txtFileExt):
 			return nil
 		default:

@@ -408,3 +408,35 @@ input[type='radio'] {
 .checkbox-list-items li {
   margin-bottom: 5px;
 }
+
+/* Nested forms styling */
+.nested-folder {
+  margin-left: 15px;
+  border-left: 2px solid #eee;
+  padding-left: 15px;
+}
+
+.folder-toggle {
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.folder-toggle::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid currentColor;
+}
+
+.folder-toggle.collapsed::after {
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.form-item {
+  margin: 5px 0;
+}

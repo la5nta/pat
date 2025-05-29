@@ -389,46 +389,60 @@ function deleteCookie(cname) {
   document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 }
 
-function appendFormFolder(rootId, data) {
-  if (data.folders && data.folders.length > 0 && data.form_count > 0) {
-    const rootAcc = `${rootId}Acc`;
-    $(`#${rootId}`).append(`
-			<div class="accordion" id="${rootAcc}">
-			</div>
-			`);
+function appendFormFolder(rootId, data, level = 0) {
+  if (!data.folders && !data.forms) return;
+  
+  const container = $(`#${rootId}`);
+  
+  // Create a unique ID for this level's accordion
+  const folderId = `folder-${level}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Handle folders
+  if (data.folders && data.folders.length > 0) {
     data.folders.forEach(function(folder) {
       if (folder.form_count > 0) {
-        const folderNameId = rootId + folder.name.replace(/\s/g, '_').replace(/&/g, 'and');
-        const cardBodyId = folderNameId + 'Body';
-        const card = `
-				<div class="card">
-					<div class="card-header d-flex">
-						<button class="btn btn-secondary flex-fill" type="button" data-toggle="collapse" data-target="#${folderNameId}">
-							${folder.name}
-						</button>
-					</div>
-					<div id="${folderNameId}" class="collapse" data-parent="#${rootAcc}">
-						<div class="card-body" id="${cardBodyId}">
-						</div>
-					</div>
-				</div>
-				`;
-        $(`#${rootAcc}`).append(card);
-        appendFormFolder(`${cardBodyId}`, folder);
-        if (folder.forms && folder.forms.length > 0) {
-          const cardBodyFormsId = `${cardBodyId}Forms`;
-          $(`#${cardBodyId}`).append(`<div id="${cardBodyFormsId}" class="list-group"></div>`);
-          folder.forms.forEach((form) => {
-            const newDiv = $(
-              `<div class="list-group-item list-group-item-action list-group-item-light">${form.name}</div>`
-            );
-            const path = encodeURIComponent(form.template_path);
-            newDiv.on('click', () => onFormLaunching(`/api/forms?template=${path}`));
-            $(`#${cardBodyFormsId}`).append(newDiv);
-          });
-        }
+        // Create unique IDs for this folder
+        const folderContentId = `folder-content-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Create the folder structure
+        const folderDiv = $(`
+          <div class="folder-container ${level > 0 ? 'nested-folder' : ''}">
+            <button class="btn btn-secondary folder-toggle mb-2 collapsed" 
+                    data-toggle="collapse" 
+                    data-target="#${folderContentId}">
+              ${folder.name}
+            </button>
+            <div id="${folderContentId}" class="collapse">
+              <div class="folder-content"></div>
+            </div>
+          </div>
+        `);
+        
+        container.append(folderDiv);
+        
+        // Recursively add sub-folders and forms
+        appendFormFolder(`${folderContentId} .folder-content`, folder, level + 1);
       }
     });
+  }
+  
+  // Handle forms at this level
+  if (data.forms && data.forms.length > 0) {
+    const formsContainer = $('<div class="forms-container"></div>');
+    data.forms.forEach((form) => {
+      const formDiv = $(`
+        <div class="form-item">
+          <button class="btn btn-light btn-block" style="text-align: left">
+            ${form.name}
+          </button>
+        </div>
+      `);
+      
+      const path = encodeURIComponent(form.template_path);
+      formDiv.find('button').on('click', () => onFormLaunching(`/api/forms?template=${path}`));
+      formsContainer.append(formDiv);
+    });
+    container.append(formsContainer);
   }
 }
 

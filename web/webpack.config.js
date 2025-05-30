@@ -39,7 +39,8 @@ module.exports = (env, argv) => {
     entry: {
         app: './js/app.js',
         config: './js/config.js',
-        styles: './scss/app.scss'
+        template: ['./js/template.js', './scss/template.scss'],
+        style: './scss/app.scss'
     },
 
     // enable development source maps
@@ -60,7 +61,7 @@ module.exports = (env, argv) => {
     plugins: [
       // save compiled SCSS into separated CSS file
       new MiniCssExtractPlugin({
-        filename: 'css/style.css',
+        filename: 'css/[name].css',
       }),
 
       // copy static assets directory
@@ -68,6 +69,7 @@ module.exports = (env, argv) => {
         { from: 'static', to: 'static' },
         { from: 'index.html', to: 'index.html' },
         { from: 'config.html', to: 'config.html' },
+        { from: 'template.html', to: 'template.html' },
       ]),
 
       // image optimization

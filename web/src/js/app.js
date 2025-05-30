@@ -286,6 +286,12 @@ function initComposeModal() {
     const d = new Date().toJSON();
     formData.append('date', d);
 
+    // Add in-reply-to header if present
+    const inReplyTo = $('#composer').data('in-reply-to');
+    if (inReplyTo) {
+      formData.append('in_reply_to', inReplyTo);
+    }
+
     // Set some defaults that makes the message pass validation
     if ($('#msg_body').val().length == 0) {
       $('#msg_body').val('<No message body>');
@@ -481,9 +487,13 @@ function appendFormFolder(rootId, data, level = 0) {
         </div>
       `).data('template-path', form.template_path);
 
-      formDiv.find('button').on('click', () =>
-        onFormLaunching(`/api/forms?template=${encodeURIComponent(form.template_path)}`)
-      );
+      formDiv.find('button').on('click', () => {
+        const inReplyTo = $('#composer').data('in-reply-to');
+        const replyParam = inReplyTo ? '&in-reply-to=' + encodeURIComponent(inReplyTo) : '';
+        const path = encodeURIComponent(form.template_path);
+        onFormLaunching(`/api/forms?template=${path}${replyParam}`);
+      });
+
       formsContainer.append(formDiv);
     });
     container.append(formsContainer);
@@ -1065,6 +1075,7 @@ function closeComposer(clear) {
     $('#msg_to').tokenfield('setTokens', []);
     $('#msg_cc').tokenfield('setTokens', []);
     $('#composer_form')[0].reset();
+    $('#composer').removeData('in-reply-to');
 
     // Attachment previews
     $('#composer_attachments').empty();
@@ -1594,7 +1605,7 @@ function displayMessage(elem) {
         $('#msg_subject').val(data.Subject);
       }
       $('#msg_body').val('\n\n' + quoteMsg(data));
-
+      $('#composer').data('in-reply-to', currentFolder + '/' + mid);
       $('#composer').modal('show');
       $('#msg_body').focus();
       $('#msg_body')[0].setSelectionRange(0, 0);

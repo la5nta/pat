@@ -406,6 +406,13 @@ function initFormSelect(data) {
 function updateForms() {
   $('#updateFormsResponse').text('');
   $('#updateFormsError').text('');
+
+  // Disable button and show spinner
+  const btn = $('#updateFormsButton');
+  const spinner = $('#updateFormsSpinner');
+  btn.prop('disabled', true);
+  spinner.show().addClass('icon-spin');
+
   $.ajax({
     method: 'POST',
     url: '/api/formsUpdate',
@@ -427,6 +434,11 @@ function updateForms() {
       $('#updateFormsResponse').text('');
       $('#updateFormsError').text(err.responseText);
     },
+    complete: () => {
+      // Re-enable button and hide spinner
+      btn.prop('disabled', false);
+      spinner.hide().removeClass('icon-spin');
+    }
   });
 }
 

@@ -541,10 +541,18 @@ function initConnectModal() {
   $('#bandSearchSelect').change(updateRmslist);
 
   $('#transportSelect').change(function(e) {
+    // Clear existing options
     $('#bandwidthInput').val('').change();
+    $('#addrInput').val('').change();
+    $('#freqInput').val('').change();
+    setConnectURL('');
+
+    // Refresh views
     refreshExtraInputGroups();
     onConnectInputChange();
     onConnectFreqChange();
+
+    // Update rmslist view
     switch ($(e.target).val()) {
       case 'ardop':
       case 'pactor':
@@ -795,18 +803,10 @@ function refreshExtraInputGroups() {
   switch (transport) {
     case 'telnet':
       $('#freqInputDiv').hide();
-      $('#freqInput').val('');
       $('#addrInputDiv').show();
-      break;
-    case 'ardop':
-    case 'varahf':
-      $('#addrInputDiv').hide();
-      $('#addrInput').val('');
-      $('#freqInputDiv').show();
       break;
     default:
       $('#addrInputDiv').hide();
-      $('#addrInput').val('');
       $('#freqInputDiv').show();
   }
 

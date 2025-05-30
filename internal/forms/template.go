@@ -2,8 +2,10 @@ package forms
 
 import (
 	"bufio"
+	"fmt"
 	"io/fs"
 	"log"
+	"net/textproto"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,15 +59,22 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 		return resolved
 	}
 	scanner := bufio.NewScanner(newTrimBomReader(f))
+	var isTemplate bool
 	for scanner.Scan() {
-		switch key, value, _ := strings.Cut(scanner.Text(), ":"); key {
+		switch key, value, _ := strings.Cut(scanner.Text(), ":"); textproto.CanonicalMIMEHeaderKey(key) {
+		case "Msg":
+			isTemplate = true
 		case "Form": // Form: <input form>[,<display form>]
+			isTemplate = true
 			inputForm, displayForm, _ := strings.Cut(value, ",")
 			template.InputFormPath = resolveFileReference("input from", inputForm)
 			template.DisplayFormPath = resolveFileReference("display form", displayForm)
 		case "ReplyTemplate": // ReplyTemplate: <template>
 			template.ReplyTemplatePath = resolveFileReference("reply template", value)
 		}
+	}
+	if !isTemplate {
+		return template, fmt.Errorf("not a template")
 	}
 	return template, err
 }

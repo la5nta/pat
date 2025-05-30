@@ -36,12 +36,12 @@ type Message struct {
 }
 
 type messageBuilder struct {
-	Interactive  bool
-	InReplyToMsg *fbb.Message
-	Template     Template
-	FormValues   map[string]string
-	PromptResponses    map[string]string
-	FormsMgr     *Manager
+	Interactive     bool
+	InReplyToMsg    *fbb.Message
+	Template        Template
+	FormValues      map[string]string
+	PromptResponses map[string]string
+	FormsMgr        *Manager
 }
 
 // build returns message subject, body, and attachments for the given template and variable map

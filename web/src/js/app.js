@@ -685,11 +685,16 @@ function buildConnectURL() {
   // point to retain URI parts not supported by the modal. The unsupported
   // parts may originate from a connect alias or by manual edit of the URL
   // field.
-  var current = getConnectURL()
-  let url = URI(current)
-    .protocol($('#transportSelect').val())
-    .hostname($('#addrInput').val())
-    .path($('#targetInput').val());
+  let transport = $('#transportSelect').val();
+  var current = URI(getConnectURL());
+  var url;
+  if (transport === 'telnet') {
+    // Telnet is special cased, as the address contains more than hostname.
+    url = URI(transport + "://" + $('#addrInput').val() + current.search());
+  } else {
+    url = current.protocol(transport).hostname($('#addrInput').val());
+  }
+  url = url.path($('#targetInput').val());
   if ($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
     url = url.setQuery("freq", $('#freqInput').val());
   } else {

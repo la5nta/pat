@@ -173,12 +173,6 @@ func Connect(connectStr string) (success bool) {
 		currFreq = Frequency(f)
 	}
 
-	// Wait for a clear channel
-	switch url.Scheme {
-	case MethodArdop:
-		waitBusy(adTNC)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	dialCancelFunc = func() { dialing = nil; cancel() }
 	defer dialCancelFunc()
@@ -266,19 +260,16 @@ func qsy(method, addr string) (revert func(), err error) {
 	}, nil
 }
 
-func waitBusy(b transport.BusyChannelChecker) {
-	printed := false
-
-	for b.Busy() {
-		if !printed && fOptions.IgnoreBusy {
-			log.Println("Ignoring busy channel!")
-			break
-		} else if !printed {
-			log.Println("Waiting for clear channel...")
-			printed = true
-		}
-		time.Sleep(300 * time.Millisecond)
+func onBusyChannel(ctx context.Context) (abort bool) {
+	if fOptions.IgnoreBusy {
+		log.Println("Ignoring busy channel!")
+		return false
 	}
+
+	// TODO: Extend this to prompt the user (continue anyway)
+	log.Println("Waiting for clear channel...")
+	<-ctx.Done()
+	return false
 }
 
 func initArdopTNC() error {
@@ -295,6 +286,8 @@ func initArdopTNC() error {
 	if err != nil {
 		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
 	}
+
+	adTNC.SetBusyFunc(onBusyChannel)
 
 	if !config.Ardop.ARQBandwidth.IsZero() {
 		if err := adTNC.SetARQBandwidth(config.Ardop.ARQBandwidth); err != nil {

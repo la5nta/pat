@@ -1265,45 +1265,55 @@ function processPromptQuery(p) {
   $('.modal-backdrop').remove();
   $('body').removeClass('modal-open');
 
-  $('#promptID').val(p.id);
-  $('#promptMessage').text(p.message);
-  $('#promptOkButton').click(postPromptResponse);
+  const modal = $('#promptModal');
+  const modalBody = modal.find('.modal-body');
+  const modalFooter = modal.find('.modal-footer');
 
-  // Hide all prompt inputs
-  $('.prompt-input').hide();
+  // Clear previous content
+  modalBody.empty();
+  modalFooter.empty();
+
+  // Add hidden prompt ID
+  modalBody.append($('<input type="hidden">').attr({
+    id: 'promptID',
+    value: p.id
+  }));
+
+  // Set prompt message and kind
+  $('#promptMessage').text(p.message);
+  modal.data('prompt-kind', p.kind);
 
   // Show relevant input based on type
   switch (p.kind) {
     case 'password':
-      $('#promptPasswordInput').show().val('');
+      modalBody.append(
+        $('<input>')
+          .attr({
+            type: 'password',
+            id: 'promptPasswordInput',
+            class: 'form-control',
+            placeholder: 'Enter password...',
+            autocomplete: 'off'
+          })
+      );
+      modalFooter.append(
+        $('<input>')
+          .attr({
+            type: 'submit',
+            class: 'btn btn-primary',
+            id: 'promptOkButton',
+            value: 'OK'
+          })
+          .click(function() {
+            submitPromptResponse($('#promptPasswordInput').val());
+          })
+      );
       break;
 
     case 'multi-select':
-      const container = $('#promptMultiSelectInput .checkbox-list-items');
-      container.empty();
-      $('#promptMultiSelectInput').show();
+      const container = $('<div>').addClass('checkbox-list');
+      const list = $('<ul>').addClass('checkbox-list-items');
 
-      // Initialize select all toggle button behavior
-      let allSelected = container.find('input[type="checkbox"]:checked').length > 0;
-      $('#selectAllToggle').off('click').on('click', function() {
-        allSelected = !allSelected;
-        container.find('input[type="checkbox"]').prop('checked', allSelected);
-        $(this).text(allSelected ? 'Deselect All' : 'Select All'
-        );
-        $(this).blur(); // Remove focus/active state from button after click
-      });
-
-      // Create an unordered list
-      const ul = $('<ul>').addClass('checkbox-list-items');
-
-      // Add handler to update "Select All" state when individual checkboxes change
-      container.on('change', 'input[type="checkbox"]', function() {
-        allSelected = container.find('input[type="checkbox"]:checked').length === container.find('input[type="checkbox"]').length;
-        $('#selectAllToggle').text(container.find('input[type="checkbox"]:checked').length > container.find('input[type="checkbox"]').length / 2 ? 'Deselect All' : 'Select All'
-        );
-      });
-
-      // Add checkbox for each option as list items
       p.options.forEach(opt => {
         const li = $('<li>');
         const label = $('<label>').addClass('checkbox-item');
@@ -1315,21 +1325,53 @@ function processPromptQuery(p) {
         label.append(input);
         label.append(` ${opt.desc || opt.value} (${opt.value})`);
         li.append(label);
-        ul.append(li);
+        list.append(li);
       });
 
-      container.append(ul);
+      container.append(list);
+      modalBody.append(container);
 
-      // Set initial toggle button state based on number of checked boxes
-      const checkedCount = container.find('input[type="checkbox"]:checked').length;
-      const totalCount = container.find('input[type="checkbox"]').length;
-      $('#selectAllToggle').text(checkedCount > totalCount / 2 ? 'Deselect All' : 'Select All');
+      // Add select all toggle button
+      modalFooter.append(
+        $('<button>')
+          .attr({
+            type: 'button',
+            class: 'btn btn-default pull-left',
+            id: 'selectAllToggle'
+          })
+          .text('Select All')
+          .click(function() {
+            const checkboxes = container.find('input[type="checkbox"]');
+            const allSelected = checkboxes.filter(':checked').length === checkboxes.length;
+            checkboxes.prop('checked', !allSelected);
+            $(this).text(!allSelected ? 'Deselect All' : 'Select All');
+            $(this).blur();
+          })
+      );
+
+      modalFooter.append(
+        $('<input>')
+          .attr({
+            type: 'submit',
+            class: 'btn btn-primary',
+            id: 'promptOkButton',
+            value: 'OK'
+          })
+          .click(function() {
+            const value = $('.modal-body .checkbox-list input:checked')
+              .map(function() { return $(this).val(); })
+              .get()
+              .join(',');
+            submitPromptResponse(value);
+          })
+      );
       break;
 
     default:
       console.log('Ignoring unsupported prompt kind:', p.kind);
       return;
   }
+
 
   // Show modal with error handling
   try {
@@ -1350,30 +1392,15 @@ function processPromptQuery(p) {
   }
 }
 
-function postPromptResponse() {
+function submitPromptResponse(value) {
   const id = $('#promptID').val();
-  let value = '';
-
-  // Get value from visible input
-  if ($('#promptPasswordInput').is(':visible')) {
-    value = $('#promptPasswordInput').val();
-  } else if ($('#promptMultiSelectInput').is(':visible')) {
-    // Get all checked boxes and join their values with commas
-    value = $('#promptMultiSelectInput input:checked')
-      .map(function() { return $(this).val(); })
-      .get()
-      .join(',');
-  }
-
   $('#promptModal').modal('hide');
-  ws.send(
-    JSON.stringify({
-      prompt_response: {
-        id: id,
-        value: value,
-      },
-    })
-  );
+  ws.send(JSON.stringify({
+    prompt_response: {
+      id: id,
+      value: value
+    }
+  }));
 }
 
 function updateConsole(msg) {

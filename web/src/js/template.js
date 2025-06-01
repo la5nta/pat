@@ -280,8 +280,8 @@ function renderInput(name, id, originalTag, description, isUppercase, extraAttrs
           // Prevent password managers and form autofill from triggering
           autocomplete="off"
           data-form-type="other"
-          // Explicitly tell 1Password to ignore these fields
-          data-1p-ignore="true"
+          // Explicitly tell 1Password and lastpass to ignore these fields
+          data-lpignore="true" data-1p-ignore="true"
           ${attrs}>`;
 }
 

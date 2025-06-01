@@ -140,7 +140,20 @@ func (p *PromptHub) promptTerminal(prompt Prompt) {
 	case PromptKindPassword:
 		passwd, err := gopass.GetPasswdPrompt(prompt.Message+": ", true, os.Stdin, os.Stdout)
 		p.Respond(prompt.ID, string(passwd), err)
+	case PromptKindBusyChannel:
+		fmt.Println(prompt.Message + ":")
+		for prompt.ctx.Err() == nil {
+			fmt.Printf("Answer [c(ontinue), a(bort)]: ")
+			switch ans := readLine(); strings.TrimSpace(ans) {
+			case "c", "continue":
+				p.Respond(prompt.ID, "continue", nil)
+				return
+			case "a", "abort":
+				p.Respond(prompt.ID, "abort", nil)
+				return
+			}
+		}
 	default:
-		panic(prompt.Kind + " prompt not implemented")
+		log.Printf("Prompt kind %q not implemented", prompt.Kind)
 	}
 }

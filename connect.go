@@ -266,10 +266,15 @@ func onBusyChannel(ctx context.Context) (abort bool) {
 		return false
 	}
 
-	// TODO: Extend this to prompt the user (continue anyway)
 	log.Println("Waiting for clear channel...")
-	<-ctx.Done()
-	return false
+	select {
+	case <-ctx.Done():
+		// The channel is no longer busy.
+		log.Println("Channel clear")
+		return false
+	case resp := <-promptHub.Prompt(ctx, PromptKindBusyChannel, "Waiting for clear channel..."):
+		return resp.Value == "abort" || resp.Err == context.DeadlineExceeded
+	}
 }
 
 func initArdopTNC() error {

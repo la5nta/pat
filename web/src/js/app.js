@@ -1310,6 +1310,42 @@ function processPromptQuery(p) {
       );
       break;
 
+    case 'busy-channel':
+      modalBody.append(
+        $('<p>')
+          .addClass('text-warning')
+          .html('<span class="glyphicon glyphicon-warning-sign"></span> ' +
+            'The channel appears to be in use. You can wait for it to clear, or abort the connection attempt.')
+      );
+      modalFooter.append(
+        $('<button>')
+          .attr({
+            type: 'button',
+            class: 'btn btn-warning',
+            id: 'promptOkButton'
+          })
+          .text('Continue')
+          .click(function() {
+            const id = $('#promptID').val();
+            $('#promptModal').modal('hide');
+            submitPromptResponse('continue');
+          })
+      );
+      modalFooter.append(
+        $('<button>')
+          .attr({
+            type: 'button',
+            class: 'btn btn-default'
+          })
+          .text('Abort')
+          .click(function() {
+            const id = $('#promptID').val();
+            $('#promptModal').modal('hide');
+            submitPromptResponse('abort');
+          })
+      );
+      break;
+
     case 'multi-select':
       const container = $('<div>').addClass('checkbox-list');
       const list = $('<ul>').addClass('checkbox-list-items');

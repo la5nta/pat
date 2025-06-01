@@ -52,7 +52,7 @@ func (w *WSHub) WriteNotification(n Notification) {
 
 func (w *WSHub) Prompt(p Prompt) {
 	w.WriteJSON(struct{ Prompt Prompt }{p})
-	go func() { <-p.cancel; w.WriteJSON(struct{ PromptAbort Prompt }{p}) }()
+	go func() { <-p.ctx.Done(); w.WriteJSON(struct{ PromptAbort Prompt }{p}) }()
 }
 
 func (w *WSHub) WriteJSON(v interface{}) {

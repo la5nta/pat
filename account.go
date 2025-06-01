@@ -46,7 +46,7 @@ func passwordRecoveryEmailHandle(ctx context.Context, args []string) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case resp := <-promptHub.Prompt(PromptKindPassword, "Enter account password for "+mycall):
+		case resp := <-promptHub.Prompt(ctx, PromptKindPassword, "Enter account password for "+mycall):
 			if resp.Err != nil {
 				return resp.Err
 			}

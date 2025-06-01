@@ -18,16 +18,18 @@ type PromptKind string
 const (
 	PromptKindPassword    PromptKind = "password"
 	PromptKindMultiSelect PromptKind = "multi-select"
+	PromptKindBusyChannel PromptKind = "busy-channel"
 )
 
 type Prompt struct {
-	resp     chan PromptResponse
-	cancel   chan struct{}
-	ID       string         `json:"id"`
-	Kind     PromptKind     `json:"kind"`
-	Deadline time.Time      `json:"deadline"`
-	Message  string         `json:"message"`
-	Options  []PromptOption `json:"options,omitempty"` // For multi-select
+	ID      string         `json:"id"`
+	Kind    PromptKind     `json:"kind"`
+	Message string         `json:"message"`
+	Options []PromptOption `json:"options,omitempty"` // For multi-select
+
+	resp   chan PromptResponse
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type PromptOption struct {
@@ -55,27 +57,20 @@ func (p *PromptHub) OmitTerminal(t bool) { p.omitTerminal = t }
 
 func (p *PromptHub) loop() {
 	p.c = make(chan *Prompt)
-	p.rc = make(chan PromptResponse)
+	p.rc = make(chan PromptResponse, 1)
 	for prompt := range p.c {
 		debug.Printf("New prompt: %#v", prompt)
-		timeout := time.After(time.Until(prompt.Deadline))
 		select {
-		case <-timeout:
-			debug.Printf("Prompt timeout")
-			prompt.resp <- PromptResponse{ID: prompt.ID, Err: context.DeadlineExceeded}
-			close(prompt.cancel)
+		case <-prompt.ctx.Done():
+			debug.Printf("Prompt cancelled: %v", prompt.ctx.Err())
+			prompt.resp <- PromptResponse{ID: prompt.ID, Err: prompt.ctx.Err()}
 		case resp := <-p.rc:
 			debug.Printf("Prompt resp: %#v", resp)
 			if resp.ID != prompt.ID {
 				continue
 			}
-			select {
-			case prompt.resp <- resp:
-				debug.Printf("Prompt resp delivered")
-			default:
-				debug.Printf("Prompt resp discarded")
-			}
-			close(prompt.cancel)
+			prompt.resp <- resp
+			prompt.cancel()
 		}
 	}
 }
@@ -87,15 +82,16 @@ func (p *PromptHub) Respond(id, value string, err error) {
 	}
 }
 
-func (p *PromptHub) Prompt(kind PromptKind, message string, options ...PromptOption) <-chan PromptResponse {
+func (p *PromptHub) Prompt(ctx context.Context, kind PromptKind, message string, options ...PromptOption) <-chan PromptResponse {
+	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Minute))
 	prompt := &Prompt{
-		resp:     make(chan PromptResponse),
-		cancel:   make(chan struct{}), // Closed on cancel (e.g. prompt response received)
-		ID:       fmt.Sprint(time.Now().UnixNano()),
-		Kind:     kind,
-		Message:  message,
-		Options:  options,
-		Deadline: time.Now().Add(time.Minute),
+		resp:    make(chan PromptResponse, 1),
+		ctx:     ctx,
+		cancel:  cancel,
+		ID:      fmt.Sprint(time.Now().UnixNano()),
+		Kind:    kind,
+		Message: message,
+		Options: options,
 	}
 	p.c <- prompt
 
@@ -112,7 +108,7 @@ func (p *PromptHub) promptTerminal(prompt Prompt) {
 	defer close(q)
 	go func() {
 		select {
-		case <-prompt.cancel:
+		case <-prompt.ctx.Done():
 			fmt.Printf(" Prompt Aborted - Press ENTER to continue...")
 		case <-q:
 			return

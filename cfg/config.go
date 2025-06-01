@@ -191,7 +191,7 @@ type VaraConfig struct {
 	Addr string `json:"addr"`
 
 	// Default/listen bandwidth (HF: 500/2300/2750 Hz).
-	Bandwidth int `json:"bandwidth"`
+	Bandwidth int `json:"bandwidth,omitempty"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`

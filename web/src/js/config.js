@@ -55,8 +55,7 @@ $(document).ready(function() {
       $('#pactor_path').val((config.pactor && config.pactor.path) || '');
       $('#pactor_baudrate').val((config.pactor && config.pactor.baudrate) || '');
       $('#vara_hf_addr').val((config.varahf && config.varahf.addr) || '');
-      $('#vara_hf_bandwidth').val((config.varahf && config.varahf.bandwidth && config.varahf.bandwidth.toString()) || '');
-      $('#vara_fm_bandwidth').val((config.varafm && config.varafm.bandwidth && config.varafm.bandwidth.toString()) || '');
+      $('#vara_hf_bandwidth').val((config.varahf && config.varahf.bandwidth && config.varahf.bandwidth.toString()) || '').selectpicker('refresh');
       $('#vara_fm_addr').val((config.varafm && config.varafm.addr) || '');
       $('#vara_fm_bandwidth').val((config.varafm && config.varafm.bandwidth && config.varafm.bandwidth.toString()) || '');
 
@@ -210,7 +209,6 @@ $(document).ready(function() {
     updatedConfig.varafm = {
       ...originalConfig.varafm,
       addr: $('#vara_fm_addr').val(),
-      bandwidth: parseInt($('#vara_fm_bandwidth').val(), 10),
       rig: $('#vara_fm_rig').val() || '',
       ptt_ctrl: $('#vara_fm_ptt_ctrl').is(':checked')
     };

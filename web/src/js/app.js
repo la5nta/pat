@@ -8,6 +8,7 @@ let wsURL = '';
 let posId = 0;
 let connectAliases;
 let mycall = '';
+let initialized = false;
 let formsCatalog;
 
 let statusPopoverDiv;
@@ -577,6 +578,7 @@ function initConnectModal() {
     setConnectValues(url);
   }
   refreshExtraInputGroups();
+  initialized = true;
 
   updateConnectAliases();
   updateRmslist();
@@ -722,6 +724,11 @@ function buildConnectURL() {
 }
 
 function onConnectFreqChange() {
+  if (!initialized) {
+    console.log('Skipping QSY during initialization');
+    return;
+  }
+  
   $('#qsyWarning').empty().attr('hidden', true);
 
   const freqInput = $('#freqInput');

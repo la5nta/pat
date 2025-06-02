@@ -155,8 +155,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="ardop"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="ardop">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -179,7 +179,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ardop_cwid_enabled" name="ardop_cwid_enabled"> Enable CW ID
+                                  <input type="checkbox" id="ardop_cwid_enabled" name="ardop_cwid_enabled">
+                                  Enable CW ID
                                 </label>
                               </div>
                               <div class="form-group">
@@ -195,7 +196,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ardop_ptt_ctrl" name="ardop_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="ardop_ptt_ctrl" name="ardop_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -211,8 +213,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="pactor"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="pactor">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -239,7 +241,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="pactor_ptt_ctrl" name="pactor_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="pactor_ptt_ctrl" name="pactor_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -255,8 +258,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="varahf"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="varahf">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -280,7 +283,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="vara_hf_ptt_ctrl" name="vara_hf_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="vara_hf_ptt_ctrl" name="vara_hf_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -296,8 +300,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="varafm"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="varafm">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -313,7 +317,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="vara_fm_ptt_ctrl" name="vara_fm_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="vara_fm_ptt_ctrl" name="vara_fm_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -329,8 +334,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="telnet"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="telnet">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -361,8 +366,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="ax25"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="ax25">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -401,7 +406,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ax25_ptt_ctrl" name="ax25_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="ax25_ptt_ctrl" name="ax25_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                               <small class="form-text text-muted">Linux (kernel AX.25), AGWPE (AGWPE-compatible TNC),
@@ -599,24 +605,22 @@
                       <label>
                         <input type="checkbox" id="gpsd_enable_http" name="gpsd_enable_http">
                         Enable GPSd HTTP Proxy
-                        <small class="form-text text-muted text-danger">Caution: Exposes GPS position to anyone
-                          accessing the web interface</small>
                       </label>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Exposes GPS position to anyone accessing the web interface</small>
                     </div>
                     <div class="checkbox">
                       <label>
                         <input type="checkbox" id="gpsd_allow_forms" name="gpsd_allow_forms">
                         Allow Forms GPS Access
-                        <small class="form-text text-muted text-danger">Caution: Automatically injects GPS position into
-                          forms without explicit consent</small>
                       </label>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Automatically injects GPS position into forms without explicit consent</small>
                     </div>
                     <div class="checkbox">
                       <label>
                         <input type="checkbox" id="gpsd_use_server_time" name="gpsd_use_server_time">
                         Use Server Time
-                        <small class="form-text text-muted">Use server time instead of GPS device timestamp</small>
                       </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Use server time instead of GPS device timestamp</small>
                     </div>
                     <div class="form-group">
                       <label for="gpsd_addr">Server Address</label>

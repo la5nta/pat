@@ -392,6 +392,15 @@ input[type='radio'] {
   padding: 0;
 }
 
+#configForm .checkbox label {
+  display: flex;
+  align-items: center;
+}
+
+#configForm input[type='checkbox'] {
+  margin-right: 5px;
+}
+
 .table-fixed {
   overflow-y: auto;
   height: 400px;

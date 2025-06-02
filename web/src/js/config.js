@@ -47,6 +47,7 @@ $(document).ready(function() {
       // Populate transport configs
       $('#ardop_addr').val((config.ardop && config.ardop.addr) || '');
       // Convert bandwidth object to string format
+      $('#ardop_connect_requests').val((config.ardop && config.ardop.connect_requests) || '');
       const arqBW = config.ardop && config.ardop.arq_bandwidth;
       const bwValue = arqBW ? `${arqBW.Max}${arqBW.Forced ? 'FORCED' : 'MAX'}` : '';
       $('#ardop_arq_bandwidth').val(bwValue).selectpicker('refresh');
@@ -175,6 +176,7 @@ $(document).ready(function() {
     updatedConfig.ardop = {
       ...originalConfig.ardop,
       addr: $('#ardop_addr').val(),
+      connect_requests: parseInt($('#ardop_connect_requests').val(), 10) || undefined,
       arq_bandwidth: (() => {
         const val = $('#ardop_arq_bandwidth').val();
         if (!val) return {};

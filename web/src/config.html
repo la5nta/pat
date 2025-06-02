@@ -165,6 +165,11 @@
                                   name="ardop_addr">
                               </div>
                               <div class="form-group">
+                                <label for="ardop_connect_requests">Connect Requests</label>
+                                <input type="number" class="form-control" id="ardop_connect_requests" name="ardop_connect_requests" min="1">
+                                <small class="form-text text-muted">Number of connect attempts when dialing. Some stations may require multiple attempts.</small>
+                              </div>
+                              <div class="form-group">
                                 <label for="ardop_arq_bandwidth">ARQ Bandwidth</label>
                                 <select class="form-control" id="ardop_arq_bandwidth" name="ardop_arq_bandwidth">
                                   <option value="200MAX">200 Hz MAX</option>

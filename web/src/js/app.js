@@ -21,6 +21,7 @@ $(document).ready(function() {
   $('#promptModal').css('z-index', 1050);
 
   $(function() {
+    initConfigDefaults();
     initStatusPopover();
 
     // Setup actions
@@ -530,6 +531,7 @@ function initConnectModal() {
   $('#radioOnlyInput').change(onConnectInputChange);
   $('#addrInput').change(onConnectInputChange);
   $('#targetInput').change(onConnectInputChange);
+  $('#connectRequestsInput').change(onConnectInputChange);
   $('#connectURLInput').change((e) => {
     setConnectValues($(e.target).val())
   });
@@ -546,6 +548,7 @@ function initConnectModal() {
     $('#bandwidthInput').val('').change();
     $('#addrInput').val('').change();
     $('#freqInput').val('').change();
+    $('#connectRequestsInput').val('').change();
     setConnectURL('');
 
     // Refresh views
@@ -668,6 +671,10 @@ function setConnectValues(url) {
     $('#radioOnlyInput')[0].checked = false;
   }
 
+  if (url.hasQuery('connect_requests')) {
+    $('#connectRequestsInput').val(query['connect_requests']);
+  }
+
   let usri = '';
   if (url.username()) {
     usri += url.username();
@@ -719,6 +726,11 @@ function buildConnectURL() {
     url = url.setQuery("radio_only", "true");
   } else {
     url = url.removeQuery("radio_only");
+  }
+  if ($('#connectRequestsInput').val()) {
+    url = url.setQuery('connect_requests', $('#connectRequestsInput').val());
+  } else {
+    url = url.removeQuery('connect_requests');
   }
   return url.build();
 }
@@ -811,10 +823,17 @@ function refreshExtraInputGroups() {
     case 'telnet':
       $('#freqInputDiv').hide();
       $('#addrInputDiv').show();
+      $('#connectRequestsInputDiv').hide();
+      break;
+    case 'ardop':
+      $('#addrInputDiv').hide();
+      $('#freqInputDiv').show();
+      $('#connectRequestsInputDiv').show();
       break;
     default:
       $('#addrInputDiv').hide();
       $('#freqInputDiv').show();
+      $('#connectRequestsInputDiv').hide();
   }
 
   if (transport.startsWith('ax25')) {
@@ -1207,6 +1226,18 @@ function showGUIStatus(e, show) {
 }
 
 let ws;
+
+function initConfigDefaults() {
+  $.getJSON('/api/config')
+    .done(function(config) {
+      if (config.ardop && config.ardop.connect_requests) {
+        $('#connectRequestsInput').attr('placeholder', config.ardop.connect_requests);
+      }
+    })
+    .fail(function() {
+      console.log("Failed to load config defaults");
+    });
+}
 
 function initConsole() {
   if ('WebSocket' in window) {

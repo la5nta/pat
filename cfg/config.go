@@ -173,6 +173,11 @@ type ArdopConfig struct {
 	// Default/listen ARQ bandwidth (200/500/1000/2000 MAX/FORCED).
 	ARQBandwidth ardop.Bandwidth `json:"arq_bandwidth"`
 
+	// Number of connect frames to transmit when dialing.
+	//
+	// Some stations may require mutliple attempts before responding.
+	ConnectRequests int `json:"connect_requests"`
+
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`
 
@@ -372,9 +377,10 @@ var DefaultConfig = Config{
 		RadioPort: 0,
 	},
 	Ardop: ArdopConfig{
-		Addr:         "localhost:8515",
-		ARQBandwidth: ardop.Bandwidth500Max,
-		CWID:         true,
+		Addr:            "localhost:8515",
+		ARQBandwidth:    ardop.Bandwidth500Max,
+		ConnectRequests: ardop.DefaultConnectRequests,
+		CWID:            true,
 	},
 	Pactor: PactorConfig{
 		Path:     "/dev/ttyUSB0",

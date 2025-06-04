@@ -29,19 +29,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/la5nta/wl2k-go/transport/ardop"
-
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/gpsd"
+	"github.com/la5nta/pat/internal/patapi"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/hashicorp/go-version"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
+	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/n8jja/Pat-Vara/vara"
 )
@@ -120,6 +121,7 @@ func ListenAndServe(ctx context.Context, addr string) error {
 	r.HandleFunc("/api/qsy", qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", rmslistHandler).Methods("GET")
 	r.HandleFunc("/api/config", configHandler).Methods("GET", "PUT")
+	r.HandleFunc("/api/new-release-check", newReleaseCheckHandler).Methods("GET")
 
 	r.HandleFunc("/api/formcatalog", formsMgr.GetFormsCatalogHandler).Methods("GET")
 	r.HandleFunc("/api/form", formsMgr.PostFormDataHandler(mbox.MBoxPath)).Methods("POST")
@@ -776,6 +778,36 @@ func attachmentHandler(w http.ResponseWriter, r *http.Request) {
 	if !found {
 		http.NotFound(w, r)
 	}
+}
+
+func newReleaseCheckHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	release, err := patapi.GetLatestVersion(ctx)
+	if err != nil {
+		http.Error(w, "Error getting latest version: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	currentVer, err := version.NewVersion(buildinfo.Version)
+	if err != nil {
+		http.Error(w, "Invalid current version format: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	latestVer, err := version.NewVersion(release.Version)
+	if err != nil {
+		http.Error(w, "Invalid latest version format: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if currentVer.Compare(latestVer) >= 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(release)
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {

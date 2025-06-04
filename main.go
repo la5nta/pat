@@ -26,7 +26,6 @@ import (
 	"github.com/la5nta/pat/internal/editor"
 	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/gpsd"
-
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
@@ -177,11 +176,13 @@ var commands = []Command{
 		HandleFunc: configureHandle,
 	},
 	{
-		Str:  "version",
-		Desc: "Print the application version.",
-		HandleFunc: func(_ context.Context, args []string) {
-			fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
+		Str:   "version",
+		Desc:  "Print the application version.",
+		Usage: "[options]",
+		Options: map[string]string{
+			"--check, -c": "Check if a new version is available",
 		},
+		HandleFunc: versionHandle,
 	},
 	{
 		Str:        "env",

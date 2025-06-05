@@ -53,17 +53,13 @@ $(document).ready(function() {
     $('#archive_tab').click(function(evt) {
       displayFolder('archive');
     });
-    $('.navbar li').click(function(e) {
+    $('#inbox_tab, #outbox_tab, #sent_tab, #archive_tab').parent('li').click(function(e) {
       $('.navbar li.active').removeClass('active');
       const $this = $(this);
       if (!$this.hasClass('active')) {
         $this.addClass('active');
       }
-
-      // Only prevent default if it's NOT the Configuration link
-      if (!$this.find('a[href="/ui/config"]').length) {
-        e.preventDefault();
-      }
+      e.preventDefault();
     });
 
     $('.nav :not(.dropdown) a').on('click', function() {

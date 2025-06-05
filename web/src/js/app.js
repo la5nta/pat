@@ -10,6 +10,7 @@ let connectAliases;
 let mycall = '';
 let initialized = false;
 let formsCatalog;
+let currentPromptNotification = null;
 
 let statusPopoverDiv;
 const statusPos = $('#pos_status');
@@ -1140,9 +1141,9 @@ function previewAttachmentFiles() {
 function notify(data) {
   const options = {
     body: data.body,
-    icon: '/res/images/pat_logo.png',
+    icon: '/dist/static/pat_logo.png',
   };
-  const n = new Notification(data.title, options);
+  new Notification(data.title, options);
 }
 
 function alert(msg) {
@@ -1361,9 +1362,19 @@ function initConsole() {
       }
       if (msg.Prompt) {
         processPromptQuery(msg.Prompt);
+        if (currentPromptNotification) {
+          currentPromptNotification.close();
+        }
+        currentPromptNotification = new Notification(msg.Prompt.message, {
+          icon: '/dist/static/pat_logo.png'
+        });
       }
       if (msg.PromptAbort) {
         $('#promptModal').modal('hide');
+        if (currentPromptNotification) {
+          currentPromptNotification.close();
+          currentPromptNotification = null;
+        }
       }
       if (msg.Ping) {
         ws.send(JSON.stringify({ Pong: true }));

@@ -4,6 +4,19 @@ import 'bootstrap-select';
 import 'bootstrap-tokenfield';
 
 $(document).ready(function() {
+  // Function to enforce minimum beacon interval
+  function enforceMinBeaconInterval(input) {
+    const value = parseInt(input.val(), 10);
+    if (value > 0 && value < 10) {
+      input.val(10);
+    }
+  }
+
+  // Add blur handlers for beacon intervals
+  $('#ardop_beacon_interval, #ax25_beacon_interval').on('blur', function() {
+    enforceMinBeaconInterval($(this));
+  });
+
   // Initialize Bootstrap Select components and tokenfield
   $('#ardop_arq_bandwidth, #vara_hf_bandwidth, #vara_fm_bandwidth').selectpicker();
   const tokenfieldConfig = {

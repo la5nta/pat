@@ -191,7 +191,8 @@
                               <div class="form-group">
                                 <label for="ardop_beacon_interval">Beacon Interval (seconds)</label>
                                 <input type="number" class="form-control" id="ardop_beacon_interval"
-                                  name="ardop_beacon_interval" min="0" value="0">
+                                  name="ardop_beacon_interval" value="0">
+                                <small class="form-text text-muted">Minimum 10 seconds. Use 0 or leave blank to disable beacons.</small>
                               </div>
                               <div class="form-group">
                                 <label for="ardop_rig">Rig</label>
@@ -378,9 +379,8 @@
                               <div class="form-group">
                                 <label for="ax25_beacon_interval">Beacon Interval (seconds)</label>
                                 <input type="number" class="form-control" id="ax25_beacon_interval"
-                                  name="ax25_beacon_interval" min="0" value="3600">
-                                <small class="form-text text-muted">Seconds between beacon frames when listening (0 =
-                                  disabled). Example: 3600 = hourly</small>
+                                  name="ax25_beacon_interval" value="3600">
+                                <small class="form-text text-muted">Minimum 10 seconds between beacons. Use 0 or leave blank to disable beacons. Example: 3600 = hourly</small>
                               </div>
                               <div class="form-group">
                                 <label for="ax25_beacon_message">Beacon Message</label>

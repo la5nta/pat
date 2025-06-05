@@ -76,6 +76,14 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.AGWPE = cfg.DefaultConfig.AGWPE
 	}
 
+	// Enforce minimum beacon intervals
+	if config.Ardop.BeaconInterval > 0 && config.Ardop.BeaconInterval < 10 {
+		config.Ardop.BeaconInterval = 10
+	}
+	if config.AX25.Beacon.Every > 0 && config.AX25.Beacon.Every < 10 {
+		config.AX25.Beacon.Every = 10
+	}
+
 	// Ensure we have a default AX.25 Linux config
 	if config.AX25Linux == (cfg.AX25LinuxConfig{}) {
 		config.AX25Linux = cfg.DefaultConfig.AX25Linux

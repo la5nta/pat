@@ -66,7 +66,7 @@ func (l *AX25LinuxListener) Init() (net.Listener, error) {
 
 func (l *AX25LinuxListener) BeaconStart() error {
 	interval := time.Duration(config.AX25.Beacon.Every) * time.Second
-	if interval == 0 {
+	if interval <= 0 {
 		return nil
 	}
 	b, err := ax25.NewAX25Beacon(config.AX25Linux.Port, fOptions.MyCall, config.AX25.Beacon.Destination, config.AX25.Beacon.Message)
@@ -114,7 +114,11 @@ func (l ARDOPListener) CurrentFreq() (Frequency, bool) {
 }
 
 func (l ARDOPListener) BeaconStart() error {
-	return adTNC.BeaconEvery(time.Duration(config.Ardop.BeaconInterval) * time.Second)
+	interval := time.Duration(config.Ardop.BeaconInterval) * time.Second
+	if interval <= 0 {
+		return nil
+	}
+	return adTNC.BeaconEvery(interval)
 }
 
 func (l ARDOPListener) BeaconStop() { adTNC.BeaconEvery(0) }
@@ -179,6 +183,9 @@ func (l *AX25AGWPEListener) CurrentFreq() (Frequency, bool) { return 0, false }
 func (l *AX25AGWPEListener) BeaconStart() error {
 	b := config.AX25.Beacon
 	interval := time.Duration(b.Every) * time.Second
+	if interval <= 0 {
+		return nil
+	}
 	l.stopBeacon = doEvery(interval, func() {
 		if err := agwpeTNC.SendUI([]byte(b.Message), b.Destination); err != nil {
 			log.Printf("%s beacon failed: %s", l.Name(), err)

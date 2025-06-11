@@ -171,6 +171,13 @@ var commands = []Command{
 		HandleFunc: accountHandle,
 	},
 	{
+		Str:        "mps",
+		Desc:       "Manage message pickup stations.",
+		Usage:      mpsUsage,
+		Example:    mpsExample,
+		HandleFunc: mpsHandle,
+	},
+	{
 		Str:        "configure",
 		Desc:       "Open configuration file for editing.",
 		HandleFunc: configureHandle,
@@ -735,4 +742,24 @@ func openMessage(path string) (*fbb.Message, error) {
 		})
 	}
 	return mailbox.OpenMessage(path)
+}
+
+// getPasswordForCallsign gets the password for the specified callsign
+// It tries the configured SecureLoginPassword first, then prompts if not available
+func getPasswordForCallsign(ctx context.Context, callsign string) string {
+	password := config.SecureLoginPassword
+	if password != "" {
+		return password
+	}
+
+	select {
+	case <-ctx.Done():
+		return ""
+	case resp := <-promptHub.Prompt(ctx, PromptKindPassword, "Enter account password for "+callsign):
+		if resp.Err != nil {
+			log.Printf("Password prompt error: %v", resp.Err)
+			return ""
+		}
+		return resp.Value
+	}
 }

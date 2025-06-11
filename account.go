@@ -41,18 +41,9 @@ func accountHandle(ctx context.Context, args []string) {
 }
 
 func passwordRecoveryEmailHandle(ctx context.Context, args []string) error {
-	mycall, password := fOptions.MyCall, config.SecureLoginPassword
-	if password == "" {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case resp := <-promptHub.Prompt(ctx, PromptKindPassword, "Enter account password for "+mycall):
-			if resp.Err != nil {
-				return resp.Err
-			}
-			password = resp.Value
-		}
-	}
+	mycall := fOptions.MyCall
+	password := getPasswordForCallsign(ctx, mycall)
+
 	arg, _ := shiftArgs(args)
 	if arg != "" {
 		if err := cmsapi.PasswordRecoveryEmailSet(ctx, mycall, password, arg); err != nil {

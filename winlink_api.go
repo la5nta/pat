@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 )
+
+var errRateLimited error = errors.New("call was rate-limited")
 
 // doIfElapsed implements a per-callsign rate limited function.
 func doIfElapsed(name string, t time.Duration, fn func() error) error {
@@ -28,7 +31,7 @@ func doIfElapsed(name string, t time.Duration, fn func() error) error {
 	json.NewDecoder(file).Decode(&lastUpdated)
 	if since := time.Since(lastUpdated); since < t {
 		debug.Printf("Skipping %q (last run: %s ago)", name, since.Truncate(time.Minute))
-		return nil
+		return errRateLimited
 	}
 
 	if err := fn(); err != nil {
@@ -57,7 +60,7 @@ func postVersionUpdate() {
 			Comments: fmt.Sprintf("%s - %s/%s", buildinfo.GitRev, runtime.GOOS, runtime.GOARCH),
 		}.Post()
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, errRateLimited) {
 		debug.Printf("Failed to post version update: %v", err)
 	}
 }
@@ -80,7 +83,7 @@ func checkPasswordRecoveryEmailIsSet(ctx context.Context) {
 		fmt.Println("")
 		return nil
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, errRateLimited) {
 		debug.Printf("Failed to check if password recovery email is set: %v", err)
 	}
 }

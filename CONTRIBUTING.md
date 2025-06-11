@@ -26,6 +26,7 @@ We welcome your contributions.
 To make the process as seamless as possible, we ask for the following:
 
   - Go ahead and fork the project and make your changes. We encourage pull requests to discuss code changes.
+  - Base your changes off the "develop" branch, not master
   - When you’re ready to create a pull request, be sure to:
       - Run `go fmt`
       - Consider squashing your commits into a single commit. `git rebase -i`. It's okay to force update your pull request.

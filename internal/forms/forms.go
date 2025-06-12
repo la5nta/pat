@@ -520,7 +520,11 @@ func (m *Manager) RenderForm(data []byte, inReplyToMsg *fbb.Message, inReplyToPa
 // It combines all data needed for the whole template-based message: subject, body, and attachments.
 func (m *Manager) ComposeTemplate(templatePath string, subject string, inReplyToMsg *fbb.Message) (Message, error) {
 	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
-	if err != nil {
+	switch {
+	case os.IsNotExist(err) && !filepath.IsAbs(templatePath):
+		// Try resolving the path relative to forms directory.
+		return m.ComposeTemplate(m.abs(templatePath), subject, inReplyToMsg)
+	case err != nil:
 		return Message{}, err
 	}
 

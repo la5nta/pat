@@ -36,7 +36,9 @@ type Message struct {
 }
 
 type messageBuilder struct {
-	Interactive     bool
+	Interactive bool
+	LineReader  func() string
+
 	InReplyToMsg    *fbb.Message
 	Template        Template
 	FormValues      map[string]string
@@ -229,7 +231,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 				var ans string
 				if a.Multiline {
 					fmt.Println(a.Prompt + " (Press ENTER to start external editor)")
-					b.FormsMgr.config.LineReader()
+					b.LineReader()
 					var err error
 					ans, err = editor.EditText("")
 					if err != nil {
@@ -237,7 +239,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 					}
 				} else {
 					fmt.Printf(a.Prompt + " ")
-					ans = b.FormsMgr.config.LineReader()
+					ans = b.LineReader()
 				}
 				if a.Uppercase {
 					ans = strings.ToUpper(ans)
@@ -251,7 +253,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 						fmt.Printf("  %d\t%s\n", i, opt.Item)
 					}
 					fmt.Printf("select 0-%d: ", len(s.Options)-1)
-					idx, err := strconv.Atoi(b.FormsMgr.config.LineReader())
+					idx, err := strconv.Atoi(b.LineReader())
 					if err == nil && idx < len(s.Options) {
 						return s.Options[idx]
 					}
@@ -263,7 +265,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			lineTmpl = promptVars(lineTmpl, func(key string) string {
 				fmt.Println(lineTmpl)
 				fmt.Printf("%s: ", key)
-				value := b.FormsMgr.config.LineReader()
+				value := b.LineReader()
 				addFormValue(key, value)
 				return value
 			})

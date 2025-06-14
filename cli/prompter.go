@@ -1,0 +1,70 @@
+package cli
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/la5nta/pat/app"
+
+	"github.com/howeyc/gopass"
+)
+
+type TerminalPrompter struct{}
+
+func (t TerminalPrompter) Prompt(prompt app.Prompt) {
+	q := make(chan struct{}, 1)
+	defer close(q)
+	go func() {
+		select {
+		case <-prompt.Done():
+			fmt.Printf(" Prompt Aborted - Press ENTER to continue...")
+		case <-q:
+			return
+		}
+	}()
+
+	switch prompt.Kind {
+	case app.PromptKindMultiSelect:
+		fmt.Println(prompt.Message + ":")
+		answers := map[string]app.PromptOption{}
+		for idx, opt := range prompt.Options {
+			answers[strconv.Itoa(idx+1)] = opt
+			answers[opt.Value] = opt
+			fmt.Printf("  %d: %s (%s)\n", idx+1, opt.Desc, opt.Value)
+		}
+
+		fmt.Printf("Select [1-%d, ...]: ", len(prompt.Options))
+		ans := strings.FieldsFunc(readLine(), SplitFunc)
+		var selected []string
+		for _, str := range ans {
+			opt, ok := answers[str]
+			if !ok {
+				log.Printf("Skipping unknown option %q", str)
+				continue
+			}
+			selected = append(selected, opt.Value)
+		}
+		prompt.Respond(strings.Join(selected, ","), nil)
+	case app.PromptKindPassword:
+		passwd, err := gopass.GetPasswdPrompt(prompt.Message+": ", true, os.Stdin, os.Stdout)
+		prompt.Respond(string(passwd), err)
+	case app.PromptKindBusyChannel:
+		fmt.Println(prompt.Message + ":")
+		for prompt.Err() == nil {
+			fmt.Printf("Answer [c(ontinue), a(bort)]: ")
+			switch ans := readLine(); strings.TrimSpace(ans) {
+			case "c", "continue":
+				prompt.Respond("continue", nil)
+				return
+			case "a", "abort":
+				prompt.Respond("abort", nil)
+				return
+			}
+		}
+	default:
+		log.Printf("Prompt kind %q not implemented", prompt.Kind)
+	}
+}

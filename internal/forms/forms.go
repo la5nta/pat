@@ -78,7 +78,6 @@ type Config struct {
 	MyCall         string
 	Locator        string
 	AppVersion     string
-	LineReader     func() string
 	UserAgent      string
 	GPSd           cfg.GPSdConfig
 }
@@ -518,12 +517,12 @@ func (m *Manager) RenderForm(data []byte, inReplyToMsg *fbb.Message, inReplyToPa
 // ComposeTemplate composes a message from a template (templatePath) by prompting the user through stdio.
 //
 // It combines all data needed for the whole template-based message: subject, body, and attachments.
-func (m *Manager) ComposeTemplate(templatePath string, subject string, inReplyToMsg *fbb.Message) (Message, error) {
+func (m *Manager) ComposeTemplate(templatePath string, subject string, inReplyToMsg *fbb.Message, lineReader func() string) (Message, error) {
 	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
 	switch {
 	case os.IsNotExist(err) && !filepath.IsAbs(templatePath):
 		// Try resolving the path relative to forms directory.
-		return m.ComposeTemplate(m.abs(templatePath), subject, inReplyToMsg)
+		return m.ComposeTemplate(m.abs(templatePath), subject, inReplyToMsg, lineReader)
 	case err != nil:
 		return Message{}, err
 	}
@@ -534,9 +533,11 @@ func (m *Manager) ComposeTemplate(templatePath string, subject string, inReplyTo
 	}
 	fmt.Printf("Form '%s', version: %s\n", m.rel(template.Path), formValues["templateversion"])
 	return messageBuilder{
+		Interactive: true,
+		LineReader:  lineReader,
+
 		Template:     template,
 		FormValues:   formValues,
-		Interactive:  true,
 		FormsMgr:     m,
 		InReplyToMsg: inReplyToMsg,
 	}.build()

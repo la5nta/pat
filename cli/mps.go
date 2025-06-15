@@ -2,11 +2,9 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/la5nta/pat/app"
 	"github.com/la5nta/pat/internal/cmsapi"
@@ -65,22 +63,10 @@ func MPSHandle(ctx context.Context, a *app.App, args []string) {
 }
 
 func mpsListAllHandle(ctx context.Context, mycall string) error {
-	const interval = 30 * time.Minute
-
-	var mpsList []cmsapi.MessagePickupStationRecord
-	var listErr error
-
-	err := app.DoIfElapsed(mycall, "mps_list", interval, func() error {
-		mpsList, listErr = cmsapi.MPSList(ctx, mycall)
-		return listErr
-	})
+	mpsList, err := cmsapi.HybridStationList(ctx)
 
 	if err != nil {
-		if !errors.Is(err, app.ErrRateLimited) {
-			return fmt.Errorf("failed to retrieve MPS list: %w", listErr)
-		}
-
-		return errors.New("rate limit: MPS list can only be called once every 30 minutes")
+		return fmt.Errorf("failed to retrieve MPS list: %w", err)
 	}
 
 	if len(mpsList) == 0 {
@@ -88,17 +74,12 @@ func mpsListAllHandle(ctx context.Context, mycall string) error {
 		return nil
 	}
 
-	mpsCounts := make(map[string]int64)
-	for _, mps := range mpsList {
-		mpsCounts[mps.MpsCallsign]++
-	}
-
 	// Print header
-	fmt.Printf("%-12.12s %s\n", "mps callsign", "# of users")
+	fmt.Printf("%-12s %-20s %-17s\n", "mps callsign", "automatic forwarding", "manual forwarding")
 
 	// Print MPS records
-	for mpsCall, count := range mpsCounts {
-		fmt.Printf("%-12.12s %d\n", mpsCall, count)
+	for _, station := range mpsList {
+		fmt.Printf("%-12s %-20t %-17t\n", station.Callsign, station.AutomaticForwarding, station.ManualForwarding)
 	}
 
 	return nil
@@ -161,6 +142,20 @@ func mpsAddHandle(ctx context.Context, a *app.App, mycall, mpsCallsign string) e
 	password := getPasswordForCallsign(ctx, a, mycall)
 	if password == "" {
 		return fmt.Errorf("password required for add operation")
+	}
+
+	// get list to ensure that we don't allow more than
+	// 3 stations total, with 2 suggested
+	mpsList, err := cmsapi.MPSGet(ctx, mycall, mycall)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve your MPS records to check if addition is allowed: %w", err)
+	}
+
+	numMPS := len(mpsList)
+	if numMPS >= 3 {
+		return fmt.Errorf("configuring more than 3 message pickup stations is not allowed")
+	} else if numMPS == 2 {
+		fmt.Println("Warning: You already have 2 message pickup stations configured, more is not recommended. The maximum allowed is 3 stations")
 	}
 
 	if err := cmsapi.MPSAdd(ctx, mycall, mycall, password, mpsCallsign); err != nil {

@@ -94,7 +94,7 @@ func (m NotifyMBox) GetInboundAnswers(p []fbb.Proposal) []fbb.ProposalAnswer {
 	}
 
 	// Prompt the user
-	ans := <-m.promptHub.Prompt(context.Background(), PromptKindMultiSelect, "Select messages for download", options...)
+	ans := <-m.promptHub.Prompt(context.Background(), time.Minute, PromptKindMultiSelect, "Select messages for download", options...)
 
 	// If timeout was reached, use our default values to fill in for the user
 	if ans.Err == context.DeadlineExceeded {
@@ -159,7 +159,7 @@ func (a *App) sessionExchange(conn net.Conn, targetCall string, master bool) err
 				return a.config.SecureLoginPassword, nil
 			}
 		}
-		resp := <-a.promptHub.Prompt(context.Background(), PromptKindPassword, "Enter secure login password for "+addr.String())
+		resp := <-a.promptHub.Prompt(context.Background(), time.Minute, PromptKindPassword, "Enter secure login password for "+addr.String())
 		return resp.Value, resp.Err
 	})
 

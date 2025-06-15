@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/la5nta/pat/app"
 	"github.com/la5nta/pat/internal/cmsapi"
@@ -46,7 +47,7 @@ func getPasswordForCallsign(ctx context.Context, a *app.App, callsign string) st
 	select {
 	case <-ctx.Done():
 		return ""
-	case resp := <-a.PromptHub().Prompt(ctx, app.PromptKindPassword, "Enter account password for "+callsign):
+	case resp := <-a.PromptHub().Prompt(ctx, time.Minute, app.PromptKindPassword, "Enter account password for "+callsign):
 		if resp.Err != nil {
 			log.Printf("Password prompt error: %v", resp.Err)
 			return ""

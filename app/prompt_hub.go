@@ -85,8 +85,8 @@ func (p *PromptHub) Respond(id, value string, err error) {
 	}
 }
 
-func (p *PromptHub) Prompt(ctx context.Context, kind PromptKind, message string, options ...PromptOption) <-chan PromptResponse {
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Minute))
+func (p *PromptHub) Prompt(ctx context.Context, timeout time.Duration, kind PromptKind, message string, options ...PromptOption) <-chan PromptResponse {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	prompt := &Prompt{
 		Prompt: types.Prompt{
 			ID:      fmt.Sprint(time.Now().UnixNano()),

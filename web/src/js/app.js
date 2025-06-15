@@ -1452,19 +1452,24 @@ function processPromptQuery(p) {
 
     case 'busy-channel':
       modalBody.append(
-        $('<p>')
-          .addClass('text-warning')
-          .html('<span class="glyphicon glyphicon-warning-sign"></span> ' +
-            'The channel appears to be in use. You can wait for it to clear, or abort the connection attempt.')
+        $('<div>')
+          .addClass('text-center')
+          .append($('<span>')
+            .addClass('glyphicon glyphicon-refresh icon-spin text-muted')
+            .css({
+              'font-size': '36px',
+              'margin': '12px 0'
+            })
+          )
       );
       modalFooter.append(
         $('<button>')
           .attr({
             type: 'button',
-            class: 'btn btn-warning',
+            class: 'btn btn-default',
             id: 'promptOkButton'
           })
-          .text('Continue')
+          .text('Continue anyway')
           .click(function() {
             const id = $('#promptID').val();
             $('#promptModal').modal('hide');
@@ -1475,7 +1480,7 @@ function processPromptQuery(p) {
         $('<button>')
           .attr({
             type: 'button',
-            class: 'btn btn-default'
+            class: 'btn btn-primary'
           })
           .text('Abort')
           .click(function() {

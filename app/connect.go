@@ -250,7 +250,7 @@ func (a *App) onBusyChannel(ctx context.Context) (abort bool) {
 		// The channel is no longer busy.
 		log.Println("Channel clear")
 		return false
-	case resp := <-a.promptHub.Prompt(ctx, PromptKindBusyChannel, "Waiting for clear channel..."):
+	case resp := <-a.promptHub.Prompt(ctx, 5*time.Minute, PromptKindBusyChannel, "Waiting for clear channel..."):
 		return resp.Value == "abort" || resp.Err == context.DeadlineExceeded
 	}
 }

@@ -106,18 +106,3 @@ func MPSGet(ctx context.Context, requester, callsign string) ([]MessagePickupSta
 	}
 	return resp.MpsList, resp.ResponseStatus.errorOrNil()
 }
-
-// MPSList returns all MPS records
-func MPSList(ctx context.Context, requester string) ([]MessagePickupStationRecord, error) {
-	params := url.Values{
-		"requester": []string{requester},
-	}
-	var resp struct {
-		MpsList        []MessagePickupStationRecord `json:"mpsList"`
-		ResponseStatus responseStatus
-	}
-	if err := getJSON(ctx, PathMPSList, params, &resp); err != nil {
-		return nil, err
-	}
-	return resp.MpsList, resp.ResponseStatus.errorOrNil()
-}

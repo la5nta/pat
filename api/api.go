@@ -163,25 +163,23 @@ func (h Handler) connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (h Handler) postPositionHandler(w http.ResponseWriter, r *http.Request) {
 	var pos catalog.PosReport
-
 	if err := json.NewDecoder(r.Body).Decode(&pos); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	_ = r.Body.Close()
 
 	if pos.Date.IsZero() {
 		pos.Date = time.Now()
 	}
+	msg := pos.Message(h.Options().MyCall)
 
 	// Post to outbox
-	msg := pos.Message(h.Options().MyCall)
 	if err := h.Mailbox().AddOut(msg); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-	} else {
-		_, _ = fmt.Fprintln(w, "Position update posted")
+		return
 	}
+	fmt.Fprintln(w, "Position update posted")
 }
 
 func (h Handler) wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -265,11 +263,12 @@ func (h Handler) bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
-	forceDownload, _ := strconv.ParseBool(req.FormValue("force-download"))
-	band := req.FormValue("band")
-	mode := strings.ToLower(req.FormValue("mode"))
-	prefix := strings.ToUpper(req.FormValue("prefix"))
-
+	var (
+		forceDownload, _ = strconv.ParseBool(req.FormValue("force-download"))
+		band             = req.FormValue("band")
+		mode             = strings.ToLower(req.FormValue("mode"))
+		prefix           = strings.ToUpper(req.FormValue("prefix"))
+	)
 	list, err := h.ReadRMSList(req.Context(), forceDownload, func(r app.RMS) bool {
 		switch {
 		case r.URL == nil:
@@ -289,12 +288,9 @@ func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	sort.Sort(app.ByDist(list))
-	err = json.NewEncoder(w).Encode(list)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(list)
 }
 
 func (h Handler) qsyHandler(w http.ResponseWriter, req *http.Request) {

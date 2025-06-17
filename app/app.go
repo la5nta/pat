@@ -12,7 +12,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -146,7 +145,7 @@ func (a *App) EnableWebSocket(ctx context.Context, wsHub WSHub) error {
 	return nil
 }
 
-func (a *App) Run(cmd Command, args []string) {
+func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 	debug.Printf("Version: %s", buildinfo.VersionString())
 	debug.Printf("Command: %s %v", cmd.Str, args)
 	debug.Printf("Mailbox dir is\t'%s'", a.options.MailboxPath)
@@ -159,26 +158,6 @@ func (a *App) Run(cmd Command, args []string) {
 	a.listenHub = NewListenerHub(a)
 	a.listenHub.websocketHub = a.websocketHub
 	a.promptHub = NewPromptHub()
-
-	// Graceful shutdown by cancelling background context on interrupt.
-	//
-	// If we have an active connection, cancel that instead.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go func() {
-		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
-		for {
-			<-sig
-			if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {
-				dirtyDisconnectNext = !dirtyDisconnectNext
-			} else {
-				break
-			}
-		}
-		cancel()
-	}()
 
 	// Skip initialization for some commands
 	switch cmd.Str {
@@ -267,7 +246,7 @@ func (a *App) Run(cmd Command, args []string) {
 
 	if cmd.MayConnect {
 		a.rigs = loadHamlibRigs(a.config.HamlibRigs)
-		a.exchangeChan = a.exchangeLoop()
+		a.exchangeChan = a.exchangeLoop(ctx)
 
 		go func() {
 			if a.config.VersionReportingDisabled {
@@ -276,7 +255,11 @@ func (a *App) Run(cmd Command, args []string) {
 			for {
 				a.postVersionUpdate()                  // 24 hour hold on success
 				a.checkPasswordRecoveryEmailIsSet(ctx) // 14 day hold on success
-				time.Sleep(6 * time.Hour)              // Retry every 6 hours
+				select {
+				case <-time.After(6 * time.Hour): // Retry every 6 hours
+				case <-ctx.Done():
+					return
+				}
 			}
 		}()
 	}

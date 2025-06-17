@@ -26,12 +26,17 @@ type ex struct {
 	errors chan error
 }
 
-func (a *App) exchangeLoop() (ce chan ex) {
-	ce = make(chan ex)
+func (a *App) exchangeLoop(ctx context.Context) chan ex {
+	ce := make(chan ex)
 	go func() {
-		for ex := range ce {
-			ex.errors <- a.sessionExchange(ex.conn, ex.target, ex.master)
-			close(ex.errors)
+		for {
+			select {
+			case ex := <-ce:
+				ex.errors <- a.sessionExchange(ex.conn, ex.target, ex.master)
+				close(ex.errors)
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 	return ce

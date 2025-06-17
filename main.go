@@ -6,9 +6,11 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 
@@ -64,7 +66,30 @@ func main() {
 		return
 	}
 
-	app.New(opts).Run(cmd, args)
+	a := app.New(opts)
+
+	// Graceful shutdown by cancelling background context on interrupt.
+	//
+	// If we have an active connection, cancel that instead.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
+		for {
+			<-sig
+			if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {
+				dirtyDisconnectNext = !dirtyDisconnectNext
+			} else {
+				break
+			}
+		}
+		cancel()
+	}()
+
+	// Run the app
+	a.Run(ctx, cmd, args)
 }
 
 func optionsSet(opts *app.Options) *pflag.FlagSet {

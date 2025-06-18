@@ -389,6 +389,7 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) 
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
 	transport.RegisterDialer(scheme, m)
+	m.SetBusyFunc(a.onBusyChannel)
 
 	if conf.PTTControl {
 		rig, ok := a.rigs[conf.Rig]

@@ -74,12 +74,21 @@ func mpsListAllHandle(ctx context.Context, mycall string) error {
 		return nil
 	}
 
+	fmtStr := "%-12s %-16s\n"
+
 	// Print header
-	fmt.Printf("%-12s %-20s %-17s\n", "mps callsign", "automatic forwarding", "manual forwarding")
+	fmt.Printf(fmtStr, "mps callsign", "forwarding type")
 
 	// Print MPS records
 	for _, station := range mpsList {
-		fmt.Printf("%-12s %-20t %-17t\n", station.Callsign, station.AutomaticForwarding, station.ManualForwarding)
+		fwdType := "unknown"
+		if station.AutomaticForwarding {
+			fwdType = "automatic"
+		} else if station.ManualForwarding {
+			fwdType = "manual"
+		}
+
+		fmt.Printf(fmtStr, station.Callsign, fwdType)
 	}
 
 	return nil

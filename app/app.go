@@ -358,6 +358,8 @@ func (a *App) Close() {
 			log.Printf("Failure to close AGWPE TNC: %s", err)
 		}
 	}
+
+	a.websocketHub.Close()
 	a.eventLog.Close()
 	a.formsMgr.Close()
 }

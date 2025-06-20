@@ -9,6 +9,7 @@ type WSHub interface {
 	Prompt(Prompt)
 	NumClients() int
 	ClientAddrs() []string
+	Close() error
 }
 
 type noopWSSocket struct{}
@@ -19,3 +20,4 @@ func (noopWSSocket) WriteNotification(types.Notification) {}
 func (noopWSSocket) Prompt(Prompt)                        {}
 func (noopWSSocket) NumClients() int                      { return 0 }
 func (noopWSSocket) ClientAddrs() []string                { return []string{} }
+func (noopWSSocket) Close() error                         { return nil }

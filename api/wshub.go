@@ -75,6 +75,27 @@ func (w *WSHub) WriteJSON(v interface{}) {
 	}
 }
 
+// Close closes all active WebSocket connections in the hub.
+//
+// The hub should not be used after calling Close.
+func (w *WSHub) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.pool == nil {
+		return nil
+	}
+	for conn, _ := range w.pool {
+		// Closing the connection should trigger the deferred cleanup in the Handle method for that client,
+		// which includes removing it from the pool.
+		err := conn.conn.Close()
+		if err != nil {
+			debug.Printf("Error closing WebSocket connection %s: %v", conn.conn.RemoteAddr(), err)
+		}
+	}
+	w.pool = nil
+	return nil
+}
+
 func (w *WSHub) NumClients() int { return len(w.ClientAddrs()) }
 
 func (w *WSHub) ClientAddrs() []string {

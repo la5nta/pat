@@ -67,6 +67,7 @@ func main() {
 	}
 
 	a := app.New(opts)
+	defer a.Close()
 
 	// Graceful shutdown by cancelling background context on interrupt.
 	//

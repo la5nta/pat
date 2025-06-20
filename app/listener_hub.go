@@ -188,7 +188,7 @@ func (h *ListenerHub) Disable(name string) (bool, error) {
 	return true, l.Close()
 }
 
-func (h *ListenerHub) Close() {
+func (h *ListenerHub) Close() error {
 	h.mu.Lock()
 	defer func() {
 		h.mu.Unlock()
@@ -198,4 +198,5 @@ func (h *ListenerHub) Close() {
 		l.Close()
 		delete(h.listeners, k)
 	}
+	return nil
 }

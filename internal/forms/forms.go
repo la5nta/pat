@@ -111,7 +111,13 @@ func NewManager(conf Config) *Manager {
 	return retval
 }
 
-func (m *Manager) Close() error { m.sequence.Close(); return nil }
+func (m *Manager) Close() error {
+	if m == nil {
+		return nil
+	}
+	m.sequence.Close()
+	return nil
+}
 
 // GetFormsCatalogHandler reads all forms from config.FormsPath and writes them in the http response as a JSON object graph
 // This lets the frontend present a tree-like GUI for the user to select a form for composing a message

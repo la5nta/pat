@@ -231,9 +231,6 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		GPSd:           a.config.GPSd,
 	})
 
-	// Make sure we clean up on exit, closing any open resources etc.
-	defer a.cleanup()
-
 	// Load the mailbox handler
 	a.mbox = mailbox.NewDirHandler(
 		filepath.Join(a.options.MailboxPath, a.options.MyCall),
@@ -327,7 +324,7 @@ func (a *App) GetStatus() types.Status {
 	return status
 }
 
-func (a *App) cleanup() {
+func (a *App) Close() {
 	debug.Printf("Starting cleanup")
 	defer debug.Printf("Cleanup done")
 

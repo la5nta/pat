@@ -21,7 +21,12 @@ func NewEventLogger(path string) (*EventLogger, error) {
 	return &EventLogger{file, json.NewEncoder(file)}, err
 }
 
-func (l *EventLogger) Close() error { return l.file.Close() }
+func (l *EventLogger) Close() error {
+	if l == nil || l.file == nil {
+		return nil
+	}
+	return l.file.Close()
+}
 
 func (l *EventLogger) Log(what string, event map[string]interface{}) {
 	event["log_time"] = time.Now()

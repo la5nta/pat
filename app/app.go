@@ -91,7 +91,7 @@ type App struct {
 	rigs map[string]hamlib.VFO
 
 	eventLog  *EventLogger
-	logWriter io.Writer
+	logWriter io.WriteCloser
 }
 
 func New(opts Options) *App {
@@ -183,10 +183,14 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 	// Initialize logger
 	f, err := os.Create(a.options.LogPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to create log file at %s: %v", a.options.LogPath, err)
 	}
-	a.logWriter = io.MultiWriter(f, os.Stdout)
+	a.logWriter = struct {
+		io.Writer
+		io.Closer
+	}{io.MultiWriter(f, os.Stdout), f}
 	log.SetOutput(a.logWriter)
+
 	a.eventLog, err = NewEventLogger(a.options.EventLogPath)
 	if err != nil {
 		log.Fatal("Unable to open event log file:", err)
@@ -326,7 +330,10 @@ func (a *App) GetStatus() types.Status {
 
 func (a *App) Close() {
 	debug.Printf("Starting cleanup")
-	defer debug.Printf("Cleanup done")
+	defer func() {
+		debug.Printf("Cleanup done")
+		a.logWriter.Close()
+	}()
 
 	a.AbortActiveConnection(false)
 	a.listenHub.Close()

@@ -332,7 +332,9 @@ func (a *App) Close() {
 	debug.Printf("Starting cleanup")
 	defer func() {
 		debug.Printf("Cleanup done")
-		a.logWriter.Close()
+		if a.logWriter != nil {
+			a.logWriter.Close()
+		}
 	}()
 
 	debug.Printf("Closing active connection and/or listeners")

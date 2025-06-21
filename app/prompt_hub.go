@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/la5nta/pat/api/types"
@@ -40,13 +41,25 @@ type PromptHub struct {
 	c  chan *Prompt
 	rc chan PromptResponse
 
+	closeOnce sync.Once
 	prompters map[Prompter]struct{}
 }
 
 func NewPromptHub() *PromptHub {
-	p := &PromptHub{}
+	p := &PromptHub{
+		c:  make(chan *Prompt),
+		rc: make(chan PromptResponse, 1),
+	}
 	go p.loop()
 	return p
+}
+
+func (p *PromptHub) Close() error {
+	if p == nil {
+		return nil
+	}
+	p.closeOnce.Do(func() { close(p.c) })
+	return nil
 }
 
 func (p *PromptHub) AddPrompter(prompters ...Prompter) {
@@ -59,8 +72,8 @@ func (p *PromptHub) AddPrompter(prompters ...Prompter) {
 }
 
 func (p *PromptHub) loop() {
-	p.c = make(chan *Prompt)
-	p.rc = make(chan PromptResponse, 1)
+	defer close(p.rc)
+	defer debug.Printf("PromptHub run loop stopped")
 	for prompt := range p.c {
 		debug.Printf("New prompt: %#v", prompt)
 		select {

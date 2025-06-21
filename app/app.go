@@ -335,8 +335,11 @@ func (a *App) Close() {
 		a.logWriter.Close()
 	}()
 
+	debug.Printf("Closing active connection and/or listeners")
 	a.AbortActiveConnection(false)
 	a.listenHub.Close()
+
+	debug.Printf("Closing modems")
 	if a.ardop != nil {
 		if err := a.ardop.Close(); err != nil {
 			log.Printf("Failure to close ardop TNC: %s", err)
@@ -347,25 +350,23 @@ func (a *App) Close() {
 			log.Printf("Failure to close pactor modem: %s", err)
 		}
 	}
-
 	if a.varaFM != nil {
 		if err := a.varaFM.Close(); err != nil {
 			log.Printf("Failure to close varafm modem: %s", err)
 		}
 	}
-
 	if a.varaHF != nil {
 		if err := a.varaHF.Close(); err != nil {
 			log.Printf("Failure to close varahf modem: %s", err)
 		}
 	}
-
 	if a.agwpe != nil {
 		if err := a.agwpe.Close(); err != nil {
 			log.Printf("Failure to close AGWPE TNC: %s", err)
 		}
 	}
 
+	a.promptHub.Close()
 	a.websocketHub.Close()
 	a.eventLog.Close()
 	a.formsMgr.Close()

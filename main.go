@@ -85,14 +85,14 @@ func runApp(opts app.Options, cmd app.Command, args []string, sig <-chan os.Sign
 	// Graceful shutdown/reload handling.
 	shouldReload := make(chan bool, 1)
 	done := make(chan struct{})
-	a.OnReload = func() {
+	a.OnReload = func() error {
 		// Avoid reloading of bad config
 		if _, err := app.LoadConfig(opts.ConfigPath, cfg.DefaultConfig); err != nil {
-			log.Printf("Ignoring live reload due to config error: %v", err)
-			return
+			return fmt.Errorf("bad config: %v", err)
 		}
 		cancel()
 		shouldReload <- true
+		return nil
 	}
 	go func() {
 		defer close(shouldReload)
@@ -102,13 +102,10 @@ func runApp(opts app.Options, cmd app.Command, args []string, sig <-chan os.Sign
 			case s := <-sig:
 				switch {
 				case isSIGHUP(s):
-					// Avoid reloading of bad config
-					if _, err := app.LoadConfig(opts.ConfigPath, cfg.DefaultConfig); err != nil {
-						log.Printf("Ignoring live reload due to config error: %v", err)
+					if err := a.Reload(); err != nil {
+						log.Printf("Ignoring live reload due to error: %v", err)
 						continue
 					}
-					cancel()
-					shouldReload <- true
 					return
 				default:
 					if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {

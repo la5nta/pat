@@ -78,15 +78,14 @@ func main() {
 	defer cancel()
 	go func() {
 		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
-		for {
-			<-sig
+		for range sig {
 			if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {
 				dirtyDisconnectNext = !dirtyDisconnectNext
-			} else {
-				break
+				continue
 			}
+			cancel()
+			return
 		}
-		cancel()
 	}()
 
 	// Run the app

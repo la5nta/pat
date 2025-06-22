@@ -9,13 +9,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
 
 	"github.com/la5nta/pat/api"
 	"github.com/la5nta/pat/app"
+	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/cli"
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/directories"
@@ -66,30 +67,59 @@ func main() {
 		return
 	}
 
+	sig := notifySignals()
+
+	// Run app in a loop for config reloading
+	for runApp(opts, cmd, args, sig) {
+		fmt.Fprintln(os.Stderr, "Reloading application...")
+	}
+}
+
+func runApp(opts app.Options, cmd app.Command, args []string, sig <-chan os.Signal) bool {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	a := app.New(opts)
 	defer a.Close()
 
-	// Graceful shutdown by cancelling background context on interrupt.
-	//
-	// If we have an active connection, cancel that instead.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Graceful shutdown/reload handling.
+	shouldReload := make(chan bool, 1)
+	done := make(chan struct{})
 	go func() {
+		defer close(shouldReload)
 		dirtyDisconnectNext := false // So we can do a dirty disconnect on the second interrupt
-		for range sig {
-			if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {
-				dirtyDisconnectNext = !dirtyDisconnectNext
-				continue
+		for {
+			select {
+			case s := <-sig:
+				switch {
+				case isSIGHUP(s):
+					// Avoid reloading of bad config
+					if _, err := app.LoadConfig(opts.ConfigPath, cfg.DefaultConfig); err != nil {
+						log.Printf("Ignoring live reload due to config error: %v", err)
+						continue
+					}
+					cancel()
+					shouldReload <- true
+					return
+				default:
+					if ok := a.AbortActiveConnection(dirtyDisconnectNext); ok {
+						dirtyDisconnectNext = !dirtyDisconnectNext
+						continue
+					}
+					cancel()
+					shouldReload <- false
+					return
+				}
+			case <-done:
+				return
 			}
-			cancel()
-			return
 		}
 	}()
 
 	// Run the app
 	a.Run(ctx, cmd, args)
+	close(done)
+	return <-shouldReload
 }
 
 func optionsSet(opts *app.Options) *pflag.FlagSet {

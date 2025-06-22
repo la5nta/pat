@@ -7,6 +7,7 @@ type Status struct {
 	Dialing         bool     `json:"dialing"`
 	RemoteAddr      string   `json:"remote_addr"`
 	HTTPClients     []string `json:"http_clients"`
+	ConfigHash      string   `json:"config_hash"`
 }
 
 // Progress represents a progress report as sent to the Web GUI

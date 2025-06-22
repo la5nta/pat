@@ -11,6 +11,8 @@ let mycall = '';
 let initialized = false;
 let formsCatalog;
 let currentPromptNotification = null;
+let ws;
+let configHash; // For auto-reload on config changes
 
 let statusPopoverDiv;
 const statusPos = $('#pos_status');
@@ -1317,8 +1319,6 @@ function showGUIStatus(e, show) {
   updateGUIStatus();
 }
 
-let ws;
-
 function initConfigDefaults() {
   $.getJSON('/api/config')
     .done(function(config) {
@@ -1355,6 +1355,20 @@ function initConsole() {
         displayFolder(currentFolder);
       }
       if (msg.Status) {
+        if (configHash && configHash !== msg.Status.config_hash) {
+          if ($('#composer').is(':visible')) {
+            const div = $('#navbar_status');
+            div.empty();
+            div.append(
+              '<span class="navbar-text status-text text-warning"><span class="glyphicon glyphicon-warning-sign"></span> Configuration has changed, please <a href="#" onclick="location.reload()">reload the page</a>.</span>'
+            );
+            div.show();
+          } else {
+            console.log('Config hash changed, reloading page');
+            location.reload();
+          }
+        }
+        configHash = msg.Status.config_hash;
         updateStatus(msg.Status);
       }
       if (msg.Progress) {

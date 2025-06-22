@@ -7,6 +7,8 @@ package app
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -328,11 +330,20 @@ func (a *App) Heard() map[string][]Heard {
 }
 
 func (a *App) GetStatus() types.Status {
+	configHash := func(c cfg.Config) string {
+		h := sha1.New()
+		if err := json.NewEncoder(h).Encode(c); err != nil {
+			panic(err)
+		}
+		return fmt.Sprintf("%x", h.Sum(nil))
+	}
+
 	status := types.Status{
 		ActiveListeners: a.ActiveListeners(),
 		Dialing:         a.dialing != nil,
 		Connected:       a.exchangeConn != nil,
 		HTTPClients:     a.websocketHub.ClientAddrs(),
+		ConfigHash:      configHash(a.config),
 	}
 
 	if a.exchangeConn != nil {

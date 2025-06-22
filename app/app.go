@@ -66,8 +66,9 @@ type Options struct {
 }
 
 type App struct {
-	options Options
-	config  cfg.Config
+	options  Options
+	config   cfg.Config
+	OnReload func()
 
 	mbox     *mailbox.DirHandler
 	formsMgr *forms.Manager
@@ -119,6 +120,14 @@ func (a *App) Config() cfg.Config { return a.config }
 func (a *App) Options() Options { return a.options }
 
 func (a *App) PromptHub() *PromptHub { return a.promptHub }
+
+func (a *App) Reload() error {
+	if a.OnReload == nil {
+		return fmt.Errorf("reload not supported")
+	}
+	a.OnReload()
+	return nil
+}
 
 func (a *App) VFOForRig(rig string) (hamlib.VFO, bool) { r, ok := a.rigs[rig]; return r, ok }
 

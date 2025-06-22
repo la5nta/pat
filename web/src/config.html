@@ -708,9 +708,14 @@
           <p>Configuration changes have been saved successfully.</p>
           <p class="text-warning"><strong>Note:</strong> Some changes will not take effect until the application is
             restarted.</p>
+          <div id="restartStatus" style="display: none; margin-top: 15px;"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="restartNow">
+            <span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span>
+            Restart Now
+          </button>
         </div>
       </div>
     </div>

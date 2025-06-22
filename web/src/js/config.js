@@ -316,9 +316,54 @@ $(document).ready(function() {
         originalConfig = JSON.parse(JSON.stringify(updatedConfig)); // Update base config
         showSuccess('Configuration saved successfully');
         $('#restartNotice').modal('show');
+        // Reset restart status when showing the modal
+        $('#restartStatus').hide().empty();
+        $('#restartNow').prop('disabled', false).html('<span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span> Restart Now');
       },
       error: function(xhr) {
         showError('Save failed: ' + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.statusText));
+      }
+    });
+  });
+
+  $('#restartNow').click(function() {
+    const btn = $(this);
+    const statusDiv = $('#restartStatus');
+
+    btn.prop('disabled', true).html('<span class="glyphicon glyphicon-hourglass" style="margin-right: 5px;"></span> Restarting...');
+    statusDiv.hide().empty();
+
+    $.ajax({
+      url: '/api/reload',
+      type: 'POST',
+      success: function() {
+        setTimeout(function() {
+          let attempts = 0;
+          const maxAttempts = 30; // 3 seconds
+          const interval = setInterval(function() {
+            $.ajax({
+              url: '/api/status',
+              type: 'GET',
+              success: function() {
+                clearInterval(interval);
+                btn.html('<span class="glyphicon glyphicon-ok" style="margin-right: 5px;"></span> Restarted');
+                statusDiv.removeClass('alert-danger').addClass('alert alert-success').text('Restart successful!').show();
+              },
+              error: function() {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                  clearInterval(interval);
+                  btn.prop('disabled', false).html('<span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span> Restart Now');
+                  statusDiv.removeClass('alert-success').addClass('alert alert-danger').text('Restart timed out. Please check the application logs.').show();
+                }
+              }
+            });
+          }, 100);
+        }, 1000); // Wait 1s before starting to poll
+      },
+      error: function(xhr) {
+        btn.prop('disabled', false).html('<span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span> Restart Now');
+        statusDiv.removeClass('alert-success').addClass('alert alert-danger').text('Restart failed: ' + xhr.responseText).show();
       }
     });
   });

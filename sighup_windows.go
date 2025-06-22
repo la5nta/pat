@@ -11,8 +11,10 @@ import (
 	"os/signal"
 )
 
-func notifySignals(sig chan<- os.Signal) {
+func notifySignals() <-chan os.Signal {
+	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
+	return sig
 }
 
 func isSIGHUP(s os.Signal) bool { return false }

@@ -88,10 +88,16 @@ type App struct {
 	varaHF *vara.Modem
 	varaFM *vara.Modem
 
-	rigs map[string]hamlib.VFO
+	rigs map[string]rig
 
 	eventLog  *EventLogger
 	logWriter io.WriteCloser
+}
+
+// A rig holds a VFO and a closer for the underlying rig connection.
+type rig struct {
+	hamlib.VFO
+	io.Closer
 }
 
 func New(opts Options) *App {
@@ -246,7 +252,7 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 	}
 
 	if cmd.MayConnect {
-		a.rigs = loadHamlibRigs(a.config.HamlibRigs)
+		a.loadHamlibRigs(a.config.HamlibRigs)
 		a.exchangeChan = a.exchangeLoop(ctx)
 
 		go func() {
@@ -368,15 +374,22 @@ func (a *App) Close() {
 		}
 	}
 
+	// Close rigs
+	debug.Printf("Closing rigs")
+	for name, r := range a.rigs {
+		if err := r.Close(); err != nil {
+			log.Printf("Failure to close rig %s: %s", name, err)
+		}
+	}
+
 	a.promptHub.Close()
 	a.websocketHub.Close()
 	a.eventLog.Close()
 	a.formsMgr.Close()
 }
 
-func loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) map[string]hamlib.VFO {
-	rigs := make(map[string]hamlib.VFO, len(rigsConfig))
-
+func (a *App) loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) {
+	a.rigs = make(map[string]rig, len(rigsConfig))
 	for name, conf := range rigsConfig {
 		if conf.Address == "" {
 			log.Printf("Missing address-field for rig '%s', skipping.", name)
@@ -386,7 +399,7 @@ func loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) map[string]hamlib.VF
 			conf.Network = "tcp"
 		}
 
-		rig, err := hamlib.Open(conf.Network, conf.Address)
+		r, err := hamlib.Open(conf.Network, conf.Address)
 		if err != nil {
 			log.Printf("Initialization hamlib rig %s failed: %s.", name, err)
 			continue
@@ -395,18 +408,20 @@ func loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) map[string]hamlib.VF
 		var vfo hamlib.VFO
 		switch strings.ToUpper(conf.VFO) {
 		case "A", "VFOA":
-			vfo, err = rig.VFOA()
+			vfo, err = r.VFOA()
 		case "B", "VFOB":
-			vfo, err = rig.VFOB()
+			vfo, err = r.VFOB()
 		case "":
-			vfo = rig.CurrentVFO()
+			vfo = r.CurrentVFO()
 		default:
 			log.Printf("Cannot load rig '%s': Unrecognized VFO identifier '%s'", name, conf.VFO)
+			r.Close() // Close rig if we can't use it
 			continue
 		}
 
 		if err != nil {
 			log.Printf("Cannot load rig '%s': Unable to select VFO: %s", name, err)
+			r.Close() // Close rig if we can't use it
 			continue
 		}
 
@@ -417,7 +432,6 @@ func loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) map[string]hamlib.VF
 			log.Printf("%s ready. Dial frequency is %s.", name, Frequency(f))
 		}
 
-		rigs[name] = vfo
+		a.rigs[name] = rig{VFO: vfo, Closer: r}
 	}
-	return rigs
 }

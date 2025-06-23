@@ -4,8 +4,14 @@ import 'bootstrap-select';
 import 'bootstrap-tokenfield';
 import URI from 'urijs';
 
+import { checkNewVersion } from './modules/version/index.js';
+import { NotificationService } from './modules/notifications/index.js';
+import { StatusPopover } from './modules/status-popover/index.js';
+import { initGeolocation } from './modules/geolocation/index.js';
+import { alert } from './modules/utils/index.js';
+
 let wsURL = '';
-let posId = 0;
+
 let connectAliases;
 let mycall = '';
 let initialized = false;
@@ -14,8 +20,8 @@ let currentPromptNotification = null;
 let ws;
 let configHash; // For auto-reload on config changes
 
-let statusPopoverDiv;
-const statusPos = $('#pos_status');
+let statusPopover;
+
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -25,7 +31,7 @@ $(document).ready(function() {
 
   $(function() {
     initConfigDefaults();
-    initStatusPopover();
+    statusPopover = new StatusPopover('#status_popover_content', '#gui_status_light', '.navbar-brand');
 
     // Setup actions
     $('#connect_btn').click(connect);
@@ -38,7 +44,6 @@ $(document).ready(function() {
     $('#connectForm input').keyup(function(e) {
       onConnectInputChange();
     });
-    $('#pos_btn').click(postPosition);
 
     // Setup composer
     initComposeModal();
@@ -71,43 +76,6 @@ $(document).ready(function() {
       }
     });
 
-    $('#posModal').on('shown.bs.modal', function(e) {
-      $.ajax({
-        url: '/api/current_gps_position',
-        dataType: 'json',
-        beforeSend: function() {
-          statusPos.html('Checking if GPS device is available');
-        },
-        success: function(gpsData) {
-          statusPos.html('GPS position received');
-
-          statusPos.html('<strong>Waiting for position form GPS device...</strong>');
-          updatePositionGPS(gpsData);
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-          statusPos.html('GPS device not available!');
-
-          if (navigator.geolocation) {
-            statusPos.html('<strong>Waiting for position (geolocation)...</strong>');
-            const options = { enableHighAccuracy: true, maximumAge: 0 };
-            posId = navigator.geolocation.watchPosition(
-              updatePositionGeolocation,
-              handleGeolocationError,
-              options
-            );
-          } else {
-            statusPos.html('Geolocation is not supported by this browser.');
-          }
-        },
-      });
-    });
-
-    $('#posModal').on('hidden.bs.modal', function(e) {
-      if (navigator.geolocation) {
-        navigator.geolocation.clearWatch(posId);
-      }
-    });
-
     $('#updateFormsButton').click(updateForms);
 
     initConnectModal();
@@ -118,135 +86,16 @@ $(document).ready(function() {
     initNotifications();
     initForms();
     checkNewVersion();
+
+    initGeolocation({
+      containerSelector: '#posModal',
+      statusPopoverInstance: statusPopover,
+    });
   });
 });
 
-function checkNewVersion() {
-  // Skip if already checked this session
-  if (sessionStorage.getItem('pat_version_checked') === 'true') {
-    console.log('Skipping version check - already checked this session');
-    return;
-  }
-  // Check if within 72h reminder period
-  const lastCheck = parseInt(localStorage.getItem('pat_version_check_time') || '0');
-  const now = new Date().getTime();
-  if (now - lastCheck < 72 * 60 * 60 * 1000) {
-    console.log('Skipping version check - reminder snoozed');
-    return;
-  }
-
-  $.ajax({
-    url: '/api/new-release-check',
-    method: 'GET',
-    success: function(data, textStatus, xhr) {
-      // Mark as checked for this session
-      sessionStorage.setItem('pat_version_checked', 'true');
-
-      // If status is 204, there's no new version
-      if (xhr.status === 204) {
-        console.log('No new version available');
-        return;
-      }
-
-      // Skip if this version was ignored
-      const ignoredVersion = localStorage.getItem('pat_ignored_version');
-      if (data.version === ignoredVersion) {
-        console.log(`Skipping version prompt - version ignored (${ignoredVersion})`);
-        return;
-      }
-
-      // Log success and show prompt modal
-      console.log('Successfully checked for new version');
-      const modal = $('#promptModal');
-      const modalBody = modal.find('.modal-body');
-      const modalFooter = modal.find('.modal-footer');
-
-      $('#promptMessage').text('A new version of Pat is available!');
-
-      modalBody.empty();
-      modalBody.append($('<p>').html(`Version ${data.version} is now available 🎉`));
-      modalBody.append($('<p>').html(`<a href="${data.release_url}" target="_blank">View release details</a>`));
-
-      modalFooter.empty();
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default pull-left'
-          })
-          .text('Ignore this version')
-          .click(function() {
-            localStorage.setItem('pat_ignored_version', data.version);
-            modal.modal('hide');
-          })
-      );
-
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default'
-          })
-          .text('Remind me later')
-          .click(function() {
-            localStorage.setItem('pat_version_check_time', new Date().getTime());
-            modal.modal('hide');
-          })
-      );
-
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-primary'
-          })
-          .text('Download')
-          .click(function() {
-            window.open(data.release_url, '_blank');
-            modal.modal('hide');
-          })
-      );
-
-      modal.modal('show');
-    },
-    error: function(xhr, textStatus, errorThrown) {
-      console.log('Version check failed:', textStatus, errorThrown);
-    }
-  });
-}
-
 function initNotifications() {
-  if (!isNotificationsSupported()) {
-    statusPopoverDiv
-      .find('#notifications_error')
-      .find('.panel-body')
-      .html('Not supported by this browser.');
-    return;
-  }
-  Notification.requestPermission(function(permission) {
-    if (permission === 'granted') {
-      showGUIStatus(statusPopoverDiv.find('#notifications_error'), false);
-    } else if (isInsecureOrigin()) {
-      // There is no way of knowing for sure if the permission was denied by the user
-      // or prohibited because of insecure origin (Chrome). This is just a lucky guess.
-      appendInsecureOriginWarning(statusPopoverDiv.find('#notifications_error'));
-    }
-  });
-}
-
-function isNotificationsSupported() {
-  if (!window.Notification || !Notification.requestPermission) return false;
-
-  if (Notification.permission === 'granted') return true;
-
-  // Chrome on Android support notifications only in the context of a Service worker.
-  // This is a hack to detect this case, so we can avoid asking for a pointless permission.
-  try {
-    new Notification('');
-  } catch (e) {
-    if (e.name == 'TypeError') return false;
-  }
-  return true;
+  NotificationService.requestSystemPermission(statusPopover);
 }
 
 let cancelCloseTimer = false;
@@ -278,27 +127,6 @@ function updateProgress(p) {
   }
 }
 
-function initStatusPopover() {
-  statusPopoverDiv = $('#status_popover_content');
-  showGUIStatus($('#websocket_error'), true);
-  showGUIStatus($('#notifications_error'), true);
-  $('#gui_status_light').popover({
-    placement: 'bottom',
-    content: statusPopoverDiv,
-    html: true,
-  });
-
-  // Hack to force popover to grab it's content div
-  $('#gui_status_light').popover('show');
-  $('#gui_status_light').popover('hide');
-  statusPopoverDiv.show();
-
-  // Bind click on navbar-brand
-  $('#gui_status_light').unbind();
-  $('.navbar-brand').click(function(e) {
-    $('#gui_status_light').popover('toggle');
-  });
-}
 
 function onFormLaunching(target) {
   $('#selectForm').modal('hide');
@@ -971,59 +799,6 @@ function populateBandwidths(transport) {
   });
 }
 
-function handleGeolocationError(error) {
-  if (error.message.search('insecure origin') > 0 || isInsecureOrigin()) {
-    appendInsecureOriginWarning(statusPopoverDiv.find('#geolocation_error'));
-  }
-  showGUIStatus(statusPopoverDiv.find('#geolocation_error'), true);
-  statusPos.html('Geolocation unavailable.');
-}
-
-function updatePositionGeolocation(pos) {
-  let d;
-  if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
-    // Safari detected - use current browser time instead of GPS time
-    // Ref https://openradar.appspot.com/9246279
-    d = new Date();
-  } else {
-    d = new Date(pos.timestamp);
-  }
-  statusPos.html('Last position update ' + dateFormat(d) + '...');
-  $('#pos_lat').val(pos.coords.latitude);
-  $('#pos_long').val(pos.coords.longitude);
-  $('#pos_ts').val(d.getTime());
-}
-
-function updatePositionGPS(pos) {
-  const d = new Date(pos.Time);
-  statusPos.html('Last position update ' + dateFormat(d) + '...');
-  $('#pos_lat').val(pos.Lat);
-  $('#pos_long').val(pos.Lon);
-  $('#pos_ts').val(d.getTime());
-}
-
-function postPosition() {
-  const pos = {
-    lat: parseFloat($('#pos_lat').val()),
-    lon: parseFloat($('#pos_long').val()),
-    comment: $('#pos_comment').val(),
-    date: new Date(parseInt($('#pos_ts').val())),
-  };
-
-  $.ajax('/api/posreport', {
-    data: JSON.stringify(pos),
-    contentType: 'application/json',
-    type: 'POST',
-    success: function(resp) {
-      $('#posModal').modal('toggle');
-      alert(resp);
-    },
-    error: function(xhr, st, resp) {
-      alert(resp + ': ' + xhr.responseText);
-    },
-  });
-}
-
 // Handle file selection and deduplication
 function handleFileSelection() {
   const fileInput = this;
@@ -1140,24 +915,6 @@ function previewAttachmentFiles() {
   }
 }
 
-function notify(data) {
-  const options = {
-    body: data.body,
-    icon: '/dist/static/pat_logo.png',
-  };
-  new Notification(data.title, options);
-}
-
-function alert(msg) {
-  const div = $('#navbar_status');
-  div.empty();
-  div.append('<span class="navbar-text status-text">' + msg + '</p>');
-  div.show();
-  window.setTimeout(function() {
-    div.fadeOut(500);
-  }, 5000);
-}
-
 function updateStatus(data) {
   const st = $('#status_text');
   st.empty().off('click').attr('data-toggle', 'tooltip').attr('data-placement', 'bottom').tooltip();
@@ -1198,10 +955,8 @@ function updateStatus(data) {
   }
 
   const n = data.http_clients.length;
-  statusPopoverDiv
-    .find('#webserver_info')
-    .find('.panel-body')
-    .html(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
+  statusPopover
+    .showWebserverInfo(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
 function closeComposer(clear) {
@@ -1255,70 +1010,6 @@ function disconnect(dirty, successHandler) {
   );
 }
 
-function updateGUIStatus() {
-  let color = 'success';
-  statusPopoverDiv
-    .find('.panel-info')
-    .not('.hidden')
-    .not('.ignore-status')
-    .each(function(i) {
-      color = 'info';
-    });
-  statusPopoverDiv
-    .find('.panel-warning')
-    .not('.hidden')
-    .not('.ignore-status')
-    .each(function(i) {
-      color = 'warning';
-    });
-  statusPopoverDiv
-    .find('.panel-danger')
-    .not('.hidden')
-    .not('.ignore-status')
-    .each(function(i) {
-      color = 'danger';
-    });
-  $('#gui_status_light')
-    .removeClass(function(index, className) {
-      return (className.match(/(^|\s)btn-\S+/g) || []).join(' ');
-    })
-    .addClass('btn-' + color);
-  if (color == 'success') {
-    statusPopoverDiv.find('#no_error').show();
-  } else {
-    statusPopoverDiv.find('#no_error').hide();
-  }
-}
-
-function isInsecureOrigin() {
-  if (hasOwnProperty.call(window, 'isSecureContext')) {
-    return !window.isSecureContext;
-  }
-  if (window.location.protocol == 'https:') {
-    return false;
-  }
-  if (window.location.protocol == 'file:') {
-    return false;
-  }
-  if (location.hostname === 'localhost' || location.hostname.startsWith('127.0')) {
-    return false;
-  }
-  return true;
-}
-
-function appendInsecureOriginWarning(e) {
-  e.removeClass('panel-info').addClass('panel-warning');
-  e.find('.panel-body').append(
-    '<p>Ensure the <a href="https://github.com/la5nta/pat/wiki/The-web-GUI#powerful-features">secure origin criteria for Powerful Features</a> are met.</p>'
-  );
-  updateGUIStatus();
-}
-
-function showGUIStatus(e, show) {
-  show ? e.removeClass('hidden') : e.addClass('hidden');
-  updateGUIStatus();
-}
-
 function initConfigDefaults() {
   $.getJSON('/api/config')
     .done(function(config) {
@@ -1336,8 +1027,8 @@ function initConsole() {
     ws = new WebSocket(wsURL);
     ws.onopen = function(evt) {
       console.log('Websocket opened');
-      showGUIStatus(statusPopoverDiv.find('#websocket_error'), false);
-      showGUIStatus(statusPopoverDiv.find('#webserver_info'), true);
+      statusPopover.hideWebsocketError();
+      statusPopover.showWebserverInfo(); // Content is updated by updateStatus
       $('#console').empty();
     };
     ws.onmessage = function(evt) {
@@ -1346,7 +1037,7 @@ function initConsole() {
         mycall = msg.MyCall;
       }
       if (msg.Notification) {
-        notify(msg.Notification);
+        NotificationService.show(msg.Notification.title, msg.Notification.body);
       }
       if (msg.LogLine) {
         updateConsole(msg.LogLine + '\n');
@@ -1379,9 +1070,7 @@ function initConsole() {
         if (currentPromptNotification) {
           currentPromptNotification.close();
         }
-        currentPromptNotification = new Notification(msg.Prompt.message, {
-          icon: '/dist/static/pat_logo.png'
-        });
+        currentPromptNotification = NotificationService.show(msg.Prompt.message, '');
       }
       if (msg.PromptAbort) {
         $('#promptModal').modal('hide');
@@ -1396,8 +1085,8 @@ function initConsole() {
     };
     ws.onclose = function(evt) {
       console.log('Websocket closed');
-      showGUIStatus(statusPopoverDiv.find('#websocket_error'), true);
-      showGUIStatus(statusPopoverDiv.find('#webserver_info'), false);
+      statusPopover.showWebsocketError("WebSocket connection closed. Attempting to reconnect...");
+      statusPopover.hideWebserverInfo();
       $('#status_text').empty();
       window.setTimeout(function() {
         initConsole();
@@ -2001,34 +1690,6 @@ function setRead(box, mid) {
 
 function isImageSuffix(name) {
   return name.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/);
-}
-
-function dateFormat(previous) {
-  const current = new Date();
-
-  const msPerMinute = 60 * 1000;
-  const msPerHour = msPerMinute * 60;
-  const msPerDay = msPerHour * 24;
-  const msPerMonth = msPerDay * 30;
-  const msPerYear = msPerDay * 365;
-
-  const elapsed = current - previous;
-
-  if (elapsed < msPerDay) {
-    return (
-      (previous.getHours() < 10 ? '0' : '') +
-      previous.getHours() +
-      ':' +
-      (previous.getMinutes() < 10 ? '0' : '') +
-      previous.getMinutes()
-    );
-  } else if (elapsed < msPerMonth) {
-    return 'approximately ' + Math.round(elapsed / msPerDay) + ' days ago';
-  } else if (elapsed < msPerYear) {
-    return 'approximately ' + Math.round(elapsed / msPerMonth) + ' months ago';
-  } else {
-    return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
-  }
 }
 
 function formatFileSize(bytes) {

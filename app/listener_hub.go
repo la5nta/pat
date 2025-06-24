@@ -26,13 +26,20 @@ type Listener struct {
 	*App
 	t TransportListener
 
-	mu       sync.Mutex
-	isClosed bool
-	err      error
-	ln       net.Listener
+	done chan struct{}
+
+	mu  sync.Mutex
+	err error
+	ln  net.Listener
 }
 
-func (h *ListenerHub) NewListener(t TransportListener) *Listener { return &Listener{App: h.App, t: t} }
+func (h *ListenerHub) NewListener(t TransportListener) *Listener {
+	return &Listener{
+		App:  h.App,
+		t:    t,
+		done: make(chan struct{}),
+	}
+}
 
 func (l *Listener) Err() error {
 	l.mu.Lock()
@@ -43,58 +50,63 @@ func (l *Listener) Err() error {
 func (l *Listener) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.isClosed {
-		return l.err
-	}
-	l.isClosed = true
 
-	// If l.err is not nil, then the last attempt to open the listener failed and we don't have anything to close
-	if l.err != nil {
+	select {
+	case <-l.done:
+		return l.err
+	default:
+		close(l.done)
+		if l.ln != nil {
+			return l.ln.Close()
+		}
 		return l.err
 	}
-	return l.ln.Close()
 }
 
 func (l *Listener) listenLoop(h *ListenerHub) {
 	var silenceErr bool
 	for {
-		l.mu.Lock()
-		if l.isClosed {
+		select {
+		case <-l.done:
+			return
+		default:
+			ln, err := l.t.Init()
+			l.mu.Lock()
+			l.ln, l.err = ln, err
 			l.mu.Unlock()
-			break
-		}
-
-		// Try to init the TNC
-		l.ln, l.err = l.t.Init()
-		if l.err != nil {
-			l.mu.Unlock()
-			if !silenceErr {
-				log.Printf("Listener %s failed: %s", l.t.Name(), l.err)
-				log.Printf("Will try to re-establish listener in the background...")
-				silenceErr = true
+			if err != nil {
+				if !silenceErr {
+					log.Printf("Listener %s failed: %s", l.t.Name(), err)
+					log.Printf("Will try to re-establish listener in the background...")
+					silenceErr = true
+					h.websocketHub.UpdateStatus()
+				}
+				time.Sleep(time.Second)
+				continue
+			}
+			if silenceErr {
+				log.Printf("Listener %s re-established", l.t.Name())
+				silenceErr = false
 				h.websocketHub.UpdateStatus()
 			}
-			time.Sleep(time.Second)
-			continue
-		}
-		l.mu.Unlock()
-		if silenceErr {
-			log.Printf("Listener %s re-established", l.t.Name())
-			silenceErr = false
-			h.websocketHub.UpdateStatus()
-		}
 
-		if b, ok := l.t.(Beaconer); ok {
-			b.BeaconStart()
-		}
+			if b, ok := l.t.(Beaconer); ok {
+				b.BeaconStart()
+			}
 
-		// Run the accept loop until an error occurs
-		if err := l.acceptLoop(); err != nil {
-			log.Printf("Accept %s failed: %s", l.t.Name(), err)
-		}
+			// Run the accept loop until an error occurs
+			if err := l.acceptLoop(); err != nil {
+				select {
+				case <-l.done:
+					// Ignore errors during shutdown
+				default:
+					log.Printf("Accept %s failed: %s", l.t.Name(), err)
+				}
+			}
 
-		if b, ok := l.t.(Beaconer); ok {
-			b.BeaconStop()
+			if b, ok := l.t.(Beaconer); ok {
+				b.BeaconStop()
+			}
 		}
 	}
 }

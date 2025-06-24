@@ -9,12 +9,13 @@ import { StatusPopover } from './modules/status-popover/index.js';
 import { initGeolocation } from './modules/geolocation/index.js';
 import { alert } from './modules/utils/index.js';
 import { initConnectModal, connect } from './modules/connect-modal/index.js';
+import { PromptModal } from './modules/prompt/index.js';
 
 let wsURL = '';
 let mycall = '';
 
 let formsCatalog;
-let currentPromptNotification = null;
+const promptModal = PromptModal.getInstance();
 let ws;
 let configHash; // For auto-reload on config changes
 
@@ -22,9 +23,6 @@ let statusPopover;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
-
-  // Ensure prompt modal appears on top
-  $('#promptModal').css('z-index', 1050);
 
   $(function() {
     initConfigDefaults();
@@ -433,24 +431,6 @@ function appendFormFolder(rootId, data, level = 0) {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Handle file selection and deduplication
 function handleFileSelection() {
   const fileInput = this;
@@ -663,6 +643,7 @@ function initConfigDefaults() {
 function initConsole() {
   if ('WebSocket' in window) {
     ws = new WebSocket(wsURL);
+
     ws.onopen = function(evt) {
       console.log('Websocket opened');
       statusPopover.hideWebsocketError();
@@ -704,18 +685,13 @@ function initConsole() {
         updateProgress(msg.Progress);
       }
       if (msg.Prompt) {
-        processPromptQuery(msg.Prompt);
-        if (currentPromptNotification) {
-          currentPromptNotification.close();
-        }
-        currentPromptNotification = NotificationService.show(msg.Prompt.message, '');
+        promptModal.showSystemPrompt(msg.Prompt, (response) => {
+          ws.send(JSON.stringify({ prompt_response: response }));
+        });
+        promptModal.setNotification(NotificationService.show(msg.Prompt.message, ''));
       }
       if (msg.PromptAbort) {
-        $('#promptModal').modal('hide');
-        if (currentPromptNotification) {
-          currentPromptNotification.close();
-          currentPromptNotification = null;
-        }
+        promptModal.hide();
       }
       if (msg.Ping) {
         ws.send(JSON.stringify({ Pong: true }));
@@ -735,194 +711,6 @@ function initConsole() {
     let wsError = true;
     alert('Websocket not supported by your browser, please upgrade your browser.');
   }
-}
-
-function processPromptQuery(p) {
-  console.log(p);
-
-  // Close any open modals first
-  $('.modal').modal('hide');
-  // Remove any stuck backdrops
-  $('.modal-backdrop').remove();
-  $('body').removeClass('modal-open');
-
-  const modal = $('#promptModal');
-  const modalBody = modal.find('.modal-body');
-  const modalFooter = modal.find('.modal-footer');
-
-  // Clear previous content
-  modalBody.empty();
-  modalFooter.empty();
-
-  // Add hidden prompt ID
-  modalBody.append($('<input type="hidden">').attr({
-    id: 'promptID',
-    value: p.id
-  }));
-
-  // Set prompt message and kind
-  $('#promptMessage').text(p.message);
-  modal.data('prompt-kind', p.kind);
-
-  // Show relevant input based on type
-  switch (p.kind) {
-    case 'password':
-      modalBody.append(
-        $('<input>')
-          .attr({
-            type: 'password',
-            id: 'promptPasswordInput',
-            class: 'form-control',
-            placeholder: 'Enter password...',
-            autocomplete: 'off'
-          })
-      );
-      modalFooter.append(
-        $('<input>')
-          .attr({
-            type: 'submit',
-            class: 'btn btn-primary',
-            id: 'promptOkButton',
-            value: 'OK'
-          })
-          .click(function() {
-            submitPromptResponse($('#promptPasswordInput').val());
-          })
-      );
-      break;
-
-    case 'busy-channel':
-      modalBody.append(
-        $('<div>')
-          .addClass('text-center')
-          .append($('<span>')
-            .addClass('glyphicon glyphicon-refresh icon-spin text-muted')
-            .css({
-              'font-size': '36px',
-              'margin': '12px 0'
-            })
-          )
-      );
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default',
-            id: 'promptOkButton'
-          })
-          .text('Continue anyway')
-          .click(function() {
-            const id = $('#promptID').val();
-            $('#promptModal').modal('hide');
-            submitPromptResponse('continue');
-          })
-      );
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-primary'
-          })
-          .text('Abort')
-          .click(function() {
-            const id = $('#promptID').val();
-            $('#promptModal').modal('hide');
-            submitPromptResponse('abort');
-          })
-      );
-      break;
-
-    case 'multi-select':
-      const container = $('<div>').addClass('checkbox-list');
-      const list = $('<ul>').addClass('checkbox-list-items');
-
-      p.options.forEach(opt => {
-        const li = $('<li>');
-        const label = $('<label>').addClass('checkbox-item');
-        const input = $('<input>').attr({
-          type: 'checkbox',
-          value: opt.value,
-          checked: opt.checked
-        });
-        label.append(input);
-        label.append(` ${opt.desc || opt.value} (${opt.value})`);
-        li.append(label);
-        list.append(li);
-      });
-
-      container.append(list);
-      modalBody.append(container);
-
-      // Add select all toggle button
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default pull-left',
-            id: 'selectAllToggle'
-          })
-          .text('Select All')
-          .click(function() {
-            const checkboxes = container.find('input[type="checkbox"]');
-            const allSelected = checkboxes.filter(':checked').length === checkboxes.length;
-            checkboxes.prop('checked', !allSelected);
-            $(this).text(!allSelected ? 'Deselect All' : 'Select All');
-            $(this).blur();
-          })
-      );
-
-      modalFooter.append(
-        $('<input>')
-          .attr({
-            type: 'submit',
-            class: 'btn btn-primary',
-            id: 'promptOkButton',
-            value: 'OK'
-          })
-          .click(function() {
-            const value = $('.modal-body .checkbox-list input:checked')
-              .map(function() { return $(this).val(); })
-              .get()
-              .join(',');
-            submitPromptResponse(value);
-          })
-      );
-      break;
-
-    default:
-      console.log('Ignoring unsupported prompt kind:', p.kind);
-      return;
-  }
-
-
-  // Show modal with error handling
-  try {
-    $('#promptModal').modal({
-      backdrop: 'static', // Prevent closing by clicking outside
-      keyboard: false,    // Prevent closing with keyboard
-      show: true
-    });
-  } catch (e) {
-    console.error('Failed to show prompt modal:', e);
-    // Attempt recovery
-    $('.modal-backdrop').remove();
-    $('body').removeClass('modal-open');
-    $('#promptModal').modal('hide');
-    setTimeout(() => {
-      $('#promptModal').modal('show');
-    }, 100);
-  }
-}
-
-function submitPromptResponse(value) {
-  const id = $('#promptID').val();
-  $('#promptModal').modal('hide');
-  ws.send(JSON.stringify({
-    prompt_response: {
-      id: id,
-      value: value
-    }
-  }));
 }
 
 function updateConsole(msg) {

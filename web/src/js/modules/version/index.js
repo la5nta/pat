@@ -1,3 +1,7 @@
+import { PromptModal } from '../prompt/index.js';
+
+const promptModal = PromptModal.getInstance();
+
 export function checkNewVersion() {
   // Skip if already checked this session
   if (sessionStorage.getItem('pat_version_checked') === 'true') {
@@ -34,57 +38,31 @@ export function checkNewVersion() {
 
       // Log success and show prompt modal
       console.log('Successfully checked for new version');
-      const modal = $('#promptModal');
-      const modalBody = modal.find('.modal-body');
-      const modalFooter = modal.find('.modal-footer');
 
-      $('#promptMessage').text('A new version of Pat is available!');
-
-      modalBody.empty();
-      modalBody.append($('<p>').html(`Version ${data.version} is now available 🎉`));
-      modalBody.append($('<p>').html(`<a href="${data.release_url}" target="_blank">View release details</a>`));
-
-      modalFooter.empty();
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default pull-left'
-          })
-          .text('Ignore this version')
-          .click(function() {
-            localStorage.setItem('pat_ignored_version', data.version);
-            modal.modal('hide');
-          })
-      );
-
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-default'
-          })
-          .text('Remind me later')
-          .click(function() {
-            localStorage.setItem('pat_version_check_time', new Date().getTime());
-            modal.modal('hide');
-          })
-      );
-
-      modalFooter.append(
-        $('<button>')
-          .attr({
-            type: 'button',
-            class: 'btn btn-primary'
-          })
-          .text('Download')
-          .click(function() {
-            window.open(data.release_url, '_blank');
-            modal.modal('hide');
-          })
-      );
-
-      modal.modal('show');
+      promptModal.showCustom({
+        message: 'A new version of Pat is available!',
+        body: $('<div>')
+          .append($('<p>').html(`Version ${data.version} is now available 🎉`))
+          .append($('<p>').html(`<a href="${data.release_url}" target="_blank">View release details</a>`)),
+        buttons: [
+          {
+            text: 'Ignore this version',
+            class: 'btn-default',
+            pullLeft: true,
+            onClick: () => localStorage.setItem('pat_ignored_version', data.version)
+          },
+          {
+            text: 'Remind me later',
+            class: 'btn-default',
+            onClick: () => localStorage.setItem('pat_version_check_time', new Date().getTime())
+          },
+          {
+            text: 'Download',
+            class: 'btn-primary',
+            onClick: () => window.open(data.release_url, '_blank')
+          }
+        ]
+      });
     },
     error: function(xhr, textStatus, errorThrown) {
       console.log('Version check failed:', textStatus, errorThrown);

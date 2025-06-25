@@ -20,10 +20,12 @@ import (
 )
 
 const (
-	RootURL           = "https://api.winlink.org"
-	PathVersionAdd    = "/version/add"
-	PathGatewayStatus = "/gateway/status.json"
-	PathAccountExists = "/account/exists"
+	RootURL              = "https://api.winlink.org"
+	PathVersionAdd       = "/version/add"
+	PathGatewayStatus    = "/gateway/status.json"
+	PathAccountExists    = "/account/exists"
+	PathPasswordValidate = "/account/password/validate"
+	PathAccountAdd       = "/account/add"
 
 	// AccessKey issued December 2017 by the WDT for use with Pat
 	AccessKey = "1880278F11684B358F36845615BD039A"
@@ -56,6 +58,56 @@ func AccountExists(callsign string) (bool, error) {
 		return false, err
 	}
 	return resp.CallsignExists, resp.ResponseStatus.errorOrNil()
+}
+
+type PasswordValidateRequest struct {
+	Callsign string `json:"Callsign"`
+	Password string `json:"Password"`
+}
+
+type PasswordValidateResponse struct {
+	IsValid        bool           `json:"IsValid"`
+	ResponseStatus responseStatus `json:"ResponseStatus"`
+}
+
+func ValidatePassword(ctx context.Context, callsign, password string) (bool, error) {
+	req := PasswordValidateRequest{
+		Callsign: callsign,
+		Password: password,
+	}
+	httpReq := newJSONRequest("POST", PathPasswordValidate, nil, bodyJSON(req))
+	httpReq = httpReq.WithContext(ctx)
+	var resp PasswordValidateResponse
+	if err := doJSON(httpReq, &resp); err != nil {
+		return false, err
+	}
+	return resp.IsValid, resp.ResponseStatus.errorOrNil()
+}
+
+type AccountAddRequest struct {
+	Callsign      string `json:"Callsign"`
+	Password      string `json:"Password"`
+	RecoveryEmail string `json:"RecoveryEmail,omitempty"`
+}
+
+type AccountAddResponse struct {
+	ResponseStatus responseStatus `json:"ResponseStatus"`
+}
+
+func AccountAdd(ctx context.Context, callsign, password, recoveryEmail string) error {
+	req := AccountAddRequest{
+		Callsign:      callsign,
+		Password:      password,
+		RecoveryEmail: recoveryEmail,
+	}
+
+	httpReq := newJSONRequest("POST", PathAccountAdd, nil, bodyJSON(req))
+	httpReq = httpReq.WithContext(ctx)
+	var resp AccountAddResponse
+	if err := doJSON(httpReq, &resp); err != nil {
+		return err
+	}
+	return resp.ResponseStatus.errorOrNil()
 }
 
 type GatewayStatus struct {

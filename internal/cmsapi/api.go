@@ -47,8 +47,7 @@ func (v VersionAdd) Post() error {
 	return resp.ResponseStatus.errorOrNil()
 }
 
-func AccountExists(callsign string) (bool, error) {
-	ctx := context.TODO()
+func AccountExists(ctx context.Context, callsign string) (bool, error) {
 	params := url.Values{"callsign": []string{callsign}}
 	var resp struct {
 		CallsignExists bool

@@ -9,6 +9,17 @@ import (
 
 var Commands = []app.Command{
 	{
+		Str:        "init",
+		Desc:       "Initial configuration setup.",
+		HandleFunc: InitHandle,
+		Usage:      "Interactive basic setup with Winlink account verification.",
+	},
+	{
+		Str:        "configure",
+		Desc:       "Open configuration file for editing.",
+		HandleFunc: ConfigureHandle,
+	},
+	{
 		Str:        "connect",
 		Desc:       "Connect to a remote station.",
 		HandleFunc: ConnectHandle,
@@ -136,11 +147,6 @@ var Commands = []app.Command{
 		Usage:      MPSUsage,
 		Example:    MPSExample,
 		HandleFunc: MPSHandle,
-	},
-	{
-		Str:        "configure",
-		Desc:       "Open configuration file for editing.",
-		HandleFunc: ConfigureHandle,
 	},
 	{
 		Str:   "version",

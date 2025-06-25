@@ -125,7 +125,7 @@ func accountExists(callsign string) (bool, error) {
 	}()
 
 	debug.Printf("Checking if account exists...")
-	exists, err := cmsapi.AccountExists(callsign)
+	exists, err := cmsapi.AccountExists(context.Background(), callsign)
 	debug.Printf("Account exists: %t (%v)", exists, err)
 	if !exists || err != nil {
 		// Let's try again in 48 hours

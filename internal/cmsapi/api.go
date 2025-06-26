@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,6 +95,9 @@ type AccountAddResponse struct {
 }
 
 func AccountAdd(ctx context.Context, callsign, password, recoveryEmail string) error {
+	if t, _ := strconv.ParseBool(os.Getenv("PAT_CMSAPI_MOCK_ACCOUNT_ADD")); t {
+		return nil
+	}
 	req := AccountAddRequest{
 		Callsign:      callsign,
 		Password:      password,

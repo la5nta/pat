@@ -3,6 +3,8 @@ package cmsapi
 import (
 	"context"
 	"net/url"
+	"os"
+	"strconv"
 )
 
 const (
@@ -11,6 +13,9 @@ const (
 )
 
 func PasswordRecoveryEmailGet(ctx context.Context, callsign, password string) (string, error) {
+	if t, _ := strconv.ParseBool(os.Getenv("PAT_CMSAPI_MOCK_NO_RECOVERY_EMAIL")); t {
+		return "", nil
+	}
 	params := url.Values{"callsign": []string{callsign}, "password": []string{password}}
 	var resp struct {
 		RecoveryEmail  string

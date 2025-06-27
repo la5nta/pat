@@ -10,6 +10,7 @@ import { initGeolocation } from './modules/geolocation/index.js';
 import { alert } from './modules/utils/index.js';
 import { initConnectModal, connect } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
+import { PasswordRecovery } from './modules/password-recovery/main.js';
 
 let wsURL = '';
 let mycall = '';
@@ -20,6 +21,7 @@ let ws;
 let configHash; // For auto-reload on config changes
 
 let statusPopover;
+let passwordRecovery;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -72,6 +74,7 @@ $(document).ready(function() {
     });
 
     $('#updateFormsButton').click(updateForms);
+    passwordRecovery = new PasswordRecovery(promptModal, statusPopover, $('#mycall').text());
 
     initConnectModal();
 
@@ -649,6 +652,9 @@ function initConsole() {
       statusPopover.hideWebsocketError();
       statusPopover.showWebserverInfo(); // Content is updated by updateStatus
       $('#console').empty();
+      setTimeout(() => {
+        passwordRecovery.checkPasswordRecoveryEmail();
+      }, 3000);
     };
     ws.onmessage = function(evt) {
       const msg = JSON.parse(evt.data);

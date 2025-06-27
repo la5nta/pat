@@ -131,6 +131,8 @@ func NewHandler(app *app.App, staticContent fs.FS) *Handler {
 	r.PathPrefix("/api/forms/").Handler(http.StripPrefix("/api/forms/", http.HandlerFunc(h.FormsManager().GetFormAssetHandler))).Methods("GET")
 	r.HandleFunc("/api/formsUpdate", h.FormsManager().UpdateFormTemplatesHandler).Methods("POST")
 
+	r.HandleFunc("/api/winlink-account/password-recovery-email", h.winlinkPasswordRecoveryEmailHandler).Methods("GET", "PUT")
+
 	r.PathPrefix("/dist/").Handler(h.distHandler(staticContent))
 	r.HandleFunc("/ws", h.wsHandler)
 	r.HandleFunc("/ui", h.uiHandler(staticContent, "dist/index.html")).Methods("GET")

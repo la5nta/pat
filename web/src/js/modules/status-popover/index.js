@@ -36,6 +36,46 @@ export class StatusPopover {
     });
   }
 
+  addSection({ severity, title, body }) {
+    const panelClass = `panel-${severity}`;
+    const newSection = $(`
+        <div class="panel panel-sm ${panelClass}" data-severity="${severity}">
+            <div class="panel-heading"></div>
+            <div class="panel-body"></div>
+        </div>
+    `);
+
+    newSection.find('.panel-heading').text(title);
+    newSection.find('.panel-body').append(body);
+
+    const severityOrder = { danger: 3, warning: 2, info: 1 };
+    const newSeverity = severityOrder[severity] || 0;
+
+    let inserted = false;
+    this.statusPopoverDiv.find('.panel[data-severity]').each(function() {
+      const existingSeverity = severityOrder[$(this).data('severity')] || 0;
+      if (newSeverity > existingSeverity) {
+        $(this).before(newSection);
+        inserted = true;
+        return false; // break loop
+      }
+    });
+
+    if (!inserted) {
+      this.find(this._panelSelectors.noError).before(newSection);
+    }
+
+    this.updateGUIStatus();
+    return newSection;
+  }
+
+  removeSection(section) {
+    if (section && section.length) {
+      $(section).remove();
+      this.updateGUIStatus();
+    }
+  }
+
   _setPanelState(panelSelector, isVisible, content = null, isHtml = false) {
     const panel = this.find(panelSelector);
     if (!panel.length) {
@@ -156,5 +196,9 @@ export class StatusPopover {
       this.showGUIStatus(panel, true);
       this.updateGUIStatus();
     }
+  }
+
+  show() {
+    this.guiStatusLight.popover('show');
   }
 }

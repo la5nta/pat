@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,6 +68,9 @@ func (m NotifyMBox) ProcessInbound(msgs ...*fbb.Message) error {
 			Title: fmt.Sprintf("New message from %s", msg.From().Addr),
 			Body:  msg.Subject(),
 		})
+		if isSystemMessage(msg) {
+			m.onSystemMessageReceived(msg)
+		}
 	}
 	return nil
 }
@@ -192,6 +196,11 @@ func (a *App) sessionExchange(conn net.Conn, targetCall string, master bool) err
 		fmt.Println("      aware that their password MUST be entered in ALL-UPPERCASE letters. Only")
 		fmt.Println("      passwords created/changed/issued after January 31, 2018 should/may contain")
 		fmt.Println("      lowercase letters. - https://github.com/la5nta/pat/issues/113")
+	}
+
+	if t, _ := strconv.ParseBool(os.Getenv("PAT_MOCK_NEW_ACCOUNT_MSG")); t {
+		log.Println("Mocking new account msg...")
+		NotifyMBox{a.mbox, a}.ProcessInbound(mockNewAccountMsg())
 	}
 
 	event := map[string]interface{}{

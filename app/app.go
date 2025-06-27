@@ -26,6 +26,7 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/forms"
+	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 	"github.com/la5nta/wl2k-go/transport"
@@ -400,6 +401,30 @@ func (a *App) Close() {
 	a.websocketHub.Close()
 	a.eventLog.Close()
 	a.formsMgr.Close()
+}
+
+func (a *App) onSystemMessageReceived(msg *fbb.Message) {
+	// Recover any panic here, as we really REALLY don't want the user to lose system messages due to panics.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println(r)
+		}
+	}()
+
+	// Write all system messages to the log
+	body, _ := msg.Body()
+	subject := msg.Subject()
+	fmt.Fprintln(a.logWriter)
+	fmt.Fprintln(a.logWriter, strings.Repeat("=", (60-len(subject))/2), subject, strings.Repeat("=", (60-len(subject))/2))
+	fmt.Fprintln(a.logWriter, strings.TrimSpace(body))
+	fmt.Fprintln(a.logWriter, strings.Repeat("=", 62))
+	fmt.Fprintln(a.logWriter)
+
+	// Handle account activation email
+	if isActivation, password := isAccountActivation(msg); isActivation && password != "" {
+		fmt.Fprintln(a.logWriter, "DO NOT LOSE YOUR PASSWORD:", password)
+		fmt.Fprintln(a.logWriter)
+	}
 }
 
 func (a *App) loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) {

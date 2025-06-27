@@ -142,7 +142,7 @@ func handleNewAccount(ctx context.Context, cfg *cfg.Config) {
 	fmt.Println("\nWould you like to create a new Winlink account? It is highly recommended to do so.")
 	resp := prompt("Create account?", "Y", "n")
 	if resp != "Y" && strings.ToLower(resp) != "y" && strings.ToLower(resp) != "yes" {
-		fmt.Println("\n⚠ Account creation skipped. If you connect to the Winlink system without an active account, an over-the-air activation process will be initiated by the CMS. You'll receive a generated password the first time you connect. DO NOT LOOSE THIS PASSWORD, AS YOU WILL BE LOCKED OUT OF THE SYSTEM.")
+		fmt.Println("\n⚠ Account creation skipped. If you connect to the Winlink system without an active account, an over-the-air activation process will be initiated by the CMS. You'll receive a generated password the first time you connect. DO NOT LOSE THIS PASSWORD, AS YOU WILL BE LOCKED OUT OF THE SYSTEM.")
 		if resp := prompt("Continue without an account?", "Y", "n"); strings.ToLower(resp) == "y" || strings.ToLower(resp) == "yes" {
 			return
 		}

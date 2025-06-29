@@ -7,8 +7,12 @@ import (
 	"github.com/la5nta/wl2k-go/fbb"
 )
 
-func isSystemMessage(m *fbb.Message) bool {
-	return m.From().EqualString("SYSTEM")
+func isServiceMessage(m *fbb.Message) bool {
+	return m.From().EqualString("SERVICE")
+}
+
+func isAccountActivation(from fbb.Address, subject string) bool {
+	return from.EqualString("SERVICE") && strings.EqualFold(strings.TrimSpace(subject), "Your New Winlink Account")
 }
 
 var (
@@ -16,8 +20,8 @@ var (
 	rePassword      = regexp.MustCompile("['\"`]([a-zA-Z0-9]{6,12})['\"`]")
 )
 
-func isAccountActivation(m *fbb.Message) (t bool, password string) {
-	if !isSystemMessage(m) || !strings.EqualFold(strings.TrimSpace(m.Subject()), "Your New Winlink Account") {
+func isAccountActivationMessage(m *fbb.Message) (t bool, password string) {
+	if !isAccountActivation(m.From(), m.Subject()) {
 		return false, ""
 	}
 	body, _ := m.Body()
@@ -40,7 +44,7 @@ func isAccountActivation(m *fbb.Message) (t bool, password string) {
 }
 
 func mockNewAccountMsg() *fbb.Message {
-	m := fbb.NewMessage(fbb.Private, "SYSTEM")
+	m := fbb.NewMessage(fbb.Private, "SERVICE")
 	m.AddTo("LA5NTA")
 	m.SetSubject("Your New Winlink Account")
 	m.SetBody(`A new Winlink account for 'LA5NTA' has been activated. The next time you connect to a Winlink server or gateway you will be required to use 'K1CHN7' as your account password (no quotes).

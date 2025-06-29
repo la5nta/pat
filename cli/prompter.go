@@ -64,6 +64,25 @@ func (t TerminalPrompter) Prompt(prompt app.Prompt) {
 				return
 			}
 		}
+	case app.PromptKindAccountActivation:
+		fmt.Println()
+		fmt.Println("WARNING:")
+		fmt.Println("You are about to receive a computer-generated password for your new Winlink account.")
+		fmt.Println("Once you download this message, the password inside is the only key to your account.")
+		fmt.Println("If you lose it, it cannot be recovered.")
+		fmt.Println()
+		fmt.Println("Are you ready to receive this message and save the password securely right now?")
+		for prompt.Err() == nil {
+			fmt.Printf("Answer (yes/no): ")
+			switch ans := readLine(); strings.TrimSpace(ans) {
+			case "y", "yes":
+				prompt.Respond("accept", nil)
+				return
+			case "n", "no":
+				prompt.Respond("defer", nil)
+				return
+			}
+		}
 	default:
 		log.Printf("Prompt kind %q not implemented", prompt.Kind)
 	}

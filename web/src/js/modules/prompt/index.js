@@ -229,6 +229,41 @@ export class PromptModal {
         );
         break;
 
+      case 'account-activation':
+        this.modalMessage.text('Important: Your New Account Password');
+        this.modalBody.append(
+          $('<p>').text('Welcome! The system has automatically generated a password for your new account.')
+        ).append(
+          $('<p>').text('This password is in a message that is ready to be downloaded to your inbox during this session.')
+        ).append(
+          $('<p>').addClass('text-warning').html('<b>WARNING:</b> Once you download this message, the password inside is the only key to your account. If you lose it, it cannot be recovered.')
+        ).append(
+          $('<p>').text('Are you ready to receive this message and save the password securely right now?')
+        );
+        this.modalFooter.append(
+          $('<button>')
+            .attr({
+              type: 'button',
+              class: 'btn btn-default',
+            })
+            .text('Postpone to Next Connection')
+            .click(() => {
+              this._submitResponse('defer');
+            })
+        );
+        this.modalFooter.append(
+          $('<button>')
+            .attr({
+              type: 'button',
+              class: 'btn btn-primary',
+            })
+            .text('Yes, Download Now')
+            .click(() => {
+              this._submitResponse('accept');
+            })
+        );
+        break;
+
       default:
         console.log('Ignoring unsupported prompt kind:', prompt.kind);
         return;

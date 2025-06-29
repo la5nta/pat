@@ -6,9 +6,9 @@ package app
 
 import "testing"
 
-func TestIsAccountActivation(t *testing.T) {
+func TestIsAccountActivationMessage(t *testing.T) {
 	msg := mockNewAccountMsg()
-	isActivation, password := isAccountActivation(msg)
+	isActivation, password := isAccountActivationMessage(msg)
 	if !isActivation {
 		t.Errorf("Expected isActivation to be true, but was false")
 	}

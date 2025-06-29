@@ -68,8 +68,8 @@ func (m NotifyMBox) ProcessInbound(msgs ...*fbb.Message) error {
 			Title: fmt.Sprintf("New message from %s", msg.From().Addr),
 			Body:  msg.Subject(),
 		})
-		if isSystemMessage(msg) {
-			m.onSystemMessageReceived(msg)
+		if isServiceMessage(msg) {
+			m.onServiceMessageReceived(msg)
 		}
 	}
 	return nil
@@ -78,9 +78,28 @@ func (m NotifyMBox) ProcessInbound(msgs ...*fbb.Message) error {
 func (m NotifyMBox) GetInboundAnswers(p []fbb.Proposal) []fbb.ProposalAnswer {
 	answers := make([]fbb.ProposalAnswer, len(p))
 	var outsideLimit bool
+	var hasAccountActivation bool
 	for idx, p := range p {
 		answers[idx] = m.GetInboundAnswer(p)
 		outsideLimit = outsideLimit || p.CompressedSize() >= m.config.AutoDownloadSizeLimit
+		if pm := p.PendingMessage(); pm != nil {
+			hasAccountActivation = hasAccountActivation || isAccountActivation(pm.From, pm.Subject)
+		}
+	}
+	if hasAccountActivation {
+		res := <-m.promptHub.Prompt(
+			context.Background(),
+			time.Minute,
+			types.PromptKindAccountActivation,
+			"Important: Your New Account Password",
+		)
+		if declined := res.Value != "accept"; declined {
+			// Defer all proposals
+			for idx := range answers {
+				answers[idx] = fbb.Defer
+			}
+			return answers
+		}
 	}
 	if !outsideLimit || m.config.AutoDownloadSizeLimit < 0 {
 		// All proposals are within the prompt limit. Go ahead.

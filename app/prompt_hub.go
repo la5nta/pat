@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	PromptKindBusyChannel = types.PromptKindBusyChannel
-	PromptKindMultiSelect = types.PromptKindMultiSelect
-	PromptKindPassword    = types.PromptKindPassword
+	PromptKindBusyChannel       = types.PromptKindBusyChannel
+	PromptKindMultiSelect       = types.PromptKindMultiSelect
+	PromptKindPassword          = types.PromptKindPassword
+	PromptKindAccountActivation = types.PromptKindAccountActivation
 )
 
 type (

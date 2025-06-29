@@ -403,7 +403,7 @@ func (a *App) Close() {
 	a.formsMgr.Close()
 }
 
-func (a *App) onSystemMessageReceived(msg *fbb.Message) {
+func (a *App) onServiceMessageReceived(msg *fbb.Message) {
 	// Recover any panic here, as we really REALLY don't want the user to lose system messages due to panics.
 	defer func() {
 		if r := recover(); r != nil {
@@ -411,7 +411,7 @@ func (a *App) onSystemMessageReceived(msg *fbb.Message) {
 		}
 	}()
 
-	// Write all system messages to the log
+	// Write all service messages to the log
 	body, _ := msg.Body()
 	subject := msg.Subject()
 	fmt.Fprintln(a.logWriter)
@@ -421,7 +421,7 @@ func (a *App) onSystemMessageReceived(msg *fbb.Message) {
 	fmt.Fprintln(a.logWriter)
 
 	// Handle account activation email
-	if isActivation, password := isAccountActivation(msg); isActivation && password != "" {
+	if isActivation, password := isAccountActivationMessage(msg); isActivation && password != "" {
 		fmt.Fprintln(a.logWriter, "DO NOT LOSE YOUR PASSWORD:", password)
 		fmt.Fprintln(a.logWriter)
 	}

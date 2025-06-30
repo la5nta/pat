@@ -506,3 +506,39 @@ input[type='radio'] {
 .search-clear:hover {
   color: #666;
 }
+
+/* Create Account Modal */
+#breadcrumb {
+  .breadcrumb-step {
+    color: #aaa;
+    &.active {
+      color: #333;
+      font-weight: bold;
+    }
+    &.completed .badge {
+      background-color: #5cb85c;
+      color: white;
+    }
+    &.completed::after {
+      content: ' ✓';
+      color: #5cb85c;
+    }
+  }
+  .breadcrumb-arrow {
+    color: #aaa;
+  }
+}
+
+#createAccountModal .checkbox label {
+  display: flex;
+  align-items: center;
+}
+
+#createAccountModal .checkbox input[type="checkbox"] {
+  margin-top: 0;
+  margin-right: 5px;
+}
+
+#createAccountModal #step4 .checkbox {
+  margin-bottom: 20px;
+}

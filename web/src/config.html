@@ -53,12 +53,23 @@
 
                     <div class="form-group">
                       <label for="mycall">Callsign <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="mycall" name="mycall" required pattern="[A-Z0-9]{3,7}"
-                        oninput="this.value = this.value.toUpperCase()">
+                      <div class="input-group">
+                        <input type="text" class="form-control" id="mycall" name="mycall" required
+                          pattern="[A-Z0-9]{3,7}" oninput="this.value = this.value.toUpperCase()">
+                        <span class="input-group-addon" id="mycall-status" style="visibility: hidden;"></span>
+                      </div>
                       <small class="form-text text-muted">This field is required. Valid amateur radio callsign
                         (uppercase only)</small>
                     </div>
 
+                    <div id="create-account-prompt" class="alert alert-warning" style="display: none;">
+                      Account not found.
+                      <a href="#" id="create-account-link">Create one?</a>
+                      <p class="text-danger" style="margin-top: 10px;">
+                        Continuing without a Winlink account will automatically initiate an over-the-air activation on
+                        your first connection. The Winlink system will issue a password that is not recoverable if lost.
+                      </p>
+                    </div>
                     <div class="form-group">
                       <label for="locator">Maidenhead Locator <span class="text-danger">*</span></label>
                       <input type="text" class="form-control" id="locator" name="locator" required
@@ -68,14 +79,18 @@
 
                     <div class="form-group">
                       <label for="secure_login_password">Secure Login Password (optional)</label>
-                      <input type="text" class="form-control" id="secure_login_password" name="secure_login_password"
-                        autocomplete="off">
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="secure_login_password"
+                          name="secure_login_password" autocomplete="off">
+                        <span class="input-group-btn">
+                          <button class="btn btn-default" type="button" id="toggle-password">
+                            <span class="glyphicon glyphicon-eye-open"></span>
+                          </button>
+                        </span>
+                      </div>
                       <small class="form-text text-muted">
-                        Used for secure login challenges. Leave empty for new accounts (created on first connection with
-                        a new callsign) - a password will be generated and emailed to you.
+                        Used for secure login challenges. This is the password for your Winlink account.
                       </small>
-                      <small class="form-text text-danger">Important: Write down the password emailed after first
-                        connection and keep it safe - this is your only copy!</small>
                     </div>
 
                     <div class="form-group">
@@ -722,6 +737,96 @@
   </div>
 
   <script src="../dist/js/config.js"></script>
+
+  <!-- Create Account Modal -->
+  <div class="modal fade" id="createAccountModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Create Winlink Account</h4>
+        </div>
+        <div class="modal-body">
+          <!-- Breadcrumbs -->
+          <div id="breadcrumb" style="margin-bottom: 20px; font-size: 16px;">
+            <span class="breadcrumb-step active" data-step="1"><span class="badge">1</span> Callsign</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="2"><span class="badge">2</span> Password</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="3"><span class="badge">3</span> Recovery Email</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="4"><span class="badge">4</span> Confirm</span>
+          </div>
+
+          <!-- Step 1: Callsign -->
+          <div class="tab-pane active" id="step1" style="margin-top: 20px;">
+            <p>Welcome! Let's create your Winlink account. Please confirm your callsign below.</p>
+            <div class="form-group">
+              <label for="modal-mycall">Callsign</label>
+              <input type="text" class="form-control" id="modal-mycall" disabled>
+            </div>
+            <button type="button" class="btn btn-primary" id="next-step1">Next</button>
+          </div>
+
+          <!-- Step 2: Password -->
+          <div class="tab-pane" id="step2" style="display: none; margin-top: 20px;">
+            <p>Choose a password for your account. It must be 6-12 characters long.</p>
+            <div class="form-group">
+              <label for="modal-password">Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="modal-password" minlength="6" maxlength="12">
+                <span class="input-group-addon" id="password-status"></span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="modal-password-verify">Verify Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="modal-password-verify" minlength="6" maxlength="12">
+                <span class="input-group-addon" id="password-verify-status"></span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step2">Back</button>
+            <button type="button" class="btn btn-primary" id="next-step2" disabled>Next</button>
+          </div>
+
+          <!-- Step 3: Recovery Email -->
+          <div class="tab-pane" id="step3" style="display: none; margin-top: 20px;">
+            <p>Provide a recovery email. This is optional but highly recommended in case you forget your password.</p>
+            <div class="form-group">
+              <label for="modal-email">Recovery Email</label>
+              <div class="input-group">
+                <input type="email" class="form-control" id="modal-email">
+                <span class="input-group-addon" id="email-status"></span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step3">Back</button>
+            <button type="button" class="btn btn-primary" id="next-step3">Next</button>
+          </div>
+
+          <!-- Step 4: Summary -->
+          <div class="tab-pane" id="step4" style="display: none; margin-top: 20px;">
+            <h4>Confirm Account Creation</h4>
+            <p>To create your Winlink account, we'll send your chosen callsign, password, and recovery email address
+              directly to the Winlink system.</p>
+            <p>Your callsign and password will also be stored locally on your computer in the configuration file. This
+              is so you can log in and use Winlink services directly from here.</p>
+            <p>By proceeding, you agree that your data will be handled according to Winlink's Terms, Conditions and
+              Privacy Policy:</p>
+            <p><a href="https://winlink.org/terms_conditions" target="_blank">https://winlink.org/terms_conditions</a>
+            </p>
+            <div class="checkbox">
+              <label>
+                <input type="checkbox" id="consent-checkbox"> I agree to create my Winlink account and store my
+                credentials locally.
+              </label>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step4">Back</button>
+            <button type="button" class="btn btn-success" id="finish-creation" disabled>Create Account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

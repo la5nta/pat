@@ -17,6 +17,189 @@ $(document).ready(function() {
     enforceMinBeaconInterval($(this));
   });
 
+  $('#mycall').on('blur', function() {
+    var icon = $('#mycall-status');
+    icon.empty();
+    var callsign = $(this).val();
+    if (callsign.length < 3) {
+      icon.css('visibility', 'hidden');
+      return;
+    }
+    icon.css('visibility', 'visible');
+    icon.append($('<span>').addClass('glyphicon glyphicon-refresh icon-spin'));
+    $.ajax({
+      url: '/api/winlink-account/registration?callsign=' + callsign,
+      type: 'GET',
+      dataType: 'json',
+      timeout: 10000,
+      success: function(data) {
+        icon.empty();
+        if (data.exists) {
+          icon.append($('<span>').addClass('glyphicon glyphicon-ok text-success').attr('title', 'Winlink account exists'));
+          $('#create-account-prompt').hide();
+        } else {
+          icon.append($('<span>').addClass('glyphicon glyphicon-remove text-danger').attr('title', 'Winlink account does not exist'));
+          $('#create-account-prompt').show();
+        }
+      },
+      error: function() {
+        icon.empty();
+        icon.append($('<span>').addClass('glyphicon glyphicon-warning-sign text-warning').attr('title', 'Unable to verify Winlink account status'));
+        $('#create-account-prompt').hide();
+      }
+    });
+  });
+
+  // Modal handling
+  $('#create-account-link').click(function(e) {
+    e.preventDefault();
+    $('#modal-mycall').val($('#mycall').val());
+    // Reset modal to step 1
+    navigateToStep(1);
+    $('.breadcrumb-step').removeClass('completed');
+    $('#createAccountModal').modal('show');
+  });
+
+  function navigateToStep(step) {
+    // Update breadcrumbs
+    $('.breadcrumb-step').removeClass('active');
+    $('.breadcrumb-step[data-step="' + step + '"]').addClass('active');
+
+    for (let i = 1; i < step; i++) {
+      $('.breadcrumb-step[data-step="' + i + '"]').addClass('completed');
+    }
+    for (let i = step; i <= 4; i++) {
+      $('.breadcrumb-step[data-step="' + i + '"]').removeClass('completed');
+    }
+
+
+    // Show/hide panes
+    $('.tab-pane').hide();
+    $('#step' + step).show();
+  }
+
+  function validatePassword() {
+    var password = $('#modal-password').val();
+    var verifyPassword = $('#modal-password-verify').val();
+    var passwordStatus = $('#password-status');
+    var verifyStatus = $('#password-verify-status');
+    var nextBtn = $('#next-step2');
+
+    var isLengthValid = password.length >= 6 && password.length <= 12;
+    var doPasswordsMatch = password === verifyPassword;
+
+    // Length validation
+    passwordStatus.empty();
+    if (isLengthValid) {
+      passwordStatus.append($('<span>').addClass('glyphicon glyphicon-ok text-success'));
+    } else {
+      passwordStatus.append($('<span>').addClass('glyphicon glyphicon-remove text-danger'));
+    }
+
+    // Match validation
+    verifyStatus.empty();
+    if (verifyPassword.length > 0) {
+      if (doPasswordsMatch) {
+        verifyStatus.append($('<span>').addClass('glyphicon glyphicon-ok text-success'));
+      } else {
+        verifyStatus.append($('<span>').addClass('glyphicon glyphicon-remove text-danger'));
+      }
+    }
+
+    // Enable/disable next button
+    if (isLengthValid && doPasswordsMatch) {
+      nextBtn.prop('disabled', false);
+    } else {
+      nextBtn.prop('disabled', true);
+    }
+  }
+
+  $('#modal-password, #modal-password-verify').on('input', validatePassword);
+  $('#modal-email').on('input', function() {
+    var email = $(this).val();
+    var emailStatus = $('#email-status');
+    var nextBtn = $('#next-step3');
+
+    // Simple email regex
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    emailStatus.empty();
+    if (email.length === 0) {
+      nextBtn.prop('disabled', false);
+      return;
+    }
+
+    if (emailRegex.test(email)) {
+      emailStatus.append($('<span>').addClass('glyphicon glyphicon-ok text-success'));
+      nextBtn.prop('disabled', false);
+    } else {
+      emailStatus.append($('<span>').addClass('glyphicon glyphicon-remove text-danger'));
+      nextBtn.prop('disabled', true);
+    }
+  });
+
+  $('#next-step1').click(function() { navigateToStep(2); });
+  $('#prev-step2').click(function() { navigateToStep(1); });
+  $('#next-step2').click(function() { navigateToStep(3); });
+  $('#prev-step3').click(function() { navigateToStep(2); });
+  $('#next-step3').click(function() { navigateToStep(4); });
+  $('#prev-step4').click(function() { navigateToStep(3); });
+
+  $('#consent-checkbox').on('change', function() {
+    $('#finish-creation').prop('disabled', !$(this).is(':checked'));
+  });
+
+  $('#finish-creation').click(function() {
+    var callsign = $('#modal-mycall').val();
+    var password = $('#modal-password').val();
+    var email = $('#modal-email').val();
+
+    var btn = $(this);
+    btn.prop('disabled', true).html('<span class="glyphicon glyphicon-hourglass" style="margin-right: 5px;"></span> Creating...');
+
+    $.ajax({
+      url: '/api/winlink-account/registration',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        callsign: callsign,
+        password: password,
+        password_recovery_email: email
+      }),
+      success: function() {
+        btn.html('<span class="glyphicon glyphicon-ok" style="margin-right: 5px;"></span> Created');
+        $('#createAccountModal').modal('hide');
+        // Update icon to success since we just created it.
+        var icon = $('#mycall-status');
+        icon.empty();
+        icon.append($('<span>').addClass('glyphicon glyphicon-ok text-success').attr('title', 'Winlink account created'));
+        $('#secure_login_password').val(password);
+        var prompt = $('#create-account-prompt');
+        prompt.removeClass('alert-warning').addClass('alert-success').empty().append(
+          $('<span>').text('Account ' + callsign + ' created.')
+        ).show();
+      },
+      error: function(xhr) {
+        btn.prop('disabled', false).html('Create Account');
+        alert('Failed to create account: ' + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.statusText));
+      }
+    });
+  });
+
+  $('#toggle-password').click(function() {
+    var passwordField = $('#secure_login_password');
+    var passwordFieldType = passwordField.attr('type');
+    var icon = $(this).find('span');
+
+    if (passwordFieldType === 'password') {
+      passwordField.attr('type', 'text');
+      icon.removeClass('glyphicon-eye-open').addClass('glyphicon-eye-close');
+    } else {
+      passwordField.attr('type', 'password');
+      icon.removeClass('glyphicon-eye-close').addClass('glyphicon-eye-open');
+    }
+  });
+
   // Initialize Bootstrap Select components and tokenfield
   $('#ardop_arq_bandwidth, #vara_hf_bandwidth, #vara_fm_bandwidth').selectpicker();
   const tokenfieldConfig = {
@@ -32,7 +215,7 @@ $(document).ready(function() {
     dataType: 'json',
     success: function(config) {
       originalConfig = JSON.parse(JSON.stringify(config)); // Deep clone
-      $('#mycall').val(config.mycall || '');
+      $('#mycall').val(config.mycall || '').trigger('blur');
       $('#locator').val(config.locator || '');
       $('#auto_download_limit').val(typeof config.auto_download_size_limit === 'number' ? config.auto_download_size_limit : -1);
       $('#secure_login_password').val(config.secure_login_password ? '[REDACTED]' : '')

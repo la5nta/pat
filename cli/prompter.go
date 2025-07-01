@@ -64,6 +64,24 @@ func (t TerminalPrompter) Prompt(prompt app.Prompt) {
 				return
 			}
 		}
+	case app.PromptKindPreAccountActivation:
+		fmt.Println()
+		fmt.Println("WARNING: We were unable to confirm that your Winlink account is active.")
+		fmt.Println("If you continue, an over-the-air activation will be initiated and you will receive a message with a new password.")
+		fmt.Println("This password will be the only key to your account. If you lose it, it cannot be recovered.")
+		fmt.Printf("It is strongly recommended to use '%s init' or the web gui to create your account before proceeding.\n", os.Args[0])
+		fmt.Println()
+		for prompt.Err() == nil {
+			fmt.Printf("Answer [c(ontinue), a(bort)]: ")
+			switch ans := readLine(); strings.TrimSpace(ans) {
+			case "c", "continue":
+				prompt.Respond("confirmed", nil)
+				return
+			case "a", "abort":
+				prompt.Respond("abort", nil)
+				return
+			}
+		}
 	case app.PromptKindAccountActivation:
 		fmt.Println()
 		fmt.Println("WARNING:")

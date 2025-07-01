@@ -39,6 +39,11 @@ func (a *App) Connect(connectStr string) (success bool) {
 		return a.Connect(aliased)
 	}
 
+	// Prompt if Winlink account is unconfirmed
+	if confirmed := a.promptUnconfirmedAccount(); !confirmed {
+		return false
+	}
+
 	// Hack around bug in frontend which may occur if the status updates too quickly.
 	if a.websocketHub.NumClients() > 0 {
 		defer func() { time.Sleep(time.Second); a.websocketHub.UpdateStatus() }()

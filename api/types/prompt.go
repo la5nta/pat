@@ -3,10 +3,11 @@ package types
 type PromptKind string
 
 const (
-	PromptKindPassword          PromptKind = "password"
-	PromptKindMultiSelect       PromptKind = "multi-select"
-	PromptKindBusyChannel       PromptKind = "busy-channel"
-	PromptKindAccountActivation PromptKind = "account-activation"
+	PromptKindPassword             PromptKind = "password"
+	PromptKindMultiSelect          PromptKind = "multi-select"
+	PromptKindBusyChannel          PromptKind = "busy-channel"
+	PromptKindPreAccountActivation PromptKind = "pre-account-activation"
+	PromptKindAccountActivation    PromptKind = "account-activation"
 )
 
 type Prompt struct {

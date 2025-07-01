@@ -339,8 +339,13 @@ $(document).ready(function() {
       if (Object.keys(aliases).length === 0) {
         container.append(templateRow.clone());
       }
-    },
-    error: function(xhr) {
+
+      // Handle create-account action from query parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('action') === 'create-account') {
+        $('#create-account-link').click();
+      }
+    }, error: function(xhr) {
       showError('Failed to load config: ' + xhr.responseText);
     }
   });

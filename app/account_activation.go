@@ -1,11 +1,53 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/wl2k-go/fbb"
 )
+
+func (a *App) promptUnconfirmedAccount() (confirmed bool) {
+	accountConfirmed := func() bool {
+		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+		defer cancel()
+		exists, err := cmsapi.AccountExists(ctx, a.options.MyCall)
+		switch {
+		case err != nil:
+			// API is unavailable. Use heuristic method based on message count.
+			debug.Printf("Using heuristic method. API call failed: %v", err)
+			if a.Mailbox().InboxCount() != 0 || a.Mailbox().SentCount() != 0 || a.Mailbox().ArchiveCount() != 0 {
+				return true
+			}
+		case exists:
+			// API confirmed active account.
+			debug.Printf("API confirmed active account")
+			return true
+		}
+		debug.Printf("Unable to confirm active account. Prompting user...")
+		resp := <-a.promptHub.Prompt(
+			context.Background(),
+			2*time.Minute,
+			PromptKindPreAccountActivation,
+			"Winlink Account activation",
+		)
+		return resp.Value == "confirmed"
+	}
+	debug.Printf("Checking for active Winlink account...")
+	err := DoIfElapsed(a.options.MyCall, "account-confirmed", 100*24*time.Hour, func() error {
+		if accountConfirmed() {
+			return nil // Account is confirmed. Persist state with TTL.
+		}
+		return errors.New("account not confirmed")
+	})
+	debug.Printf("Account confirmation error: %v", err)
+	return err == nil || err == ErrRateLimited
+}
 
 func isServiceMessage(m *fbb.Message) bool {
 	return m.From().EqualString("SERVICE")

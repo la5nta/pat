@@ -229,8 +229,53 @@ export class PromptModal {
         );
         break;
 
+      case 'pre-account-activation':
+        this.modalBody.append(
+          $('<p>').addClass('text-warning').html('<b>WARNING:</b> We were unable to confirm that your Winlink account is active.')
+        ).append(
+          $('<p>').text('If you continue, an over-the-air activation will be initiated and you will receive a message with a new password.')
+        ).append(
+          $('<p>').text('This password will be the only key to your account. If you lose it, it cannot be recovered.')
+        ).append(
+          $('<p>').html('It is strongly recommended to create your account before proceeding.')
+        );
+        this.modalFooter.append(
+          $('<button>')
+            .attr({
+              type: 'button',
+              class: 'btn btn-default pull-left',
+            })
+            .text('Continue anyway')
+            .click(() => {
+              this._submitResponse('confirmed');
+            })
+        );
+        this.modalFooter.append(
+          $('<button>')
+            .attr({
+              type: 'button',
+              class: 'btn btn-default',
+            })
+            .text('Abort')
+            .click(() => {
+              this._submitResponse('abort');
+            })
+        );
+        this.modalFooter.append(
+          $('<button>')
+            .attr({
+              type: 'button',
+              class: 'btn btn-primary',
+            })
+            .text('Create new account')
+            .click(() => {
+              this._submitResponse('abort');
+              window.location.href = '/ui/config?action=create-account';
+            })
+        );
+        break;
+
       case 'account-activation':
-        this.modalMessage.text('Important: Your New Account Password');
         this.modalBody.append(
           $('<p>').text('Welcome! The system has automatically generated a password for your new account.')
         ).append(

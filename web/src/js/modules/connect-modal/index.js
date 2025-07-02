@@ -2,10 +2,12 @@ import URI from 'urijs';
 import $ from 'jquery';
 import { alert } from '../utils';
 
+let mycall;
 let initialized = false;
 let connectAliases;
 
-export function initConnectModal() {
+export function initConnectModal(mycall_in) {
+  mycall = mycall_in;
   $('#freqInput').on('focusin focusout', (e) => {
     // Disable the connect button while the user is editing the frequency value.
     //   We do this because we really don't want the user to hit the connect
@@ -67,7 +69,7 @@ export function initConnectModal() {
     $('#modeSearchSelect').selectpicker('refresh');
     updateRmslist();
   });
-  let url = localStorage.getItem('pat_connect_url');
+  let url = localStorage.getItem(`pat_connect_url_${mycall}`);
   if (url != null) {
     setConnectValues(url);
   }
@@ -373,7 +375,7 @@ function setConnectValues(url) {
 
 export function connect(evt) {
   const url = getConnectURL();
-  localStorage.setItem('pat_connect_url', url);
+  localStorage.setItem(`pat_connect_url_${mycall}`, url);
   $('#connectModal').modal('hide');
 
   $.getJSON('/api/connect?url=' + encodeURIComponent(url), function(data) {

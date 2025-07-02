@@ -29,6 +29,7 @@ $(document).ready(function() {
   $(function() {
     initConfigDefaults();
     statusPopover = new StatusPopover('#status_popover_content', '#gui_status_light', '.navbar-brand');
+    mycall = $('#mycall').text();
 
     // Setup actions
     $('#connect_btn').click(connect);
@@ -74,9 +75,9 @@ $(document).ready(function() {
     });
 
     $('#updateFormsButton').click(updateForms);
-    passwordRecovery = new PasswordRecovery(promptModal, statusPopover, $('#mycall').text());
+    passwordRecovery = new PasswordRecovery(promptModal, statusPopover, mycall);
 
-    initConnectModal();
+    initConnectModal(mycall);
 
     initConsole();
     displayFolder('in');

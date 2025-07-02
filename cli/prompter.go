@@ -68,7 +68,9 @@ func (t TerminalPrompter) Prompt(prompt app.Prompt) {
 		fmt.Println()
 		fmt.Println("WARNING: We were unable to confirm that your Winlink account is active.")
 		fmt.Println("If you continue, an over-the-air activation will be initiated and you will receive a message with a new password.")
-		fmt.Println("This password will be the only key to your account. If you lose it, it cannot be recovered.")
+		fmt.Println("This password will be the only key to your account:")
+		fmt.Println("- If you lose the password, it cannot be recovered.")
+		fmt.Println("- If you fail to receive it, you will be permanently locked out of your account.")
 		fmt.Printf("It is strongly recommended to use '%s init' or the web gui to create your account before proceeding.\n", os.Args[0])
 		fmt.Println()
 		for prompt.Err() == nil {

@@ -8,7 +8,7 @@ import { NotificationService } from './modules/notifications/index.js';
 import { StatusPopover } from './modules/status-popover/index.js';
 import { initGeolocation } from './modules/geolocation/index.js';
 import { alert } from './modules/utils/index.js';
-import { initConnectModal, connect } from './modules/connect-modal/index.js';
+import { ConnectModal } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
 import { PasswordRecovery } from './modules/password-recovery/main.js';
 
@@ -22,26 +22,17 @@ let configHash; // For auto-reload on config changes
 
 let statusPopover;
 let passwordRecovery;
+let connectModal;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
 
   $(function() {
-    initConfigDefaults();
-    statusPopover = new StatusPopover('#status_popover_content', '#gui_status_light', '.navbar-brand');
     mycall = $('#mycall').text();
 
-    // Setup actions
-    $('#connect_btn').click(connect);
-    $('#connectForm input').keypress(function(e) {
-      if (e.which == 13) {
-        connect();
-        return false;
-      }
-    });
-    $('#connectForm input').keyup(function(e) {
-      onConnectInputChange();
-    });
+    statusPopover = new StatusPopover('#status_popover_content', '#gui_status_light', '.navbar-brand');
+    connectModal = new ConnectModal(mycall);
+    connectModal.init();
 
     // Setup composer
     initComposeModal();
@@ -76,8 +67,6 @@ $(document).ready(function() {
 
     $('#updateFormsButton').click(updateForms);
     passwordRecovery = new PasswordRecovery(promptModal, statusPopover, mycall);
-
-    initConnectModal(mycall);
 
     initConsole();
     displayFolder('in');
@@ -585,9 +574,7 @@ function updateStatus(data) {
       st.append('<i>Ready</i>');
     }
     st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
-    st.click(() => {
-      $('#connectModal').modal('toggle');
-    });
+    st.click(() => { connectModal.toggle(); });
   }
 
   const n = data.http_clients.length;
@@ -616,8 +603,6 @@ function closeComposer(clear) {
   $('#composer').modal('hide');
 }
 
-
-
 function disconnect(dirty, successHandler) {
   if (successHandler === undefined) {
     successHandler = () => { };
@@ -630,18 +615,6 @@ function disconnect(dirty, successHandler) {
     },
     'json'
   );
-}
-
-function initConfigDefaults() {
-  $.getJSON('/api/config')
-    .done(function(config) {
-      if (config.ardop && config.ardop.connect_requests) {
-        $('#connectRequestsInput').attr('placeholder', config.ardop.connect_requests);
-      }
-    })
-    .fail(function() {
-      console.log("Failed to load config defaults");
-    });
 }
 
 function initConsole() {

@@ -1,3 +1,50 @@
+pat (0.18.0) stable; urgency=medium
+
+  * Add support for Message Pickup Station (MPS) management in the CLI
+  * Add an option to specify the ARDOP connect request count
+  * Configuration Live Reload:
+    - Support for live reloading of the configuration via SIGHUP signals
+    - The web interface automatically reloads when settings are changed
+  * Templates & Forms:
+    - Add a text-only template editor to the web GUI
+    - Add search functionality to the Forms catalog browser
+    - Add support for the `{FormFolder}` tag in templates
+    - Add a spinner during Standard Forms updates
+    - Improved template parsing and detection
+    - Fix duplicate subfolders in the form catalog listing
+    - Fix parsing of ReplyTemplate template command
+  * Version Management:
+    - Show a popup in the web GUI when a new release is available
+    - Add a CLI option to check for updates (`pat version --check`)
+  * Busy Channel Detection:
+    - Add busy channel detection for VARA HF and VARA FM
+    - Show a prompt with an option to continue when waiting for a clear channel
+    - Improve ARDOP busy channel detection and handling
+  * Onboarding:
+    - Guide users toward safer, online account creation to prevent lockouts
+    - Add the `pat init` command, a CLI wizard for basic configuration and account creation
+    - Add an account creation wizard to the web interface
+    - Prompt users to create a new account online before their first connection in the web interface
+    - Add reminders to set a password recovery email
+  * CLI message reader/composer:
+    - Refactor composer to unify interactive, non-interactive and template-based composition
+    - Add message preview and confirmation prompt in interactive mode
+    - Add option to forward message
+    - Add option to delete message
+  * Web GUI:
+    - Add "Edit as new..." message action
+    - Show desktop notifications for prompts
+    - Add a favicon
+    - Fix highlighting of the active tab in the web interface navbar
+    - Fix bug removing attachment from composer
+    - Fix Telnet URI building
+    - Fix unintentional QSY during the initial load of the GUI
+  * Web Config:
+    - Fix VARA HF/FM bandwidth options
+    - Prevent unwanted config saves on alias/schedule buttons
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Thu, 31 Jul 2025 13:10:21 +0200
+
 pat (0.17.0) stable; urgency=medium
 
   * Add Configuration page to web GUI

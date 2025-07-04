@@ -1,10 +1,10 @@
 import $ from 'jquery';
 
 export class StatusPopover {
-  constructor(statusPopoverContentSelector, guiStatusLightSelector, navbarBrandSelector) {
-    this.statusPopoverDiv = $(statusPopoverContentSelector);
-    this.guiStatusLight = $(guiStatusLightSelector);
-    this.navbarBrand = $(navbarBrandSelector);
+  constructor() {
+    this.statusPopoverDiv = null;
+    this.guiStatusLight = null;
+    this.navbarBrand = null;
     this._panelSelectors = {
       websocketError: '#websocket_error',
       webserverInfo: '#webserver_info',
@@ -12,6 +12,12 @@ export class StatusPopover {
       geolocationError: '#geolocation_error',
       noError: '#no_error',
     };
+  }
+
+  init() {
+    this.statusPopoverDiv = $('#status_popover_content');
+    this.guiStatusLight = $('#gui_status_light');
+    this.navbarBrand = $('.navbar-brand');
     this._initPopover();
   }
 

@@ -3,10 +3,10 @@ import 'bootstrap/dist/js/bootstrap';
 import 'bootstrap-select';
 import 'bootstrap-tokenfield';
 
-import { checkNewVersion } from './modules/version/index.js';
+import { Version } from './modules/version/index.js';
 import { NotificationService } from './modules/notifications/index.js';
 import { StatusPopover } from './modules/status-popover/index.js';
-import { initGeolocation } from './modules/geolocation/index.js';
+import { Geolocation } from './modules/geolocation/index.js';
 import { alert } from './modules/utils/index.js';
 import { ConnectModal } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
@@ -16,13 +16,16 @@ let wsURL = '';
 let mycall = '';
 
 let formsCatalog;
-const promptModal = PromptModal.getInstance();
 let ws;
 let configHash; // For auto-reload on config changes
 
 let statusPopover;
-let passwordRecovery;
+let promptModal;
 let connectModal;
+let version;
+let notificationService;
+let passwordRecovery;
+let geolocation;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -30,9 +33,19 @@ $(document).ready(function() {
   $(function() {
     mycall = $('#mycall').text();
 
-    statusPopover = new StatusPopover('#status_popover_content', '#gui_status_light', '.navbar-brand');
+    statusPopover = new StatusPopover();
+    statusPopover.init();
     connectModal = new ConnectModal(mycall);
     connectModal.init();
+    promptModal = new PromptModal();
+    promptModal.init();
+    version = new Version(promptModal);
+    passwordRecovery = new PasswordRecovery(promptModal, statusPopover, mycall);
+    passwordRecovery.init();
+    geolocation = new Geolocation(statusPopover);
+    geolocation.init();
+    notificationService = new NotificationService(statusPopover);
+    notificationService.init();
 
     // Setup composer
     initComposeModal();
@@ -66,25 +79,14 @@ $(document).ready(function() {
     });
 
     $('#updateFormsButton').click(updateForms);
-    passwordRecovery = new PasswordRecovery(promptModal, statusPopover, mycall);
 
     initConsole();
     displayFolder('in');
 
-    initNotifications();
     initForms();
-    checkNewVersion();
-
-    initGeolocation({
-      containerSelector: '#posModal',
-      statusPopoverInstance: statusPopover,
-    });
+    version.checkNewVersion();
   });
 });
-
-function initNotifications() {
-  NotificationService.requestSystemPermission(statusPopover);
-}
 
 let cancelCloseTimer = false;
 
@@ -636,7 +638,7 @@ function initConsole() {
         mycall = msg.MyCall;
       }
       if (msg.Notification) {
-        NotificationService.show(msg.Notification.title, msg.Notification.body);
+        notificationService.show(msg.Notification.title, msg.Notification.body);
       }
       if (msg.LogLine) {
         updateConsole(msg.LogLine + '\n');
@@ -668,7 +670,7 @@ function initConsole() {
         promptModal.showSystemPrompt(msg.Prompt, (response) => {
           ws.send(JSON.stringify({ prompt_response: response }));
         });
-        promptModal.setNotification(NotificationService.show(msg.Prompt.message, ''));
+        promptModal.setNotification(notificationService.show(msg.Prompt.message, ''));
       }
       if (msg.PromptAbort) {
         promptModal.hide();

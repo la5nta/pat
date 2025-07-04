@@ -1,17 +1,19 @@
 export class PromptModal {
-  static getInstance(modalSelector = '#promptModal') {
-    if (!PromptModal.instance) {
-      PromptModal.instance = new PromptModal(modalSelector);
-    }
-    return PromptModal.instance;
-  }
   constructor(modalSelector = '#promptModal') {
-    this.modal = $(modalSelector);
+    this.modalSelector = modalSelector;
+    this.modal = null;
+    this.modalBody = null;
+    this.modalFooter = null;
+    this.modalMessage = null;
+    this.currentNotification = null;
+    this.onResponse = null;
+  }
+
+  init() {
+    this.modal = $(this.modalSelector);
     this.modalBody = this.modal.find('.modal-body');
     this.modalFooter = this.modal.find('.modal-footer');
     this.modalMessage = $('#promptMessage');
-    this.currentNotification = null;
-    this.onResponse = null;
 
     // Ensure prompt modal appears on top
     this.modal.css('z-index', 1050);
@@ -339,4 +341,3 @@ export class PromptModal {
     }
   }
 }
-PromptModal.instance = null;

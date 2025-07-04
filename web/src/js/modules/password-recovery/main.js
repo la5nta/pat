@@ -4,6 +4,9 @@ export class PasswordRecovery {
     this.statusPopover = statusPopover;
     this.mycall = mycall;
     this.warningSection = null;
+  }
+
+  init() {
     $(document).on('click', '#fix-now-btn', () => this.promptRecoveryEmail());
     $(document).on('click', '#dismiss_password_warning', () => this.dismissPasswordRecoveryWarning());
   }

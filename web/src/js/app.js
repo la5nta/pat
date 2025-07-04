@@ -881,32 +881,23 @@ function displayMessage(elem) {
       $('#msg_body')[0].setSelectionRange(0, 0);
 
       // Add attachments
-      $('#composer_attachments').empty();
-      const fileInput = $('#msg_attachments_input')[0];
-      const dt = new DataTransfer();
+      reAttachFiles(msg_url, data.Files);
 
-      if (data.Files) {
-        let filesProcessed = 0;
-        data.Files.forEach(file => {
-          $.ajax({
-            url: msg_url + '/' + file.Name,
-            method: 'GET',
-            xhrFields: {
-              responseType: 'blob'
-            },
-            success: function(blob) {
-              const f = new File([blob], file.Name, { type: blob.type });
-              dt.items.add(f);
-              filesProcessed++;
+      $('#composer').modal('show');
+      $('#msg_to-tokenfield').focus();
+    });
+    $('#edit_as_new_btn').off('click');
+    $('#edit_as_new_btn').click(function(evt) {
+      $('#message_view').modal('hide');
 
-              if (filesProcessed === data.Files.length) {
-                fileInput.files = dt.files;
-                previewAttachmentFiles.call(fileInput);
-              }
-            }
-          });
-        });
-      }
+      $('#msg_to').tokenfield('setTokens', data.To.map(function(recipient) { return recipient.Addr; }));
+      $('#msg_cc').tokenfield('setTokens', data.Cc ? data.Cc.map(function(recipient) { return recipient.Addr; }) : []);
+      $('#msg_subject').val(data.Subject);
+      $('#msg_body').val(data.Body);
+      $('#msg_body')[0].setSelectionRange(0, 0);
+
+      // Add attachments
+      reAttachFiles(msg_url, data.Files);
 
       $('#composer').modal('show');
       $('#msg_to-tokenfield').focus();
@@ -959,6 +950,35 @@ function displayMessage(elem) {
     }
     elem.attr('class', 'active');
   });
+}
+
+function reAttachFiles(msg_url, files) {
+  $('#composer_attachments').empty();
+  const fileInput = $('#msg_attachments_input')[0];
+  const dt = new DataTransfer();
+
+  if (files) {
+    let filesProcessed = 0;
+    files.forEach(file => {
+      $.ajax({
+        url: msg_url + '/' + file.Name,
+        method: 'GET',
+        xhrFields: {
+          responseType: 'blob'
+        },
+        success: function(blob) {
+          const f = new File([blob], file.Name, { type: blob.type });
+          dt.items.add(f);
+          filesProcessed++;
+
+          if (filesProcessed === files.length) {
+            fileInput.files = dt.files;
+            previewAttachmentFiles.call(fileInput);
+          }
+        }
+      });
+    });
+  }
 }
 
 function formXmlToFormName(fileName) {

@@ -217,15 +217,23 @@ export class Composer {
       removeBtn.click((e) => {
         e.preventDefault();
         e.stopPropagation(); // Prevent event from bubbling up
+
+        const filenameToRemove = file.name;
+
         // Remove file from DataTransfer
         const dt = new DataTransfer();
-        const files = this.files;
-        for (let i = 0; i < files.length; i++) {
-          if (files[i].name !== file.name) {
-            dt.items.add(files[i]);
+        for (let i = 0; i < this.files.length; i++) {
+          if (this.files[i].name !== filenameToRemove) {
+            dt.items.add(this.files[i]);
           }
         }
         this.files = dt.files;
+
+        // Also remove from our persistent storage (dataset.storedFiles)
+        let storedFiles = JSON.parse(this.dataset.storedFiles || '[]');
+        storedFiles = storedFiles.filter(f => f.name !== filenameToRemove);
+        this.dataset.storedFiles = JSON.stringify(storedFiles);
+
         // Remove preview
         col.remove();
       });

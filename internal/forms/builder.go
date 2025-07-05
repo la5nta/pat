@@ -282,7 +282,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 			// The message body starts here. No more control fields after this.
 			msg.Body += value
 			inBody = true
-		case "Form", "ReplyTemplate":
+		case "Form", "Replytemplate":
 			// Handled elsewhere
 			continue
 		case "Def", "Define":

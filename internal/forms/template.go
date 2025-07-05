@@ -69,7 +69,7 @@ func readTemplate(path string, filesMap formFilesMap) (Template, error) {
 			inputForm, displayForm, _ := strings.Cut(value, ",")
 			template.InputFormPath = resolveFileReference("input from", inputForm)
 			template.DisplayFormPath = resolveFileReference("display form", displayForm)
-		case "ReplyTemplate": // ReplyTemplate: <template>
+		case "Replytemplate": // ReplyTemplate: <template>
 			template.ReplyTemplatePath = resolveFileReference("reply template", value)
 		}
 	}

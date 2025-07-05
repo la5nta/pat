@@ -7,10 +7,11 @@ import { Version } from './modules/version/index.js';
 import { NotificationService } from './modules/notifications/index.js';
 import { StatusPopover } from './modules/status-popover/index.js';
 import { Geolocation } from './modules/geolocation/index.js';
-import { alert } from './modules/utils/index.js';
+import { alert, htmlEscape, isImageSuffix, formatFileSize } from './modules/utils/index.js';
 import { ConnectModal } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
 import { PasswordRecovery } from './modules/password-recovery/main.js';
+import { Mailbox } from './modules/mailbox/index.js';
 
 let wsURL = '';
 let mycall = '';
@@ -26,6 +27,7 @@ let version;
 let notificationService;
 let passwordRecovery;
 let geolocation;
+let mailbox;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -47,30 +49,15 @@ $(document).ready(function() {
     notificationService = new NotificationService(statusPopover);
     notificationService.init();
 
+    const composer = {
+      previewAttachmentFiles: previewAttachmentFiles,
+      startPollingFormData: startPollingFormData,
+    };
+    mailbox = new Mailbox(displayMessage);
+    mailbox.init();
+
     // Setup composer
     initComposeModal();
-
-    // Setup folder navigation
-    $('#inbox_tab').click(function(evt) {
-      displayFolder('in');
-    });
-    $('#outbox_tab').click(function(evt) {
-      displayFolder('out');
-    });
-    $('#sent_tab').click(function(evt) {
-      displayFolder('sent');
-    });
-    $('#archive_tab').click(function(evt) {
-      displayFolder('archive');
-    });
-    $('#inbox_tab, #outbox_tab, #sent_tab, #archive_tab').parent('li').click(function(e) {
-      $('.navbar li.active').removeClass('active');
-      const $this = $(this);
-      if (!$this.hasClass('active')) {
-        $this.addClass('active');
-      }
-      e.preventDefault();
-    });
 
     $('.nav :not(.dropdown) a').on('click', function() {
       if ($('.navbar-toggle').css('display') != 'none') {
@@ -81,7 +68,7 @@ $(document).ready(function() {
     $('#updateFormsButton').click(updateForms);
 
     initConsole();
-    displayFolder('in');
+    mailbox.displayFolder('in');
 
     initForms();
     version.checkNewVersion();
@@ -644,7 +631,7 @@ function initConsole() {
         updateConsole(msg.LogLine + '\n');
       }
       if (msg.UpdateMailbox) {
-        displayFolder(currentFolder);
+        mailbox.displayFolder(mailbox.currentFolder);
       }
       if (msg.Status) {
         if (configHash && configHash !== msg.Status.config_hash) {
@@ -701,86 +688,7 @@ function updateConsole(msg) {
   pre.scrollTop(pre.prop('scrollHeight'));
 }
 
-const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
-
-const comparer = (idx, asc) => (a, b) =>
-  ((v1, v2) =>
-    v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2))(
-      getCellValue(asc ? a : b, idx),
-      getCellValue(asc ? b : a, idx)
-    );
-
-let currentFolder;
-
-function displayFolder(dir) {
-  currentFolder = dir;
-
-  const is_from = dir == 'in' || dir == 'archive';
-
-  const table = $('#folder table');
-  table.empty();
-  table.append(
-    '<thead><tr><th></th><th>Subject</th>' +
-    '<th>' +
-    (is_from ? 'From' : 'To') +
-    '</th>' +
-    (is_from ? '' : '<th>P2P</th>') +
-    '<th>Date</th><th>Message ID</th></tr></thead><tbody></tbody>'
-  );
-
-  const tbody = $('#folder table tbody');
-
-  $.getJSON('/api/mailbox/' + dir, function(data) {
-    for (let i = 0; i < data.length; i++) {
-      const msg = data[i];
-
-      //TODO: Cleanup (Sorry about this...)
-      let html =
-        '<tr id="' + msg.MID + '" class="active' + (msg.Unread ? ' strong' : '') + '"><td>';
-      if (msg.Files.length > 0) {
-        html += '<span class="glyphicon glyphicon-paperclip"></span>';
-      }
-      html += '</td><td>' + htmlEscape(msg.Subject) + '</td><td>';
-      if (!is_from && !msg.To) {
-        html += '';
-      } else if (is_from) {
-        html += msg.From.Addr;
-      } else if (msg.To.length == 1) {
-        html += msg.To[0].Addr;
-      } else if (msg.To.length > 1) {
-        html += msg.To[0].Addr + '...';
-      }
-      html += '</td>';
-      html += is_from
-        ? ''
-        : '<td>' + (msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : '') + '</td>';
-      html += '<td>' + msg.Date + '</td><td>' + msg.MID + '</td></tr>';
-
-      const elem = $(html);
-      tbody.append(elem);
-      elem.click(function(evt) {
-        displayMessage($(this));
-      });
-    }
-  });
-  // Adapted from https://stackoverflow.com/a/49041392
-  document.querySelectorAll('th').forEach((th) =>
-    th.addEventListener('click', () => {
-      const table = th.closest('table');
-      const tbody = table.querySelector('tbody');
-      Array.from(tbody.querySelectorAll('tr'))
-        .sort(comparer(Array.from(th.parentNode.children).indexOf(th), (this.asc = !this.asc)))
-        .forEach((tr) => tbody.appendChild(tr));
-      const previousTh = table.querySelector('th.sorted');
-      if (previousTh != null) {
-        previousTh.classList.remove('sorted');
-      }
-      th.classList.add('sorted');
-    })
-  );
-}
-
-function displayMessage(elem) {
+function displayMessage(elem, currentFolder) {
   const mid = elem.attr('ID');
   const msg_url = buildMessagePath(currentFolder, mid);
 
@@ -1062,10 +970,6 @@ function quoteMsg(data) {
   return output;
 }
 
-function htmlEscape(str) {
-  return $('<div></div>').text(str).html();
-}
-
 function archiveMessage(box, mid) {
   $.ajax('/api/mailbox/archive', {
     headers: {
@@ -1116,19 +1020,7 @@ function setRead(box, mid) {
   });
 }
 
-function isImageSuffix(name) {
-  return name.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/);
-}
-
-function formatFileSize(bytes) {
-  if (bytes >= 1024 * 1024) {
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  } else if (bytes >= 1024) {
-    return (bytes / 1024).toFixed(1) + ' KB';
-  }
-  return bytes + ' B';
-}
-
 function buildMessagePath(folder, mid) {
   return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
 }
+

@@ -51,3 +51,20 @@ export function dateFormat(previous) {
     return 'approximately ' + Math.round(elapsed / msPerYear) + ' years ago';
   }
 }
+
+export function htmlEscape(str) {
+  return $('<div></div>').text(str).html();
+}
+
+export function isImageSuffix(name) {
+  return name.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/);
+}
+
+export function formatFileSize(bytes) {
+  if (bytes >= 1024 * 1024) {
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  } else if (bytes >= 1024) {
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
+  return bytes + ' B';
+}

@@ -16,6 +16,7 @@ import { Composer } from './modules/composer/index.js';
 import { FormCatalog } from './modules/form-catalog/index.js';
 import { Viewer } from './modules/viewer/index.js';
 import { ProgressBar } from './modules/progress-bar/index.js';
+import { StatusText } from './modules/status-text/index.js';
 
 let wsURL = '';
 let mycall = '';
@@ -35,6 +36,7 @@ let composer;
 let formCatalog;
 let viewer;
 let progressBar;
+let statusText;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -65,6 +67,8 @@ $(document).ready(function() {
     formCatalog.init();
     progressBar = new ProgressBar();
     progressBar.init();
+    statusText = new StatusText(() => connectModal.toggle());
+    statusText.init();
 
     // Setup folder navigation
     $('#inbox_tab').click(() => mailbox.displayFolder('in'));
@@ -97,62 +101,6 @@ $(document).ready(function() {
     version.checkNewVersion();
   });
 });
-
-function updateStatus(data) {
-  const st = $('#status_text');
-  st.empty().off('click').attr('data-toggle', 'tooltip').attr('data-placement', 'bottom').tooltip();
-
-  const onDisconnect = function() {
-    st.tooltip('hide');
-    disconnect(false, () => {
-      // This will be reset by the next updateStatus when the session is aborted
-      st.empty().append('Disconnecting... ');
-      // Issue dirty disconnect on second click
-      st.off('click').click(() => {
-        st.off('click');
-        disconnect(true);
-        st.tooltip('hide');
-      });
-      st.attr('title', 'Click to force disconnect').tooltip('fixTitle').tooltip('show');
-    });
-  };
-
-  if (data.dialing) {
-    st.append('Dialing... ');
-    st.click(onDisconnect);
-    st.attr('title', 'Click to abort').tooltip('fixTitle').tooltip('show');
-  } else if (data.connected) {
-    st.append('Connected ' + data.remote_addr);
-    st.click(onDisconnect);
-    st.attr('title', 'Click to disconnect').tooltip('fixTitle').tooltip('hide');
-  } else {
-    if (data.active_listeners.length > 0) {
-      st.append('<i>Listening ' + data.active_listeners + '</i>');
-    } else {
-      st.append('<i>Ready</i>');
-    }
-    st.attr('title', 'Click to connect').tooltip('fixTitle').tooltip('hide');
-    st.click(() => { connectModal.toggle(); });
-  }
-
-  const n = data.http_clients.length;
-  statusPopover
-    .showWebserverInfo(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
-}
-
-function disconnect(dirty, successHandler) {
-  if (successHandler === undefined) {
-    successHandler = () => { };
-  }
-  $.post(
-    '/api/disconnect?dirty=' + dirty,
-    {},
-    function(response) {
-      successHandler();
-    },
-    'json'
-  );
-}
 
 function initWs() {
   if ('WebSocket' in window) {
@@ -196,7 +144,10 @@ function initWs() {
           }
         }
         configHash = msg.Status.config_hash;
-        updateStatus(msg.Status);
+        statusText.update(msg.Status);
+        const n = msg.Status.http_clients.length;
+        statusPopover
+          .showWebserverInfo(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
       }
       if (msg.Progress) {
         progressBar.update(msg.Progress);

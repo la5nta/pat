@@ -3,11 +3,11 @@ import 'bootstrap/dist/js/bootstrap';
 import 'bootstrap-select';
 import 'bootstrap-tokenfield';
 
+import { alert, htmlEscape } from './modules/utils/index.js';
 import { Version } from './modules/version/index.js';
 import { NotificationService } from './modules/notifications/index.js';
 import { StatusPopover } from './modules/status-popover/index.js';
 import { Geolocation } from './modules/geolocation/index.js';
-import { alert, htmlEscape, isImageSuffix, formatFileSize, formXmlToFormName } from './modules/utils/index.js';
 import { ConnectModal } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
 import { PasswordRecovery } from './modules/password-recovery/main.js';
@@ -62,7 +62,23 @@ $(document).ready(function() {
     formCatalog = new FormCatalog(composer);
     formCatalog.init();
 
+    // Setup folder navigation
+    $('#inbox_tab').click(() => mailbox.displayFolder('in'));
+    $('#outbox_tab').click(() => mailbox.displayFolder('out'));
+    $('#sent_tab').click(() => mailbox.displayFolder('sent'));
+    $('#archive_tab').click(() => mailbox.displayFolder('archive'));
 
+    // Highlight active tab (mailbox folder)
+    $('#inbox_tab, #outbox_tab, #sent_tab, #archive_tab')
+      .parent('li')
+      .click(function(e) {
+        $('.navbar li.active').removeClass('active');
+        const $this = $(this);
+        if (!$this.hasClass('active')) {
+          $this.addClass('active');
+        }
+        e.preventDefault();
+      });
     $('.nav :not(.dropdown) a').on('click', function() {
       if ($('.navbar-toggle').css('display') != 'none') {
         $('.navbar-toggle').trigger('click');

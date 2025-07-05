@@ -15,6 +15,7 @@ import { Mailbox } from './modules/mailbox/index.js';
 import { Composer } from './modules/composer/index.js';
 import { FormCatalog } from './modules/form-catalog/index.js';
 import { Viewer } from './modules/viewer/index.js';
+import { ProgressBar } from './modules/progress-bar/index.js';
 
 let wsURL = '';
 let mycall = '';
@@ -33,6 +34,7 @@ let mailbox;
 let composer;
 let formCatalog;
 let viewer;
+let progressBar;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -61,6 +63,8 @@ $(document).ready(function() {
     mailbox.init();
     formCatalog = new FormCatalog(composer);
     formCatalog.init();
+    progressBar = new ProgressBar();
+    progressBar.init();
 
     // Setup folder navigation
     $('#inbox_tab').click(() => mailbox.displayFolder('in'));
@@ -93,35 +97,6 @@ $(document).ready(function() {
     version.checkNewVersion();
   });
 });
-
-let cancelCloseTimer = false;
-
-function updateProgress(p) {
-  cancelCloseTimer = !p.done;
-
-  if (p.receiving || p.sending) {
-    const percent = Math.ceil((p.bytes_transferred * 100) / p.bytes_total);
-    const op = p.receiving ? 'Receiving' : 'Sending';
-    let text = op + ' ' + p.mid + ' (' + p.bytes_total + ' bytes)';
-    if (p.subject) {
-      text += ' - ' + htmlEscape(p.subject);
-    }
-    $('#navbar_progress .progress-text').text(text);
-    $('#navbar_progress .progress-bar')
-      .css('width', percent + '%')
-      .text(percent + '%');
-  }
-
-  if ($('#navbar_progress').is(':visible') && p.done) {
-    window.setTimeout(function() {
-      if (!cancelCloseTimer) {
-        $('#navbar_progress').fadeOut(500);
-      }
-    }, 3000);
-  } else if ((p.receiving || p.sending) && !p.done) {
-    $('#navbar_progress').show();
-  }
-}
 
 function updateStatus(data) {
   const st = $('#status_text');
@@ -224,7 +199,7 @@ function initWs() {
         updateStatus(msg.Status);
       }
       if (msg.Progress) {
-        updateProgress(msg.Progress);
+        progressBar.update(msg.Progress);
       }
       if (msg.Prompt) {
         promptModal.showSystemPrompt(msg.Prompt, (response) => {

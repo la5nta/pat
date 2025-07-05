@@ -68,3 +68,28 @@ export function formatFileSize(bytes) {
   }
   return bytes + ' B';
 }
+
+export function setCookie(cname, cvalue, exdays) {
+  const d = new Date();
+  d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
+  const expires = 'expires=' + d.toUTCString();
+  document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/';
+}
+
+export function deleteCookie(cname) {
+  document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+}
+
+export function formXmlToFormName(fileName) {
+  let match = fileName.match(/^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i);
+  if (match) {
+    return match[1];
+  }
+
+  match = fileName.match(/^RMS_Express_Form_([\w \.]+)\.xml$/i);
+  if (match) {
+    return match[1];
+  }
+
+  return null;
+}

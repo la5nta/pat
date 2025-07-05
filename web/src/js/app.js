@@ -7,16 +7,17 @@ import { Version } from './modules/version/index.js';
 import { NotificationService } from './modules/notifications/index.js';
 import { StatusPopover } from './modules/status-popover/index.js';
 import { Geolocation } from './modules/geolocation/index.js';
-import { alert, htmlEscape, isImageSuffix, formatFileSize } from './modules/utils/index.js';
+import { alert, htmlEscape, isImageSuffix, formatFileSize, formXmlToFormName } from './modules/utils/index.js';
 import { ConnectModal } from './modules/connect-modal/index.js';
 import { PromptModal } from './modules/prompt/index.js';
 import { PasswordRecovery } from './modules/password-recovery/main.js';
 import { Mailbox } from './modules/mailbox/index.js';
+import { Composer } from './modules/composer/index.js';
+import { FormCatalog } from './modules/form-catalog/index.js';
 
 let wsURL = '';
 let mycall = '';
 
-let formsCatalog;
 let ws;
 let configHash; // For auto-reload on config changes
 
@@ -28,6 +29,8 @@ let notificationService;
 let passwordRecovery;
 let geolocation;
 let mailbox;
+let composer;
+let formCatalog;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -48,16 +51,13 @@ $(document).ready(function() {
     geolocation.init();
     notificationService = new NotificationService(statusPopover);
     notificationService.init();
-
-    const composer = {
-      previewAttachmentFiles: previewAttachmentFiles,
-      startPollingFormData: startPollingFormData,
-    };
+    composer = new Composer(mycall);
+    composer.init();
     mailbox = new Mailbox(displayMessage);
     mailbox.init();
+    formCatalog = new FormCatalog(composer);
+    formCatalog.init();
 
-    // Setup composer
-    initComposeModal();
 
     $('.nav :not(.dropdown) a').on('click', function() {
       if ($('.navbar-toggle').css('display') != 'none') {
@@ -65,12 +65,11 @@ $(document).ready(function() {
       }
     });
 
-    $('#updateFormsButton').click(updateForms);
+    $('#updateFormsButton').click(formCatalog.update);
 
-    initConsole();
+    initWs();
     mailbox.displayFolder('in');
 
-    initForms();
     version.checkNewVersion();
   });
 });
@@ -101,431 +100,6 @@ function updateProgress(p) {
     }, 3000);
   } else if ((p.receiving || p.sending) && !p.done) {
     $('#navbar_progress').show();
-  }
-}
-
-
-function onFormLaunching(target) {
-  $('#selectForm').modal('hide');
-  startPollingFormData();
-  window.open(target);
-}
-
-function startPollingFormData() {
-  setCookie('forminstance', Math.floor(Math.random() * 1000000000), 1);
-  pollFormData();
-}
-
-function forgetFormData() {
-  window.clearTimeout(pollTimer);
-  deleteCookie('forminstance');
-}
-
-let pollTimer;
-
-function pollFormData() {
-  $.ajax({
-    method: 'GET',
-    url: '/api/form',
-    dataType: 'json',
-    success: function(data) {
-      // TODO: Should verify forminstance key in case of multi-user scenario
-      console.log('done polling');
-      console.log(data);
-      if (!$('#composer').hasClass('hidden')) {
-        writeFormDataToComposer(data);
-      }
-    },
-    error: function() {
-      if (!$('#composer').hasClass('hidden')) {
-        // TODO: Consider replacing this polling mechanism with a WS message (push)
-        pollTimer = window.setTimeout(pollFormData, 1000);
-      }
-    },
-  });
-}
-
-function writeFormDataToComposer(data) {
-  $('#msg_body').val(data.msg_body);
-  if (data.msg_to) {
-    $('#msg_to').tokenfield('setTokens', data.msg_to.split(/[ ;,]/).filter(Boolean));
-  }
-  if (data.msg_cc) {
-    $('#msg_cc').tokenfield('setTokens', data.msg_cc.split(/[ ;,]/).filter(Boolean));
-  }
-  if (data.msg_subject) {
-    // in case of composing a form-based reply we keep the 'Re: ...' subject line
-    $('#msg_subject').val(data.msg_subject);
-  }
-}
-
-function initComposeModal() {
-  $('#compose_btn').click(function(evt) {
-    closeComposer(true); // Clear everything when opening a new compose
-    $('#composer').modal('toggle');
-  });
-  const tokenfieldConfig = {
-    delimiter: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)
-    inputType: 'email',
-    createTokensOnBlur: true,
-  };
-  $('#msg_to').tokenfield(tokenfieldConfig);
-  $('#msg_cc').tokenfield(tokenfieldConfig);
-  $('#composer').on('change', '.btn-file :file', handleFileSelection);
-  $('#composer').on('hidden.bs.modal', forgetFormData);
-
-  $('#composer_error').hide();
-
-  $('#compose_cancel').click(function(evt) {
-    closeComposer(true);
-  });
-
-  $('#composer_form').submit(function(e) {
-    const form = $('#composer_form');
-    const formData = new FormData(form[0]);
-
-    const d = new Date().toJSON();
-    formData.append('date', d);
-
-    // Add in-reply-to header if present
-    const inReplyTo = $('#composer').data('in-reply-to');
-    if (inReplyTo) {
-      formData.append('in_reply_to', inReplyTo);
-    }
-
-    // Set some defaults that makes the message pass validation
-    if ($('#msg_body').val().length == 0) {
-      $('#msg_body').val('<No message body>');
-    }
-    if ($('#msg_subject').val().length == 0) {
-      $('#msg_subject').val('<No subject>');
-    }
-
-    $.ajax({
-      url: '/api/mailbox/out',
-      method: 'POST',
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function(result) {
-        // Clear stored files data
-        $('#msg_attachments_input')[0].dataset.storedFiles = '[]';
-        $('#composer').modal('hide');
-        closeComposer(true);
-        alert(result);
-      },
-      error: function(error) {
-        $('#composer_error').html(error.responseText);
-        $('#composer_error').show();
-      },
-    });
-    e.preventDefault();
-  });
-}
-
-function initForms() {
-  $.getJSON('/api/formcatalog')
-    .done(function(data) {
-      initFormSelect(data);
-      // Add search handlers
-      $('#formSearchInput').on('input', function() {
-        filterForms($(this).val().toLowerCase());
-      });
-
-      $('#clearSearchButton').click(function() {
-        $('#formSearchInput').val('');
-        filterForms('');
-      });
-    })
-    .fail(function(data) {
-      initFormSelect(null);
-    });
-}
-
-function filterForms(searchTerm) {
-  let visibleCount = 0;
-
-  // Search through all form items
-  $('.form-item').each(function() {
-    const formDiv = $(this);
-    const templatePath = formDiv.data('template-path') || '';
-    const isMatch = templatePath.toLowerCase().includes(searchTerm);
-
-    // Show/hide the form item
-    formDiv.css('display', isMatch ? '' : 'none');
-    if (isMatch) visibleCount++;
-  });
-
-  // Show/hide folders based on whether they have visible forms
-  $('.folder-container').each(function() {
-    const folder = $(this);
-    const hasVisibleForms = folder.find('.form-item').filter(function() {
-      return $(this).css('display') !== 'none';
-    }).length > 0;
-    folder.css('display', hasVisibleForms ? '' : 'none');
-  });
-
-  // Auto-expand/collapse based on result count
-  if (visibleCount < 20) {
-    // Expand when few results
-    $('.folder-toggle.collapsed').each(function() {
-      $(this).click();
-    });
-  } else {
-    // Collapse when many results
-    $('.folder-toggle:not(.collapsed)').each(function() {
-      $(this).click();
-    });
-  }
-}
-
-function initFormSelect(data) {
-  formsCatalog = data;
-  if (
-    data &&
-    data.path &&
-    ((data.folders && data.folders.length > 0) || (data.forms && data.forms.length > 0))
-  ) {
-    $('#formsVersion').html(
-      '<span>(ver <a href="http://www.winlink.org/content/all_standard_templates_folders_one_zip_self_extracting_winlink_express_ver_12142016">' +
-      data.version +
-      '</a>)</span>'
-    );
-    $('#updateFormsVersion').html(data.version);
-    $('#formsRootFolderName').text(data.path);
-    $('#formFolderRoot').html('');
-    appendFormFolder('formFolderRoot', data);
-  } else {
-    $('#formsRootFolderName').text('missing form templates');
-    $(`#formFolderRoot`).append(`
-			<h6>Form templates not downloaded</h6>
-			Use Action → Update Form Templates to download now
-			`);
-  }
-}
-
-function updateForms() {
-  $('#updateFormsResponse').text('');
-  $('#updateFormsError').text('');
-
-  // Disable button and show spinner
-  const btn = $('#updateFormsButton');
-  const spinner = $('#updateFormsSpinner');
-  btn.prop('disabled', true);
-  spinner.show().addClass('icon-spin');
-
-  $.ajax({
-    method: 'POST',
-    url: '/api/formsUpdate',
-    success: (msg) => {
-      $('#updateFormsError').text('');
-      let response = JSON.parse(msg);
-      switch (response.action) {
-        case 'none':
-          $('#updateFormsResponse').text('You already have the latest forms version');
-          break;
-        case 'update':
-          $('#updateFormsResponse').text('Updated forms to ' + response.newestVersion);
-          // Update views to reflect new state
-          initForms();
-          break;
-      }
-    },
-    error: (err) => {
-      $('#updateFormsResponse').text('');
-      $('#updateFormsError').text(err.responseText);
-    },
-    complete: () => {
-      // Re-enable button and hide spinner
-      btn.prop('disabled', false);
-      spinner.hide().removeClass('icon-spin');
-    }
-  });
-}
-
-function setCookie(cname, cvalue, exdays) {
-  const d = new Date();
-  d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
-  const expires = 'expires=' + d.toUTCString();
-  document.cookie = cname + '=' + cvalue + ';' + expires + ';path=/';
-}
-
-function deleteCookie(cname) {
-  document.cookie = cname + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-}
-
-function appendFormFolder(rootId, data, level = 0) {
-  if (!data.folders && !data.forms) return;
-
-  const container = $(`#${rootId}`);
-
-  // Handle folders
-  if (data.folders && data.folders.length > 0) {
-    data.folders.forEach(function(folder) {
-      if (folder.form_count > 0) {
-        // Create unique IDs for this folder
-        const folderContentId = `folder-content-${Math.random().toString(36).substr(2, 9)}`;
-
-        // Create the folder structure
-        const folderDiv = $(`
-          <div class="folder-container ${level > 0 ? 'nested-folder' : ''}">
-            <button class="btn btn-secondary folder-toggle mb-2 collapsed"
-                    data-toggle="collapse"
-                    data-target="#${folderContentId}">
-              ${folder.name}
-            </button>
-            <div id="${folderContentId}" class="collapse">
-              <div class="folder-content"></div>
-            </div>
-          </div>
-        `);
-
-        container.append(folderDiv);
-
-        // Recursively add sub-folders and forms
-        appendFormFolder(`${folderContentId} .folder-content`, folder, level + 1);
-      }
-    });
-  }
-
-  // Handle forms at this level
-  if (data.forms && data.forms.length > 0) {
-    const formsContainer = $('<div class="forms-container"></div>');
-    data.forms.forEach((form) => {
-      const formDiv = $(`
-        <div class="form-item">
-          <button class="btn btn-light btn-block" style="text-align: left">
-            ${form.name}
-          </button>
-        </div>
-      `).data('template-path', form.template_path);
-
-      formDiv.find('button').on('click', () => {
-        const inReplyTo = $('#composer').data('in-reply-to');
-        const replyParam = inReplyTo ? '&in-reply-to=' + encodeURIComponent(inReplyTo) : '';
-        const path = encodeURIComponent(form.template_path);
-        onFormLaunching(`/api/forms?template=${path}${replyParam}`);
-      });
-
-      formsContainer.append(formDiv);
-    });
-    container.append(formsContainer);
-  }
-}
-
-// Handle file selection and deduplication
-function handleFileSelection() {
-  const fileInput = this;
-  const dt = new DataTransfer();
-  let storedFiles = [];
-  let filesProcessed = 0;
-  const totalFiles = this.files.length;
-
-  // Get previously stored files from data attribute
-  try {
-    storedFiles = JSON.parse(fileInput.dataset.storedFiles || '[]');
-
-    // First add all previously stored files to DataTransfer
-    storedFiles.forEach(fileInfo => {
-      const byteString = atob(fileInfo.content.split(',')[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([ab], { type: fileInfo.type });
-      const file = new File([blob], fileInfo.name, { type: fileInfo.type });
-      dt.items.add(file);
-    });
-  } catch (e) {
-    console.error("Error parsing stored files:", e);
-  }
-
-  // Process newly selected files
-  Array.from(this.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      // Add to stored files array
-      storedFiles.push({
-        name: file.name,
-        type: file.type,
-        content: e.target.result
-      });
-
-      // Update dataset
-      fileInput.dataset.storedFiles = JSON.stringify(storedFiles);
-
-      // Add to DataTransfer
-      dt.items.add(file);
-
-      filesProcessed++;
-
-      // Only update input files and preview when ALL files are processed
-      if (filesProcessed === totalFiles) {
-        fileInput.files = dt.files;
-        previewAttachmentFiles.call(fileInput);
-      }
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// Display file previews
-function previewAttachmentFiles() {
-  const attachments = $('#composer_attachments');
-  attachments.empty();
-
-  // Add a row container
-  const row = $('<div class="row"></div>');
-  attachments.append(row);
-
-  for (let i = 0; i < this.files.length; i++) {
-    const file = this.files[i];
-
-    const col = $('<div class="col-xs-6 col-md-3"></div>');
-    const link = $('<a class="attachment-preview"></a>');
-
-    // Add remove button - append it directly to avoid event binding issues
-    const removeBtn = $('<button type="button" class="close remove-attachment" aria-label="Remove">' +
-      '<span aria-hidden="true">&times;</span></button>');
-    removeBtn.click((e) => {
-      e.preventDefault();
-      e.stopPropagation(); // Prevent event from bubbling up
-      // Remove file from DataTransfer
-      const dt = new DataTransfer();
-      const files = this.files;
-      for (let i = 0; i < files.length; i++) {
-        if (files[i].name !== file.name) {
-          dt.items.add(files[i]);
-        }
-      }
-      this.files = dt.files;
-      // Remove preview
-      col.remove();
-    });
-
-    if (isImageSuffix(file.name)) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        link.empty() // Clear any existing content
-          .append(removeBtn)
-          .append($('<span class="filesize">').text(formatFileSize(file.size)))
-          .append($('<img>').attr({
-            src: e.target.result,
-            alt: file.name
-          }));
-      };
-      reader.readAsDataURL(file);
-    } else {
-      link.empty() // Clear any existing content
-        .append(removeBtn)
-        .append($('<span class="filesize">').text(formatFileSize(file.size)))
-        .append('<br>')
-        .append($('<span class="filename">').text(file.name));
-    }
-
-    col.append(link);
-    row.append(col);
   }
 }
 
@@ -571,27 +145,6 @@ function updateStatus(data) {
     .showWebserverInfo(n + (n == 1 ? ' client ' : ' clients ') + 'connected.');
 }
 
-function closeComposer(clear) {
-  if (clear) {
-    $('#composer_error').val('').hide();
-    $('#msg_body').val('');
-    $('#msg_subject').val('');
-    $('#msg_to').tokenfield('setTokens', []);
-    $('#msg_cc').tokenfield('setTokens', []);
-    $('#composer_form')[0].reset();
-    $('#composer').removeData('in-reply-to');
-
-    // Attachment previews
-    $('#composer_attachments').empty();
-
-    // Attachment input field
-    let attachments = $('#msg_attachments_input');
-    attachments[0].dataset.storedFiles = '[]';
-    attachments.replaceWith((attachments = attachments.clone(true)));
-  }
-  $('#composer').modal('hide');
-}
-
 function disconnect(dirty, successHandler) {
   if (successHandler === undefined) {
     successHandler = () => { };
@@ -606,7 +159,7 @@ function disconnect(dirty, successHandler) {
   );
 }
 
-function initConsole() {
+function initWs() {
   if ('WebSocket' in window) {
     ws = new WebSocket(wsURL);
 
@@ -672,7 +225,7 @@ function initConsole() {
       statusPopover.hideWebserverInfo();
       $('#status_text').empty();
       window.setTimeout(function() {
-        initConsole();
+        initWs();
       }, 1000);
     };
   } else {
@@ -775,42 +328,19 @@ function displayMessage(elem, currentFolder) {
     }
     $('#reply_btn').off('click');
     $('#reply_btn').click(function(evt) {
-      handleReply(false);
+      composer.reply(currentFolder, data, false);
     });
 
     $('#reply_all_btn').click(function(evt) {
-      handleReply(true);
+      composer.reply(currentFolder, data, true);
     });
     $('#forward_btn').off('click');
     $('#forward_btn').click(function(evt) {
-      $('#message_view').modal('hide');
-
-      $('#msg_to').tokenfield('setTokens', '');
-      $('#msg_subject').val('Fw: ' + data.Subject);
-      $('#msg_body').val(quoteMsg(data));
-      $('#msg_body')[0].setSelectionRange(0, 0);
-
-      // Add attachments
-      reAttachFiles(msg_url, data.Files);
-
-      $('#composer').modal('show');
-      $('#msg_to-tokenfield').focus();
+      composer.forward(currentFolder, data);
     });
     $('#edit_as_new_btn').off('click');
     $('#edit_as_new_btn').click(function(evt) {
-      $('#message_view').modal('hide');
-
-      $('#msg_to').tokenfield('setTokens', data.To.map(function(recipient) { return recipient.Addr; }));
-      $('#msg_cc').tokenfield('setTokens', data.Cc ? data.Cc.map(function(recipient) { return recipient.Addr; }) : []);
-      $('#msg_subject').val(data.Subject);
-      $('#msg_body').val(data.Body);
-      $('#msg_body')[0].setSelectionRange(0, 0);
-
-      // Add attachments
-      reAttachFiles(msg_url, data.Files);
-
-      $('#composer').modal('show');
-      $('#msg_to-tokenfield').focus();
+      composer.editAsNew(currentFolder, data);
     });
     $('#delete_btn').off('click');
     $('#delete_btn').click(function(evt) {
@@ -828,28 +358,6 @@ function displayMessage(elem, currentFolder) {
       $('#archive_btn').parent().show();
     }
 
-    // Add reply handling function
-    function handleReply(replyAll) {
-      $('#message_view').modal('hide');
-
-      $('#msg_to').tokenfield('setTokens', [data.From.Addr]);
-      $('#msg_cc').tokenfield('setTokens', replyAll ? replyCarbonCopyList(data) : []);
-      if (data.Subject.lastIndexOf('Re:', 0) != 0) {
-        $('#msg_subject').val('Re: ' + data.Subject);
-      } else {
-        $('#msg_subject').val(data.Subject);
-      }
-      $('#msg_body').val('\n\n' + quoteMsg(data));
-      $('#composer').data('in-reply-to', currentFolder + '/' + mid);
-      $('#composer').modal('show');
-      $('#msg_body').focus();
-      $('#msg_body')[0].setSelectionRange(0, 0);
-
-      // opens browser window for a form-based reply,
-      // or does nothing if this is not a form-based message
-      showReplyForm(currentFolder, mid, data);
-    }
-
     view.show();
     $('#message_view').modal('show');
     let mbox = currentFolder;
@@ -860,114 +368,6 @@ function displayMessage(elem, currentFolder) {
     }
     elem.attr('class', 'active');
   });
-}
-
-function reAttachFiles(msg_url, files) {
-  $('#composer_attachments').empty();
-  const fileInput = $('#msg_attachments_input')[0];
-  const dt = new DataTransfer();
-
-  if (files) {
-    let filesProcessed = 0;
-    files.forEach(file => {
-      $.ajax({
-        url: msg_url + '/' + file.Name,
-        method: 'GET',
-        xhrFields: {
-          responseType: 'blob'
-        },
-        success: function(blob) {
-          const f = new File([blob], file.Name, { type: blob.type });
-          dt.items.add(f);
-          filesProcessed++;
-
-          if (filesProcessed === files.length) {
-            fileInput.files = dt.files;
-            previewAttachmentFiles.call(fileInput);
-          }
-        }
-      });
-    });
-  }
-}
-
-function formXmlToFormName(fileName) {
-  let match = fileName.match(/^RMS_Express_Form_([\w \.]+)-\d+\.xml$/i);
-  if (match) {
-    return match[1];
-  }
-
-  match = fileName.match(/^RMS_Express_Form_([\w \.]+)\.xml$/i);
-  if (match) {
-    return match[1];
-  }
-
-  return null;
-}
-
-function showReplyForm(mbox, mid, msg) {
-  const orgMsgUrl = buildMessagePath(mbox, mid);
-  for (let i = 0; msg.Files && i < msg.Files.length; i++) {
-    const file = msg.Files[i];
-    const formName = formXmlToFormName(file.Name);
-    if (!formName) {
-      continue;
-    }
-    // retrieve form XML attachment and determine if it specifies a form-based reply
-    const attachUrl = orgMsgUrl + '/' + file.Name;
-    $.get(
-      attachUrl + '?rendertohtml=false',
-      {},
-      function(data) {
-        let parser = new DOMParser();
-        let xmlDoc = parser.parseFromString(data, 'text/xml');
-        if (xmlDoc) {
-          let replyTmpl = xmlDoc.evaluate(
-            '/RMS_Express_Form/form_parameters/reply_template',
-            xmlDoc,
-            null,
-            XPathResult.STRING_TYPE,
-            null
-          );
-          if (replyTmpl && replyTmpl.stringValue) {
-            window.setTimeout(startPollingFormData, 500);
-            open(attachUrl + '?rendertohtml=true&in-reply-to=' + encodeURIComponent(mbox + "/" + mid));
-          }
-        }
-      },
-      'text'
-    );
-    return;
-  }
-}
-
-function replyCarbonCopyList(msg) {
-  let addrs = msg.To;
-  if (msg.Cc != null && msg.Cc.length > 0) {
-    addrs = addrs.concat(msg.Cc);
-  }
-  const seen = {};
-  seen[mycall] = true;
-  seen[msg.From.Addr] = true;
-  const strings = [];
-  for (let i = 0; i < addrs.length; i++) {
-    if (seen[addrs[i].Addr]) {
-      continue;
-    }
-    seen[addrs[i].Addr] = true;
-    strings.push(addrs[i].Addr);
-  }
-  return strings;
-}
-
-function quoteMsg(data) {
-  let output = '--- ' + data.Date + ' ' + data.From.Addr + ' wrote: ---\n';
-
-  const lines = data.Body.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    output += '>' + lines[i] + '\n';
-  }
-  return output;
 }
 
 function archiveMessage(box, mid) {
@@ -1023,4 +423,3 @@ function setRead(box, mid) {
 function buildMessagePath(folder, mid) {
   return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
 }
-

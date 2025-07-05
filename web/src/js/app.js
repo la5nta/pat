@@ -14,6 +14,7 @@ import { PasswordRecovery } from './modules/password-recovery/main.js';
 import { Mailbox } from './modules/mailbox/index.js';
 import { Composer } from './modules/composer/index.js';
 import { FormCatalog } from './modules/form-catalog/index.js';
+import { Viewer } from './modules/viewer/index.js';
 
 let wsURL = '';
 let mycall = '';
@@ -31,6 +32,7 @@ let geolocation;
 let mailbox;
 let composer;
 let formCatalog;
+let viewer;
 
 $(document).ready(function() {
   wsURL = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -53,7 +55,9 @@ $(document).ready(function() {
     notificationService.init();
     composer = new Composer(mycall);
     composer.init();
-    mailbox = new Mailbox(displayMessage);
+    viewer = new Viewer(composer);
+    viewer.init();
+    mailbox = new Mailbox((currentFolder, mid) => viewer.displayMessage(currentFolder, mid));
     mailbox.init();
     formCatalog = new FormCatalog(composer);
     formCatalog.init();
@@ -230,7 +234,6 @@ function initWs() {
     };
   } else {
     // The browser doesn't support WebSocket
-    let wsError = true;
     alert('Websocket not supported by your browser, please upgrade your browser.');
   }
 }
@@ -239,187 +242,4 @@ function updateConsole(msg) {
   const pre = $('#console');
   pre.append('<span class="terminal">' + msg + '</span>');
   pre.scrollTop(pre.prop('scrollHeight'));
-}
-
-function displayMessage(elem, currentFolder) {
-  const mid = elem.attr('ID');
-  const msg_url = buildMessagePath(currentFolder, mid);
-
-  $.getJSON(msg_url, function(data) {
-    elem.attr('class', 'info');
-
-    const view = $('#message_view');
-    view.find('#subject').text(data.Subject);
-    view.find('#headers').empty();
-    view.find('#headers').append('Date: ' + data.Date + '<br>');
-    view.find('#headers').append('From: ' + data.From.Addr + '<br>');
-    view.find('#headers').append('To: ');
-    for (let i = 0; data.To && i < data.To.length; i++) {
-      view
-        .find('#headers')
-        .append('<el>' + data.To[i].Addr + '</el>' + (data.To.length - 1 > i ? ', ' : ''));
-    }
-    if (data.P2POnly) {
-      view.find('#headers').append(' (<strong>P2P only</strong>)');
-    }
-
-    if (data.Cc) {
-      view.find('#headers').append('<br>Cc: ');
-      for (let i = 0; i < data.Cc.length; i++) {
-        view
-          .find('#headers')
-          .append('<el>' + data.Cc[i].Addr + '</el>' + (data.Cc.length - 1 > i ? ', ' : ''));
-      }
-    }
-
-    view.find('#body').html(data.BodyHTML);
-
-    const attachments = view.find('#attachments');
-    attachments.empty();
-
-    // Add a row container
-    const row = $('<div class="row"></div>');
-    attachments.append(row);
-
-    if (!data.Files) {
-      attachments.hide();
-    } else {
-      attachments.show();
-    }
-    for (let i = 0; data.Files && i < data.Files.length; i++) {
-      const file = data.Files[i];
-      const formName = formXmlToFormName(file.Name);
-      let renderToHtml = 'false';
-      if (formName) {
-        renderToHtml = 'true';
-      }
-      const attachUrl = msg_url + '/' + file.Name + '?rendertohtml=' + renderToHtml;
-
-      const col = $('<div class="col-xs-6 col-md-3"></div>');
-      const link = $('<a class="attachment-preview"></a>');
-
-      if (isImageSuffix(file.Name)) {
-        link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
-        link.html(
-          '<span class="filesize">' + formatFileSize(file.Size) + '</span>' +
-          '<span class="glyphicon glyphicon-paperclip"></span> ' +
-          '<img src="' + msg_url + '/' + file.Name + '" alt="' + file.Name + '">'
-        );
-        col.append(link);
-        attachments.append(col);
-      } else if (formName) {
-        attachments.append(
-          '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
-          attachUrl +
-          '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit"></span> ' +
-          formName +
-          '</a></div>'
-        );
-      } else {
-        link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
-        link.html(
-          '<span class="filesize">' + formatFileSize(file.Size) + '</span>' +
-          '<span class="glyphicon glyphicon-paperclip"></span> ' +
-          '<br><span class="filename">' + file.Name + '</span>'
-        );
-        col.append(link);
-        attachments.append(col);
-      }
-    }
-    $('#reply_btn').off('click');
-    $('#reply_btn').click(function(evt) {
-      composer.reply(currentFolder, data, false);
-    });
-
-    $('#reply_all_btn').click(function(evt) {
-      composer.reply(currentFolder, data, true);
-    });
-    $('#forward_btn').off('click');
-    $('#forward_btn').click(function(evt) {
-      composer.forward(currentFolder, data);
-    });
-    $('#edit_as_new_btn').off('click');
-    $('#edit_as_new_btn').click(function(evt) {
-      composer.editAsNew(currentFolder, data);
-    });
-    $('#delete_btn').off('click');
-    $('#delete_btn').click(function(evt) {
-      deleteMessage(currentFolder, mid);
-    });
-    $('#archive_btn').off('click');
-    $('#archive_btn').click(function(evt) {
-      archiveMessage(currentFolder, mid);
-    });
-
-    // Archive button should be hidden for already archived messages
-    if (currentFolder == 'archive') {
-      $('#archive_btn').parent().hide();
-    } else {
-      $('#archive_btn').parent().show();
-    }
-
-    view.show();
-    $('#message_view').modal('show');
-    let mbox = currentFolder;
-    if (!data.Read) {
-      window.setTimeout(function() {
-        setRead(mbox, data.MID);
-      }, 2000);
-    }
-    elem.attr('class', 'active');
-  });
-}
-
-function archiveMessage(box, mid) {
-  $.ajax('/api/mailbox/archive', {
-    headers: {
-      'X-Pat-SourcePath': buildMessagePath(box, mid),
-    },
-    contentType: 'application/json',
-    type: 'POST',
-    success: function(resp) {
-      $('#message_view').modal('hide');
-      alert('Message archived');
-    },
-    error: function(xhr, st, resp) {
-      alert(resp + ': ' + xhr.responseText);
-    },
-  });
-}
-
-function deleteMessage(box, mid) {
-  $('#confirm_delete').on('click', '.btn-ok', function(e) {
-    $('#message_view').modal('hide');
-    const $modalDiv = $(e.delegateTarget);
-    $.ajax(buildMessagePath(box, mid), {
-      type: 'DELETE',
-      success: function(resp) {
-        $modalDiv.modal('hide');
-        alert('Message deleted');
-      },
-      error: function(xhr, st, resp) {
-        $modalDiv.modal('hide');
-        alert(resp + ': ' + xhr.responseText);
-      },
-    });
-  });
-  $('#confirm_delete').modal('show');
-}
-
-function setRead(box, mid) {
-  const data = { read: true };
-
-  $.ajax(buildMessagePath(box, mid) + '/read', {
-    data: JSON.stringify(data),
-    contentType: 'application/json',
-    type: 'POST',
-    success: function(resp) { },
-    error: function(xhr, st, resp) {
-      alert(resp + ': ' + xhr.responseText);
-    },
-  });
-}
-
-function buildMessagePath(folder, mid) {
-  return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
 }

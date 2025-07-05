@@ -71,7 +71,11 @@ export class Mailbox {
 
         tbody.append(elem);
         elem.click((evt) => {
-          this.onMessageClick($(evt.currentTarget), this.currentFolder);
+          // Handle active class for the message list
+          tbody.find('tr.active').removeClass('active');
+          elem.addClass('active');
+
+          this.onMessageClick(this.currentFolder, elem.attr('id'));
         });
       });
     });

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -60,4 +61,22 @@ func prompt(question, defaultValue string, options ...string) string {
 
 func SplitFunc(c rune) bool {
 	return unicode.IsSpace(c) || c == ',' || c == ';'
+}
+
+func exitOnContextCancellation(ctx context.Context) (cancel func()) {
+	done := make(chan struct{}, 1)
+	go func() {
+		select {
+		case <-ctx.Done():
+			fmt.Println()
+			os.Exit(1)
+		case <-done:
+		}
+	}()
+	return func() {
+		select {
+		case done <- struct{}{}:
+		default:
+		}
+	}
 }

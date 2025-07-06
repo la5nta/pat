@@ -131,6 +131,8 @@ func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool
 }
 
 func ComposeMessage(ctx context.Context, app *app.App, args []string) {
+	exitOnContextCancellation(ctx)
+
 	set := pflag.NewFlagSet("compose", pflag.ExitOnError)
 	// From default is --mycall but it can be overriden with -r
 	from := set.StringP("from", "r", app.Options().MyCall, "")

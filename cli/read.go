@@ -25,13 +25,16 @@ import (
 var mailboxes = []string{"in", "out", "sent", "archive"}
 
 func ReadHandle(ctx context.Context, app *app.App, _ []string) {
+	cancel := exitOnContextCancellation(ctx)
+	defer cancel()
+
 	w := os.Stdout
 
 	for {
 		// Query user for mailbox to list
 		printMailboxes(w)
 		fmt.Fprintf(w, "\nChoose mailbox [n]: ")
-		mailboxIdx, ok := readInt(ctx)
+		mailboxIdx, ok := readInt()
 		if !ok {
 			break
 		} else if mailboxIdx+1 > len(mailboxes) {
@@ -55,7 +58,7 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 
 			// Query user for message to print
 			fmt.Fprintf(w, "Choose message [n]: ")
-			msgIdx, ok := readInt(ctx)
+			msgIdx, ok := readInt()
 			if !ok {
 				break
 			} else if msgIdx+1 > len(msgs) {
@@ -99,19 +102,13 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 	}
 }
 
-func readInt(ctx context.Context) (int, bool) {
-	cs := make(chan string, 1)
-	go func() { cs <- readLine() }()
-	select {
-	case <-ctx.Done():
+func readInt() (int, bool) {
+	str := readLine()
+	if str == "" {
 		return 0, false
-	case str := <-cs:
-		if str == "" {
-			return 0, false
-		}
-		i, _ := strconv.Atoi(str)
-		return i, true
 	}
+	i, _ := strconv.Atoi(str)
+	return i, true
 }
 
 func printMsg(w io.Writer, msg *fbb.Message) {

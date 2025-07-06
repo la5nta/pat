@@ -18,17 +18,8 @@ import (
 )
 
 func InitHandle(ctx context.Context, a *app.App, args []string) {
-	// Exit on context cancellation (os signal etc)
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-ctx.Done():
-			fmt.Println()
-			os.Exit(1)
-		case <-done:
-		}
-	}()
+	cancel := exitOnContextCancellation(ctx)
+	defer cancel()
 
 	cfg, err := app.LoadConfig(a.Options().ConfigPath, cfg.DefaultConfig)
 	if err != nil {

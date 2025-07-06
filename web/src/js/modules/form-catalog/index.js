@@ -5,6 +5,7 @@ export class FormCatalog {
   }
 
   init() {
+    $('#updateFormsButton').click(() => this.update());
     $.getJSON('/api/formcatalog')
       .done((data) => {
         this._initFormSelect(data);

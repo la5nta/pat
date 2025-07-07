@@ -78,10 +78,23 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 
 		L:
 			for {
-				fmt.Fprintf(w, "Action [C,r,ra,e,q,?]: ")
+				fmt.Fprintf(w, "Action [C,r,ra,e,d,q,?]: ")
 				switch ans := readLine(); ans {
 				case "C", "c", "":
 					break L
+				case "d":
+					fmt.Fprint(w, "Delete message? [y/N]: ")
+					if ans := readLine(); strings.EqualFold(ans, "y") {
+						msg := msgs[msgIdx]
+						mbox := mailboxes[mailboxIdx]
+						path := filepath.Join(app.Mailbox().MBoxPath, mbox, msg.MID()+mailbox.Ext)
+						if err := os.Remove(path); err != nil {
+							log.Printf("Failed to delete message %s from %s: %v", msg.MID(), mbox, err)
+						} else {
+							fmt.Fprintln(w, "Message deleted.")
+						}
+						break L
+					}
 				case "r", "ra":
 					composeReplyMessage(app, msgs[msgIdx], ans == "ra")
 				case "e":
@@ -95,6 +108,7 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 					fmt.Fprintln(w, "r  - reply")
 					fmt.Fprintln(w, "ra - reply all")
 					fmt.Fprintln(w, "e  - extract (attachments)")
+					fmt.Fprintln(w, "d  - delete")
 					fmt.Fprintln(w, "q  - quit")
 				}
 			}

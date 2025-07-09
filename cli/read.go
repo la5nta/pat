@@ -78,7 +78,7 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 
 		L:
 			for {
-				fmt.Fprintf(w, "Action [C,r,ra,e,d,q,?]: ")
+				fmt.Fprintf(w, "Action [C,r,ra,f,e,d,q,?]: ")
 				switch ans := readLine(); ans {
 				case "C", "c", "":
 					break L
@@ -95,8 +95,12 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 						}
 						break L
 					}
-				case "r", "ra":
-					composeReplyMessage(app, msgs[msgIdx], ans == "ra")
+				case "r":
+					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionReply, OriginalMsg: msgs[msgIdx]})
+				case "ra":
+					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionReplyAll, OriginalMsg: msgs[msgIdx]})
+				case "f":
+					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionForward, OriginalMsg: msgs[msgIdx]})
 				case "e":
 					ExtractMessageHandle(ctx, app, []string{msgs[msgIdx].MID()})
 				case "q":
@@ -107,6 +111,7 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 					fmt.Fprintln(w, "c  - continue")
 					fmt.Fprintln(w, "r  - reply")
 					fmt.Fprintln(w, "ra - reply all")
+					fmt.Fprintln(w, "f  - forward")
 					fmt.Fprintln(w, "e  - extract (attachments)")
 					fmt.Fprintln(w, "d  - delete")
 					fmt.Fprintln(w, "q  - quit")

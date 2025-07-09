@@ -52,7 +52,7 @@ func openMessage(a *app.App, path string) (*fbb.Message, error) {
 	return mailbox.OpenMessage(path)
 }
 
-func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool) *fbb.Message {
+func composeMessageHeader(app *app.App, opts *ComposeOpts) *fbb.Message {
 	msg := fbb.NewMessage(fbb.Private, app.Options().MyCall)
 
 	fmt.Printf(`From [%s]: `, app.Options().MyCall)
@@ -63,13 +63,13 @@ func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool
 	msg.SetFrom(from)
 
 	fmt.Print(`To`)
-	if inReplyToMsg != nil {
-		fmt.Printf(" [%s]", inReplyToMsg.From())
+	if opts.OriginalMsg != nil {
+		fmt.Printf(" [%s]", opts.OriginalMsg.From())
 	}
 	fmt.Printf(": ")
 	to := readLine()
-	if to == "" && inReplyToMsg != nil {
-		msg.AddTo(inReplyToMsg.From().String())
+	if to == "" && opts.OriginalMsg != nil {
+		msg.AddTo(opts.OriginalMsg.From().String())
 	} else {
 		for _, addr := range strings.FieldsFunc(to, SplitFunc) {
 			msg.AddTo(addr)
@@ -77,8 +77,8 @@ func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool
 	}
 
 	ccCand := make([]fbb.Address, 0)
-	if inReplyToMsg != nil && replyAll {
-		for _, addr := range append(inReplyToMsg.To(), inReplyToMsg.Cc()...) {
+	if opts.Action == ComposeActionReplyAll {
+		for _, addr := range append(opts.OriginalMsg.To(), opts.OriginalMsg.Cc()...) {
 			if !addr.EqualString(app.Options().MyCall) {
 				ccCand = append(ccCand, addr)
 			}
@@ -86,12 +86,12 @@ func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool
 	}
 
 	fmt.Printf("Cc")
-	if inReplyToMsg != nil {
+	if len(ccCand) > 0 {
 		fmt.Printf(" %s", ccCand)
 	}
 	fmt.Print(`: `)
 	cc := readLine()
-	if cc == "" && inReplyToMsg != nil {
+	if cc == "" {
 		for _, addr := range ccCand {
 			msg.AddCc(addr.String())
 		}
@@ -114,12 +114,18 @@ func composeMessageHeader(app *app.App, inReplyToMsg *fbb.Message, replyAll bool
 	}
 
 	fmt.Print(`Subject: `)
-	if inReplyToMsg != nil {
-		subject := strings.TrimSpace(strings.TrimPrefix(inReplyToMsg.Subject(), "Re:"))
+	switch opts.Action {
+	case ComposeActionForward:
+		subject := strings.TrimSpace(strings.TrimPrefix(opts.OriginalMsg.Subject(), "Fwd:"))
+		subject = fmt.Sprintf("Fwd:%s", subject)
+		fmt.Println(subject)
+		msg.SetSubject(subject)
+	case ComposeActionReplyAll, ComposeActionReply:
+		subject := strings.TrimSpace(strings.TrimPrefix(opts.OriginalMsg.Subject(), "Re:"))
 		subject = fmt.Sprintf("Re:%s", subject)
 		fmt.Println(subject)
 		msg.SetSubject(subject)
-	} else {
+	default:
 		msg.SetSubject(readLine())
 	}
 	// A message without subject is not valid, so let's use a sane default
@@ -165,6 +171,15 @@ func ComposeMessage(ctx context.Context, app *app.App, args []string) {
 		}
 	}
 
+	opts := &ComposeOpts{Action: ComposeActionNew}
+	if inReplyToMsg != nil {
+		opts.Action = ComposeActionReply
+		if *replyAll {
+			opts.Action = ComposeActionReplyAll
+		}
+		opts.OriginalMsg = inReplyToMsg
+	}
+
 	// Check if condition are met for non-interactive compose.
 	if (len(*subject)+len(*attachments)+len(*ccs)+len(recipients)) > 0 && *template != "" {
 		noninteractiveComposeMessage(app, *from, *subject, *attachments, *ccs, recipients, *p2pOnly)
@@ -173,12 +188,12 @@ func ComposeMessage(ctx context.Context, app *app.App, args []string) {
 
 	// Use template?
 	if *template != "" {
-		interactiveComposeWithTemplate(app, *template, inReplyToMsg, *replyAll)
+		interactiveComposeWithTemplate(app, *template, opts)
 		return
 	}
 
 	// Interactive compose
-	interactiveComposeMessage(app, inReplyToMsg, *replyAll)
+	InteractiveComposeMessage(app, opts)
 }
 
 func noninteractiveComposeMessage(app *app.App, from string, subject string, attachments []string, ccs []string, recipients []string, p2pOnly bool) {
@@ -228,12 +243,6 @@ func noninteractiveComposeMessage(app *app.App, from string, subject string, att
 	postMessage(app, msg)
 }
 
-// This is currently an alias for interactiveComposeMessage but keeping as a separate
-// call path for the future
-func composeReplyMessage(app *app.App, inReplyToMsg *fbb.Message, replyAll bool) {
-	interactiveComposeMessage(app, inReplyToMsg, replyAll)
-}
-
 func composeBody(template string) (string, error) {
 	body, err := editor.EditText(template)
 	if err != nil {
@@ -246,13 +255,14 @@ func composeBody(template string) (string, error) {
 	return body, nil
 }
 
-func interactiveComposeMessage(app *app.App, inReplyToMsg *fbb.Message, replyAll bool) {
-	msg := composeMessageHeader(app, inReplyToMsg, replyAll)
+func InteractiveComposeMessage(app *app.App, opts *ComposeOpts) {
+	msg := composeMessageHeader(app, opts)
 
 	// Body
 	var template bytes.Buffer
-	if inReplyToMsg != nil {
-		writeMessageCitation(&template, inReplyToMsg)
+	switch opts.Action {
+	case ComposeActionForward, ComposeActionReply, ComposeActionReplyAll:
+		writeMessageCitation(&template, opts.OriginalMsg)
 	}
 	fmt.Printf(`Press ENTER to start composing the message body. `)
 	readLine()
@@ -263,6 +273,11 @@ func interactiveComposeMessage(app *app.App, inReplyToMsg *fbb.Message, replyAll
 	msg.SetBody(body)
 
 	// Attachments
+	if opts.Action == ComposeActionForward {
+		for _, f := range opts.OriginalMsg.Files() {
+			msg.AddFile(f)
+		}
+	}
 	fmt.Print("\n")
 	for {
 		fmt.Print(`Attachment [empty when done]: `)
@@ -297,10 +312,10 @@ func addAttachmentFromPath(msg *fbb.Message, path string) error {
 	return app.AddAttachment(msg, filepath.Base(path), "", f)
 }
 
-func interactiveComposeWithTemplate(a *app.App, template string, inReplyToMsg *fbb.Message, replyAll bool) {
-	msg := composeMessageHeader(a, inReplyToMsg, replyAll)
+func interactiveComposeWithTemplate(a *app.App, template string, opts *ComposeOpts) {
+	msg := composeMessageHeader(a, opts)
 
-	formMsg, err := a.FormsManager().ComposeTemplate(template, msg.Subject(), inReplyToMsg, readLine)
+	formMsg, err := a.FormsManager().ComposeTemplate(template, msg.Subject(), opts.OriginalMsg, readLine)
 	if err != nil {
 		log.Printf("failed to compose message for template: %v", err)
 		return
@@ -345,4 +360,18 @@ L:
 	}
 	msg.SetBody(formMsg.Body)
 	postMessage(a, msg)
+}
+
+type ComposeAction int
+
+const (
+	ComposeActionNew ComposeAction = iota
+	ComposeActionReply
+	ComposeActionReplyAll
+	ComposeActionForward
+)
+
+type ComposeOpts struct {
+	Action      ComposeAction
+	OriginalMsg *fbb.Message
 }

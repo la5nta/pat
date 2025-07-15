@@ -57,6 +57,7 @@ var Commands = []app.Command{
 			"\tIf options are passed, reads message from stdin similar to mail(1).",
 		Options: map[string]string{
 			"--from, -r":        "Address to send from. Default is your call from config or --mycall, but can be specified to use tactical addresses.",
+			"--forward":         "Forward given message (full path or mid)",
 			"--in-reply-to":     "Compose in reply to given message (full path or mid)",
 			"--reply-all":       "Reply to all (only applicable in combination with --in-reply-to)",
 			"--template":        "Compose using template file. Uses the --forms directory as root for relative paths.",

@@ -4,9 +4,17 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/la5nta/pat/app"
+	"github.com/la5nta/pat/internal/debug"
+	"github.com/la5nta/wl2k-go/fbb"
+	"github.com/la5nta/wl2k-go/mailbox"
 )
 
 var stdin *bufio.Reader
@@ -18,6 +26,14 @@ func readLine() string {
 
 	str, _ := stdin.ReadString('\n')
 	return strings.TrimSpace(str)
+}
+
+func isTerminal(f *os.File) bool {
+	info, err := f.Stat()
+	if err != nil {
+		return true // Fail-safe
+	}
+	return (info.Mode() & os.ModeCharDevice) != 0
 }
 
 func prompt(question, defaultValue string, options ...string) string {
@@ -79,4 +95,21 @@ func exitOnContextCancellation(ctx context.Context) (cancel func()) {
 		default:
 		}
 	}
+}
+
+func openMessage(a *app.App, path string) (*fbb.Message, error) {
+	// Search if only MID is specified.
+	if filepath.Dir(path) == "." && filepath.Ext(path) == "" {
+		debug.Printf("openMessage(%q): Searching...", path)
+		path += mailbox.Ext
+		fs.WalkDir(os.DirFS(a.Mailbox().MBoxPath), ".", func(p string, d fs.DirEntry, err error) error {
+			if d.Name() != path {
+				return nil
+			}
+			debug.Printf("openMessage(%q): Found %q", d.Name(), p)
+			path = filepath.Join(a.Mailbox().MBoxPath, p)
+			return io.EOF
+		})
+	}
+	return mailbox.OpenMessage(path)
 }

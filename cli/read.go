@@ -96,11 +96,11 @@ func ReadHandle(ctx context.Context, app *app.App, _ []string) {
 						break L
 					}
 				case "r":
-					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionReply, OriginalMsg: msgs[msgIdx]})
+					composeMessage(app, composerFlags{from: app.Options().MyCall, inReplyTo: msgs[msgIdx].MID()}, true)
 				case "ra":
-					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionReplyAll, OriginalMsg: msgs[msgIdx]})
+					composeMessage(app, composerFlags{from: app.Options().MyCall, inReplyTo: msgs[msgIdx].MID(), replyAll: true}, true)
 				case "f":
-					InteractiveComposeMessage(app, &ComposeOpts{Action: ComposeActionForward, OriginalMsg: msgs[msgIdx]})
+					composeMessage(app, composerFlags{from: app.Options().MyCall, forward: msgs[msgIdx].MID()}, true)
 				case "e":
 					ExtractMessageHandle(ctx, app, []string{msgs[msgIdx].MID()})
 				case "q":

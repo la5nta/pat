@@ -297,20 +297,25 @@ class ConnectModal {
       mode: $('#modeSearchSelect').val(),
       band: $('#bandSearchSelect').val(),
       'force-download': forceDownload === true,
+      predict: true,
     };
     $.ajax({
       method: 'GET',
       url: '/api/rmslist',
       dataType: 'json',
       data: params,
-      success: (data) => {
+      beforeSend: () => {
         tbody.empty();
+        $('#rmslistSpinner').show();
+      },
+      success: (data) => {
         data.forEach((rms) => {
           let tr = $('<tr>')
             .append($('<td class="text-left">').text(rms.callsign))
             .append($('<td class="text-left">').text(rms.distance.toFixed(0) + ' km'))
             .append($('<td class="text-left">').text(rms.modes))
-            .append($('<td class="text-right">').text(rms.dial.desc));
+            .append($('<td class="text-right">').text(rms.dial.desc))
+            .append($('<td class="text-right">').text(rms.link_quality == -1 ? 'N/A' : rms.link_quality + '%'));
           tr.click((e) => {
             tbody.find('.active').removeClass('active');
             tr.addClass('active');
@@ -318,6 +323,9 @@ class ConnectModal {
           });
           tbody.append(tr);
         });
+      },
+      complete: () => {
+        $('#rmslistSpinner').hide();
       },
     });
   }

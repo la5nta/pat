@@ -26,6 +26,7 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/forms"
+	"github.com/la5nta/pat/internal/propagation"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
@@ -93,6 +94,8 @@ type App struct {
 	varaFM *vara.Modem
 
 	rigs map[string]rig
+
+	predictor propagation.Predictor
 
 	eventLog  *EventLogger
 	logWriter io.WriteCloser
@@ -233,6 +236,14 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 
 	if a.options.Listen == "" && len(a.config.Listen) > 0 {
 		a.options.Listen = strings.Join(a.config.Listen, ",")
+	}
+
+	// init predictor
+	// TODO: Make executable and datadir configurable
+	if predictor, err := propagation.NewVOACAPPredictor("", ""); err != nil {
+		log.Println("Failed to initialize propagation engine:", err)
+	} else {
+		a.predictor = propagation.WithCaching(predictor)
 	}
 
 	// init forms subsystem

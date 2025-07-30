@@ -9,44 +9,56 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/propagation/voacap"
 )
 
-// voacaplPredictor implements the Predictor interface for the VOACAP tool.
-type voacaplPredictor struct {
+// voacapPredictor implements the Predictor interface for the VOACAP.
+type voacapPredictor struct {
 	executable string
 	dataDir    string
 
 	mu sync.Mutex // Guard against concurrent voacapw.exe instances
 }
 
-// TODO: For voacapw.exe
-//       * --run-dir is not available, so concurrent predictions is not possible. Use mutex to guard.
-//       * dataDir is by default: c:\itshfbc
-//       * runDir is "..\RUN" (is that relative to pwd or executable dir? usually it is {dataDir}\RUN)
-//               (if relative to pwd, we can maybe do concurrency after all?)
-//       * executable is by default: c:\itshfbc\bin_win\voacapw.exe
-
-// NewVOACAPLPredictor creates a new Predictor for voacapl (VOACAP for Linux).
-func NewVOACAPLPredictor(executable, dataDir string) (Predictor, error) {
-	if dataDir == "" {
-		dataDir = os.ExpandEnv("$HOME/itshfbc")
-	}
-	if _, err := os.Stat(dataDir); err != nil {
-		return nil, fmt.Errorf("failed to find datadir '%s': %w", dataDir, err)
+// NewVOACAPPredictor creates a new VOACAP predictor
+func NewVOACAPPredictor(executable, dataDir string) (Predictor, error) {
+	// Find CLI executable
+	if executable == "" {
+		switch runtime.GOOS {
+		case "windows":
+			executable = `c:\itshfbc\bin_win\voacapw.exe`
+		default:
+			executable = `voacapl`
+		}
 	}
 	executable, err := findExecutable(executable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find executable '%s': %w", executable, err)
 	}
-	return &voacaplPredictor{executable: executable, dataDir: dataDir}, nil
+
+	// Find model data directory
+	if dataDir == "" {
+		switch runtime.GOOS {
+		case "windows":
+			// Usually c:\itshfbc (c:\itshfbc\bin_win\..)
+			dataDir = filepath.Join(filepath.Dir(executable), "..")
+		default:
+			dataDir = os.ExpandEnv("$HOME/itshfbc")
+		}
+	}
+	if _, err := os.Stat(dataDir); err != nil {
+		return nil, fmt.Errorf("failed to find datadir '%s': %w", dataDir, err)
+	}
+
+	return &voacapPredictor{executable: executable, dataDir: dataDir}, nil
 }
 
 // Predict implements the Predictor interface.
-func (p *voacaplPredictor) Predict(ctx context.Context, params PredictionParams) (*Prediction, error) {
+func (p *voacapPredictor) Predict(ctx context.Context, params PredictionParams) (*Prediction, error) {
 	const (
 		inputName  = "input.dat"
 		outputName = "output.out"
@@ -102,7 +114,7 @@ func (p *voacaplPredictor) Predict(ctx context.Context, params PredictionParams)
 	return prediction, nil
 }
 
-func (p *voacaplPredictor) generateInputFile(params PredictionParams) ([]byte, error) {
+func (*voacapPredictor) generateInputFile(params PredictionParams) ([]byte, error) {
 	if params.Frequency >= 31e6 {
 		return nil, ErrFrequencyOutOfBounds
 	}
@@ -125,7 +137,7 @@ func (p *voacaplPredictor) generateInputFile(params PredictionParams) ([]byte, e
 	return buf.Bytes(), nil
 }
 
-func (p *voacaplPredictor) parseOutput(output io.Reader) (*Prediction, error) {
+func (*voacapPredictor) parseOutput(output io.Reader) (*Prediction, error) {
 	b, err := io.ReadAll(output)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read voacap output: %w", err)

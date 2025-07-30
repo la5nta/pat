@@ -10,7 +10,7 @@ import (
 )
 
 func TestVOACAPLAdapter_ParseOutput(t *testing.T) {
-	predictor := &voacaplPredictor{}
+	predictor := &voacapPredictor{}
 	outputData, err := os.ReadFile(filepath.Join("voacap", "testdata", "output.out"))
 	if err != nil {
 		t.Fatalf("failed to read testdata/output.out: %v", err)

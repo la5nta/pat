@@ -269,11 +269,12 @@ func (h Handler) bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
 	var (
 		forceDownload, _ = strconv.ParseBool(req.FormValue("force-download"))
+		predict, _       = strconv.ParseBool(req.FormValue("predict"))
 		band             = req.FormValue("band")
 		mode             = strings.ToLower(req.FormValue("mode"))
 		prefix           = strings.ToUpper(req.FormValue("prefix"))
 	)
-	list, err := h.ReadRMSList(req.Context(), forceDownload, func(r app.RMS) bool {
+	list, err := h.ReadRMSList(req.Context(), forceDownload, predict, func(r app.RMS) bool {
 		switch {
 		case r.URL == nil:
 			return false
@@ -293,7 +294,11 @@ func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sort.Sort(app.ByDist(list))
+	if predict {
+		sort.Sort(sort.Reverse(app.ByLinkQuality(list)))
+	} else {
+		sort.Sort(app.ByDist(list))
+	}
 	json.NewEncoder(w).Encode(list)
 }
 

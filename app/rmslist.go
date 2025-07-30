@@ -7,16 +7,21 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math"
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/la5nta/pat/internal/cmsapi"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
+	"github.com/la5nta/pat/internal/propagation"
+	"github.com/la5nta/pat/internal/silso"
 
 	"github.com/pd0mz/go-maidenhead"
 )
@@ -36,14 +41,15 @@ func (f JSONFloat64) MarshalJSON() ([]byte, error) {
 }
 
 type RMS struct {
-	Callsign   string      `json:"callsign"`
-	Gridsquare string      `json:"gridsquare"`
-	Distance   JSONFloat64 `json:"distance"`
-	Azimuth    JSONFloat64 `json:"azimuth"`
-	Modes      string      `json:"modes"`
-	Freq       Frequency   `json:"freq"`
-	Dial       Frequency   `json:"dial"`
-	URL        *JSONURL    `json:"url"`
+	Callsign    string      `json:"callsign"`
+	Gridsquare  string      `json:"gridsquare"`
+	Distance    JSONFloat64 `json:"distance"`
+	Azimuth     JSONFloat64 `json:"azimuth"`
+	Modes       string      `json:"modes"`
+	Freq        Frequency   `json:"freq"`
+	Dial        Frequency   `json:"dial"`
+	URL         *JSONURL    `json:"url"`
+	LinkQuality int         `json:"link_quality"`
 }
 
 func (r RMS) IsMode(mode string) bool {
@@ -60,13 +66,33 @@ func (r RMS) IsBand(band string) bool {
 	return bands[band].Contains(r.Freq)
 }
 
+type ByLinkQuality []RMS
+
+func (r ByLinkQuality) Len() int      { return len(r) }
+func (r ByLinkQuality) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+func (r ByLinkQuality) Less(i, j int) bool {
+	if r[i].LinkQuality != r[j].LinkQuality {
+		return r[i].LinkQuality < r[j].LinkQuality
+	}
+	// Fallback to distance sort (reversed since smaller value is better, as oppose to link quality)
+	return sort.Reverse(ByDist(r)).Less(i, j)
+}
+
 type ByDist []RMS
 
-func (r ByDist) Len() int           { return len(r) }
-func (r ByDist) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ByDist) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
+func (r ByDist) Len() int      { return len(r) }
+func (r ByDist) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+func (r ByDist) Less(i, j int) bool {
+	if r[i].Distance != r[j].Distance {
+		return r[i].Distance < r[j].Distance
+	}
+	if r[i].Callsign != r[j].Callsign {
+		return r[i].Callsign < r[j].Callsign
+	}
+	return r[i].Freq < r[j].Freq
+}
 
-func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
+func (a *App) ReadRMSList(ctx context.Context, forceDownload, predict bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
 	me, err := maidenhead.ParseLocator(a.config.Locator)
 	if err != nil {
 		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
@@ -94,11 +120,12 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 	for _, gw := range status.Gateways {
 		for _, channel := range gw.Channels {
 			r := RMS{
-				Callsign:   gw.Callsign,
-				Gridsquare: channel.Gridsquare,
-				Modes:      channel.SupportedModes,
-				Freq:       Frequency(channel.Frequency),
-				Dial:       Frequency(channel.Frequency).Dial(channel.SupportedModes),
+				Callsign:    gw.Callsign,
+				Gridsquare:  channel.Gridsquare,
+				Modes:       channel.SupportedModes,
+				Freq:        Frequency(channel.Frequency),
+				Dial:        Frequency(channel.Frequency).Dial(channel.SupportedModes),
+				LinkQuality: -1,
 			}
 			if chURL := toURL(channel, gw.Callsign); chURL != nil {
 				r.URL = &JSONURL{*chURL}
@@ -114,7 +141,65 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 			slice = append(slice, r)
 		}
 	}
+
+	switch {
+	case !predict:
+		return slice, nil
+	case a.predictor == nil:
+		log.Println("HF propagation prediction is not configured")
+		return slice, nil
+	}
+
+	// Grab the forecasted SSN for today
+	ssn, err := getSSN(ctx, time.Now())
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Run prediction (in parallel)
+	params := make([]propagation.PredictionParams, len(slice))
+	for i, r := range slice {
+		params[i] = propagation.PredictionParams{
+			From:          propagation.Maidenhead(a.Config().Locator),
+			To:            propagation.Maidenhead(r.Gridsquare),
+			Frequency:     int(r.Freq),
+			SSN:           ssn,
+			TransmitPower: 100, // TODO: Consider increasing or making configurable
+			MinSNR:        -20, // -20 dB is lowest SNR for PACTOR III
+			Time:          time.Now(),
+		}
+	}
+	propagation.PredictParallel(ctx, a.predictor, params, func(i int, p *propagation.Prediction, err error) {
+		switch {
+		case errors.Is(err, propagation.ErrFrequencyOutOfBounds), ctx.Err() != nil:
+		case err != nil:
+			log.Printf("Could not predict propagation for %s: %s", slice[i].Callsign, err)
+		default:
+			slice[i].LinkQuality = p.LinkQuality
+		}
+	})
+
 	return slice, nil
+}
+
+func getSSN(ctx context.Context, now time.Time) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	debug.Printf("Fetching SIDC SSN prediction...")
+	cachePath := filepath.Join(directories.DataDir(), ".predicted-ssn-silso.json")
+	predictions, err := silso.GetPredictedSSNCached(ctx, cachePath)
+	if err != nil || len(predictions) == 0 {
+		return 50, fmt.Errorf("failed to get SSN prediction data: %v", err)
+	}
+	targetMonth := now.Format("2006-01")
+	for _, p := range predictions {
+		if p.TimeTag == targetMonth {
+			debug.Printf("SSN: %v", p.PredictedSSN)
+			return int(p.PredictedSSN), nil
+		}
+	}
+	p := predictions[len(predictions)-1]
+	return int(p.PredictedSSN), fmt.Errorf("failed to find SSN prediction for current month. Using %.0f (%s)", p.PredictedSSN, p.TimeTag)
 }
 
 func toURL(gc cmsapi.GatewayChannel, targetCall string) *url.URL {

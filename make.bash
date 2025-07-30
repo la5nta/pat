@@ -15,7 +15,7 @@ GO_POINT_VERSION=$(go version| perl -ne 'm/go1\.(\d+)/; print $1;')
 
 AX25VERSION="0.0.12-rc4"
 AX25DIST="libax25-${AX25VERSION}"
-AX25DIST_URL="http://http.debian.net/debian/pool/main/liba/libax25/libax25_${AX25VERSION}.orig.tar.gz"
+AX25DIST_URL="https://ubuntu.hi.no/ubuntu/pool/universe/liba/libax25/libax25_${AX25VERSION}.orig.tar.gz"
 function install_libax25 {
 	mkdir -p .build && cd .build
 	[[ -f "${AX25DIST}" ]] || curl -LSsf "${AX25DIST_URL}" | tar zx

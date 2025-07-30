@@ -18,10 +18,10 @@ func findExecutable(name string) (string, error) {
 
 	// 1. If 'name' is an absolute path, check if it exists and return it.
 	if filepath.IsAbs(name) {
-		if _, err := os.Stat(name); err == nil {
-			return name, nil
+		if _, err := os.Stat(name); err != nil {
+			return "", err
 		}
-		return "", fmt.Errorf("absolute path '%s' not found", name)
+		return name, nil
 	}
 
 	// 2. If 'name' contains a path separator, treat as a relative path.
@@ -30,16 +30,12 @@ func findExecutable(name string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get absolute path for '%s': %w", name, err)
 		}
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath, nil
+		if _, err := os.Stat(absPath); err != nil {
+			return "", err
 		}
-		return "", fmt.Errorf("relative path '%s' (resolved to %s) not found", name, absPath)
+		return absPath, nil
 	}
 
 	// 3. Try to find the command in PATH.
-	path, err := exec.LookPath(name)
-	if err != nil {
-		return "", fmt.Errorf("command '%s' not found in PATH: %w", name, err)
-	}
-	return path, nil // LookPath returns an absolute path or an error
+	return exec.LookPath(name) // LookPath returns an absolute path or an error
 }

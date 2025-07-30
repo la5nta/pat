@@ -37,7 +37,7 @@ func NewVOACAPPredictor(executable, dataDir string) (Predictor, error) {
 	}
 	executable, err := findExecutable(executable)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find executable '%s': %w", executable, err)
+		return nil, fmt.Errorf("failed to find executable: %w", err)
 	}
 
 	// Find model data directory
@@ -51,7 +51,7 @@ func NewVOACAPPredictor(executable, dataDir string) (Predictor, error) {
 		}
 	}
 	if _, err := os.Stat(dataDir); err != nil {
-		return nil, fmt.Errorf("failed to find datadir '%s': %w", dataDir, err)
+		return nil, fmt.Errorf("failed to find datadir: %w", err)
 	}
 
 	return &voacapPredictor{executable: executable, dataDir: dataDir}, nil

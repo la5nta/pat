@@ -14,6 +14,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{.AppName}} - Configuration</title>
+  <link rel="icon" type="image/png" href="../dist/static/pat_logo.png">
   <link href="../dist/css/style.css" rel="stylesheet" />
 </head>
 
@@ -52,12 +53,23 @@
 
                     <div class="form-group">
                       <label for="mycall">Callsign <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="mycall" name="mycall" required pattern="[A-Z0-9]{3,7}"
-                        oninput="this.value = this.value.toUpperCase()">
+                      <div class="input-group">
+                        <input type="text" class="form-control" id="mycall" name="mycall" required
+                          pattern="[A-Z0-9]{3,7}" oninput="this.value = this.value.toUpperCase()">
+                        <span class="input-group-addon" id="mycall-status" style="visibility: hidden;"></span>
+                      </div>
                       <small class="form-text text-muted">This field is required. Valid amateur radio callsign
                         (uppercase only)</small>
                     </div>
 
+                    <div id="create-account-prompt" class="alert alert-warning" style="display: none;">
+                      Account not found.
+                      <a href="#" id="create-account-link">Create one?</a>
+                      <p class="text-danger" style="margin-top: 10px;">
+                        Continuing without a Winlink account will automatically initiate an over-the-air activation on
+                        your first connection. The Winlink system will issue a password that is not recoverable if lost.
+                      </p>
+                    </div>
                     <div class="form-group">
                       <label for="locator">Maidenhead Locator <span class="text-danger">*</span></label>
                       <input type="text" class="form-control" id="locator" name="locator" required
@@ -67,14 +79,18 @@
 
                     <div class="form-group">
                       <label for="secure_login_password">Secure Login Password (optional)</label>
-                      <input type="text" class="form-control" id="secure_login_password" name="secure_login_password"
-                        autocomplete="off">
+                      <div class="input-group">
+                        <input type="password" class="form-control" id="secure_login_password"
+                          name="secure_login_password" autocomplete="off">
+                        <span class="input-group-btn">
+                          <button class="btn btn-default" type="button" id="toggle-password">
+                            <span class="glyphicon glyphicon-eye-open"></span>
+                          </button>
+                        </span>
+                      </div>
                       <small class="form-text text-muted">
-                        Used for secure login challenges. Leave empty for new accounts (created on first connection with
-                        a new callsign) - a password will be generated and emailed to you.
+                        Used for secure login challenges. This is the password for your Winlink account.
                       </small>
-                      <small class="form-text text-danger">Important: Write down the password emailed after first
-                        connection and keep it safe - this is your only copy!</small>
                     </div>
 
                     <div class="form-group">
@@ -125,7 +141,7 @@
                                 </div>
                               </div>
                             </div>
-                            <button id="addAlias" class="btn btn-success btn-sm" style="margin-top: 10px;">
+                            <button id="addAlias" class="btn btn-success btn-sm" style="margin-top: 10px;" type="button">
                               <span class="glyphicon glyphicon-plus"></span> Add Alias
                             </button>
                           </div>
@@ -155,14 +171,19 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="ardop"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="ardop">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
                                 <label for="ardop_addr">TNC Address</label>
                                 <input type="text" class="form-control" id="ardop_addr" placeholder="localhost:8515"
                                   name="ardop_addr">
+                              </div>
+                              <div class="form-group">
+                                <label for="ardop_connect_requests">Connect Requests</label>
+                                <input type="number" class="form-control" id="ardop_connect_requests" name="ardop_connect_requests" min="1">
+                                <small class="form-text text-muted">Number of connect attempts when dialing. Most stations require multiple tries before responding.</small>
                               </div>
                               <div class="form-group">
                                 <label for="ardop_arq_bandwidth">ARQ Bandwidth</label>
@@ -179,13 +200,15 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ardop_cwid_enabled" name="ardop_cwid_enabled"> Enable CW ID
+                                  <input type="checkbox" id="ardop_cwid_enabled" name="ardop_cwid_enabled">
+                                  Enable CW ID
                                 </label>
                               </div>
                               <div class="form-group">
                                 <label for="ardop_beacon_interval">Beacon Interval (seconds)</label>
                                 <input type="number" class="form-control" id="ardop_beacon_interval"
-                                  name="ardop_beacon_interval" min="0" value="0">
+                                  name="ardop_beacon_interval" value="0">
+                                <small class="form-text text-muted">Minimum 10 seconds. Use 0 or leave blank to disable beacons.</small>
                               </div>
                               <div class="form-group">
                                 <label for="ardop_rig">Rig</label>
@@ -195,7 +218,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ardop_ptt_ctrl" name="ardop_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="ardop_ptt_ctrl" name="ardop_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -211,8 +235,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="pactor"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="pactor">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -239,7 +263,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="pactor_ptt_ctrl" name="pactor_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="pactor_ptt_ctrl" name="pactor_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -255,8 +280,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="varahf"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="varahf">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -280,7 +305,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="vara_hf_ptt_ctrl" name="vara_hf_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="vara_hf_ptt_ctrl" name="vara_hf_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -296,21 +322,14 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="varafm"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="varafm">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
                                 <label for="vara_fm_addr">Modem Address</label>
                                 <input type="text" class="form-control" id="vara_fm_addr" placeholder="localhost:8300"
                                   name="vara_fm_addr">
-                              </div>
-                              <div class="form-group">
-                                <label for="vara_fm_bandwidth">Bandwidth</label>
-                                <select class="form-control" id="vara_fm_bandwidth" name="vara_fm_bandwidth">
-                                  <option value="6250">6250 Hz</option>
-                                  <option value="12500">12500 Hz</option>
-                                </select>
                               </div>
                               <div class="form-group">
                                 <label for="vara_fm_rig">Rig</label>
@@ -320,7 +339,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="vara_fm_ptt_ctrl" name="vara_fm_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="vara_fm_ptt_ctrl" name="vara_fm_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                             </div>
@@ -336,8 +356,8 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="telnet"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="telnet">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
@@ -368,16 +388,15 @@
                             <div class="panel-body">
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" name="listen_methods[]" value="ax25"> Listen for inbound P2P
-                                  traffic
+                                  <input type="checkbox" name="listen_methods[]" value="ax25">
+                                  Listen for inbound P2P traffic
                                 </label>
                               </div>
                               <div class="form-group">
                                 <label for="ax25_beacon_interval">Beacon Interval (seconds)</label>
                                 <input type="number" class="form-control" id="ax25_beacon_interval"
-                                  name="ax25_beacon_interval" min="0" value="3600">
-                                <small class="form-text text-muted">Seconds between beacon frames when listening (0 =
-                                  disabled). Example: 3600 = hourly</small>
+                                  name="ax25_beacon_interval" value="3600">
+                                <small class="form-text text-muted">Minimum 10 seconds between beacons. Use 0 or leave blank to disable beacons. Example: 3600 = hourly</small>
                               </div>
                               <div class="form-group">
                                 <label for="ax25_beacon_message">Beacon Message</label>
@@ -408,7 +427,8 @@
                               </div>
                               <div class="checkbox">
                                 <label>
-                                  <input type="checkbox" id="ax25_ptt_ctrl" name="ax25_ptt_ctrl"> PTT Control
+                                  <input type="checkbox" id="ax25_ptt_ctrl" name="ax25_ptt_ctrl">
+                                  PTT Control
                                 </label>
                               </div>
                               <small class="form-text text-muted">Linux (kernel AX.25), AGWPE (AGWPE-compatible TNC),
@@ -606,24 +626,22 @@
                       <label>
                         <input type="checkbox" id="gpsd_enable_http" name="gpsd_enable_http">
                         Enable GPSd HTTP Proxy
-                        <small class="form-text text-muted text-danger">Caution: Exposes GPS position to anyone
-                          accessing the web interface</small>
                       </label>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Exposes GPS position to anyone accessing the web interface</small>
                     </div>
                     <div class="checkbox">
                       <label>
                         <input type="checkbox" id="gpsd_allow_forms" name="gpsd_allow_forms">
                         Allow Forms GPS Access
-                        <small class="form-text text-muted text-danger">Caution: Automatically injects GPS position into
-                          forms without explicit consent</small>
                       </label>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Automatically injects GPS position into forms without explicit consent</small>
                     </div>
                     <div class="checkbox">
                       <label>
                         <input type="checkbox" id="gpsd_use_server_time" name="gpsd_use_server_time">
                         Use Server Time
-                        <small class="form-text text-muted">Use server time instead of GPS device timestamp</small>
                       </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Use server time instead of GPS device timestamp</small>
                     </div>
                     <div class="form-group">
                       <label for="gpsd_addr">Server Address</label>
@@ -668,7 +686,7 @@
                         </div>
                       </div>
                     </div>
-                    <button id="addSchedule" class="btn btn-success btn-sm" style="margin-top: 10px;">
+                    <button id="addSchedule" class="btn btn-success btn-sm" style="margin-top: 10px;" type="button">
                       <span class="glyphicon glyphicon-plus"></span> Add Schedule
                     </button>
                   </div>
@@ -705,15 +723,110 @@
           <p>Configuration changes have been saved successfully.</p>
           <p class="text-warning"><strong>Note:</strong> Some changes will not take effect until the application is
             restarted.</p>
+          <div id="restartStatus" style="display: none; margin-top: 15px;"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="restartNow">
+            <span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span>
+            Restart Now
+          </button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="../dist/js/config.js"></script>
+
+  <!-- Create Account Modal -->
+  <div class="modal fade" id="createAccountModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Create Winlink Account</h4>
+        </div>
+        <div class="modal-body">
+          <!-- Breadcrumbs -->
+          <div id="breadcrumb" style="margin-bottom: 20px; font-size: 16px;">
+            <span class="breadcrumb-step active" data-step="1"><span class="badge">1</span> Callsign</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="2"><span class="badge">2</span> Password</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="3"><span class="badge">3</span> Recovery Email</span>
+            <span class="breadcrumb-arrow"> &rarr; </span>
+            <span class="breadcrumb-step" data-step="4"><span class="badge">4</span> Confirm</span>
+          </div>
+
+          <!-- Step 1: Callsign -->
+          <div class="tab-pane active" id="step1" style="margin-top: 20px;">
+            <p>Welcome! Let's create your Winlink account. Please confirm your callsign below.</p>
+            <div class="form-group">
+              <label for="modal-mycall">Callsign</label>
+              <input type="text" class="form-control" id="modal-mycall" disabled>
+            </div>
+            <button type="button" class="btn btn-primary" id="next-step1">Next</button>
+          </div>
+
+          <!-- Step 2: Password -->
+          <div class="tab-pane" id="step2" style="display: none; margin-top: 20px;">
+            <p>Choose a password for your account. It must be 6-12 characters long.</p>
+            <div class="form-group">
+              <label for="modal-password">Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="modal-password" minlength="6" maxlength="12">
+                <span class="input-group-addon" id="password-status"></span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="modal-password-verify">Verify Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="modal-password-verify" minlength="6" maxlength="12">
+                <span class="input-group-addon" id="password-verify-status"></span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step2">Back</button>
+            <button type="button" class="btn btn-primary" id="next-step2" disabled>Next</button>
+          </div>
+
+          <!-- Step 3: Recovery Email -->
+          <div class="tab-pane" id="step3" style="display: none; margin-top: 20px;">
+            <p>Provide a recovery email. This is optional but highly recommended in case you forget your password.</p>
+            <div class="form-group">
+              <label for="modal-email">Recovery Email</label>
+              <div class="input-group">
+                <input type="email" class="form-control" id="modal-email">
+                <span class="input-group-addon" id="email-status"></span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step3">Back</button>
+            <button type="button" class="btn btn-primary" id="next-step3">Next</button>
+          </div>
+
+          <!-- Step 4: Summary -->
+          <div class="tab-pane" id="step4" style="display: none; margin-top: 20px;">
+            <h4>Confirm Account Creation</h4>
+            <p>To create your Winlink account, we'll send your chosen callsign, password, and recovery email address
+              directly to the Winlink system.</p>
+            <p>Your callsign and password will also be stored locally on your computer in the configuration file. This
+              is so you can log in and use Winlink services directly from here.</p>
+            <p>By proceeding, you agree that your data will be handled according to Winlink's Terms, Conditions and
+              Privacy Policy:</p>
+            <p><a href="https://winlink.org/terms_conditions" target="_blank">https://winlink.org/terms_conditions</a>
+            </p>
+            <div class="checkbox">
+              <label>
+                <input type="checkbox" id="consent-checkbox"> I agree to create my Winlink account and store my
+                credentials locally.
+              </label>
+            </div>
+            <button type="button" class="btn btn-default" id="prev-step4">Back</button>
+            <button type="button" class="btn btn-success" id="finish-creation" disabled>Create Account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>

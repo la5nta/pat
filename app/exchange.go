@@ -204,7 +204,7 @@ func (a *App) sessionExchange(conn net.Conn, targetCall string, master bool) err
 	}
 
 	session.IsMaster(master)
-	session.SetLogger(log.New(a.logWriter, "", 0))
+	session.SetLogger(log.New(a.termWriter, "", 0))
 
 	session.SetStatusUpdater(StatusUpdate{a.websocketHub})
 

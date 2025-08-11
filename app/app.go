@@ -94,8 +94,8 @@ type App struct {
 
 	rigs map[string]rig
 
-	eventLog  *EventLogger
-	logWriter io.WriteCloser
+	eventLog   *EventLogger
+	termWriter io.WriteCloser // termWriter writes to both stdout and the log file (web gui echoes log file)
 }
 
 // A rig holds a VFO and a closer for the underlying rig connection.
@@ -197,11 +197,11 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 	if err != nil {
 		log.Fatalf("Unable to create log file at %s: %v", a.options.LogPath, err)
 	}
-	a.logWriter = struct {
+	a.termWriter = struct {
 		io.Writer
 		io.Closer
 	}{io.MultiWriter(f, os.Stdout), f}
-	log.SetOutput(a.logWriter)
+	log.SetOutput(io.MultiWriter(f, os.Stderr)) // web gui echoes the log file
 
 	a.eventLog, err = NewEventLogger(a.options.EventLogPath)
 	if err != nil {
@@ -353,8 +353,8 @@ func (a *App) Close() {
 	debug.Printf("Starting cleanup")
 	defer func() {
 		debug.Printf("Cleanup done")
-		if a.logWriter != nil {
-			a.logWriter.Close()
+		if a.termWriter != nil {
+			a.termWriter.Close()
 		}
 	}()
 
@@ -414,16 +414,16 @@ func (a *App) onServiceMessageReceived(msg *fbb.Message) {
 	// Write all service messages to the log
 	body, _ := msg.Body()
 	subject := msg.Subject()
-	fmt.Fprintln(a.logWriter)
-	fmt.Fprintln(a.logWriter, strings.Repeat("=", (60-len(subject))/2), subject, strings.Repeat("=", (60-len(subject))/2))
-	fmt.Fprintln(a.logWriter, strings.TrimSpace(body))
-	fmt.Fprintln(a.logWriter, strings.Repeat("=", 62))
-	fmt.Fprintln(a.logWriter)
+	fmt.Fprintln(a.termWriter)
+	fmt.Fprintln(a.termWriter, strings.Repeat("=", (60-len(subject))/2), subject, strings.Repeat("=", (60-len(subject))/2))
+	fmt.Fprintln(a.termWriter, strings.TrimSpace(body))
+	fmt.Fprintln(a.termWriter, strings.Repeat("=", 62))
+	fmt.Fprintln(a.termWriter)
 
 	// Handle account activation email
 	if isActivation, password := isAccountActivationMessage(msg); isActivation && password != "" {
-		fmt.Fprintln(a.logWriter, "DO NOT LOSE YOUR PASSWORD:", password)
-		fmt.Fprintln(a.logWriter)
+		fmt.Fprintln(a.termWriter, "DO NOT LOSE YOUR PASSWORD:", password)
+		fmt.Fprintln(a.termWriter)
 	}
 }
 

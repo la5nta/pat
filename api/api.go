@@ -293,7 +293,7 @@ func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sort.Sort(app.ByDist(list))
+	sort.Sort(sort.Reverse(app.ByLinkQuality(list)))
 	json.NewEncoder(w).Encode(list)
 }
 

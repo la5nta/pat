@@ -109,6 +109,9 @@ type Config struct {
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:"gpsd"`
 
+	// See PredictionConfig.
+	Prediction PredictionConfig `json:"prediction,omitzero"`
+
 	// Legacy support for old config files only. This field is deprecated!
 	// Please use "Addr" field in GPSd config struct (GPSd.Addr)
 	GPSdAddrLegacy string `json:"gpsd_addr,omitempty"`
@@ -149,6 +152,32 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	*c = Config(tmp.aliased)
 	return nil
 }
+
+type PredictionConfig struct {
+	// engine sets the HF propagation prediction engine to be used.
+	// Valid options are:
+	//   - empty string (autodetect)
+	//   - voacap
+	//   - disabled
+	// If empty, autodetection is attempted.
+	Engine PredictionEngine `json:"engine"`
+
+	// See VOACAPConfig.
+	VOACAP VOACAPConfig `json:"voacap,omitzero"`
+}
+
+func (p PredictionConfig) IsZero() bool { return p == (PredictionConfig{}) }
+
+type VOACAPConfig struct {
+	// Executable overrides the default executable for VOACAP.
+	// Default is c:\itshfbc\bin_win\voacapw.exe on Windows and voacapl for other platforms.
+	Executable string `json:"executable"`
+	// DataDir overrides the default data directory for VOACAP.
+	// Default is c:\itshfbc on Windows and $HOME/itshfbc for other platforms.
+	DataDir string `json:"data_dir"`
+}
+
+func (v VOACAPConfig) IsZero() bool { return v == (VOACAPConfig{}) }
 
 type HamlibConfig struct {
 	// The network type ("serial" or "tcp"). Use 'tcp' for rigctld (default).

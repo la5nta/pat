@@ -26,6 +26,7 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/forms"
+	"github.com/la5nta/pat/internal/propagation"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
@@ -93,6 +94,8 @@ type App struct {
 	varaFM *vara.Modem
 
 	rigs map[string]rig
+
+	predictor propagation.Predictor
 
 	eventLog   *EventLogger
 	termWriter io.WriteCloser // termWriter writes to both stdout and the log file (web gui echoes log file)
@@ -233,6 +236,21 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 
 	if a.options.Listen == "" && len(a.config.Listen) > 0 {
 		a.options.Listen = strings.Join(a.config.Listen, ",")
+	}
+
+	// Initialize HF prediction engine (VOACAP)
+	switch p := a.config.Prediction; p.Engine {
+	case cfg.PredictionEngineVOACAP, cfg.PredictionEngineAuto:
+		voacap, err := propagation.NewVOACAPPredictor(p.VOACAP.Executable, p.VOACAP.DataDir)
+		if err != nil {
+			// Only log error if engine is set explicitly
+			if p.Engine == cfg.PredictionEngineVOACAP {
+				log.Println("Failed to initialize VOACAP:", err)
+			}
+			break
+		}
+		debug.Printf("Prediction engine: %q", voacap.Version())
+		a.predictor = propagation.WithCaching(voacap)
 	}
 
 	// init forms subsystem

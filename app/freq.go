@@ -63,6 +63,7 @@ func (f Frequency) MarshalJSON() ([]byte, error) {
 }
 
 func (f Frequency) KHz() float64 { return float64(f) / 1e3 }
+func (f Frequency) MHz() float64 { return float64(f) / 1e6 }
 
 func (f Frequency) Dial(mode string) Frequency {
 	mode = strings.ToLower(mode)

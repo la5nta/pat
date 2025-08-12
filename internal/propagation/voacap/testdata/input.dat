@@ -1,0 +1,16 @@
+COMMENT    5.3 MHz, JP20QH -> JO59JS @ 2025-07-01T20:00:00Z                          
+LINEMAX      55
+COEFFS    CCIR
+TIME            20   20    1    1
+MONTH      2025 7.00
+SUNSPOT   139.00
+LABEL     JP20QH              JO59JS              
+CIRCUIT   60.29N     5.33E    59.75N    10.75E  S     0
+SYSTEM     1.00  145 0.10   15-20.00 0.50 0.10
+FPROB      1.00 1.00 1.00 0.00
+ANTENNA       1    1    2   30     5.350[                     ] 90.0    0.1000
+ANTENNA       2    2    2   30     5.350[                     ]270.0    0.1000
+FREQUENCY 5.350
+METHOD       30    0
+EXECUTE
+QUIT

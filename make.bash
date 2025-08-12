@@ -32,6 +32,7 @@ function build_web {
 	npm run production
 }
 function embed {
+	curl -LSsf "https://www.sidc.be/SILSO/FORECASTS/KFprediCM.txt" > internal/propagation/silso/KFprediCM.txt && go test ./internal/propagation/silso
 	curl -LSsf 'https://api.winlink.org/gateway/status.json?key=1880278F11684B358F36845615BD039A&mode=AnyAll&HistoryHours=48&ServiceCodes=PUBLIC' | gzip -9 > internal/cmsapi/gateway_status.json.gz && go test ./internal/cmsapi
 }
 

@@ -1,0 +1,79 @@
+  IONOSPHERIC COMMUNICATIONS ANALYSIS AND PREDICTION PROGRAM
+                     VOACAP   VERSION 16.1207W
+
+
+          1         2         3         4         5         6         7
+ 123456789012345678901234567890123456789012345678901234567890123456789012345
+
+ COMMENT    Any VOACAP default cards may be placed in the file: VOACAP.DEF
+ LINEMAX      55
+ COEFFS    CCIR
+ TIME             8    8    1    1
+ MONTH      2025 8.00
+ SUNSPOT   121.00
+ LABEL     JP20qh              JQ78TF
+ CIRCUIT   60.29N     5.33E    78.21N    15.58E  S     0
+ SYSTEM     1.00  145 0.10    320.00 0.50 0.10
+ FPROB      1.00 1.00 1.00 0.00
+ ANTENNA       1    1    2   30     3.599[                     ] 90.0    0.0500
+ ANTENNA       2    2    2   30     3.599[                     ]270.0    0.0500
+ FREQUENCY 3.599
+ METHOD       30    0
+ EXECUTE
+ QUIT
+     CCIR Coefficients        ~METHOD 30   VOACAP L 16.1207W  PAGE   1
+
+  Aug    2025          SSN = 121.                Minimum Angle= 0.100 degrees
+  JP20qh              JQ78TF                AZIMUTHS          N. MI.      KM
+  60.29 N    5.33 E - 78.21 N   15.58 E      6.68  196.38    1093.8   2025.5
+  XMTR  2-30 +  3.6 dBi[                     ] Az= 90.0 OFFaz=276.7   0.050kW
+  RCVR  2-30 +  0.1 dBi[                     ] Az=270.0 OFFaz=286.4
+  3 MHz NOISE = -145.0 dBW     REQ. REL =  3%    REQ. SNR = 20.0 dB
+  MULTIPATH POWER TOLERANCE =  0.5 dB   MULTIPATH DELAY TOLERANCE =  0.100 ms
+
+  24.0 11.5  3.6  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0 FREQ
+        1F2  1 E   -    -    -    -    -    -    -    -    -    -  MODE  
+       17.8  0.9   -    -    -    -    -    -    -    -    -    -  TANGLE
+        7.5  6.8   -    -    -    -    -    -    -    -    -    -  DELAY 
+        431   98   -    -    -    -    -    -    -    -    -    -  V HITE
+       0.50 1.00   -    -    -    -    -    -    -    -    -    -  MUFday
+        133  126   -    -    -    -    -    -    -    -    -    -  LOSS  
+         12    9   -    -    -    -    -    -    -    -    -    -  DBU   
+       -116 -109   -    -    -    -    -    -    -    -    -    -  S DBW 
+       -161 -147   -    -    -    -    -    -    -    -    -    -  N DBW 
+         45   38   -    -    -    -    -    -    -    -    -    -  SNR   
+        -41  -30   -    -    -    -    -    -    -    -    -    -  RPWRG 
+       0.88 0.82   -    -    -    -    -    -    -    -    -    -  REL   
+       0.00 0.00   -    -    -    -    -    -    -    -    -    -  MPROB 
+       0.92 0.87   -    -    -    -    -    -    -    -    -    -  S PRB 
+       25.0 23.5   -    -    -    -    -    -    -    -    -    -  SIG LW
+       11.5  7.2   -    -    -    -    -    -    -    -    -    -  SIG UP
+       26.8 25.4   -    -    -    -    -    -    -    -    -    -  SNR LW
+       12.9  9.3   -    -    -    -    -    -    -    -    -    -  SNR UP
+        3.6  3.6   -    -    -    -    -    -    -    -    -    -  TGAIN 
+        0.1  0.1   -    -    -    -    -    -    -    -    -    -  RGAIN 
+         61   50   -    -    -    -    -    -    -    -    -    -  SNRxx 
+
+   8.0 15.1  3.6  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0  0.0 FREQ
+        1F2  2 E   -    -    -    -    -    -    -    -    -    -  MODE  
+       19.6  7.8   -    -    -    -    -    -    -    -    -    -  TANGLE
+        7.7  6.9   -    -    -    -    -    -    -    -    -    -  DELAY 
+        472   91   -    -    -    -    -    -    -    -    -    -  V HITE
+       0.38 1.00   -    -    -    -    -    -    -    -    -    -  MUFday
+        148  217   -    -    -    -    -    -    -    -    -    -  LOSS  
+          0  -82   -    -    -    -    -    -    -    -    -    -  DBU   
+       -131 -200   -    -    -    -    -    -    -    -    -    -  S DBW 
+       -164 -147   -    -    -    -    -    -    -    -    -    -  N DBW 
+         33  -53   -    -    -    -    -    -    -    -    -    -  SNR   
+        -40   56   -    -    -    -    -    -    -    -    -    -  RPWRG 
+       0.74 0.00   -    -    -    -    -    -    -    -    -    -  REL   
+       0.00 0.00   -    -    -    -    -    -    -    -    -    -  MPROB 
+       0.84 0.03   -    -    -    -    -    -    -    -    -    -  S PRB 
+       25.0 25.0   -    -    -    -    -    -    -    -    -    -  SIG LW
+       20.0 11.6   -    -    -    -    -    -    -    -    -    -  SIG UP
+       26.8 26.8   -    -    -    -    -    -    -    -    -    -  SNR LW
+       20.8 13.0   -    -    -    -    -    -    -    -    -    -  SNR UP
+        3.6  3.6   -    -    -    -    -    -    -    -    -    -  TGAIN 
+        0.1  0.1   -    -    -    -    -    -    -    -    -    -  RGAIN 
+         60  -36   -    -    -    -    -    -    -    -    -    -  SNRxx 
+ *****END OF RUN*****     VOACAP 16.1207W

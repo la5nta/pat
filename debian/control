@@ -10,6 +10,6 @@ Package: pat
 Architecture: amd64 i386 armhf arm64
 Conflicts: wl2k-go, dist
 Replaces: wl2k-go
-Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90)
+Recommends: libhamlib-utils (>= 1.2), ax25-tools, gpsd (>= 2.90), voacapl
 Suggests: tmd710-tncsetup
 Description: A portable Winlink client for amateur radio email.

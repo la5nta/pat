@@ -5,7 +5,10 @@
 package cmsapi
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -186,6 +189,16 @@ func GetGatewayStatus(ctx context.Context, mode string, historyHours int, servic
 	return resp.Body, err
 }
 
+//go:embed gateway_status.json.gz
+var embeddedGatewayStatus []byte
+
+func getGatewayStatusEmbedded() (io.ReadCloser, error) {
+	return gzip.NewReader(bytes.NewReader(embeddedGatewayStatus))
+}
+
+// GetGatewayStatusCached fetches the gateway status list, either from a cache file or by downloading it.
+//
+// If error occurs while downloading, it will fall back to the embedded gateway status information.
 func GetGatewayStatusCached(ctx context.Context, cacheFile string, forceDownload bool, serviceCodes ...string) (io.ReadCloser, error) {
 	if !forceDownload {
 		file, err := os.Open(cacheFile)
@@ -196,6 +209,12 @@ func GetGatewayStatusCached(ctx context.Context, cacheFile string, forceDownload
 
 	log.Println("Downloading latest gateway status information...")
 	fresh, err := GetGatewayStatus(ctx, "", 48, serviceCodes...)
+	if !forceDownload && err != nil {
+		// If user didn't explicitly request a forced download, fail gracefully with the embedded dataset.
+		log.Printf("Download failed: %v", err)
+		log.Println("Loading embedded gateway status information")
+		fresh, err = getGatewayStatusEmbedded()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -206,10 +225,6 @@ func GetGatewayStatusCached(ctx context.Context, cacheFile string, forceDownload
 	}
 	_, err = io.Copy(file, fresh)
 	file.Seek(0, 0)
-	if err == nil {
-		log.Println("download succeeded.")
-	}
-
 	return file, err
 }
 

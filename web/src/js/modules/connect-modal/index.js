@@ -1,12 +1,16 @@
 import URI from 'urijs';
 import $ from 'jquery';
 import { alert } from '../utils';
+import { PredictionPopover } from './prediction-popover';
+import { PredictionModal } from './prediction-modal';
 
 class ConnectModal {
   constructor(mycall) {
     this.mycall = mycall;
     this.initialized = false;
     this.connectAliases = {};
+    this.predictionPopover = new PredictionPopover();
+    this.predictionModal = new PredictionModal();
   }
 
   init() {
@@ -46,6 +50,10 @@ class ConnectModal {
     $('#modeSearchSelect').change(this.updateRmslist.bind(this));
     $('#bandSearchSelect').change(this.updateRmslist.bind(this));
 
+    $('button[data-target="#rmslist-container"]').click(() => {
+      this.updateRmslist();
+    });
+
     $('#transportSelect').change((e) => {
       // Clear existing options
       $('#bandwidthInput').val('').change();
@@ -77,7 +85,6 @@ class ConnectModal {
           return;
       }
       $('#modeSearchSelect').selectpicker('refresh');
-      this.updateRmslist();
     });
     let url = localStorage.getItem(`pat_connect_url_${this.mycall}`);
     if (url != null) {
@@ -87,7 +94,6 @@ class ConnectModal {
     this.initialized = true;
 
     this.updateConnectAliases();
-    this.updateRmslist();
     this._initConfigDefaults();
   }
 
@@ -293,6 +299,11 @@ class ConnectModal {
 
   updateRmslist(forceDownload) {
     let tbody = $('#rmslist tbody');
+
+    // Remove any existing modal and destroy popovers
+    this.predictionModal.remove();
+    this.predictionPopover.destroyAll();
+
     let params = {
       mode: $('#modeSearchSelect').val(),
       band: $('#bandSearchSelect').val(),
@@ -303,14 +314,48 @@ class ConnectModal {
       url: '/api/rmslist',
       dataType: 'json',
       data: params,
-      success: (data) => {
+      beforeSend: () => {
         tbody.empty();
+        $('#rmslistSpinner').show();
+      },
+      success: (data) => {
+        const hideLinkQuality = data.every(rms => rms.prediction == null);
+
+        // Show/hide link quality column based on data
+        $('.link-quality-column').toggle(!hideLinkQuality);
+
         data.forEach((rms) => {
           let tr = $('<tr>')
             .append($('<td class="text-left">').text(rms.callsign))
             .append($('<td class="text-left">').text(rms.distance.toFixed(0) + ' km'))
             .append($('<td class="text-left">').text(rms.modes))
             .append($('<td class="text-right">').text(rms.dial.desc));
+
+          let linkQualityCell = $('<td class="text-right link-quality-cell">');
+          if (hideLinkQuality) {
+            linkQualityCell.hide();
+          } else {
+            let linkQualityText = rms.prediction == null ? 'N/A' : rms.prediction.link_quality + '%';
+            let span = $('<span>').text(linkQualityText);
+            if (rms.prediction) {
+              span.css('cursor', 'pointer').css('border-bottom', '1px dotted #337ab7');
+              if (rms.prediction.output_values) {
+                this.predictionPopover.attach(span, rms.prediction.output_values);
+              }
+              if (rms.prediction.output_raw) {
+                span.on('click', (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  this.predictionPopover.hide(span);
+                  this.predictionModal.show(rms.callsign, rms.prediction.output_raw);
+                  return false;
+                });
+              }
+            }
+            linkQualityCell.append(span);
+          }
+          tr.append(linkQualityCell);
+
           tr.click((e) => {
             tbody.find('.active').removeClass('active');
             tr.addClass('active');
@@ -318,6 +363,9 @@ class ConnectModal {
           });
           tbody.append(tr);
         });
+      },
+      complete: () => {
+        $('#rmslistSpinner').hide();
       },
     });
   }

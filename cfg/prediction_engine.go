@@ -9,9 +9,10 @@ import (
 type PredictionEngine string
 
 const (
-	PredictionEngineAuto     PredictionEngine = ""
-	PredictionEngineDisabled PredictionEngine = "disabled"
-	PredictionEngineVOACAP   PredictionEngine = "voacap"
+	PredictionEngineAuto      PredictionEngine = ""
+	PredictionEngineDisabled  PredictionEngine = "disabled"
+	PredictionEngineVOACAP    PredictionEngine = "voacap"
+	PredictionEngineVOACAPAPI PredictionEngine = "voacap-api"
 )
 
 func (p *PredictionEngine) UnmarshalJSON(b []byte) error {
@@ -20,7 +21,7 @@ func (p *PredictionEngine) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	switch v := PredictionEngine(strings.ToLower(strings.TrimSpace(str))); v {
-	case PredictionEngineVOACAP, PredictionEngineDisabled, PredictionEngineAuto:
+	case PredictionEngineVOACAP, PredictionEngineVOACAPAPI, PredictionEngineDisabled, PredictionEngineAuto:
 		*p = v
 		return nil
 	default:

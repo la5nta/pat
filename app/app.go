@@ -249,7 +249,11 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 			}
 			break
 		}
-		debug.Printf("Prediction engine: %q", voacap.Version())
+		debug.Printf("Prediction engine: %s (%q)", p.Engine, voacap.Version())
+		a.predictor = propagation.WithCaching(voacap)
+	case cfg.PredictionEngineVOACAPAPI:
+		voacap := propagation.NewVOACAPAPIPredictor(p.VOACAPAPI.BaseURL)
+		debug.Printf("Prediction engine: %s (%q)", p.Engine, voacap.Version())
 		a.predictor = propagation.WithCaching(voacap)
 	}
 

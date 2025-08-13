@@ -158,12 +158,16 @@ type PredictionConfig struct {
 	// Valid options are:
 	//   - empty string (autodetect)
 	//   - voacap
+	//   - voacap-api
 	//   - disabled
 	// If empty, autodetection is attempted.
 	Engine PredictionEngine `json:"engine"`
 
 	// See VOACAPConfig.
 	VOACAP VOACAPConfig `json:"voacap,omitzero"`
+
+	// See VOACAPAPIConfig.
+	VOACAPAPI VOACAPAPIConfig `json:"voacap_api,omitzero"`
 }
 
 func (p PredictionConfig) IsZero() bool { return p == (PredictionConfig{}) }
@@ -178,6 +182,14 @@ type VOACAPConfig struct {
 }
 
 func (v VOACAPConfig) IsZero() bool { return v == (VOACAPConfig{}) }
+
+type VOACAPAPIConfig struct {
+	// BaseURL is the base URL for the VOACAP API.
+	// E.g. http://localhost:3000
+	BaseURL string `json:"base_url"`
+}
+
+func (v VOACAPAPIConfig) IsZero() bool { return v == (VOACAPAPIConfig{}) }
 
 type HamlibConfig struct {
 	// The network type ("serial" or "tcp"). Use 'tcp' for rigctld (default).

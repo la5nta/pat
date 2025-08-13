@@ -293,7 +293,20 @@ func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sort.Sort(sort.Reverse(app.ByLinkQuality(list)))
+	// Sort by predictions if we have more than 1/3 entries with predictions,
+	// otherwise sort by distance.
+	nPredictions := 0
+	for _, rms := range list {
+		if rms.Prediction != nil {
+			nPredictions++
+		}
+	}
+	if nPredictions > len(list)/3 {
+		sort.Sort(sort.Reverse(app.ByLinkQuality(list)))
+	} else {
+		sort.Sort(app.ByDist(list))
+	}
+
 	json.NewEncoder(w).Encode(list)
 }
 

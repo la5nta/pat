@@ -12,6 +12,10 @@ class ConnectModal {
     this.predictionPopover = new PredictionPopover();
     this.predictionModal = new PredictionModal();
     this.rmslistData = [];
+    this.filteredData = [];
+    this.itemsShown = 0;
+    this.itemsPerLoad = 100;
+    this.hideLinkQuality = true;
   }
 
   init() {
@@ -51,6 +55,10 @@ class ConnectModal {
     $('#modeSearchSelect').change(this.updateRmslist.bind(this));
     $('#bandSearchSelect').change(this.updateRmslist.bind(this));
     $('#targetFilterInput').on('input', this.filterRmslist.bind(this));
+
+    $('#loadmore-btn').click(() => {
+      this.loadMoreItems();
+    });
 
     $('button[data-target="#rmslist-container"]').click(() => {
       this.updateRmslist();
@@ -319,9 +327,11 @@ class ConnectModal {
       beforeSend: () => {
         tbody.empty();
         $('#rmslistSpinner').show();
+        $('#rmslist-loadmore').hide();
       },
       success: (data) => {
         this.rmslistData = data;
+        this.itemsShown = 0;
         this.filterRmslist();
       },
       complete: () => {
@@ -332,20 +342,47 @@ class ConnectModal {
 
   filterRmslist() {
     const filterText = $('#targetFilterInput').val().toLowerCase();
-    const filteredData = this.rmslistData.filter(rms =>
+    this.filteredData = this.rmslistData.filter(rms =>
       rms.callsign.toLowerCase().startsWith(filterText)
     );
-    this.renderRmslist(filteredData);
+    this.itemsShown = Math.min(this.itemsPerLoad, this.filteredData.length);
+    this.hideLinkQuality = this.filteredData.every(rms => rms.prediction == null);
+
+    const initialData = this.filteredData.slice(0, this.itemsShown);
+    this.renderRmslist(initialData, this.hideLinkQuality);
+    this.updateLoadMoreControls();
   }
 
-  renderRmslist(data) {
+  loadMoreItems() {
+    const currentItems = this.itemsShown;
+    this.itemsShown = Math.min(this.itemsShown + this.itemsPerLoad, this.filteredData.length);
+    const newItems = this.filteredData.slice(currentItems, this.itemsShown);
+    this.appendToRmslist(newItems);
+    this.updateLoadMoreControls();
+  }
+
+  updateLoadMoreControls() {
+    $('#showing-count').text(this.itemsShown);
+    $('#total-results').text(this.filteredData.length);
+
+    const hasMore = this.itemsShown < this.filteredData.length;
+    $('#loadmore-btn').toggle(hasMore);
+    $('#rmslist-loadmore').toggle(this.filteredData.length > 0);
+  }
+
+  appendToRmslist(data) {
+    this.renderRmslistRows(data, this.hideLinkQuality);
+  }
+
+  renderRmslist(data, hideLinkQuality) {
     let tbody = $('#rmslist tbody');
     tbody.empty();
-
-    const hideLinkQuality = data.every(rms => rms.prediction == null);
-
-    // Show/hide link quality column based on data
     $('.link-quality-column').toggle(!hideLinkQuality);
+    this.renderRmslistRows(data, hideLinkQuality);
+  }
+
+  renderRmslistRows(data, hideLinkQuality) {
+    let tbody = $('#rmslist tbody');
 
     data.forEach((rms) => {
       let tr = $('<tr>')

@@ -247,7 +247,7 @@
           </div>
           <div class="modal-footer collapse" id="rmslist-container">
             <div class="form-group row">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <select class="selectpicker form-control" data-width="100%" id="modeSearchSelect">
                   <optgroup label="mode">
                     <option value="">(any mode)</option>
@@ -259,7 +259,7 @@
                   </optgroup>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <select class="selectpicker form-control" data-width="100%" id="bandSearchSelect">
                   <optgroup label="band">
                     <!-- Values from freq.go -->
@@ -282,7 +282,10 @@
                   </optgroup>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
+                <input type="text" class="form-control" id="targetFilterInput" placeholder="(any target)">
+              </div>
+              <div class="col-md-3">
                 <button id="updateRmslistButton" class="btn btn-default btn-link">
                   Update cache
                 </button>

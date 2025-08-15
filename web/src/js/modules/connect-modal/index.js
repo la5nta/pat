@@ -11,6 +11,7 @@ class ConnectModal {
     this.connectAliases = {};
     this.predictionPopover = new PredictionPopover();
     this.predictionModal = new PredictionModal();
+    this.rmslistData = [];
   }
 
   init() {
@@ -49,6 +50,7 @@ class ConnectModal {
 
     $('#modeSearchSelect').change(this.updateRmslist.bind(this));
     $('#bandSearchSelect').change(this.updateRmslist.bind(this));
+    $('#targetFilterInput').on('input', this.filterRmslist.bind(this));
 
     $('button[data-target="#rmslist-container"]').click(() => {
       this.updateRmslist();
@@ -319,54 +321,70 @@ class ConnectModal {
         $('#rmslistSpinner').show();
       },
       success: (data) => {
-        const hideLinkQuality = data.every(rms => rms.prediction == null);
-
-        // Show/hide link quality column based on data
-        $('.link-quality-column').toggle(!hideLinkQuality);
-
-        data.forEach((rms) => {
-          let tr = $('<tr>')
-            .append($('<td class="text-left">').text(rms.callsign))
-            .append($('<td class="text-left">').text(rms.distance.toFixed(0) + ' km'))
-            .append($('<td class="text-left">').text(rms.modes))
-            .append($('<td class="text-right">').text(rms.dial.desc));
-
-          let linkQualityCell = $('<td class="text-right link-quality-cell">');
-          if (hideLinkQuality) {
-            linkQualityCell.hide();
-          } else {
-            let linkQualityText = rms.prediction == null ? 'N/A' : rms.prediction.link_quality + '%';
-            let span = $('<span>').text(linkQualityText);
-            if (rms.prediction) {
-              span.css('cursor', 'pointer').css('border-bottom', '1px dotted #337ab7');
-              if (rms.prediction.output_values) {
-                this.predictionPopover.attach(span, rms.prediction.output_values);
-              }
-              if (rms.prediction.output_raw) {
-                span.on('click', (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  this.predictionPopover.hide(span);
-                  this.predictionModal.show(rms.callsign, rms.prediction.output_raw);
-                  return false;
-                });
-              }
-            }
-            linkQualityCell.append(span);
-          }
-          tr.append(linkQualityCell);
-
-          tr.click((e) => {
-            tbody.find('.active').removeClass('active');
-            tr.addClass('active');
-            this.setConnectValues(rms.url);
-          });
-          tbody.append(tr);
-        });
+        this.rmslistData = data;
+        this.filterRmslist();
       },
       complete: () => {
         $('#rmslistSpinner').hide();
       },
+    });
+  }
+
+  filterRmslist() {
+    const filterText = $('#targetFilterInput').val().toLowerCase();
+    const filteredData = this.rmslistData.filter(rms =>
+      rms.callsign.toLowerCase().startsWith(filterText)
+    );
+    this.renderRmslist(filteredData);
+  }
+
+  renderRmslist(data) {
+    let tbody = $('#rmslist tbody');
+    tbody.empty();
+
+    const hideLinkQuality = data.every(rms => rms.prediction == null);
+
+    // Show/hide link quality column based on data
+    $('.link-quality-column').toggle(!hideLinkQuality);
+
+    data.forEach((rms) => {
+      let tr = $('<tr>')
+        .append($('<td class="text-left">').text(rms.callsign))
+        .append($('<td class="text-left">').text(rms.distance.toFixed(0) + ' km'))
+        .append($('<td class="text-left">').text(rms.modes))
+        .append($('<td class="text-right">').text(rms.dial.desc));
+
+      let linkQualityCell = $('<td class="text-right link-quality-cell">');
+      if (hideLinkQuality) {
+        linkQualityCell.hide();
+      } else {
+        let linkQualityText = rms.prediction == null ? 'N/A' : rms.prediction.link_quality + '%';
+        let span = $('<span>').text(linkQualityText);
+        if (rms.prediction) {
+          span.css('cursor', 'pointer').css('border-bottom', '1px dotted #337ab7');
+          if (rms.prediction.output_values) {
+            this.predictionPopover.attach(span, rms.prediction.output_values);
+          }
+          if (rms.prediction.output_raw) {
+            span.on('click', (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              this.predictionPopover.hide(span);
+              this.predictionModal.show(rms.callsign, rms.prediction.output_raw);
+              return false;
+            });
+          }
+        }
+        linkQualityCell.append(span);
+      }
+      tr.append(linkQualityCell);
+
+      tr.click((e) => {
+        tbody.find('.active').removeClass('active');
+        tr.addClass('active');
+        this.setConnectValues(rms.url);
+      });
+      tbody.append(tr);
     });
   }
 

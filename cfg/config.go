@@ -382,6 +382,12 @@ type GPSdConfig struct {
 	// Use server time instead of timestamp provided by GPSd (e.g for older GPS device with week roll-over issue).
 	UseServerTime bool `json:"use_server_time"`
 
+	// Automatically update the locator field in-memory by polling GPSd every hour.
+	//
+	// Note: This only updates the locator in-memory. The config file is not modified.
+	// On app start, the config's locator value will be used until the first position is received from GPSd.
+	UpdateLocator bool `json:"update_locator"`
+
 	// Address and port of GPSd server (e.g. localhost:2947).
 	Addr string `json:"addr"`
 }
@@ -442,6 +448,7 @@ var DefaultConfig = Config{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)
 		AllowForms:    false, // Default to false to help protect location privacy of unknowing users
 		UseServerTime: false,
+		UpdateLocator: false,
 		Addr:          "localhost:2947", // Default listen address for GPSd
 	},
 	GPSdAddrLegacy: "",

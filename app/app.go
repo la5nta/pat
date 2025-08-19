@@ -303,6 +303,9 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		if a.options.Listen != "" {
 			a.Listen(a.options.Listen)
 		}
+		if a.config.GPSd.UpdateLocator {
+			go a.gpsdLocatorUpdater(ctx)
+		}
 	}
 
 	// Start command execution

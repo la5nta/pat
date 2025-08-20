@@ -35,6 +35,7 @@ import (
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/n8jja/Pat-Vara/vara"
+	"github.com/pd0mz/go-maidenhead"
 )
 
 // The web/ go:embed directive must be in package main because we can't
@@ -114,6 +115,7 @@ func NewHandler(app *app.App, staticContent fs.FS) *Handler {
 	r.HandleFunc("/api/posreport", h.postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", h.statusHandler).Methods("GET")
 	r.HandleFunc("/api/current_gps_position", h.positionHandler).Methods("GET")
+	r.HandleFunc("/api/coords_to_locator", h.coordsToLocatorHandler).Methods("POST")
 	r.HandleFunc("/api/qsy", h.qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", h.rmslistHandler).Methods("GET")
 
@@ -471,4 +473,25 @@ func (h Handler) reloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h Handler) coordsToLocatorHandler(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Lat float64 `json:"lat"`
+		Lon float64 `json:"lon"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	point := maidenhead.NewPoint(req.Lat, req.Lon)
+	locator, err := point.GridSquare()
+	if err != nil {
+		http.Error(w, "Failed to convert coordinates to locator: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(struct {
+		Locator string `json:"locator"`
+	}{Locator: locator})
 }

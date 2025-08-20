@@ -200,6 +200,130 @@ $(document).ready(function() {
     }
   });
 
+  $('#locate-me').click(function() {
+    var button = $(this);
+    var icon = button.find('span');
+    var locatorField = $('#locator');
+    var statusDiv = $('#locate-status');
+    var watchId = 0;
+
+    // Change button state to indicate active location tracking
+    button.prop('disabled', true);
+    icon.removeClass('glyphicon-map-marker').addClass('glyphicon-refresh icon-spin');
+    statusDiv.hide(); // Clear any previous status
+
+    // Function to stop watching and reset button
+    function stopWatching() {
+      if (navigator.geolocation && watchId !== 0) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = 0;
+      }
+      button.prop('disabled', false);
+      icon.removeClass('glyphicon-refresh icon-spin').addClass('glyphicon-map-marker');
+    }
+
+    // Function to convert coordinates to locator and update field
+    function updateLocatorFromCoords(lat, lon, accuracy, source) {
+      $.ajax({
+        url: '/api/coords_to_locator',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ lat, lon }),
+        success: function(response) {
+          var locator = response.locator;
+          locatorField.val(locator);
+          var sourceText = source === 'gps' ? 'GPS device' : 'geolocation';
+          var accuracyText = accuracy ? ' (accuracy: ' + Math.round(accuracy) + 'm)' : '';
+          statusDiv.removeClass('text-info text-danger').addClass('text-success').text('Locator updated from ' + sourceText + accuracyText).show();
+          console.log('Locator set to:', locator, 'from', sourceText, accuracyText);
+          stopWatching();
+        },
+        error: function(xhr) {
+          statusDiv.removeClass('text-info text-success').addClass('text-danger').text('Failed to convert location to grid locator.').show();
+          console.error('Failed to convert coordinates to locator:', xhr.responseText);
+          stopWatching();
+        }
+      });
+    }
+
+    // First try to get position from GPS device (GPSd)
+    $.ajax({
+      url: '/api/current_gps_position',
+      dataType: 'json',
+      beforeSend: function() {
+        statusDiv.removeClass('text-danger text-success').addClass('text-info').text('Checking if GPS device is available...').show();
+      },
+      success: function(gpsData) {
+        statusDiv.removeClass('text-danger text-success').addClass('text-info').text('GPS position received').show();
+        updateLocatorFromCoords(gpsData.Lat, gpsData.Lon, null, 'gps');
+      },
+      error: function() {
+        statusDiv.removeClass('text-success').addClass('text-info').text('GPS device not available, trying geolocation...').show();
+
+        // Fall back to HTML5 geolocation API
+        if (!navigator.geolocation) {
+          statusDiv.removeClass('text-info text-success').addClass('text-danger').text('Geolocation is not supported by this browser.').show();
+          stopWatching();
+          return;
+        }
+
+        statusDiv.removeClass('text-danger text-success').addClass('text-info').text('Waiting for position from geolocation...').show();
+
+        // Start watching position with high accuracy
+        const geoOptions = {
+          enableHighAccuracy: true,
+          maximumAge: 0
+        };
+        watchId = navigator.geolocation.watchPosition(
+          function(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            var accuracy = position.coords.accuracy;
+            console.log('Geolocation position:', lat, lon, 'accuracy:', accuracy + 'm');
+            // Check if accuracy is good enough (1000m threshold)
+            if (accuracy > 1000) {
+              statusDiv.removeClass('text-danger text-success').addClass('text-info').text('Waiting for better GPS accuracy... (current: ' + Math.round(accuracy) + 'm)').show();
+              console.log('Waiting for better accuracy (current: ' + Math.round(accuracy) + 'm, need: ≤1000m)');
+              return;
+            }
+
+            updateLocatorFromCoords(lat, lon, accuracy, 'geolocation');
+          },
+          function(error) {
+            var errorMsg = 'Location error: ';
+            switch (error.code) {
+              case error.PERMISSION_DENIED:
+                errorMsg += 'Location access denied. Please allow location access and try again.';
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMsg += 'Location information unavailable.';
+                break;
+              case error.TIMEOUT:
+                errorMsg += 'Location request timed out.';
+                break;
+              default:
+                errorMsg += error.message;
+                break;
+            }
+            statusDiv.removeClass('text-info text-success').addClass('text-danger').text(errorMsg).show();
+            console.error('Error getting location:', error.message);
+            stopWatching();
+          },
+          geoOptions
+        );
+
+        // Fail-safe: stop watching after 60 seconds
+        setTimeout(function() {
+          if (watchId !== 0) {
+            statusDiv.removeClass('text-info text-success').addClass('text-warning').text('Location request timed out. Please try again.').show();
+            console.log('Timeout reached, stopping location watch');
+            stopWatching();
+          }
+        }, 60000);
+      }
+    });
+  });
+
   // Initialize Bootstrap Select components and tokenfield
   $('#ardop_arq_bandwidth, #vara_hf_bandwidth, #vara_fm_bandwidth').selectpicker();
   const tokenfieldConfig = {

@@ -579,7 +579,7 @@ $(document).ready(function() {
     };
     updatedConfig.gpsd = {
       ...originalConfig.gpsd,
-      enable_http: $('#gpsd_enable_http').is(':checked'),
+      // Note: enable_http is excluded from web updates for security reasons
       allow_forms: $('#gpsd_allow_forms').is(':checked'),
       use_server_time: $('#gpsd_use_server_time').is(':checked'),
       update_locator: $('#gpsd_update_locator').is(':checked'),

@@ -630,12 +630,20 @@
                     <h3 class="panel-title">GPSd Configuration</h3>
                   </div>
                   <div class="panel-body">
+                    <div class="form-group">
+                      <label for="gpsd_addr">Server Address</label>
+                      <input type="text" class="form-control" id="gpsd_addr" placeholder="localhost:2947"
+                        name="gpsd_addr">
+                      <small class="form-text text-muted">GPSd server address (e.g. localhost:2947)</small>
+                    </div>
                     <div class="checkbox">
                       <label>
-                        <input type="checkbox" id="gpsd_enable_http" name="gpsd_enable_http" disabled>
-                        Enable GPSd HTTP Proxy
+                        <input type="checkbox" id="gpsd_update_locator" name="gpsd_update_locator">
+                        Update Locator
                       </label>
-                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">This setting is disabled due to security concerns and can only be changed by editing the configuration file manually</small>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Automatically
+                        update the locator field in-memory by polling GPSd every hour. On startup, the config's locator
+                        value will be used until the first position is received from GPSd.</small>
                     </div>
                     <div class="checkbox">
                       <label>
@@ -653,18 +661,10 @@
                     </div>
                     <div class="checkbox">
                       <label>
-                        <input type="checkbox" id="gpsd_update_locator" name="gpsd_update_locator">
-                        Update Locator
+                        <input type="checkbox" id="gpsd_enable_http" name="gpsd_enable_http" disabled>
+                        Enable GPSd HTTP Proxy
                       </label>
-                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Automatically
-                        update the locator field in-memory by polling GPSd every hour. On startup, the config's locator
-                        value will be used until the first position is received from GPSd.</small>
-                    </div>
-                    <div class="form-group">
-                      <label for="gpsd_addr">Server Address</label>
-                      <input type="text" class="form-control" id="gpsd_addr" placeholder="localhost:2947"
-                        name="gpsd_addr">
-                      <small class="form-text text-muted">GPSd server address (e.g. localhost:2947)</small>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">This setting is disabled due to security concerns and can only be changed by editing the configuration file manually</small>
                     </div>
                   </div>
                 </div>

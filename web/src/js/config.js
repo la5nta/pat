@@ -299,6 +299,7 @@ $(document).ready(function() {
       $('#gpsd_enable_http').prop('checked', (config.gpsd && config.gpsd.enable_http) || false);
       $('#gpsd_allow_forms').prop('checked', (config.gpsd && config.gpsd.allow_forms) || false);
       $('#gpsd_use_server_time').prop('checked', (config.gpsd && config.gpsd.use_server_time) || false);
+      $('#gpsd_update_locator').prop('checked', (config.gpsd && config.gpsd.update_locator) || false);
       $('#gpsd_addr').val((config.gpsd && config.gpsd.addr) || '');
 
       // Populate Hamlib rigs
@@ -457,6 +458,7 @@ $(document).ready(function() {
       enable_http: $('#gpsd_enable_http').is(':checked'),
       allow_forms: $('#gpsd_allow_forms').is(':checked'),
       use_server_time: $('#gpsd_use_server_time').is(':checked'),
+      update_locator: $('#gpsd_update_locator').is(':checked'),
       addr: $('#gpsd_addr').val()
     };
 

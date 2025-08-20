@@ -385,7 +385,7 @@ type GPSdConfig struct {
 	// Automatically update the locator field in-memory by polling GPSd every hour.
 	//
 	// Note: This only updates the locator in-memory. The config file is not modified.
-	// On app start, the config's locator value will be used until the first position is received from GPSd.
+	// On startup, the config's locator value will be used until the first position is received from GPSd.
 	UpdateLocator bool `json:"update_locator"`
 
 	// Address and port of GPSd server (e.g. localhost:2947).

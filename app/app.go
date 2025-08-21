@@ -499,3 +499,16 @@ func (a *App) loadHamlibRigs(rigsConfig map[string]cfg.HamlibConfig) {
 		a.rigs[name] = rig{VFO: vfo, Closer: r}
 	}
 }
+
+func (a *App) SetConnectAliases(aliases map[string]string) error {
+	onDisk, err := LoadConfig(a.options.ConfigPath, cfg.DefaultConfig)
+	if err != nil {
+		return err
+	}
+	onDisk.ConnectAliases = aliases
+	if err := WriteConfig(onDisk, a.options.ConfigPath); err != nil {
+		return err
+	}
+	a.config.ConnectAliases = aliases
+	return nil
+}

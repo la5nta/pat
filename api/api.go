@@ -120,9 +120,12 @@ func NewHandler(app *app.App, staticContent fs.FS) *Handler {
 	r.HandleFunc("/api/rmslist", h.rmslistHandler).Methods("GET")
 
 	r.HandleFunc("/api/config", h.configHandler).Methods("GET", "PUT")
+	r.HandleFunc("/api/config/connect_aliases", h.connectAliasesHandler).Methods("GET")
+	r.HandleFunc("/api/config/connect_aliases/{alias}", h.connectAliasHandler).Methods("GET", "PUT", "DELETE")
+
 	r.HandleFunc("/api/reload", h.reloadHandler).Methods("POST")
 	r.HandleFunc("/api/bandwidths", h.bandwidthsHandler).Methods("GET")
-	r.HandleFunc("/api/connect_aliases", h.connectAliasesHandler).Methods("GET")
+	r.HandleFunc("/api/connect_aliases", h.connectAliasesHandler).Methods("GET") // DEPRECATED: Use /api/config/connect_aliases.
 	r.HandleFunc("/api/new-release-check", h.newReleaseCheckHandler).Methods("GET")
 
 	r.HandleFunc("/api/formcatalog", h.FormsManager().GetFormsCatalogHandler).Methods("GET")
@@ -165,6 +168,46 @@ func (h Handler) rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h Handler) connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {
 	_ = json.NewEncoder(w).Encode(h.Config().ConnectAliases)
+}
+
+func (h Handler) connectAliasHandler(w http.ResponseWriter, r *http.Request) {
+	// Make a copy of the map to avoid concurrenct read/write of the "live" map
+	// TODO: Simplify by using maps.Clone when we're on Go 1.25 with Debian Trixie.
+	currentAliases := make(map[string]string, len(h.Config().ConnectAliases))
+	for k, v := range h.Config().ConnectAliases {
+		currentAliases[k] = v
+	}
+
+	alias := mux.Vars(r)["alias"]
+	switch r.Method {
+	case http.MethodGet:
+		v, ok := currentAliases[alias]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		json.NewEncoder(w).Encode(v)
+	case http.MethodDelete:
+		delete(currentAliases, alias)
+		if err := h.SetConnectAliases(currentAliases); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	case http.MethodPut:
+		var v string
+		if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		currentAliases[alias] = v
+		if err := h.SetConnectAliases(currentAliases); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(v)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
 }
 
 func (h Handler) postPositionHandler(w http.ResponseWriter, r *http.Request) {

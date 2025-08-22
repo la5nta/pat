@@ -42,11 +42,15 @@ class ConnectModal {
       this.setConnectValues($(e.target).val())
     });
 
-    // Delete alias button handler
-    $('#deleteAliasBtn').click(() => {
+    // Alias action button handler (add/delete)
+    $('#aliasActionBtn').click(() => {
       const selectedAlias = $('#aliasSelect').val();
       if (selectedAlias && selectedAlias !== '') {
+        // Delete mode
         this.deleteAlias(selectedAlias);
+      } else {
+        // Add mode
+        this.saveAsNewAlias();
       }
     });
 
@@ -78,6 +82,7 @@ class ConnectModal {
     this.initialized = true;
 
     this.updateConnectAliases();
+    this.updateAliasActionButton();
     this._initConfigDefaults();
   }
 
@@ -101,11 +106,13 @@ class ConnectModal {
     $('#connectURLInput').val(decodeURIComponent(url));
   }
 
-  buildConnectURL() {
+  buildConnectURL(options = {}) {
     // Instead of building from scratch, we use the current URL as a starting
     // point to retain URI parts not supported by the modal. The unsupported
     // parts may originate from a connect alias or by manual edit of the URL
     // field.
+    const { preserveFreq = false } = options;
+
     let transport = $('#transportSelect').val();
     var current = URI(this.getConnectURL());
     var url;
@@ -116,7 +123,7 @@ class ConnectModal {
       url = current.protocol(transport).hostname($('#addrInput').val());
     }
     url = url.path($('#targetInput').val());
-    if ($('#freqInput').val() && $('#freqInput').parent().hasClass('has-success')) {
+    if ($('#freqInput').val() && (preserveFreq || $('#freqInput').parent().hasClass('has-success'))) {
       url = url.setQuery("freq", $('#freqInput').val());
     } else {
       url = url.removeQuery("freq");
@@ -225,7 +232,25 @@ class ConnectModal {
     // Clear alias selection when user modifies inputs (unless we want to preserve it)
     if (!this.preserveAliasSelection) {
       $('#aliasSelect').val('').selectpicker('refresh');
-      $('#deleteAliasBtn').hide();
+      this.updateAliasActionButton();
+    }
+  }
+
+  updateAliasActionButton() {
+    const selectedAlias = $('#aliasSelect').val();
+    const button = $('#aliasActionBtn');
+    const icon = button.find('.glyphicon');
+
+    if (selectedAlias && selectedAlias !== '') {
+      // Delete mode - show trash icon
+      icon.removeClass('glyphicon-plus').addClass('glyphicon-trash');
+      button.attr('title', 'Delete selected alias');
+      button.show();
+    } else {
+      // Add mode - show plus icon
+      icon.removeClass('glyphicon-trash').addClass('glyphicon-plus');
+      button.attr('title', 'Save current configuration as new alias');
+      button.show();
     }
   }
 
@@ -250,12 +275,90 @@ class ConnectModal {
           return $(this).text() === aliasName;
         }).remove();
 
-        // Clear selection and hide delete button
+        // Clear selection and update button
         $('#aliasSelect').val('').selectpicker('refresh');
-        $('#deleteAliasBtn').hide();
+        this.updateAliasActionButton();
       },
       error: (xhr) => {
         console.error('Failed to delete alias:', xhr);
+      }
+    });
+  }
+
+  validateAliasName(name) {
+    // Check for empty or invalid characters
+    if (!name || !/^[a-zA-Z0-9_.@-]+$/.test(name)) {
+      return 'Alias name must contain only letters, numbers, dashes, underscores, dots, and @ symbols.';
+    }
+
+    // Check for duplicates
+    if (this.connectAliases[name]) {
+      return 'An alias with this name already exists.';
+    }
+
+    return null; // Valid
+  }
+
+  promptForAliasName() {
+    let aliasName;
+    while (true) {
+      aliasName = prompt('Enter a name for the new alias:');
+
+      // User cancelled
+      if (aliasName === null) {
+        return null;
+      }
+
+      // Trim whitespace
+      aliasName = aliasName.trim();
+
+      // Validate the name
+      const validationError = this.validateAliasName(aliasName);
+      if (!validationError) {
+        return aliasName;
+      }
+
+      // Show error and try again
+      alert(validationError);
+    }
+  }
+
+  saveAsNewAlias() {
+    const aliasName = this.promptForAliasName();
+    if (!aliasName) {
+      // User cancelled, revert dropdown selection
+      $('#aliasSelect').val('').selectpicker('refresh');
+      return;
+    }
+
+    const connectURL = this.buildConnectURL({ preserveFreq: true }).toString();
+    if (!connectURL) {
+      alert('No connection URL to save. Please configure connection settings first.');
+      $('#aliasSelect').val('').selectpicker('refresh');
+      return;
+    }
+
+    $.ajax({
+      method: 'PUT',
+      url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
+      data: JSON.stringify(connectURL),
+      contentType: 'application/json',
+      success: () => {
+        // Add to local cache
+        this.connectAliases[aliasName] = connectURL;
+
+        // Add to dropdown
+        const option = $(`<option>${aliasName}</option>`);
+        $('#aliasSelect').append(option);
+
+        // Select the new alias
+        $('#aliasSelect').val(aliasName).selectpicker('refresh');
+        this.updateAliasActionButton();
+      },
+      error: (xhr) => {
+        console.error('Failed to save alias:', xhr);
+        alert('Failed to save alias. Please try again.');
+        $('#aliasSelect').val('').selectpicker('refresh');
       }
     });
   }
@@ -336,8 +439,8 @@ class ConnectModal {
       select.change(() => {
         const selectedAlias = select.val();
         const hasSelection = selectedAlias && selectedAlias !== '';
+        this.updateAliasActionButton();
 
-        $('#deleteAliasBtn').toggle(hasSelection);
         if (hasSelection) {
           $('#aliasSelect option:selected').each((i, E) => {
             const alias = $(E).text();

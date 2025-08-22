@@ -9,6 +9,7 @@ class ConnectModal {
     this.initialized = false;
     this.connectAliases = {};
     this.rmslistView = new RmslistView();
+    this.preserveAliasSelection = false;
   }
 
   init() {
@@ -39,6 +40,14 @@ class ConnectModal {
     $('#connectRequestsInput').change(() => this.onConnectInputChange());
     $('#connectURLInput').change((e) => {
       this.setConnectValues($(e.target).val())
+    });
+
+    // Delete alias button handler
+    $('#deleteAliasBtn').click(() => {
+      const selectedAlias = $('#aliasSelect').val();
+      if (selectedAlias && selectedAlias !== '') {
+        this.deleteAlias(selectedAlias);
+      }
     });
 
     // Initialize RMS list manager
@@ -192,7 +201,10 @@ class ConnectModal {
         }
       },
       complete: () => {
-        this.onConnectInputChange();
+        // Update URL after QSY operation, but don't clear alias selection
+        this.withPreservedAliasSelection(() => {
+          this.onConnectInputChange();
+        });
       }, // This removes freq= from URL in case of failure
     });
   }
@@ -209,6 +221,43 @@ class ConnectModal {
 
   onConnectInputChange() {
     this.setConnectURL(this.buildConnectURL());
+
+    // Clear alias selection when user modifies inputs (unless we want to preserve it)
+    if (!this.preserveAliasSelection) {
+      $('#aliasSelect').val('').selectpicker('refresh');
+      $('#deleteAliasBtn').hide();
+    }
+  }
+
+  withPreservedAliasSelection(callback) {
+    this.preserveAliasSelection = true;
+    callback();
+    this.preserveAliasSelection = false;
+  }
+
+  deleteAlias(aliasName) {
+    if (!confirm(`Are you sure you want to delete the alias "${aliasName}"?`)) {
+      return;
+    }
+
+    $.ajax({
+      method: 'DELETE',
+      url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
+      success: () => {
+        // Remove from local cache and dropdown
+        delete this.connectAliases[aliasName];
+        $('#aliasSelect option').filter(function() {
+          return $(this).text() === aliasName;
+        }).remove();
+
+        // Clear selection and hide delete button
+        $('#aliasSelect').val('').selectpicker('refresh');
+        $('#deleteAliasBtn').hide();
+      },
+      error: (xhr) => {
+        console.error('Failed to delete alias:', xhr);
+      }
+    });
   }
 
   refreshExtraInputGroups() {
@@ -249,7 +298,7 @@ class ConnectModal {
       method: 'GET',
       url: `/api/bandwidths?mode=${transport}`,
       dataType: 'json',
-      success: function(data) {
+      success: (data) => {
         if (data.bandwidths.length === 0) {
           return;
         }
@@ -261,9 +310,12 @@ class ConnectModal {
           option.prop('selected', bw === selected);
           select.append(option);
         });
-        select.val(selected).change();
+        // Use programmatic wrapper for the change event
+        this.withPreservedAliasSelection(() => {
+          select.val(selected).change();
+        });
       },
-      complete: function(xhr) {
+      complete: (xhr) => {
         select.attr('x-for-transport', transport);
         div.toggle(select.find('option').length > 0);
         select.prop('disabled', false);
@@ -273,7 +325,7 @@ class ConnectModal {
   }
 
   updateConnectAliases() {
-    $.getJSON('/api/connect_aliases', (data) => {
+    $.getJSON('/api/config/connect_aliases', (data) => {
       this.connectAliases = data;
 
       const select = $('#aliasSelect');
@@ -282,13 +334,19 @@ class ConnectModal {
       });
 
       select.change(() => {
-        $('#aliasSelect option:selected').each((i, E) => {
-          const alias = $(E).text();
-          const url = this.connectAliases[alias];
-          this.setConnectValues(url);
-          select.val('');
-          select.selectpicker('refresh');
-        });
+        const selectedAlias = select.val();
+        const hasSelection = selectedAlias && selectedAlias !== '';
+
+        $('#deleteAliasBtn').toggle(hasSelection);
+        if (hasSelection) {
+          $('#aliasSelect option:selected').each((i, E) => {
+            const alias = $(E).text();
+            const url = this.connectAliases[alias];
+            this.withPreservedAliasSelection(() => {
+              this.setConnectValues(url);
+            });
+          });
+        }
       });
       select.selectpicker('refresh');
     });

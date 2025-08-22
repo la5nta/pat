@@ -161,9 +161,16 @@
                 <div class="col-md-11">
                   <div class="form-group row">
                     <div class="col-md-4">
-                      <select class="selectpicker form-control" data-width="100%" id="aliasSelect">
-                        <option value="">(select alias)</option>
-                      </select>
+                      <div class="input-group">
+                        <select class="selectpicker form-control" data-width="100%" id="aliasSelect">
+                          <option value="">(select alias)</option>
+                        </select>
+                        <span class="input-group-btn">
+                          <button class="btn btn-default" type="button" id="deleteAliasBtn" title="Delete selected alias" style="display: none;">
+                            <span class="glyphicon glyphicon-trash"></span>
+                          </button>
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div class="form-group row">

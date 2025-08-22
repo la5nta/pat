@@ -89,7 +89,7 @@ class ConnectModal {
   }
 
   setConnectURL(url) {
-    $('#connectURLInput').val(url);
+    $('#connectURLInput').val(decodeURIComponent(url));
   }
 
   buildConnectURL() {

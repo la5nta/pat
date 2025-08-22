@@ -39,6 +39,9 @@ func (a *App) Connect(connectStr string) (success bool) {
 		return a.Connect(aliased)
 	}
 
+	// Replace placeholders
+	connectStr = strings.ReplaceAll(connectStr, cfg.PlaceholderMycall, a.options.MyCall)
+
 	// Prompt if Winlink account is unconfirmed
 	if confirmed := a.promptUnconfirmedAccount(); !confirmed {
 		return false

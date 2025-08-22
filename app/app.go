@@ -229,11 +229,6 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		a.config.SecureLoginPassword = ""
 	}
 
-	// Replace placeholders in connect aliases
-	for k, v := range a.config.ConnectAliases {
-		a.config.ConnectAliases[k] = strings.ReplaceAll(v, cfg.PlaceholderMycall, a.options.MyCall)
-	}
-
 	if a.options.Listen == "" && len(a.config.Listen) > 0 {
 		a.options.Listen = strings.Join(a.config.Listen, ",")
 	}

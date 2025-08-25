@@ -61,6 +61,7 @@ class ConnectModal {
     // Initialize RMS list manager
     this.rmslistView.init();
     this.rmslistView.onRowClick = (url) => this.setConnectValues(url);
+    $('#connectModal').on('hidden.bs.modal', () => this.rmslistView.reset());
 
     $('#transportSelect').change((e) => {
       // Clear existing options

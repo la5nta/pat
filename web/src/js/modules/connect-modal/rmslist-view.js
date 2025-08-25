@@ -33,9 +33,24 @@ class RmslistView {
       this.updateRmslist();
     });
 
-    $('button[data-target="#rmslist-container"]').click(() => {
+    $('#rmslist-container').on('shown.bs.collapse', () => {
       this.updateRmslist();
     });
+
+    $('#rmslist-container').on('hidden.bs.collapse', () => {
+      this.reset();
+    });
+  }
+
+  reset() {
+    $('#rmslist-container').collapse('hide');
+    this.rmslistData = [];
+    this.filteredData = [];
+    this.itemsShown = 0;
+    $('#rmslist tbody').empty();
+    $('#rmslist-loadmore').hide();
+    this.predictionModal.remove();
+    this.predictionPopover.destroyAll();
   }
 
   onTransportChange(transport) {

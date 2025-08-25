@@ -2,6 +2,7 @@ import URI from 'urijs';
 import $ from 'jquery';
 import { alert } from '../utils';
 import { RmslistView } from './rmslist-view';
+import { PromptModal } from '../prompt';
 
 class ConnectModal {
   constructor(mycall) {
@@ -10,9 +11,12 @@ class ConnectModal {
     this.connectAliases = {};
     this.rmslistView = new RmslistView();
     this.preserveAliasSelection = false;
+    this.promptModal = new PromptModal();
   }
 
   init() {
+    this.promptModal.init();
+
     $('#connect_btn').click(() => this.connect());
     $('#connectForm input').keypress((e) => {
       if (e.which == 13) {
@@ -261,27 +265,39 @@ class ConnectModal {
   }
 
   deleteAlias(aliasName) {
-    if (!confirm(`Are you sure you want to delete the alias "${aliasName}"?`)) {
-      return;
-    }
+    this.promptModal.showCustom({
+      message: `Are you sure you want to delete the alias "${aliasName}"?`,
+      buttons: [
+        {
+          text: 'Cancel',
+          class: 'btn-default',
+          onClick: () => { } // Just close modal
+        },
+        {
+          text: 'Delete',
+          class: 'btn-danger',
+          onClick: () => {
+            $.ajax({
+              method: 'DELETE',
+              url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
+              success: () => {
+                // Remove from local cache and dropdown
+                delete this.connectAliases[aliasName];
+                $('#aliasSelect option').filter(function() {
+                  return $(this).text() === aliasName;
+                }).remove();
 
-    $.ajax({
-      method: 'DELETE',
-      url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
-      success: () => {
-        // Remove from local cache and dropdown
-        delete this.connectAliases[aliasName];
-        $('#aliasSelect option').filter(function() {
-          return $(this).text() === aliasName;
-        }).remove();
-
-        // Clear selection and update button
-        $('#aliasSelect').val('').selectpicker('refresh');
-        this.updateAliasActionButton();
-      },
-      error: (xhr) => {
-        console.error('Failed to delete alias:', xhr);
-      }
+                // Clear selection and update button
+                $('#aliasSelect').val('').selectpicker('refresh');
+                this.updateAliasActionButton();
+              },
+              error: (xhr) => {
+                console.error('Failed to delete alias:', xhr);
+              }
+            });
+          }
+        }
+      ]
     });
   }
 
@@ -300,66 +316,120 @@ class ConnectModal {
   }
 
   promptForAliasName() {
-    let aliasName;
-    while (true) {
-      aliasName = prompt('Enter a name for the new alias:');
+    return new Promise((resolve) => {
+      const tryAgain = (errorMessage = null) => {
+        // Create input field
+        const inputId = 'aliasNameInput';
+        const body = $('<div>');
 
-      // User cancelled
-      if (aliasName === null) {
-        return null;
-      }
+        // Add description
+        body.append(
+          $('<p>').text('Create a new alias to save this connection configuration for quick access.')
+        );
 
-      // Trim whitespace
-      aliasName = aliasName.trim();
+        // Add allowed characters info
+        body.append(
+          $('<p>').addClass('text-muted small').text('Allowed characters: letters, numbers, dashes (-), underscores (_), dots (.), and @ symbols')
+        );
 
-      // Validate the name
-      const validationError = this.validateAliasName(aliasName);
-      if (!validationError) {
-        return aliasName;
-      }
+        // Add error message if any
+        if (errorMessage) {
+          body.append(
+            $('<div>').addClass('alert alert-danger').text(errorMessage)
+          );
+        }
 
-      // Show error and try again
-      alert(validationError);
-    }
+        // Add input field
+        body.append(
+          $('<input>').attr({
+            type: 'text',
+            id: inputId,
+            class: 'form-control',
+            placeholder: 'Enter alias name...',
+            autocomplete: 'off'
+          })
+        );
+
+        this.promptModal.showCustom({
+          message: 'New Connection Alias',
+          body: body,
+          buttons: [
+            {
+              text: 'Cancel',
+              class: 'btn-default',
+              onClick: () => {
+                resolve(null);
+              }
+            },
+            {
+              text: 'Save',
+              class: 'btn-primary',
+              onClick: () => {
+                const aliasName = $(`#${inputId}`).val().trim();
+
+                // Validate the name
+                const validationError = this.validateAliasName(aliasName);
+                if (validationError) {
+                  // Show error and try again
+                  this.promptModal.hide();
+                  setTimeout(() => tryAgain(validationError), 100);
+                  return;
+                }
+
+                resolve(aliasName);
+              }
+            }
+          ]
+        });
+
+        // Focus input after modal is shown
+        this.promptModal.modal.one('shown.bs.modal', () => {
+          $(`#${inputId}`).focus();
+        });
+      };
+
+      tryAgain();
+    });
   }
 
   saveAsNewAlias() {
-    const aliasName = this.promptForAliasName();
-    if (!aliasName) {
-      // User cancelled, revert dropdown selection
-      $('#aliasSelect').val('').selectpicker('refresh');
-      return;
-    }
-
-    const connectURL = this.buildConnectURL({ preserveFreq: true }).toString();
-    if (!connectURL) {
-      alert('No connection URL to save. Please configure connection settings first.');
-      $('#aliasSelect').val('').selectpicker('refresh');
-      return;
-    }
-
-    $.ajax({
-      method: 'PUT',
-      url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
-      data: JSON.stringify(connectURL),
-      contentType: 'application/json',
-      success: () => {
-        // Add to local cache
-        this.connectAliases[aliasName] = connectURL;
-
-        // Add to dropdown
-        const option = $(`<option>${aliasName}</option>`);
-        $('#aliasSelect').append(option);
-
-        // Select the new alias
-        $('#aliasSelect').val(aliasName).selectpicker('refresh');
-        this.updateAliasActionButton();
-      },
-      error: (xhr) => {
-        console.error('Failed to save alias:', xhr);
-        alert('Failed to save alias. Please try again.');
+    this.promptForAliasName().then((aliasName) => {
+      if (!aliasName) {
+        // User cancelled, revert dropdown selection
         $('#aliasSelect').val('').selectpicker('refresh');
+        return;
       }
+
+      const connectURL = this.buildConnectURL({ preserveFreq: true }).toString();
+      if (!connectURL) {
+        alert('No connection URL to save. Please configure connection settings first.');
+        $('#aliasSelect').val('').selectpicker('refresh');
+        return;
+      }
+
+      $.ajax({
+        method: 'PUT',
+        url: `/api/config/connect_aliases/${encodeURIComponent(aliasName)}`,
+        data: JSON.stringify(connectURL),
+        contentType: 'application/json',
+        success: () => {
+          // Add to local cache
+          this.connectAliases[aliasName] = connectURL;
+
+          // Add to dropdown
+          const option = $(`<option>${aliasName}</option>`);
+          $('#aliasSelect').append(option);
+
+          // Select the new alias
+          $('#aliasSelect').val(aliasName).selectpicker('refresh');
+          this.updateAliasActionButton();
+        },
+        error: (xhr) => {
+          console.error('Failed to save alias:', xhr);
+          alert('Failed to save alias. Please try again.');
+          $('#aliasSelect').val('').selectpicker('refresh');
+        }
+      });
     });
   }
 

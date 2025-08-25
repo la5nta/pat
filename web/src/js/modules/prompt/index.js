@@ -15,16 +15,12 @@ export class PromptModal {
     this.modalFooter = this.modal.find('.modal-footer');
     this.modalMessage = $('#promptMessage');
 
-    // Ensure prompt modal appears on top
-    this.modal.css('z-index', 1050);
+    // Ensure prompt modal appears on top of other modals
+    this.modal.css('z-index', 1060);
   }
 
   _cleanupModals() {
-    // Close any open modals first
-    $('.modal').modal('hide');
-    // Remove any stuck backdrops
-    $('.modal-backdrop').remove();
-    $('body').removeClass('modal-open');
+    $(this.modalSelector).modal('hide');
   }
 
   showCustom(options = {}) {

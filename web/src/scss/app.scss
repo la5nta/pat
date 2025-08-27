@@ -406,12 +406,12 @@ input[type='radio'] {
   margin-right: 5px;
 }
 
-.table-fixed {
+.rms-table-container {
   overflow-y: auto;
   height: 400px;
 }
 
-.table-fixed thead th {
+.rms-table-container thead th {
   position: sticky;
   top: 0;
   background: #eee;

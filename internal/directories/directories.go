@@ -68,7 +68,7 @@ func initDir(dir *string, basePath string, methodName string) {
 }
 
 func MigrateLegacyDataDir() {
-	if f, err := os.Stat(ConfigDir()); err != nil && f.IsDir() {
+	if f, err := os.Stat(ConfigDir()); err == nil && f.IsDir() {
 		debug.Printf("new config directory %s already exists, we have already migrated", ConfigDir())
 		return
 	}

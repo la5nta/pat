@@ -332,7 +332,7 @@ func (a *App) Heard() map[string][]Heard {
 		}
 	}
 
-	if ax25, err := ax25.Heard(a.Config().AX25Linux.Port); err != nil {
+	if ax25, err := ax25.Heard(a.Config().AX25Linux.Port); err == nil {
 		for callsign, time := range ax25 {
 			heard[MethodAX25Linux] = append(heard[MethodAX25Linux], Heard{
 				Callsign: callsign,

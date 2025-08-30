@@ -191,6 +191,7 @@ func (h Handler) connectAliasHandler(w http.ResponseWriter, r *http.Request) {
 		delete(currentAliases, alias)
 		if err := h.SetConnectAliases(currentAliases); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodPut:

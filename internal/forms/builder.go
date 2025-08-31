@@ -132,7 +132,7 @@ func (b messageBuilder) buildXML() []byte {
 		RMSExpressVersion:  b.FormsMgr.config.AppVersion,
 		SubmissionDatetime: now().UTC().Format("20060102150405"),
 		SendersCallsign:    b.FormsMgr.config.MyCall,
-		GridSquare:         b.FormsMgr.config.Locator,
+		GridSquare:         b.FormsMgr.config.LocatorProvider.Locator(),
 		DisplayForm:        filename(b.Template.DisplayFormPath),
 		ReplyTemplate:      filename(b.Template.ReplyTemplatePath),
 	}

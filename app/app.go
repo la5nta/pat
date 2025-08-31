@@ -131,6 +131,9 @@ func (a *App) Reload() error { return a.OnReload() }
 
 func (a *App) VFOForRig(rig string) (hamlib.VFO, bool) { r, ok := a.rigs[rig]; return r, ok }
 
+// Locator implements forms.LocatorProvider
+func (a *App) Locator() string { return a.config.Locator }
+
 func (a *App) VFOForTransport(transport string) (vfo hamlib.VFO, rigName string, ok bool, err error) {
 	var rig string
 	switch {
@@ -254,14 +257,14 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 
 	// init forms subsystem
 	a.formsMgr = forms.NewManager(forms.Config{
-		FormsPath:      a.options.FormsPath,
-		SequencePath:   filepath.Join(directories.StateDir(), "template-sequence-number.json"),
-		SequenceFormat: "%03d",
-		MyCall:         a.options.MyCall,
-		Locator:        a.config.Locator,
-		AppVersion:     buildinfo.AppName + " " + buildinfo.VersionStringShort(),
-		UserAgent:      buildinfo.UserAgent(),
-		GPSd:           a.config.GPSd,
+		FormsPath:       a.options.FormsPath,
+		SequencePath:    filepath.Join(directories.StateDir(), "template-sequence-number.json"),
+		SequenceFormat:  "%03d",
+		MyCall:          a.options.MyCall,
+		AppVersion:      buildinfo.AppName + " " + buildinfo.VersionStringShort(),
+		UserAgent:       buildinfo.UserAgent(),
+		GPSd:            a.config.GPSd,
+		LocatorProvider: a,
 	})
 
 	// Load the mailbox handler

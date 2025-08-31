@@ -70,16 +70,21 @@ func (m *Manager) SeqSet(v int) error {
 	return err
 }
 
+// LocatorProvider provides access to the current locator value
+type LocatorProvider interface {
+	Locator() string
+}
+
 // Config passes config options to the forms package
 type Config struct {
-	FormsPath      string
-	SequencePath   string
-	SequenceFormat string
-	MyCall         string
-	Locator        string
-	AppVersion     string
-	UserAgent      string
-	GPSd           cfg.GPSdConfig
+	FormsPath       string
+	SequencePath    string
+	SequenceFormat  string
+	MyCall          string
+	AppVersion      string
+	UserAgent       string
+	GPSd            cfg.GPSdConfig
+	LocatorProvider LocatorProvider
 }
 
 // FormFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches

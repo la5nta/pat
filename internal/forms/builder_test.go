@@ -9,11 +9,17 @@ import (
 	"github.com/la5nta/pat/cfg"
 )
 
+// mockLocatorProvider implements LocatorProvider for testing
+type mockLocatorProvider string
+
+func (m mockLocatorProvider) Locator() string { return string(m) }
+
 func TestInsertionTagReplacer(t *testing.T) {
 	m := &Manager{config: Config{
-		MyCall:     "LA5NTA",
-		AppVersion: "Pat v1.0.0 (test)",
-		GPSd:       cfg.GPSdConfig{Addr: gpsMockAddr},
+		MyCall:          "LA5NTA",
+		AppVersion:      "Pat v1.0.0 (test)",
+		GPSd:            cfg.GPSdConfig{Addr: gpsMockAddr},
+		LocatorProvider: mockLocatorProvider("JO29PJ"),
 	}}
 	location = time.FixedZone("UTC+1", 1*60*60)
 	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }
@@ -57,10 +63,10 @@ func TestBuildXML(t *testing.T) {
 	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }
 	b := messageBuilder{
 		FormsMgr: &Manager{config: Config{
-			MyCall:     "LA5NTA",
-			AppVersion: "v1.0.0",
-			Locator:    "JO29PJ",
-			GPSd:       cfg.GPSdConfig{Addr: gpsMockAddr},
+			MyCall:          "LA5NTA",
+			AppVersion:      "v1.0.0",
+			GPSd:            cfg.GPSdConfig{Addr: gpsMockAddr},
+			LocatorProvider: mockLocatorProvider("JO29PJ"),
 		}},
 		Template: Template{DisplayFormPath: "viewer.html", ReplyTemplatePath: "reply.txt"},
 		FormValues: map[string]string{

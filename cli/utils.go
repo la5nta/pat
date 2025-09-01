@@ -36,7 +36,7 @@ func isTerminal(f *os.File) bool {
 	return (info.Mode() & os.ModeCharDevice) != 0
 }
 
-func prompt(question, defaultValue string, options ...string) string {
+func prompt2(w io.Writer, question, defaultValue string, options ...string) string {
 	var suffix string
 	if len(options) > 0 {
 		// Ensure default is included in options if not already present
@@ -67,12 +67,16 @@ func prompt(question, defaultValue string, options ...string) string {
 		suffix = fmt.Sprintf(" [%s]", defaultValue)
 	}
 
-	fmt.Printf("%s%s: ", question, suffix)
+	fmt.Fprintf(w, "%s%s: ", question, suffix)
 	response := readLine()
 	if response == "" {
 		return defaultValue
 	}
 	return response
+}
+
+func prompt(question, defaultValue string, options ...string) string {
+	return prompt2(os.Stdout, question, defaultValue, options...)
 }
 
 func SplitFunc(c rune) bool {

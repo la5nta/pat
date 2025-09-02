@@ -1,3 +1,16 @@
+pat (0.19.0) stable; urgency=medium
+
+  * Add VOACAP-based HF propagation prediction
+  * Add support for automatic locator updates from GPSd
+  * Add support for adding and deleting connect aliases in web GUI
+  * Add filtering and pagination to RMS list in web GUI
+  * Add 'Set from GPS' option for locator in web GUI config
+  * Embed RMS list for offline operation
+  * Log to stderr
+  * Minor bug fixes
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 02 Sep 2025 18:57:49 +0200
+
 pat (0.18.0) stable; urgency=medium
 
   * Add support for Message Pickup Station (MPS) management in the CLI

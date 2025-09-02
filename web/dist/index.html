@@ -161,9 +161,16 @@
                 <div class="col-md-11">
                   <div class="form-group row">
                     <div class="col-md-4">
-                      <select class="selectpicker form-control" data-width="100%" id="aliasSelect">
-                        <option value="">(select alias)</option>
-                      </select>
+                      <div class="input-group">
+                        <select class="selectpicker form-control" data-width="100%" id="aliasSelect">
+                          <option value="">(select alias)</option>
+                        </select>
+                        <span class="input-group-btn">
+                          <button class="btn btn-default" type="button" id="aliasActionBtn" title="Save current configuration as new alias" style="display: none;">
+                            <span class="glyphicon glyphicon-plus"></span>
+                          </button>
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div class="form-group row">
@@ -247,7 +254,7 @@
           </div>
           <div class="modal-footer collapse" id="rmslist-container">
             <div class="form-group row">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <select class="selectpicker form-control" data-width="100%" id="modeSearchSelect">
                   <optgroup label="mode">
                     <option value="">(any mode)</option>
@@ -259,7 +266,7 @@
                   </optgroup>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <select class="selectpicker form-control" data-width="100%" id="bandSearchSelect">
                   <optgroup label="band">
                     <!-- Values from freq.go -->
@@ -282,13 +289,16 @@
                   </optgroup>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
+                <input type="text" class="form-control" id="targetFilterInput" placeholder="(any target)">
+              </div>
+              <div class="col-md-3">
                 <button id="updateRmslistButton" class="btn btn-default btn-link">
                   Update cache
                 </button>
               </div>
             </div>
-            <div class="table-responsive table-fixed">
+            <div class="table-responsive rms-table-container">
               <table id="rmslist" class="table table-hover table-condensed">
                 <thead>
                   <tr>
@@ -296,11 +306,22 @@
                     <th>distance</th>
                     <th>mode</th>
                     <th class="text-right">dial freq</th>
+                    <th class="text-right link-quality-column" style="display: none;" title="predicted link quality">quality</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
                 <!-- This is populated by javascript -->
               </table>
+              <div id="rmslist-loadmore" class="text-center" style="margin: 10px 0; display: none;">
+                <button id="loadmore-btn" class="btn btn-default btn-sm">Load more results</button>
+                <div class="text-muted small" style="margin-top: 5px;">
+                  Showing <span id="showing-count">0</span> of <span id="total-results">0</span> results
+                </div>
+              </div>
+              <div id="rmslistSpinner" class="text-center" style="display: none;">
+                <span class="glyphicon glyphicon-refresh icon-spin text-muted"
+                  style="font-size: 24px; margin: 12px 0;"></span>
+              </div>
             </div>
           </div>
         </div>

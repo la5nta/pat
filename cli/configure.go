@@ -13,6 +13,9 @@ import (
 )
 
 func ConfigureHandle(ctx context.Context, a *app.App, args []string) {
+	cancel := exitOnContextCancellation(ctx)
+	defer cancel()
+
 	// Ensure config file has been written
 	config, err := app.ReadConfig(a.Options().ConfigPath)
 	if os.IsNotExist(err) {

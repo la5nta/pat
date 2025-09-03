@@ -1,10 +1,11 @@
 package app
 
 import (
-	"github.com/la5nta/pat/internal/cmsapi"
 	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/la5nta/pat/internal/cmsapi"
 )
 
 func Test_toURL(t *testing.T) {
@@ -26,7 +27,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "K0NTS-10",
 			},
-			want: parseUrl("ax25:///K0NTS-10?freq=145050"),
+			want: parseURL("ax25:///K0NTS-10?freq=145050"),
 		},
 		{
 			name: "ax25 9600",
@@ -37,7 +38,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "HB9AK-14",
 			},
-			want: parseUrl("ax25:///HB9AK-14?freq=438075"),
+			want: parseURL("ax25:///HB9AK-14?freq=438075"),
 		},
 		{
 			name: "adrop 2000",
@@ -48,7 +49,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "K0SI",
 			},
-			want: parseUrl("ardop:///K0SI?bw=2000MAX&freq=3585"),
+			want: parseURL("ardop:///K0SI?bw=2000MAX&freq=3585"),
 		},
 		{
 			name: "adrop 500",
@@ -59,7 +60,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "F1ZWL",
 			},
-			want: parseUrl("ardop:///F1ZWL?bw=500MAX&freq=3582.5"),
+			want: parseURL("ardop:///F1ZWL?bw=500MAX&freq=3582.5"),
 		},
 		{
 			// These are quite rare but are seen in the wild
@@ -71,7 +72,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "N3HYM-10",
 			},
-			want: parseUrl("ardop:///N3HYM-10?bw=1000MAX&freq=3586.5"),
+			want: parseURL("ardop:///N3HYM-10?bw=1000MAX&freq=3586.5"),
 		},
 		{
 			// This is a notional ARDOP station that doesn't specify bandwidth in supportedModes.
@@ -84,7 +85,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "T3ST",
 			},
-			want: parseUrl("ardop:///T3ST?freq=7582.5"),
+			want: parseURL("ardop:///T3ST?freq=7582.5"),
 		},
 		{
 			name: "pactor",
@@ -95,7 +96,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "K1EHZ",
 			},
-			want: parseUrl("pactor:///K1EHZ?freq=1848.5"),
+			want: parseURL("pactor:///K1EHZ?freq=1848.5"),
 		},
 		{
 			name: "robust packet",
@@ -106,7 +107,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "N3HYM-10",
 			},
-			want: parseUrl("ax25:///N3HYM-10?freq=7099.4"),
+			want: parseURL("ax25:///N3HYM-10?freq=7099.4"),
 		},
 		{
 			name: "vara hf 500",
@@ -117,7 +118,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "W0VG",
 			},
-			want: parseUrl("varahf:///W0VG?bw=500&freq=7062.5"),
+			want: parseURL("varahf:///W0VG?bw=500&freq=7062.5"),
 		},
 		{
 			name: "vara hf unspec",
@@ -128,7 +129,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "W0VG",
 			},
-			want: parseUrl("varahf:///W0VG?bw=2300&freq=7101.5"),
+			want: parseURL("varahf:///W0VG?bw=2300&freq=7101.5"),
 		},
 		{
 			name: "vara hf 2750",
@@ -139,7 +140,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "W1EO",
 			},
-			want: parseUrl("varahf:///W1EO?bw=2750&freq=3596.4"),
+			want: parseURL("varahf:///W1EO?bw=2750&freq=3596.4"),
 		},
 		{
 			name: "vara fm narrow",
@@ -151,7 +152,7 @@ func Test_toURL(t *testing.T) {
 				targetCall: "W0TQ",
 			},
 			// vara transport adapter will default to narrow
-			want: parseUrl("varafm:///W0TQ?freq=145070"),
+			want: parseURL("varafm:///W0TQ?freq=145070"),
 		},
 		{
 			name: "vara fm wide",
@@ -162,7 +163,7 @@ func Test_toURL(t *testing.T) {
 				},
 				targetCall: "W1AW-10",
 			},
-			want: parseUrl("varafm:///W1AW-10?freq=145510"),
+			want: parseURL("varafm:///W1AW-10?freq=145510"),
 		},
 	}
 	for _, tt := range tests {
@@ -174,7 +175,7 @@ func Test_toURL(t *testing.T) {
 	}
 }
 
-func parseUrl(str string) *url.URL {
+func parseURL(str string) *url.URL {
 	parse, _ := url.Parse(str)
 	return parse
 }

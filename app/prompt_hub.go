@@ -116,8 +116,7 @@ func (p *PromptHub) Prompt(ctx context.Context, timeout time.Duration, kind Prom
 	}
 	p.c <- prompt
 
-	for prompter, _ := range p.prompters {
-		prompter := prompter
+	for prompter := range p.prompters {
 		go prompter.Prompt(*prompt)
 	}
 

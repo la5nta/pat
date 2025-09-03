@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -172,11 +173,7 @@ func (h Handler) connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (h Handler) connectAliasHandler(w http.ResponseWriter, r *http.Request) {
 	// Make a copy of the map to avoid concurrenct read/write of the "live" map
-	// TODO: Simplify by using maps.Clone when we're on Go 1.25 with Debian Trixie.
-	currentAliases := make(map[string]string, len(h.Config().ConnectAliases))
-	for k, v := range h.Config().ConnectAliases {
-		currentAliases[k] = v
-	}
+	currentAliases := maps.Clone(h.Config().ConnectAliases)
 
 	alias := mux.Vars(r)["alias"]
 	switch r.Method {

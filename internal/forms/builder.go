@@ -238,7 +238,7 @@ func (b messageBuilder) scanAndBuild(path string) (Message, error) {
 						log.Fatalf("Failed to start text editor: %v", err)
 					}
 				} else {
-					fmt.Printf(a.Prompt + " ")
+					fmt.Print(a.Prompt + " ")
 					ans = b.LineReader()
 				}
 				if a.Uppercase {

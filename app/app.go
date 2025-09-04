@@ -244,6 +244,8 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 			// Only log error if engine is set explicitly
 			if p.Engine == cfg.PredictionEngineVOACAP {
 				log.Println("Failed to initialize VOACAP:", err)
+			} else {
+				debug.Printf("Failed to initialize VOACAP: %v", err)
 			}
 			break
 		}

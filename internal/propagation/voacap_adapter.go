@@ -78,7 +78,18 @@ func NewVOACAPPredictor(executable, dataDir string) (*voacapPredictor, error) {
 			// Usually c:\itshfbc (c:\itshfbc\bin_win\..)
 			dataDir = filepath.Join(filepath.Dir(executable), "..")
 		default:
+			// Search default paths (prefer homedir)
 			dataDir = os.ExpandEnv("$HOME/itshfbc")
+			for _, d := range []string{
+				dataDir,
+				"/usr/share/voacapl/itshfbc",
+				"/usr/local/share/voacapl/itshfbc",
+			} {
+				if _, err := os.Stat(d); err == nil {
+					dataDir = d
+					break
+				}
+			}
 		}
 	}
 	if _, err := os.Stat(dataDir); err != nil {

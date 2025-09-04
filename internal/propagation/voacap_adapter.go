@@ -84,6 +84,7 @@ func NewVOACAPPredictor(executable, dataDir string) (*voacapPredictor, error) {
 				dataDir,
 				"/usr/share/voacapl/itshfbc",
 				"/usr/local/share/voacapl/itshfbc",
+				filepath.Join(brewPrefix(), "/share/voacapl/itshfbc"),
 			} {
 				if _, err := os.Stat(d); err == nil {
 					dataDir = d
@@ -548,4 +549,14 @@ func toSMeter(SDBW float64) string {
 
 func isVoacapl(executable string) bool {
 	return filepath.Base(executable) == "voacapl"
+}
+
+// brewPrefix returns the brew prefix path or empty string on error
+func brewPrefix() string {
+	cmd := exec.Command("brew", "--prefix")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return string(bytes.TrimSpace(output))
 }

@@ -233,13 +233,7 @@ export class PromptModal {
         ).append(
           $('<p>').text('If you continue, an over-the-air activation will be initiated and you will receive a message with a new password.')
         ).append(
-          $('<p>').text('This password will be the only key to your account:')
-        ).append(
-          $('<ul>').append(
-            $('<li>').text('If you lose the password, it cannot be recovered.')
-          ).append(
-            $('<li>').text('If you fail to receive it, you will be permanently locked out of your account.')
-          )
+          $('<p>').text('This password will be the only key to your account. If you lose it, it cannot be recovered.')
         ).append(
           $('<p>').html('It is strongly recommended to create your account before proceeding.')
         );

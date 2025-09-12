@@ -87,18 +87,10 @@ func (m NotifyMBox) GetInboundAnswers(p []fbb.Proposal) []fbb.ProposalAnswer {
 		}
 	}
 	if hasAccountActivation {
-		// CMS will currently enforce the password even if the message is deferred or transfer fails.
-		// If we don't accept it now, the user risks being locked out of their account.
-		// Fingers crossed that the connection does not fail.
-		if true { // Make vet happy
-			return answers
-		}
-
-		// TODO: If the above issue is ever resolved by WTD, do this instead:
 		res := <-m.promptHub.Prompt(
 			context.Background(),
 			time.Minute,
-			PromptKindAccountActivation,
+			types.PromptKindAccountActivation,
 			"Important: Your New Account Password",
 		)
 		if declined := res.Value != "accept"; declined {

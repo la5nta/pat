@@ -1,3 +1,13 @@
+pat (0.19.1) stable; urgency=medium
+
+  * Fix Reply All button accumulating event handlers in web GUI
+  * Fix interrupt (ctrl+c) in `pat configure` command
+  * Search brew prefix and share folders for voacapl data directory
+  * Improve Winlink over-the-air account activation flow following CMS fix
+  * Require Go 1.24 or later (due to updated dependencies)
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Sat, 13 Sep 2025 17:19:00 +0200
+
 pat (0.19.0) stable; urgency=medium
 
   * Add VOACAP-based HF propagation prediction

@@ -167,6 +167,7 @@ export class Viewer {
         this.composer.reply(currentFolder, data, false);
       });
 
+      this.replyAllBtn.off('click');
       this.replyAllBtn.click(evt => {
         this.composer.reply(currentFolder, data, true);
       });

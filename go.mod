@@ -2,6 +2,8 @@ module github.com/la5nta/pat
 
 go 1.24.0
 
+tool golang.org/x/vuln/cmd/govulncheck
+
 require (
 	github.com/adrg/xdg v0.5.3
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
@@ -35,7 +37,11 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/telemetry v0.0.0-20240522233618-39ace7a40ae7 // indirect
 	golang.org/x/term v0.34.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
+	golang.org/x/vuln v1.1.4 // indirect
 )

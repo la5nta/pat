@@ -22,7 +22,7 @@ function install_libax25 {
 	cd "${AX25DIST}/" && ./configure --prefix=/ && make && cd ../../
 }
 function build_web {
-	cd web
+	pushd web
 	if [ -d $NVM_DIR ]; then
 	  source $NVM_DIR/nvm.sh
 	  nvm install
@@ -30,15 +30,22 @@ function build_web {
 	fi
 	npm install
 	npm run production
+	popd
 }
 function embed {
 	curl -LSsf "https://www.sidc.be/SILSO/FORECASTS/KFprediCM.txt" > internal/propagation/silso/KFprediCM.txt && go test ./internal/propagation/silso
 	curl -LSsf 'https://api.winlink.org/gateway/status.json?key=1880278F11684B358F36845615BD039A&mode=AnyAll&HistoryHours=48&ServiceCodes=PUBLIC' | gzip -9 > internal/cmsapi/gateway_status.json.gz && go test ./internal/cmsapi
 }
+function pre_release {
+	build_web > /dev/null
+	embed
+	go tool govulncheck ./...
+}
 
 [[ "$1" == "libax25" ]] && { install_libax25; exit $?; }
 [[ "$1" == "web" ]] && { build_web; exit $?; }
 [[ "$1" == "embed" ]] && { embed; exit $?; }
+[[ "$1" == "pre-release" ]] && { pre_release; exit $?; }
 
 # Link against libax25 (statically) on Linux
 if [[ "$OS" == "linux"* ]] && [[ "$CGO_ENABLED" == "1" ]]; then

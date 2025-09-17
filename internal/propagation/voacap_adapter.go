@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/propagation/voacap"
 )
 
@@ -194,7 +193,7 @@ func (*voacapPredictor) generateInputFile(params PredictionParams) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	debug.Printf("--- voacap input ---\n%s", buf.Bytes())
+	debugf("--- voacap input ---\n%s", buf.Bytes())
 	return buf.Bytes(), nil
 }
 
@@ -203,7 +202,7 @@ func (*voacapPredictor) parseOutput(output io.Reader) (*Prediction, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read voacap output: %w", err)
 	}
-	debug.Printf("--- voacap output ---\n%s", b)
+	debugf("--- voacap output ---\n%s", b)
 	voacapOutput, err := voacap.Parse(bytes.NewReader(b))
 	if err != nil {
 		return nil, err
@@ -374,7 +373,7 @@ func toPrediction(output *voacap.VoacapOutput, outputRaw string) (*Prediction, e
 	// 7. Long path modes - evaluated based on layers involved
 	modeFactor := 0.0
 	if band.Mode != "" {
-		debug.Printf("Parsing MODE: %q", band.Mode)
+		debugf("Parsing MODE: %q", band.Mode)
 
 		// Parse the mode string - handle both formats from MODE.md
 		if len(band.Mode) >= 2 && band.Mode[0] >= '0' && band.Mode[0] <= '9' {
@@ -392,7 +391,7 @@ func toPrediction(output *voacap.VoacapOutput, outputRaw string) (*Prediction, e
 				layer = band.Mode[1:]
 			}
 
-			debug.Printf("Parsed short path mode: %d hops via %s layer", hops, layer)
+			debugf("Parsed short path mode: %d hops via %s layer", hops, layer)
 
 			if hops == 1 {
 				switch layer {
@@ -421,7 +420,7 @@ func toPrediction(output *voacap.VoacapOutput, outputRaw string) (*Prediction, e
 			}
 		} else {
 			// Long path format: "L1L2" (e.g., "F2F2", "EF1", etc.)
-			debug.Printf("Parsed long path mode: %s", band.Mode)
+			debugf("Parsed long path mode: %s", band.Mode)
 
 			if len(band.Mode) >= 4 {
 				if band.Mode[:2] == "F2" && band.Mode[2:4] == "F2" {
@@ -490,17 +489,17 @@ func toPrediction(output *voacap.VoacapOutput, outputRaw string) (*Prediction, e
 	lqi := weightedRelFactor * weightedSnrFactor * weightedAngleFactor * weightedMufFactor * weightedModeFactor * weightedSdbwFactor * 100
 
 	// Debug log the LQI calculation steps
-	debug.Printf("--- LQI calculation ---")
-	debug.Printf("%-6s  %-15s  %-6s  %-6s  %-6s", "PARAM", "VALUE", "RAW", "WEIGHT", "WEIGHTED")
-	debug.Printf("%-6s  %-15.2f  %-6s  %-6.1f  %.4f", "REL", band.Rel, fmt.Sprintf("%.4f", relFactor), WeightReliability, weightedRelFactor)
-	debug.Printf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "SNR", fmt.Sprintf("%.1f dB", band.SNR), fmt.Sprintf("%.4f", snrFactor), WeightSNR, weightedSnrFactor)
-	debug.Printf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "TANGLE", fmt.Sprintf("%.1f°", band.Tangle), fmt.Sprintf("%.4f", angleFactor), WeightTakeoffAngle, weightedAngleFactor)
-	debug.Printf("%-6s  %-15.2f  %-6s  %-6.1f  %.4f", "MUFday", band.MUFday, fmt.Sprintf("%.4f", mufFactor), WeightMUFday, weightedMufFactor)
-	debug.Printf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "MODE", band.Mode, fmt.Sprintf("%.4f", modeFactor), WeightMode, weightedModeFactor)
-	debug.Printf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "S_DBW", fmt.Sprintf("%.1f (%s)", band.SDBW, toSMeter(band.SDBW)), fmt.Sprintf("%.4f", sdbwFactor), WeightSDBW, weightedSdbwFactor)
-	debug.Printf("-------------------------------------------------------------")
-	debug.Printf("                               REL      SNR      TANGLE   MUFday   MODE     S_DBW")
-	debug.Printf("LQI = Weighted factors × 100 = %.4f × %.4f × %.4f × %.4f × %.4f × %.4f × 100 = %.1f",
+	debugf("--- LQI calculation ---")
+	debugf("%-6s  %-15s  %-6s  %-6s  %-6s", "PARAM", "VALUE", "RAW", "WEIGHT", "WEIGHTED")
+	debugf("%-6s  %-15.2f  %-6s  %-6.1f  %.4f", "REL", band.Rel, fmt.Sprintf("%.4f", relFactor), WeightReliability, weightedRelFactor)
+	debugf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "SNR", fmt.Sprintf("%.1f dB", band.SNR), fmt.Sprintf("%.4f", snrFactor), WeightSNR, weightedSnrFactor)
+	debugf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "TANGLE", fmt.Sprintf("%.1f°", band.Tangle), fmt.Sprintf("%.4f", angleFactor), WeightTakeoffAngle, weightedAngleFactor)
+	debugf("%-6s  %-15.2f  %-6s  %-6.1f  %.4f", "MUFday", band.MUFday, fmt.Sprintf("%.4f", mufFactor), WeightMUFday, weightedMufFactor)
+	debugf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "MODE", band.Mode, fmt.Sprintf("%.4f", modeFactor), WeightMode, weightedModeFactor)
+	debugf("%-6s  %-15s  %-6s  %-6.1f  %.4f", "S_DBW", fmt.Sprintf("%.1f (%s)", band.SDBW, toSMeter(band.SDBW)), fmt.Sprintf("%.4f", sdbwFactor), WeightSDBW, weightedSdbwFactor)
+	debugf("-------------------------------------------------------------")
+	debugf("                               REL      SNR      TANGLE   MUFday   MODE     S_DBW")
+	debugf("LQI = Weighted factors × 100 = %.4f × %.4f × %.4f × %.4f × %.4f × %.4f × 100 = %.1f",
 		weightedRelFactor, weightedSnrFactor, weightedAngleFactor, weightedMufFactor, weightedModeFactor, weightedSdbwFactor, lqi)
 
 	return &Prediction{

@@ -3,7 +3,10 @@ package propagation
 import (
 	"context"
 	"errors"
+	"log"
+	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -69,4 +72,11 @@ func PredictParallel(ctx context.Context, p Predictor, params []PredictionParams
 		}()
 	}
 	wg.Wait()
+}
+
+func debugf(format string, v ...any) {
+	if t, _ := strconv.ParseBool(os.Getenv("PROPAGATION_DEBUG")); !t {
+		return
+	}
+	log.Printf("[PROPAGATION] "+format, v...)
 }

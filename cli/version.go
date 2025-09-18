@@ -14,12 +14,23 @@ import (
 )
 
 func VersionHandle(ctx context.Context, app *app.App, args []string) {
-	var check bool
+	var (
+		check   bool
+		verbose bool
+	)
 	set := pflag.NewFlagSet("version", pflag.ExitOnError)
 	set.BoolVarP(&check, "check", "c", false, "Check if new version is available")
+	set.BoolVarP(&verbose, "verbose", "v", false, "Show detailed build information")
 	set.Parse(args)
 
 	fmt.Printf("%s %s\n", buildinfo.AppName, buildinfo.VersionString())
+	if verbose {
+		fmt.Println("Modules:")
+		for _, m := range buildinfo.Modules {
+			fmt.Printf("  %s@%s\n", m.Path, m.Version)
+		}
+	}
+
 	if !check {
 		return
 	}

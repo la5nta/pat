@@ -155,7 +155,8 @@ var Commands = []app.Command{
 		Desc:  "Print the application version.",
 		Usage: "[options]",
 		Options: map[string]string{
-			"--check, -c": "Check if a new version is available",
+			"--check, -c":   "Check if a new version is available",
+			"--verbose, -v": "Show detailed build information",
 		},
 		HandleFunc: VersionHandle,
 	},

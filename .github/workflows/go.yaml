@@ -38,5 +38,7 @@ jobs:
         run: go version
       - name: Vet
         run: go vet ./...
+      - name: Govulncheck
+        run: go tool govulncheck ./...
       - name: Build
         run: ./make.bash

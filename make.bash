@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-export GO111MODULE=on
-
 if [ -d $GOOS ]; then OS=$(go env GOOS); else OS=$GOOS; fi
 if [ -d $CGO_ENABLED ]; then CGO_ENABLED=$(go env CGO_ENABLED); else OS=$CGO_ENABLED; fi
 
-GITREV=$(git rev-parse --short HEAD)
 VERSION=$(grep "Version =" internal/buildinfo/VERSION.go|cut -d '"' -f2)
 
 # Go 1.24 or later is required
@@ -82,7 +79,7 @@ fi
 echo
 
 echo "Building Pat v$VERSION..."
-go build -tags "$TAGS" -ldflags "-X \"github.com/la5nta/pat/internal/buildinfo.GitRev=$GITREV\"" $(go list .)
+go build -tags "$TAGS" -o pat
 
 # Build macOS pkg
 if [[ "$OS" == "darwin"* ]] && command -v packagesbuild >/dev/null 2>&1; then

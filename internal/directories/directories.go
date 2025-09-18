@@ -29,11 +29,24 @@ func IsInPath(parent, sub string) bool {
 	if filepath.IsAbs(parent) != filepath.IsAbs(sub) {
 		panic("mix of rel and abs paths")
 	}
-	rel, err := filepath.Rel(parent, sub)
+	root, err := os.OpenRoot(parent)
 	if err != nil {
 		return false
 	}
-	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	defer root.Close()
+	// Make sub relative to parent
+	relSub, err := filepath.Rel(parent, sub)
+	if err != nil {
+		return false
+	}
+	switch _, err = root.Stat(relSub); {
+	case err == nil:
+		return true
+	case errors.Is(err, os.ErrNotExist):
+		return true // Path is within root, just not present
+	default:
+		return false
+	}
 }
 
 func DataDir() string {

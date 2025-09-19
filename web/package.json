@@ -48,8 +48,6 @@
     "copy-webpack-plugin": "^5.1.2",
     "css-loader": "^2.1.1",
     "del-cli": "^3.0.1",
-    "image-webpack-loader": "^5.1.0",
-    "imagemin-webpack-plugin": "^2.4.2",
     "mini-css-extract-plugin": "^0.7.0",
     "optimize-css-assets-webpack-plugin": "^5.0.4",
     "prettier": "^2.5.1",

@@ -19,15 +19,7 @@ function install_libax25 {
 	cd "${AX25DIST}/" && ./configure --prefix=/ && make && cd ../../
 }
 function build_web {
-	pushd web
-	if [ -d $NVM_DIR ]; then
-	  source $NVM_DIR/nvm.sh
-	  nvm install
-	  nvm use
-	fi
-	npm install
-	npm run production
-	popd
+    bash web/make.bash
 }
 function embed {
 	curl -LSsf "https://www.sidc.be/SILSO/FORECASTS/KFprediCM.txt" > internal/propagation/silso/KFprediCM.txt && go test ./internal/propagation/silso

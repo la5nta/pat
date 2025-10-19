@@ -19,6 +19,7 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/prehook"
 
+	"github.com/harenber/Pat-PTB"
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
@@ -89,6 +90,11 @@ func (a *App) Connect(connectStr string) (success bool) {
 			ptCmdInit = strings.Join(val, "\n")
 		}
 		if err := a.initPACTOR(ptCmdInit); err != nil {
+			log.Println(err)
+			return
+		}
+	case MethodPTB:
+		if err := a.initPTB(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -333,6 +339,51 @@ func (a *App) initPACTOR(cmdlineinit string) error {
 	transport.RegisterDialer(MethodPactor, a.pactor)
 
 	return nil
+}
+
+// PTB returns the initialized PTB HF modem, initializing it if necessary.
+func (a *App) PTB() (*ptb.Modem, error) {
+	if err := a.initPTB(); err != nil {
+		return nil, err
+	}
+	return a.ptb, nil
+}
+
+func (a *App) initPTB() error {
+	if a.ptb != nil && a.ptb.Ping() == nil {
+		return nil
+	}
+
+	if a.ptb != nil {
+		a.ptb.Close()
+	}
+
+	// Get addresses from config
+	addr := a.config.PTB.Addr
+	if addr == "" {
+		addr = ptb.DefaultAddr
+	}
+
+	dataAddr := a.config.PTB.DataAddr
+	if dataAddr == "" {
+		dataAddr = ptb.DefaultDataAddr
+	}
+
+	var err error
+	a.ptb, err = ptb.OpenTCP(addr, dataAddr, a.options.MyCall)
+	if err != nil {
+		return fmt.Errorf("PTB modem initialization failed: %w", err)
+	}
+
+	// Enable debug if needed
+	if debug.Enabled() {
+		a.ptb.SetDebug(true)
+	}
+
+	transport.RegisterDialer(MethodPTB, a.ptb)
+	log.Printf("PTB modem initialized at %s (data: %s)", addr, dataAddr)
+	return nil
+
 }
 
 // VARAHF returns the initialized VARA HF modem, initializing it if necessary.

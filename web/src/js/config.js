@@ -360,9 +360,26 @@ $(document).ready(function() {
         .map(addr => ({ value: addr, label: addr }));
       $('#auxiliary_addresses').tokenfield('setTokens', auxAddrs);
 
-      // Populate rig selects
-      // Initialize rig selects with any existing config
-      updateRigSelects();
+      // Populate Hamlib rigs
+      const rigs = config.hamlib_rigs || {};
+      const rigsContainer = $('#rigsContainer');
+      const rigTemplate = $('.rig-row').first().clone();
+      rigsContainer.empty();
+
+      Object.entries(rigs).forEach(([name, rig]) => {
+        const row = rigTemplate.clone();
+        const nameInput = row.find('.rig-name').val(name);
+        nameInput.on('input', updateRigSelects); // Add input listener
+        row.find('.rig-network').val(rig.network || '');
+        row.find('.rig-address').val(rig.address || '');
+        rigsContainer.append(row);
+      });
+
+      if (Object.keys(rigs).length === 0) {
+        rigsContainer.append(rigTemplate.clone());
+      }
+
+      updateRigSelects(); // Refresh rig dropdowns with loaded data
 
       // Populate transport configs
       $('#ardop_addr').val((config.ardop && config.ardop.addr) || '');
@@ -426,26 +443,6 @@ $(document).ready(function() {
       $('#gpsd_update_locator').prop('checked', (config.gpsd && config.gpsd.update_locator) || false);
       $('#gpsd_addr').val((config.gpsd && config.gpsd.addr) || '');
 
-      // Populate Hamlib rigs
-      const rigs = config.hamlib_rigs || {};
-      const rigsContainer = $('#rigsContainer');
-      const rigTemplate = $('.rig-row').first().clone();
-      rigsContainer.empty();
-
-      Object.entries(rigs).forEach(([name, rig]) => {
-        const row = rigTemplate.clone();
-        const nameInput = row.find('.rig-name').val(name);
-        nameInput.on('input', updateRigSelects); // Add input listener
-        row.find('.rig-network').val(rig.network || '');
-        row.find('.rig-address').val(rig.address || '');
-        rigsContainer.append(row);
-      });
-
-      if (Object.keys(rigs).length === 0) {
-        rigsContainer.append(rigTemplate.clone());
-      }
-
-      updateRigSelects(); // Refresh rig dropdowns with loaded data
 
       // Populate connect aliases
       const aliases = config.connect_aliases || {};
@@ -718,10 +715,12 @@ $(document).ready(function() {
     });
 
     $('.rig-select').each(function() {
+      const currentVal = $(this).val();
       $(this).empty().append($('<option>').val('').text('None'));
       rigNames.forEach(name => {
         $(this).append($('<option>').val(name).text(name));
       });
+      $(this).val(currentVal);
     });
   }
 

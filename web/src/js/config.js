@@ -360,11 +360,7 @@ $(document).ready(function() {
         .map(addr => ({ value: addr, label: addr }));
       $('#auxiliary_addresses').tokenfield('setTokens', auxAddrs);
 
-      // Populate rig selects
-      // Initialize rig selects with any existing config
-      updateRigSelects();
-
-      // Populate transport configs
+      // Populate transport configs (rig selections are set later, after rig rows are populated)
       $('#ardop_addr').val((config.ardop && config.ardop.addr) || '');
       // Convert bandwidth object to string format
       $('#ardop_connect_requests').val((config.ardop && config.ardop.connect_requests) || '');
@@ -381,21 +377,13 @@ $(document).ready(function() {
       $('#vara_fm_bandwidth').val((config.varafm && config.varafm.bandwidth && config.varafm.bandwidth.toString()) || '');
 
       // Populate AX25 config
-      // Populate transport rig selections
-      $('#ardop_rig').val((config.ardop && config.ardop.rig) || '');
       $('#ardop_ptt_ctrl').prop('checked', (config.ardop && config.ardop.ptt_ctrl) || false);
-      $('#ax25_rig').val((config.ax25 && config.ax25.rig) || '');
       $('#ax25_ptt_ctrl').prop('checked', (config.ax25 && config.ax25.ptt_ctrl) || false);
-      $('#pactor_rig').val((config.pactor && config.pactor.rig) || '');
       $('#pactor_ptt_ctrl').prop('checked', (config.pactor && config.pactor.ptt_ctrl) || false);
-      $('#vara_hf_rig').val((config.varahf && config.varahf.rig) || '');
       $('#vara_hf_ptt_ctrl').prop('checked', (config.varahf && config.varahf.ptt_ctrl) || false);
-      $('#vara_fm_rig').val((config.varafm && config.varafm.rig) || '');
       $('#vara_fm_ptt_ctrl').prop('checked', (config.varafm && config.varafm.ptt_ctrl) || false);
       $('#telnet_listen_addr').val((config.telnet && config.telnet.listen_addr) || '');
       $('#telnet_password').val((config.telnet && config.telnet.password) || '');
-      $('#vara_hf_rig').val((config.varahf && config.varahf.rig) || '');
-      $('#vara_fm_rig').val((config.varafm && config.varafm.rig) || '');
 
       // Set listen methods checkboxes
       const listenMethods = config.listen || [];
@@ -446,6 +434,13 @@ $(document).ready(function() {
       }
 
       updateRigSelects(); // Refresh rig dropdowns with loaded data
+
+      // Now populate transport rig selections (after rig dropdowns have options)
+      $('#ardop_rig').val((config.ardop && config.ardop.rig) || '');
+      $('#ax25_rig').val((config.ax25 && config.ax25.rig) || '');
+      $('#pactor_rig').val((config.pactor && config.pactor.rig) || '');
+      $('#vara_hf_rig').val((config.varahf && config.varahf.rig) || '');
+      $('#vara_fm_rig').val((config.varafm && config.varafm.rig) || '');
 
       // Populate connect aliases
       const aliases = config.connect_aliases || {};

@@ -1,4 +1,4 @@
-import { alert, isImageSuffix, formatFileSize, formXmlToFormName, setCookie, deleteCookie } from '../utils/index.js';
+import { alert, isImageSuffix, formatFileSize, formXmlToFormName, setCookie, deleteCookie } from '../utils';
 
 const tokenfieldConfig = {
   delimiter: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)

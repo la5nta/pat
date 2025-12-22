@@ -1,4 +1,4 @@
-import { alert, isImageSuffix, formatFileSize, formXmlToFormName } from '../utils/index.js';
+import { alert, isImageSuffix, formatFileSize, formXmlToFormName } from '../utils';
 
 export class Viewer {
   constructor(composer) {
@@ -129,11 +129,11 @@ export class Viewer {
             formatFileSize(file.Size) +
             '</span>' +
             '<span class="glyphicon glyphicon-paperclip"></span> ' +
-            '<img src="' +
+            '' +
             msg_url +
-            '/' +
+            '<img src="/web_frontend/web/src/static" alt="' +
             file.Name +
-            '" alt="' +
+            '' +
             file.Name +
             '">'
           );

@@ -1,6 +1,9 @@
 .build/
+.idea/
 pat
 pat*.pkg
 docker-data/
 .aider*
 *.swp
+libportapat/build/*.jar
+libportapat/build/*.aar

@@ -1,4 +1,4 @@
-import { alert, isInsecureOrigin, dateFormat } from '../utils/index.js';
+import { alert, isInsecureOrigin, dateFormat } from '../utils';
 
 export class Geolocation {
   constructor(statusPopover) {

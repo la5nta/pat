@@ -1,4 +1,4 @@
-import { isInsecureOrigin } from '../utils/index.js';
+import { isInsecureOrigin } from '../utils';
 
 export class NotificationService {
   constructor(statusPopover) {

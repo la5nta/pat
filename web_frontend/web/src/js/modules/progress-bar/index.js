@@ -1,4 +1,4 @@
-import { htmlEscape } from '../utils/index.js';
+import { htmlEscape } from '../utils';
 
 export class ProgressBar {
   constructor() {

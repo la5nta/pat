@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import { htmlEscape } from '../utils/index.js';
+import { htmlEscape } from '../utils';
 
 export class Mailbox {
   constructor(onMessageClick) {

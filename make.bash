@@ -19,7 +19,7 @@ function install_libax25 {
 	cd "${AX25DIST}/" && ./configure --prefix=/ && make && cd ../../
 }
 function build_web {
-    bash web/make.bash
+    bash web_frontend/web/make.bash
 }
 function embed {
 	curl -LSsf "https://www.sidc.be/SILSO/FORECASTS/KFprediCM.txt" > internal/propagation/silso/KFprediCM.txt && go test ./internal/propagation/silso

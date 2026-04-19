@@ -9,12 +9,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/gorhill/cronexpr"
+	"github.com/adhocore/gronx"
 	"github.com/la5nta/pat/app"
 )
 
 type Job struct {
-	expr *cronexpr.Expression
+	expr string
 	cmd  string
 	next time.Time
 }
@@ -22,16 +22,16 @@ type Job struct {
 func scheduleLoop(ctx context.Context, a *app.App) {
 	jobs := make([]*Job, 0, len(a.Config().Schedule))
 	for exprStr, cmd := range a.Config().Schedule {
-		expr, err := cronexpr.Parse(exprStr)
+		if !gronx.IsValid(exprStr) {
+			log.Printf("Skipping invalid schedule expression %q", exprStr)
+			continue
+		}
+		next, err := gronx.NextTickAfter(exprStr, time.Now(), false)
 		if err != nil {
 			log.Printf("Skipping invalid schedule expression %q: %v", exprStr, err)
 			continue
 		}
-		jobs = append(jobs, &Job{
-			expr,
-			cmd,
-			expr.Next(time.Now()),
-		})
+		jobs = append(jobs, &Job{exprStr, cmd, next})
 	}
 
 	go func() {
@@ -48,7 +48,7 @@ func scheduleLoop(ctx context.Context, a *app.App) {
 					}
 					log.Printf("Executing scheduled command '%s'...", j.cmd)
 					execCmd(a, j.cmd)
-					j.next = j.expr.Next(time.Now())
+					j.next, _ = gronx.NextTickAfter(j.expr, time.Now(), false)
 				}
 			}
 		}

@@ -5,10 +5,10 @@ go 1.24.0
 tool golang.org/x/vuln/cmd/govulncheck
 
 require (
+	github.com/adhocore/gronx v1.19.6
 	github.com/adrg/xdg v0.5.3
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/harenber/ptc-go/v2 v2.2.4

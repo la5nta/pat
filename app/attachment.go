@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/la5nta/wl2k-go/fbb"
-	"github.com/nfnt/resize"
+	"golang.org/x/image/draw"
 )
 
 func AddAttachment(msg *fbb.Message, filename string, contentType string, r io.Reader) error {
@@ -58,9 +58,9 @@ func convertImage(orig []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Scale down
+	// Scale to a maximum width of 600px
 	if img.Bounds().Dx() > 600 {
-		img = resize.Resize(600, 0, img, resize.NearestNeighbor)
+		img = resize(img, 600)
 	}
 
 	// Re-encode as low quality jpeg
@@ -72,4 +72,12 @@ func convertImage(orig []byte) ([]byte, error) {
 		return orig, nil
 	}
 	return buf.Bytes(), nil
+}
+
+func resize(img image.Image, newWidth int) image.Image {
+	bounds := img.Bounds()
+	height := bounds.Dy() * newWidth / bounds.Dx()
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, height))
+	draw.NearestNeighbor.Scale(dst, dst.Bounds(), img, bounds, draw.Src, nil)
+	return dst
 }

@@ -3,7 +3,8 @@ package app
 import (
 	"bytes"
 	"image"
-	"image/jpeg"
+	"image/jpeg"  // jpeg decoding (and encoding)
+	_ "image/png" // png decoding
 	"io"
 	"log"
 	"mime"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/la5nta/wl2k-go/fbb"
+	_ "golang.org/x/image/bmp" // bmp decoding
 	"golang.org/x/image/draw"
 )
 

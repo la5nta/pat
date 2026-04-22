@@ -26,6 +26,8 @@ func AddAttachment(msg *fbb.Message, filename string, contentType string, r io.R
 		log.Printf("Auto converting '%s' [%s]...", filename, mediaType)
 		if converted, err := convertImage(p); err != nil {
 			log.Printf("Error converting image: %s", err)
+		} else if len(converted) >= len(p) {
+			log.Printf("Convertion did not reduce file size, using original '%s'.", filename)
 		} else {
 			log.Printf("Done converting '%s'.", filename)
 			ext := filepath.Ext(filename)

@@ -1,3 +1,5 @@
+import { htmlEscape } from '../utils/index.js';
+
 export class FormCatalog {
   constructor(composer) {
     this.composer = composer;
@@ -166,7 +168,7 @@ export class FormCatalog {
         const formDiv = $(`
           <div class="form-item">
             <button class="btn btn-light btn-block" style="text-align: left">
-              ${form.name}
+              ${htmlEscape(form.name)}
             </button>
           </div>
         `).data('template-path', form.template_path);

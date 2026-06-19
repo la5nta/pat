@@ -1,4 +1,4 @@
-import { alert, isImageSuffix, formatFileSize, formXmlToFormName } from '../utils/index.js';
+import { alert, isImageSuffix, formatFileSize, formXmlToFormName, htmlEscape } from '../utils/index.js';
 
 export class Viewer {
   constructor(composer) {
@@ -81,10 +81,10 @@ export class Viewer {
       this.subject.text(data.Subject);
       this.headers.empty();
       this.headers.append('Date: ' + data.Date + '<br>');
-      this.headers.append('From: ' + data.From.Addr + '<br>');
+      this.headers.append('From: ' + htmlEscape(data.From.Addr) + '<br>');
       this.headers.append('To: ');
       for (let i = 0; data.To && i < data.To.length; i++) {
-        this.headers.append('<el>' + data.To[i].Addr + '</el>' + (data.To.length - 1 > i ? ', ' : ''));
+        this.headers.append('<el>' + htmlEscape(data.To[i].Addr) + '</el>' + (data.To.length - 1 > i ? ', ' : ''));
       }
       if (data.P2POnly) {
         this.headers.append(' (<strong>P2P only</strong>)');
@@ -93,7 +93,7 @@ export class Viewer {
       if (data.Cc) {
         this.headers.append('<br>Cc: ');
         for (let i = 0; i < data.Cc.length; i++) {
-          this.headers.append('<el>' + data.Cc[i].Addr + '</el>' + (data.Cc.length - 1 > i ? ', ' : ''));
+          this.headers.append('<el>' + htmlEscape(data.Cc[i].Addr) + '</el>' + (data.Cc.length - 1 > i ? ', ' : ''));
         }
       }
 
@@ -123,30 +123,25 @@ export class Viewer {
         const link = $('<a class="attachment-preview"></a>');
 
         if (isImageSuffix(file.Name)) {
-          link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
+          const fileUrl = msg_url + '/' + file.Name;
+          link.attr('target', '_blank').attr('href', fileUrl);
           link.html(
             '<span class="filesize">' +
             formatFileSize(file.Size) +
             '</span>' +
-            '<span class="glyphicon glyphicon-paperclip"></span> ' +
-            '<img src="' +
-            msg_url +
-            '/' +
-            file.Name +
-            '" alt="' +
-            file.Name +
-            '">'
+            '<span class="glyphicon glyphicon-paperclip"></span> '
           );
+          link.append($('<img>').attr('src', fileUrl).attr('alt', file.Name));
           col.append(link);
           this.attachments.append(col);
         } else if (formName) {
-          this.attachments.append(
-            '<div class="col-xs-6 col-md-3"><a target="_blank" href="' +
-            attachUrl +
-            '" class="btn btn-default navbar-btn"><span class="glyphicon glyphicon-edit"></span> ' +
-            formName +
-            '</a></div>'
-          );
+          const formCol = $('<div class="col-xs-6 col-md-3"></div>');
+          const formLink = $('<a target="_blank" class="btn btn-default navbar-btn"></a>')
+            .attr('href', attachUrl)
+            .html('<span class="glyphicon glyphicon-edit"></span> ')
+            .append(document.createTextNode(formName));
+          formCol.append(formLink);
+          this.attachments.append(formCol);
         } else {
           link.attr('target', '_blank').attr('href', msg_url + '/' + file.Name);
           link.html(
@@ -154,10 +149,9 @@ export class Viewer {
             formatFileSize(file.Size) +
             '</span>' +
             '<span class="glyphicon glyphicon-paperclip"></span> ' +
-            '<br><span class="filename">' +
-            file.Name +
-            '</span>'
+            '<br><span class="filename"></span>'
           );
+          link.find('.filename').text(file.Name);
           col.append(link);
           this.attachments.append(col);
         }

@@ -45,12 +45,12 @@ export class Mailbox {
         let to_from_html = '';
         if (!is_from && msg.To) {
           if (msg.To.length === 1) {
-            to_from_html = msg.To[0].Addr;
+            to_from_html = htmlEscape(msg.To[0].Addr);
           } else if (msg.To.length > 1) {
-            to_from_html = `${msg.To[0].Addr}...`;
+            to_from_html = htmlEscape(msg.To[0].Addr) + '...';
           }
         } else if (is_from) {
-          to_from_html = msg.From.Addr;
+          to_from_html = htmlEscape(msg.From.Addr);
         }
 
         const p2p_html = is_from
@@ -58,13 +58,13 @@ export class Mailbox {
           : `<td>${msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : ''}</td>`;
 
         const elem = $(`
-          <tr id="${msg.MID}" class="active${msg.Unread ? ' strong' : ''}">
+          <tr id="${htmlEscape(msg.MID)}" class="active${msg.Unread ? ' strong' : ''}">
             <td>${msg.Files.length > 0 ? '<span class="glyphicon glyphicon-paperclip"></span>' : ''}</td>
             <td>${htmlEscape(msg.Subject)}</td>
             <td>${to_from_html}</td>
             ${p2p_html}
-            <td>${msg.Date}</td>
-            <td>${msg.MID}</td>
+            <td>${htmlEscape(msg.Date)}</td>
+            <td>${htmlEscape(msg.MID)}</td>
           </tr>
         `);
 

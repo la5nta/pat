@@ -93,7 +93,7 @@ func NewHandler(app *app.App) *Handler {
 	r.HandleFunc("/api/mailbox/{box}", h.mailboxHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", h.messageHandler).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}", h.messageDeleteHandler).Methods("DELETE")
-	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", h.attachmentHandler).Methods("GET")
+	r.HandleFunc("/api/mailbox/{box}/{mid}/{attachment}", sandboxHandler(h.attachmentHandler)).Methods("GET")
 	r.HandleFunc("/api/mailbox/{box}/{mid}/read", h.readHandler).Methods("POST")
 	r.HandleFunc("/api/mailbox/{box}", h.postMessageHandler).Methods("POST")
 
@@ -117,8 +117,8 @@ func NewHandler(app *app.App) *Handler {
 	r.HandleFunc("/api/form", h.FormsManager().PostFormDataHandler(h.Mailbox().MBoxPath)).Methods("POST")
 	r.HandleFunc("/api/template", h.FormsManager().GetTemplateDataHandler(h.Mailbox().MBoxPath)).Methods("GET")
 	r.HandleFunc("/api/form", h.FormsManager().GetFormDataHandler).Methods("GET")
-	r.HandleFunc("/api/forms", h.FormsManager().GetFormTemplateHandler).Methods("GET")
-	r.PathPrefix("/api/forms/").Handler(http.StripPrefix("/api/forms/", http.HandlerFunc(h.FormsManager().GetFormAssetHandler))).Methods("GET")
+	r.HandleFunc("/api/forms", sandboxHandler(h.FormsManager().GetFormTemplateHandler)).Methods("GET")
+	r.PathPrefix("/api/forms/").Handler(http.StripPrefix("/api/forms/", sandboxHandler(h.FormsManager().GetFormAssetHandler))).Methods("GET")
 	r.HandleFunc("/api/formsUpdate", h.FormsManager().UpdateFormTemplatesHandler).Methods("POST")
 
 	r.HandleFunc("/api/winlink-account/password-recovery-email", h.winlinkPasswordRecoveryEmailHandler).Methods("GET", "PUT")
@@ -130,6 +130,24 @@ func NewHandler(app *app.App) *Handler {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/ui", http.StatusFound) })
 
 	return h
+}
+
+// sandboxHandler wraps h to apply a Content-Security-Policy sandbox directive,
+// preventing untrusted content (e.g. Winlink form HTML/JS) from making
+// credentialed same-origin requests to /api/ endpoints.
+// The absence of allow-same-origin gives the response a null origin, so
+// fetch/XHR to same-origin endpoints carries no cookies and is rejected.
+// allow-forms and allow-scripts are retained so interactive Winlink forms
+// continue to function: scripts run, and native <form> POSTs reach /api/form.
+//
+// Access-Control-Allow-Origin: null mirrors the attachment handler, allowing
+// sandboxed resources to reference each other (null-origin cross-origin reads).
+func sandboxHandler(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Security-Policy", "sandbox allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-scripts")
+		w.Header().Set("Access-Control-Allow-Origin", "null")
+		h(w, r)
+	}
 }
 
 func (h Handler) connectAliasesHandler(w http.ResponseWriter, _ *http.Request) {

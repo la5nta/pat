@@ -27,6 +27,7 @@ import (
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/propagation"
+	"github.com/la5nta/pat/web"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
@@ -267,6 +268,7 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		UserAgent:       buildinfo.UserAgent(),
 		GPSd:            a.config.GPSd,
 		LocatorProvider: a,
+		RenderTemplateEditor: web.RenderTemplateEditor,
 	})
 
 	// Load the mailbox handler

@@ -115,7 +115,6 @@ func NewHandler(app *app.App) *Handler {
 
 	r.HandleFunc("/api/formcatalog", h.FormsManager().GetFormsCatalogHandler).Methods("GET")
 	r.HandleFunc("/api/form", h.FormsManager().PostFormDataHandler(h.Mailbox().MBoxPath)).Methods("POST")
-	r.HandleFunc("/api/template", h.FormsManager().GetTemplateDataHandler(h.Mailbox().MBoxPath)).Methods("GET")
 	r.HandleFunc("/api/form", h.FormsManager().GetFormDataHandler).Methods("GET")
 	r.HandleFunc("/api/forms", sandboxHandler(h.FormsManager().GetFormTemplateHandler)).Methods("GET")
 	r.PathPrefix("/api/forms/").Handler(http.StripPrefix("/api/forms/", sandboxHandler(h.FormsManager().GetFormAssetHandler))).Methods("GET")

@@ -42,8 +42,18 @@ func UIHandler(mycall string) http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/ui", templateHandler("dist/index.html", mycall)).Methods("GET")
 	r.HandleFunc("/ui/config", templateHandler("dist/config.html", mycall)).Methods("GET")
-	r.HandleFunc("/ui/template", templateHandler("dist/template.html", mycall)).Methods("GET")
 	return r
+}
+
+// RenderTemplateEditor renders the text-only template editor page for the given template text.
+func RenderTemplateEditor(w http.ResponseWriter, templateText string) error {
+	type templateEditorData struct{ TemplateText string }
+	t, err := loadTemplate("dist/template.html")
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return t.Execute(w, templateEditorData{TemplateText: templateText})
 }
 
 func templateHandler(templatePath string, mycall string) http.HandlerFunc {

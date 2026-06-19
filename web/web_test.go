@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -53,11 +54,6 @@ func TestUIHandler(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
-			name:       "template UI",
-			path:       "/ui/template",
-			wantStatus: http.StatusOK,
-		},
-		{
 			name:       "non-existent UI page",
 			path:       "/ui/foobar",
 			wantStatus: http.StatusNotFound,
@@ -73,5 +69,19 @@ func TestUIHandler(t *testing.T) {
 				t.Errorf("got status %d, want %d", rec.Code, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestRenderTemplateEditor(t *testing.T) {
+	const templateText = "Hello, world!"
+	rec := httptest.NewRecorder()
+	if err := RenderTemplateEditor(rec, templateText); err != nil {
+		t.Fatalf("RenderTemplateEditor returned error: %v", err)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("got Content-Type %q, want text/html", ct)
+	}
+	if !strings.Contains(rec.Body.String(), templateText) {
+		t.Error("rendered page does not contain the template text")
 	}
 }

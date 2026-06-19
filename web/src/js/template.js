@@ -556,38 +556,36 @@ $(function() {
   // Keep template name in state through template parsing
   const origTemplateName = templateName;
 
-  // Fetch template content from backend with all query parameters
-  const queryParams = new URLSearchParams(window.location.search);
-  fetch(`/api/template?${queryParams}`)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Failed to fetch template: ${response.statusText}`);
-      }
-      return response.text();
-    })
-    .then(async templateContent => {
-      // Parse template and set up state
-      state = parseTemplate(templateContent);
-      state.templateName = origTemplateName; // Restore template name after parsing
+  // Template content is injected server-side into window.__TEMPLATE_CONTENT__
+  const templateContent = window.__TEMPLATE_CONTENT__;
+  if (!templateContent) {
+    $('#template_error')
+      .text('Template content not available')
+      .show();
+    return;
+  }
 
-      // Convert template to interactive HTML
-      await templateToHtml(templateContent, state);
-      setupInputResize();
-      setupVariableHandlers();
+  // Parse template and set up state
+  state = parseTemplate(templateContent);
+  state.templateName = origTemplateName; // Restore template name after parsing
 
-      // Initial check of prompts
+  // Convert template to interactive HTML
+  templateToHtml(templateContent, state).then(() => {
+    setupInputResize();
+    setupVariableHandlers();
+
+    // Initial check of prompts
+    checkAllPromptsFilled();
+
+    // Add input handlers for prompt checking
+    $('.container').on('input change', '[data-original-tag]', function() {
       checkAllPromptsFilled();
-
-      // Add input handlers for prompt checking
-      $('.container').on('input change', '[data-original-tag]', function() {
-        checkAllPromptsFilled();
-      });
-    })
-    .catch(err => {
-      $('#template_error')
-        .text(`Failed to process template: ${err.message}`)
-        .fadeIn();
     });
+  }).catch(err => {
+    $('#template_error')
+      .text(`Failed to process template: ${err.message}`)
+      .fadeIn();
+  });
 
   // Set up event handlers for inputs
   $('.container').on('input change', 'input, textarea, select', function() {
@@ -608,35 +606,30 @@ $(function() {
   $('#cancel').click(() => window.close());
   $('#save').click(() => submitTemplate());
 
-  async function submitTemplate() {
+  function submitTemplate() {
     try {
-      // Get form data but exclude template field
-      const formData = {
-        responses: state.collectFormData().responses
-      };
+      // Get form data
+      const formData = state.collectFormData().responses;
 
       // Include all query parameters in submission URL
       const queryParams = new URLSearchParams(window.location.search);
-      const response = await fetch(`/api/form?${queryParams}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+
+      // Create a hidden form to submit via native POST (carries cookies in CSP sandbox)
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/api/form?${queryParams}`;
+      form.style.display = 'none';
+
+      Object.entries(formData).forEach(([tag, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = tag;
+        input.value = value;
+        form.appendChild(input);
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      // Show success message
-      $('#statusMessage')
-        .removeClass('text-danger')
-        .addClass('text-success')
-        .text('Message posted to outbox successfully');
-
-      // Close window immediately
-      window.close();
+      document.body.appendChild(form);
+      form.submit();
 
     } catch (err) {
       $('#template_error')

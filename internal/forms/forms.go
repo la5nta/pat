@@ -85,6 +85,7 @@ type Config struct {
 	UserAgent       string
 	GPSd            cfg.GPSdConfig
 	LocatorProvider LocatorProvider
+	RenderTemplateEditor func(http.ResponseWriter, string) error
 }
 
 // FormFolder is a folder with forms. A tree structure with Form leaves and sub-Folder branches
@@ -167,17 +168,17 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 			for key, values := range r.PostForm {
 				formValues[strings.TrimSpace(strings.ToLower(key))] = values[0]
 			}
-		case strings.HasPrefix(contentType, "application/json"):
-			// Process JSON template submission (from builtin text-only template editor)
-			var payload struct {
-				Responses map[string]string `json:"responses"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		case strings.HasPrefix(contentType, "application/x-www-form-urlencoded"):
+			// Process template editor submission (from CSP sandboxed template editor)
+			if err := r.ParseForm(); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			formValues = map[string]string{"templateversion": m.getFormsVersion()}
-			promptResponses = payload.Responses
+			promptResponses = make(map[string]string, len(r.PostForm))
+			for key, values := range r.PostForm {
+				promptResponses[key] = values[0]
+			}
 		default:
 			http.Error(w, "unsupported content type", http.StatusBadRequest)
 			return
@@ -276,50 +277,51 @@ func (m *Manager) GetFormAssetHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// GetTemplateDataHandler serves partially processed template content.
-//
-// It's primary use case is to provide template files to the text-only template editor.
-func (m *Manager) GetTemplateDataHandler(mboxRoot string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		templatePath := r.URL.Query().Get("template")
-		// Make sure we don't escape FormsPath
-		if !directories.IsInPath(m.config.FormsPath, m.abs(templatePath)) {
-			http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
-			return
-		}
-		template, err := readTemplate(m.abs(templatePath), formFilesFromPath(m.config.FormsPath))
+// readProcessedTemplate reads and processes a template file with insertion tags.
+func (m *Manager) readProcessedTemplate(templatePath, inReplyTo, mboxRoot string) (string, error) {
+	template, err := readTemplate(m.abs(templatePath), formFilesFromPath(m.config.FormsPath))
+	if err != nil {
+		return "", err
+	}
+
+	// Load optional in-reply-to message
+	var inReplyToMsg *fbb.Message
+	if inReplyTo != "" {
+		inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
 		if err != nil {
+			return "", err
+		}
+	}
+
+	// Open the template file
+	f, err := os.Open(template.Path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	// Process insertion tags
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, newTrimBomReader(f)); err != nil {
+		return "", err
+	}
+	return insertionTagReplacer(m, inReplyToMsg, templatePath, "<", ">")(buf.String()), nil
+}
+
+// serveTemplateEditor serves the text-only template editor with the processed template content injected.
+func (m *Manager) serveTemplateEditor(w http.ResponseWriter, r *http.Request, templatePath string) {
+	templateContent, err := m.readProcessedTemplate(templatePath, r.URL.Query().Get("in-reply-to"), "")
+	if err != nil {
+		if os.IsNotExist(err) {
 			http.NotFound(w, r)
 			return
 		}
-		// Load optional in-reply-to message
-		var inReplyToMsg *fbb.Message
-		if inReplyTo := r.URL.Query().Get("in-reply-to"); inReplyTo != "" {
-			var err error
-			inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				log.Printf("failed to load in-reply-to (%q): %v", inReplyTo, err)
-				return
-			}
-		}
-
-		// Open the template
-		f, err := os.Open(template.Path)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer f.Close()
-
-		// Process insertion tags (for preview)
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, newTrimBomReader(f)); err != nil {
-			panic(err)
-		}
-		text := insertionTagReplacer(m, inReplyToMsg, templatePath, "<", ">")(buf.String())
-
-		io.WriteString(w, text)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := m.config.RenderTemplateEditor(w, templateContent); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -350,8 +352,8 @@ func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request)
 	}
 	formPath := template.InputFormPath
 	if formPath == "" {
-		// This is a text-only template. Redirect to template editor.
-		http.Redirect(w, r, "/ui/template?"+r.URL.Query().Encode(), http.StatusFound)
+		// This is a text-only template. Serve the template editor.
+		m.serveTemplateEditor(w, r, templatePath)
 		return
 	}
 

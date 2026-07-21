@@ -11,7 +11,7 @@ jobs:
         go-version: [ '1.x' ]
         include:
           - os: ubuntu-latest
-            go-version: '1.24'
+            go-version: '1.26'
             gotoolchain: local
     runs-on: ${{ matrix.os }}
     env:

@@ -280,6 +280,16 @@ func (v VaraConfig) CmdPort() int {
 func (v VaraConfig) DataPort() int { return v.CmdPort() + 1 }
 
 type PactorConfig struct {
+	// The PACTOR engine (driver) to be used.
+	//
+	// Valid options are:
+	//   - serial (serial-attached TNC via ptc-go)
+	//   - ptb    (PACTOR-TCP-Bridge)
+	//
+	// When "ptb" is selected, the connection details are read from the
+	// separate PTB config section.
+	Engine PactorEngine `json:"engine"`
+
 	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
 	Path string `json:"path"`
 
@@ -297,10 +307,6 @@ type PactorConfig struct {
 type PTBConfig struct {
 	// Network address of the PTB command socket (e.g. localhost:8300).
 	Addr string `json:"addr"`
-
-	// Network address of the PTB data socket (e.g. localhost:8301).
-	// If empty, defaults to command port + 1.
-	DataAddr string `json:"data_addr,omitempty"`
 
 	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
 	Rig string `json:"rig"`
@@ -438,6 +444,7 @@ var DefaultConfig = Config{
 		CWID:            true,
 	},
 	Pactor: PactorConfig{
+		Engine:   DefaultPactorEngine(),
 		Path:     "/dev/ttyUSB0",
 		Baudrate: 57600,
 	},

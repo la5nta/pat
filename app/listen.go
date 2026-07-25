@@ -40,6 +40,9 @@ func (a *App) Listen(listenStr string) {
 		if method == MethodAX25 {
 			method = a.defaultAX25Method()
 		}
+		if method == MethodPactor {
+			method = a.defaultPactorMethod()
+		}
 
 		switch strings.ToLower(method) {
 		case MethodArdop:
@@ -54,9 +57,9 @@ func (a *App) Listen(listenStr string) {
 			a.listenHub.Enable(VaraFMListener{a})
 		case MethodVaraHF:
 			a.listenHub.Enable(VaraHFListener{a})
-		case MethodPTB:
+		case MethodPactorPTB:
 			a.listenHub.Enable(PTBListener{a})
-		case MethodAX25SerialTNC, MethodSerialTNCDeprecated:
+		case MethodAX25SerialTNC, MethodSerialTNCDeprecated, MethodPactorSerial:
 			log.Printf("%s listen not implemented, ignoring.", method)
 		default:
 			log.Printf("'%s' is not a valid listen method", method)
@@ -209,7 +212,7 @@ type PTBListener struct {
 	}
 }
 
-func (l PTBListener) Name() string { return MethodPTB }
+func (l PTBListener) Name() string { return MethodPactorPTB }
 func (l PTBListener) Init() (net.Listener, error) {
 	m, err := l.a.PTB()
 	if err != nil {

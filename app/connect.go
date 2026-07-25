@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -72,6 +73,11 @@ func (a *App) Connect(connectStr string) (success bool) {
 		url.Scheme = a.defaultAX25Method()
 	}
 
+	// Rewrite the generic pactor:// scheme to use a specified PACTOR engine.
+	if url.Scheme == MethodPactor {
+		url.Scheme = a.defaultPactorMethod()
+	}
+
 	// Init TNCs
 	switch url.Scheme {
 	case MethodAX25AGWPE:
@@ -84,7 +90,7 @@ func (a *App) Connect(connectStr string) (success bool) {
 			log.Println(err)
 			return
 		}
-	case MethodPactor:
+	case MethodPactorSerial:
 		ptCmdInit := ""
 		if val, ok := url.Params["init"]; ok {
 			ptCmdInit = strings.Join(val, "\n")
@@ -93,7 +99,7 @@ func (a *App) Connect(connectStr string) (success bool) {
 			log.Println(err)
 			return
 		}
-	case MethodPTB:
+	case MethodPactorPTB:
 		if err := a.initPTB(); err != nil {
 			log.Println(err)
 			return
@@ -336,7 +342,7 @@ func (a *App) initPACTOR(cmdlineinit string) error {
 		return fmt.Errorf("pactor initialization failed: %w", err)
 	}
 
-	transport.RegisterDialer(MethodPactor, a.pactor)
+	transport.RegisterDialer(MethodPactorSerial, a.pactor)
 
 	return nil
 }
@@ -364,12 +370,19 @@ func (a *App) initPTB() error {
 		addr = ptb.DefaultAddr
 	}
 
-	dataAddr := a.config.PTB.DataAddr
-	if dataAddr == "" {
-		dataAddr = ptb.DefaultDataAddr
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Errorf("PTB modem initialization failed: invalid host:port pair: %w", err)
 	}
 
-	var err error
+	var port int
+	port, err = strconv.Atoi(portStr)
+	if err != nil {
+		return fmt.Errorf("PTB modem initialization failed: invalid port: %w", err)
+	}
+
+	dataAddr := net.JoinHostPort(host, strconv.Itoa(port+1))
+
 	a.ptb, err = ptb.OpenTCP(addr, dataAddr, a.options.MyCall)
 	if err != nil {
 		return fmt.Errorf("PTB modem initialization failed: %w", err)
@@ -380,7 +393,7 @@ func (a *App) initPTB() error {
 		a.ptb.SetDebug(true)
 	}
 
-	transport.RegisterDialer(MethodPTB, a.ptb)
+	transport.RegisterDialer(MethodPactorPTB, a.ptb)
 	log.Printf("PTB modem initialized at %s (data: %s)", addr, dataAddr)
 	return nil
 
@@ -495,6 +508,22 @@ func (a *App) initAGWPE() error {
 
 	transport.RegisterContextDialer(MethodAX25AGWPE, a.agwpe)
 	return nil
+}
+
+// defaultPactorMethod resolves the generic pactor:// scheme to a implementation specific scheme.
+func (a *App) defaultPactorMethod() string {
+	switch a.config.Pactor.Engine {
+	case cfg.PactorEngineSerial:
+		return MethodPactorSerial
+	case cfg.PactorEnginePTB:
+		return MethodPactorPTB
+	case "":
+		// Unset (e.g. legacy config not passed through UnmarshalJSON): fall
+		// back to the default engine.
+		return MethodPactorSerial
+	default:
+		panic(fmt.Sprintf("invalid pactor engine: %s", a.config.Pactor.Engine))
+	}
 }
 
 // defaultAX25Method resolves the generic ax25:// scheme to a implementation specific scheme.

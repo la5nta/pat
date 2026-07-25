@@ -41,10 +41,12 @@ import (
 const (
 	MethodArdop  = "ardop"
 	MethodTelnet = "telnet"
-	MethodPactor = "pactor"
 	MethodVaraHF = "varahf"
 	MethodVaraFM = "varafm"
-	MethodPTB    = "ptb"
+
+	MethodPactor       = "pactor"
+	MethodPactorSerial = MethodPactor + "+serial"
+	MethodPactorPTB    = MethodPactor + "+ptb"
 
 	MethodAX25          = "ax25"
 	MethodAX25AGWPE     = MethodAX25 + "+agwpe"
@@ -144,7 +146,7 @@ func (a *App) VFOForTransport(transport string) (vfo hamlib.VFO, rigName string,
 		rig = a.config.Ardop.Rig
 	case transport == MethodAX25, strings.HasPrefix(transport, MethodAX25+"+"):
 		rig = a.config.AX25.Rig
-	case transport == MethodPactor:
+	case transport == MethodPactor, strings.HasPrefix(transport, MethodPactor+"+"):
 		rig = a.config.Pactor.Rig
 	case transport == MethodVaraHF:
 		rig = a.config.VaraHF.Rig

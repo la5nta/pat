@@ -77,14 +77,14 @@ type LocatorProvider interface {
 
 // Config passes config options to the forms package
 type Config struct {
-	FormsPath       string
-	SequencePath    string
-	SequenceFormat  string
-	MyCall          string
-	AppVersion      string
-	UserAgent       string
-	GPSd            cfg.GPSdConfig
-	LocatorProvider LocatorProvider
+	FormsPath            string
+	SequencePath         string
+	SequenceFormat       string
+	MyCall               string
+	AppVersion           string
+	UserAgent            string
+	GPSd                 cfg.GPSdConfig
+	LocatorProvider      LocatorProvider
 	RenderTemplateEditor func(http.ResponseWriter, string) error
 }
 
@@ -207,7 +207,12 @@ func (m *Manager) PostFormDataHandler(mboxRoot string) http.HandlerFunc {
 		var inReplyToMsg *fbb.Message
 		if inReplyTo != "" {
 			var err error
-			inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
+			inReplyToPath := filepath.Join(mboxRoot, inReplyTo+mailbox.Ext)
+			if !directories.IsInPath(mboxRoot, inReplyToPath) {
+				http.Error(w, fmt.Sprintf("invalid in-reply-to (%q)", inReplyTo), http.StatusBadRequest)
+				return
+			}
+			inReplyToMsg, err = mailbox.OpenMessage(inReplyToPath)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				log.Printf("failed to load in-reply-to (%q): %v", inReplyTo, err)
@@ -287,7 +292,11 @@ func (m *Manager) readProcessedTemplate(templatePath, inReplyTo, mboxRoot string
 	// Load optional in-reply-to message
 	var inReplyToMsg *fbb.Message
 	if inReplyTo != "" {
-		inReplyToMsg, err = mailbox.OpenMessage(filepath.Join(mboxRoot, inReplyTo+mailbox.Ext))
+		inReplyToPath := filepath.Join(mboxRoot, inReplyTo+mailbox.Ext)
+		if !directories.IsInPath(mboxRoot, inReplyToPath) {
+			return "", fmt.Errorf("invalid in-reply-to path")
+		}
+		inReplyToMsg, err = mailbox.OpenMessage(inReplyToPath)
 		if err != nil {
 			return "", err
 		}

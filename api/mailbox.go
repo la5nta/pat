@@ -173,7 +173,12 @@ func (h Handler) attachmentHandler(w http.ResponseWriter, r *http.Request) {
 		var inReplyToMsg *fbb.Message
 		if inReplyTo != "" {
 			var err error
-			inReplyToMsg, err = mailbox.OpenMessage(path.Join(h.Mailbox().MBoxPath, inReplyTo+mailbox.Ext))
+			inReplyToPath := filepath.Join(h.Mailbox().MBoxPath, inReplyTo+mailbox.Ext)
+			if !directories.IsInPath(h.Mailbox().MBoxPath, inReplyToPath) {
+				http.Error(w, fmt.Sprintf("Invalid in-reply-to message (%q)", inReplyTo), http.StatusBadRequest)
+				return
+			}
+			inReplyToMsg, err = mailbox.OpenMessage(inReplyToPath)
 			if err != nil {
 				err = fmt.Errorf("Failed to load in-reply-to message (%q): %v", inReplyTo, err)
 				log.Println(err)

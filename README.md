@@ -77,6 +77,7 @@ Copyright (c) 2020 Martin Hebnes Pedersen LA5NTA
 * N2YGK - Alan Crosswell
 * VE7GNU - Doug Collinge
 * W6IPA  - JC Martin
+* W7AYU - Marc Thomson
 * WY2K - Benjamin Seidenberg
 
 ## Thanks to

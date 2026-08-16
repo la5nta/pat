@@ -542,3 +542,52 @@ input[type='radio'] {
 #createAccountModal #step4 .checkbox {
   margin-bottom: 20px;
 }
+
+// Connect modal: form fields stack on narrow screens and pair up from
+// 600px. A custom breakpoint is used instead of Bootstrap's stock
+// col-sm-* (768px breakpoint) because common phone-landscape viewports
+// (600-750px, e.g. iPhone SE/8 at 667px) fall below 768px -- stock
+// col-sm-6 would still collapse to one column on exactly the case
+// issue #220 asked to preserve as 2-up.
+//
+// Named connect-field-* (not form-row/form-col) to avoid reading like
+// Bootstrap 4's grid classes on this Bootstrap 3 project.
+#connectModal .connect-field-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#connectModal .connect-field-col {
+  width: 100%;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 600px) {
+  #connectModal .connect-field-col-half {
+    width: 50%;
+  }
+}
+
+#connectModal .checkbox {
+  // Vertically align the Radio Only checkbox with its row-mate (the
+  // Tries field), which has a label above its input -- without this,
+  // the checkbox sits noticeably higher since it has no label of its own.
+  margin-top: 25px;
+}
+
+#connectModal .checkbox label {
+  display: flex;
+  align-items: center;
+}
+
+// RMS list filter row: mode/band/target/update-cache stay paired 2-up
+// even at phone width (they're short controls, not long labeled
+// fields), only dropping to a single column below Bootstrap's smallest
+// breakpoint floor.
+@media (max-width: 359px) {
+  #rmslist-container .rms-filter-col {
+    width: 100%;
+  }
+}

@@ -530,6 +530,8 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	// to other goroutines after being published to the map)
 	if useVaranny && varannySession != nil {
 		a.setVarannySession(scheme, varannySession)
+		// Clear local reference so error paths don't double-close
+		varannySession = nil
 	}
 
 	if conf.PTTControl {
@@ -537,14 +539,9 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 		r, ok := a.rigs[rig]
 		if !ok {
 			m.Close()
+			// Session is already published at this point, remove from map
 			if useVaranny {
-				// Session might not be in map yet if this error occurs early
-				if varannySession != nil {
-					varannySession.Close()
-					varannySession = nil
-				} else {
-					a.removeVarannySession(scheme)
-				}
+				a.removeVarannySession(scheme)
 			}
 			return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", rig)
 		}

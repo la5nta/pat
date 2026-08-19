@@ -402,6 +402,7 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	// Try varanny if enabled
 	var useVaranny bool
 	var modemInfo varanny.ModemInfo
+	var varannySession *varanny.Session
 
 	if a.config.Varanny.Enable {
 		modemType := "hf"
@@ -418,8 +419,8 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 				useVaranny = true
 
 				// Track session per scheme
-				session := varanny.NewSession(client, modemInfo, scheme)
-				a.setVarannySession(scheme, session)
+				varannySession = varanny.NewSession(client, modemInfo, scheme)
+				a.setVarannySession(scheme, varannySession)
 
 				log.Printf("Using varanny for %s: %s", scheme, modemInfo.Name)
 			} else {
@@ -504,7 +505,11 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 				vfo := hamlibRig.CurrentVFO()
 				m.SetPTT(vfo)
 				log.Printf("Using varanny CAT control for %s", scheme)
-				defer hamlibRig.Close()
+
+				// Store the hamlib closer in the session so it's cleaned up properly
+				if varannySession != nil {
+					varannySession.SetCATCloser(hamlibRig)
+				}
 			} else {
 				log.Printf("Failed to connect to varanny CAT: %v", err)
 			}

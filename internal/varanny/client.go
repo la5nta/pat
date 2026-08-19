@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -149,6 +150,7 @@ type Session struct {
 	modemInfo ModemInfo
 	scheme    string
 	createdAt time.Time
+	catCloser io.Closer // Closer for varanny's CAT/PTT connection (if used)
 }
 
 // NewSession creates a new varanny session.
@@ -161,12 +163,32 @@ func NewSession(client *Client, modemInfo ModemInfo, scheme string) *Session {
 	}
 }
 
-// Close closes the session's varanny client.
+// SetCATCloser sets the closer for the varanny CAT/PTT connection.
+// This will be closed when the session is closed.
+func (s *Session) SetCATCloser(c io.Closer) {
+	s.catCloser = c
+}
+
+// Close closes the session's varanny client and CAT connection.
 func (s *Session) Close() error {
-	if s.client == nil {
-		return nil
+	var errs []error
+
+	if s.client != nil {
+		if err := s.client.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("varanny client: %w", err))
+		}
 	}
-	return s.client.Close()
+
+	if s.catCloser != nil {
+		if err := s.catCloser.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("varanny CAT: %w", err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("session close errors: %v", errs)
+	}
+	return nil
 }
 
 // Scheme returns the transport scheme for this session.
@@ -347,6 +369,7 @@ func (c *Client) Close() error {
 }
 
 // WaitForPortBinding waits for VARA to bind to both cmd and data ports.
+// The timeout is controlled by the passed context's deadline.
 func WaitForPortBinding(ctx context.Context, host string, cmdPort, dataPort int) error {
 	checkPort := func(port int) bool {
 		dialer := &net.Dialer{Timeout: 500 * time.Millisecond}
@@ -361,16 +384,12 @@ func WaitForPortBinding(ctx context.Context, host string, cmdPort, dataPort int)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
-	timeout := time.After(defaultPortBindingTimeout)
-
 	for {
 		select {
 		case <-ticker.C:
 			if checkPort(cmdPort) && checkPort(dataPort) {
 				return nil
 			}
-		case <-timeout:
-			return fmt.Errorf("VARA did not bind to ports within %v", defaultPortBindingTimeout)
 		case <-ctx.Done():
 			return ctx.Err()
 		}

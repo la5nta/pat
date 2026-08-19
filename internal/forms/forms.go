@@ -35,6 +35,7 @@ import (
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/gpsd"
+	"github.com/la5nta/pat/internal/signalk"
 )
 
 const formsVersionInfoURL = "https://api.getpat.io/v1/forms/standard-templates/latest"
@@ -84,6 +85,7 @@ type Config struct {
 	AppVersion      string
 	UserAgent       string
 	GPSd            cfg.GPSdConfig
+	SignalK         cfg.SignalKConfig
 	LocatorProvider LocatorProvider
 }
 
@@ -628,11 +630,21 @@ func (m *Manager) rel(path string) string {
 
 const gpsMockAddr = "mock" // Hack for unit testing
 
-// gpsPos returns the current GPS Position
+// gpsPos returns the current GPS Position from Signal K or GPSd
 func (m *Manager) gpsPos() (gpsd.Position, error) {
+	// Try Signal K first if enabled and allowed
+	if m.config.SignalK.Enable && m.config.SignalK.AllowForms {
+		pos, err := m.signalkPos()
+		if err == nil {
+			return pos, nil
+		}
+		log.Printf("Signal K position unavailable: %v", err)
+	}
+
+	// Fall back to GPSd
 	addr := m.config.GPSd.Addr
 	if addr == "" {
-		return gpsd.Position{}, errors.New("GPSd: not configured.")
+		return gpsd.Position{}, errors.New("No position source configured (Signal K or GPSd).")
 	}
 	if addr == gpsMockAddr {
 		return gpsd.Position{Lat: 59.41378, Lon: 5.268}, nil
@@ -652,6 +664,30 @@ func (m *Manager) gpsPos() (gpsd.Position, error) {
 	log.Println("Waiting for position from GPSd...")
 	// TODO: make the GPSd timeout configurable
 	return conn.NextPosTimeout(3 * time.Second)
+}
+
+// signalkPos returns the current position from Signal K
+func (m *Manager) signalkPos() (gpsd.Position, error) {
+	conn, err := signalk.DialWithToken(m.config.SignalK.Addr, m.config.SignalK.UseServerTime)
+	if err != nil {
+		return gpsd.Position{}, err
+	}
+	defer conn.Close()
+
+	log.Println("Waiting for position from Signal K...")
+	pos, err := conn.NextPosTimeout(3 * time.Second)
+	if err != nil {
+		return gpsd.Position{}, err
+	}
+
+	return gpsd.Position{
+		Lat:   pos.Lat,
+		Lon:   pos.Lon,
+		Alt:   pos.Alt,
+		Track: pos.Track,
+		Speed: pos.Speed,
+		Time:  pos.Time,
+	}, nil
 }
 
 func (m *Manager) fillFormTemplate(templatePath string, inReplyToMsg *fbb.Message, formDestURL string, formVars map[string]string) (string, error) {

@@ -266,6 +266,7 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		AppVersion:      buildinfo.AppName + " " + buildinfo.VersionStringShort(),
 		UserAgent:       buildinfo.UserAgent(),
 		GPSd:            a.config.GPSd,
+		SignalK:         a.config.SignalK,
 		LocatorProvider: a,
 	})
 
@@ -305,6 +306,9 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		}
 		if a.config.GPSd.UpdateLocator {
 			go a.gpsdLocatorUpdater(ctx)
+		}
+		if a.config.SignalK.UpdateLocator {
+			go a.signalkLocatorUpdater(ctx)
 		}
 	}
 

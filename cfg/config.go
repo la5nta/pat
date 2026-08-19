@@ -106,6 +106,9 @@ type Config struct {
 	VaraHF    VaraConfig      `json:"varahf"`     // See VaraConfig.
 	VaraFM    VaraConfig      `json:"varafm"`     // See VaraConfig.
 
+	// See VarannyConfig.
+	Varanny VarannyConfig `json:"varanny"`
+
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:"gpsd"`
 
@@ -381,6 +384,56 @@ type GPSdConfig struct {
 	Addr string `json:"addr"`
 }
 
+// VarannyConfig provides configuration for varanny-managed VARA modems.
+type VarannyConfig struct {
+	// Enable automatic varanny support for VARA connections.
+	Enable bool `json:"enable"`
+
+	// Discovery timeout in seconds (for mDNS).
+	DiscoveryTimeout int `json:"discovery_timeout"`
+
+	// Preferred modem names for each type.
+	PreferredHFModem string `json:"preferred_hf_modem"`
+	PreferredFMModem string `json:"preferred_fm_modem"`
+
+	// Use varanny's managed CAT control instead of pat's hamlib.
+	UseVarannyCAT bool `json:"use_varanny_cat"`
+
+	// Fallback to direct VARA if varanny is enabled but unavailable.
+	FallbackToDirect bool `json:"fallback_to_direct"`
+
+	// TTL for discovered modems (in minutes, default: 10).
+	ModemTTL int `json:"modem_ttl"`
+
+	// Continuous discovery (event-driven) vs periodic refresh.
+	ContinuousDiscovery bool `json:"continuous_discovery"`
+
+	// Startup timeout in seconds (time to wait for VARA to start and bind).
+	// Default: 30, may need higher for emulation (Wine/Raspberry Pi).
+	StartupTimeout int `json:"startup_timeout"`
+
+	// Command timeout in seconds (individual varanny commands like start/stop).
+	// Default: 5.
+	CommandTimeout int `json:"command_timeout"`
+}
+
+// Validate validates and sets defaults for VarannyConfig.
+func (v *VarannyConfig) Validate() error {
+	if v.DiscoveryTimeout <= 0 {
+		v.DiscoveryTimeout = 5
+	}
+	if v.ModemTTL <= 0 {
+		v.ModemTTL = 10
+	}
+	if v.StartupTimeout <= 0 {
+		v.StartupTimeout = 30
+	}
+	if v.CommandTimeout <= 0 {
+		v.CommandTimeout = 5
+	}
+	return nil
+}
+
 var DefaultConfig = Config{
 	MOTD:                  []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs:              []AuxAddr{},
@@ -432,6 +485,18 @@ var DefaultConfig = Config{
 	},
 	VaraFM: VaraConfig{
 		Addr: "localhost:8300",
+	},
+	Varanny: VarannyConfig{
+		Enable:              false,
+		DiscoveryTimeout:    5,
+		PreferredHFModem:    "",
+		PreferredFMModem:    "",
+		UseVarannyCAT:       true,
+		FallbackToDirect:    true,
+		ModemTTL:            10,
+		ContinuousDiscovery: true,
+		StartupTimeout:      30,
+		CommandTimeout:      5,
 	},
 	GPSd: GPSdConfig{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)

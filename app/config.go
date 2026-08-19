@@ -111,6 +111,11 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.GPSd = cfg.DefaultConfig.GPSd
 	}
 
+	// Validate Varanny config (sets defaults if needed)
+	if err := config.Varanny.Validate(); err != nil {
+		return config, err
+	}
+
 	// Ensure SerialTNC has a default hbaud and serialbaud
 	if config.SerialTNC.HBaud == 0 {
 		config.SerialTNC.HBaud = cfg.DefaultConfig.SerialTNC.HBaud

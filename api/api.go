@@ -99,6 +99,7 @@ func NewHandler(app *app.App) *Handler {
 
 	r.HandleFunc("/api/posreport", h.postPositionHandler).Methods("POST")
 	r.HandleFunc("/api/status", h.statusHandler).Methods("GET")
+	r.HandleFunc("/api/varanny/status", h.varannyStatusHandler).Methods("GET")
 	r.HandleFunc("/api/current_gps_position", h.positionHandler).Methods("GET")
 	r.HandleFunc("/api/coords_to_locator", h.coordsToLocatorHandler).Methods("POST")
 	r.HandleFunc("/api/qsy", h.qsyHandler).Methods("POST")
@@ -469,4 +470,60 @@ func (h Handler) coordsToLocatorHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(struct {
 		Locator string `json:"locator"`
 	}{Locator: locator})
+}
+
+func (h Handler) varannyStatusHandler(w http.ResponseWriter, r *http.Request) {
+	type ModemStatus struct {
+		Name      string    `json:"name"`
+		Type      string    `json:"type"`
+		Host      string    `json:"host"`
+		CmdPort   int       `json:"cmd_port"`
+		CatPort   int       `json:"cat_port"`
+		FirstSeen time.Time `json:"first_seen"`
+		LastSeen  time.Time `json:"last_seen"`
+		Expired   bool      `json:"expired"`
+	}
+
+	status := struct {
+		Enabled  bool         `json:"enabled"`
+		Modems   []ModemStatus `json:"modems"`
+		Sessions int          `json:"active_sessions"`
+		LastSeen time.Time    `json:"last_discovery"`
+	}{
+		Enabled:  h.Config().Varanny.Enable,
+		Modems:   []ModemStatus{},
+		Sessions: 0,
+	}
+
+	modems := h.App.GetVarannyModems()
+	sessions := h.App.GetVarannySessionCount()
+
+	ttl := time.Duration(h.Config().Varanny.ModemTTL) * time.Minute
+
+	status.Modems = make([]ModemStatus, 0, len(modems))
+	for _, m := range modems {
+		status.Modems = append(status.Modems, ModemStatus{
+			Name:      m.Name,
+			Type:      m.Type,
+			Host:      m.Host,
+			CmdPort:   m.CmdPort,
+			CatPort:   m.CatPort,
+			FirstSeen: m.FirstSeen,
+			LastSeen:  m.LastSeen,
+			Expired:   m.IsExpired(ttl),
+		})
+	}
+
+	status.Sessions = sessions
+
+	if len(status.Modems) > 0 {
+		for _, m := range status.Modems {
+			if m.LastSeen.After(status.LastSeen) {
+				status.LastSeen = m.LastSeen
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(status)
 }

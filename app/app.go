@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/harenber/ptc-go/v2/pactor"
@@ -27,6 +28,9 @@ import (
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/forms"
 	"github.com/la5nta/pat/internal/propagation"
+	"github.com/la5nta/pat/internal/varanny"
+
+	"github.com/grandcat/zeroconf"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/mailbox"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
@@ -99,6 +103,14 @@ type App struct {
 
 	eventLog   *EventLogger
 	termWriter io.WriteCloser // termWriter writes to both stdout and the log file (web gui echoes log file)
+
+	// Varanny state
+	varannyModems     map[string]varanny.ModemInfo // Discovered modems (name -> info)
+	varannyModemsMu   sync.RWMutex
+	varannySessions   map[string]*varanny.Session  // Active sessions keyed by scheme
+	varannySessionsMu sync.RWMutex
+	varannyCtx        context.Context               // Context for varanny operations
+	varannyCancel     context.CancelFunc            // Cancel varanny discovery loop
 }
 
 // A rig holds a VFO and a closer for the underlying rig connection.
@@ -114,7 +126,12 @@ func New(opts Options) *App {
 	opts.LogPath = filepath.Clean(opts.LogPath)
 	opts.EventLogPath = filepath.Clean(opts.EventLogPath)
 
-	return &App{options: opts, websocketHub: noopWSSocket{}}
+	return &App{
+		options:         opts,
+		websocketHub:    noopWSSocket{},
+		varannyModems:   make(map[string]varanny.ModemInfo),
+		varannySessions: make(map[string]*varanny.Session),
+	}
 }
 
 func (a *App) Mailbox() *mailbox.DirHandler { return a.mbox }
@@ -279,6 +296,19 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		log.Fatal(err)
 	}
 
+	// Setup varanny context
+	a.varannyCtx, a.varannyCancel = context.WithCancel(context.Background())
+
+	// Start varanny discovery if enabled
+	if a.config.Varanny.Enable {
+		if a.config.Varanny.ContinuousDiscovery {
+			a.startVarannyContinuousDiscovery()
+		} else {
+			a.refreshVarannyModems()
+			go a.varannyDiscoveryLoop()
+		}
+	}
+
 	if cmd.MayConnect {
 		a.loadHamlibRigs(a.config.HamlibRigs)
 		a.exchangeChan = a.exchangeLoop(ctx)
@@ -386,6 +416,24 @@ func (a *App) Close() {
 	debug.Printf("Closing active connection and/or listeners")
 	a.AbortActiveConnection(false)
 	a.listenHub.Close()
+
+	// Cancel varanny discovery
+	if a.varannyCancel != nil {
+		a.varannyCancel()
+	}
+
+	// Clean up all varanny sessions
+	// Collect schemes first to avoid holding lock during cleanup
+	var schemes []string
+	a.varannySessionsMu.Lock()
+	for scheme := range a.varannySessions {
+		schemes = append(schemes, scheme)
+	}
+	a.varannySessionsMu.Unlock()
+
+	for _, scheme := range schemes {
+		a.removeVarannySession(scheme)
+	}
 
 	debug.Printf("Closing modems")
 	if a.ardop != nil {
@@ -511,4 +559,226 @@ func (a *App) SetConnectAliases(aliases map[string]string) error {
 	}
 	a.config.ConnectAliases = aliases
 	return nil
+}
+
+// getVarannySession returns a varanny session by scheme.
+func (a *App) getVarannySession(scheme string) (*varanny.Session, bool) {
+	a.varannySessionsMu.RLock()
+	defer a.varannySessionsMu.RUnlock()
+	session, ok := a.varannySessions[scheme]
+	return session, ok
+}
+
+// setVarannySession sets a varanny session by scheme.
+func (a *App) setVarannySession(scheme string, session *varanny.Session) {
+	a.varannySessionsMu.Lock()
+	defer a.varannySessionsMu.Unlock()
+	a.varannySessions[scheme] = session
+}
+
+// removeVarannySession removes a varanny session by scheme.
+func (a *App) removeVarannySession(scheme string) {
+	a.varannySessionsMu.Lock()
+	session, ok := a.varannySessions[scheme]
+	if !ok {
+		a.varannySessionsMu.Unlock()
+		return
+	}
+	delete(a.varannySessions, scheme)
+	a.varannySessionsMu.Unlock()
+
+	// Close session outside the lock to avoid holding it during I/O
+	if session != nil {
+		if err := session.Close(); err != nil {
+			log.Printf("Error closing varanny session for %s: %v", scheme, err)
+		}
+	}
+}
+
+// GetVarannyModems returns a copy of the discovered varanny modems.
+func (a *App) GetVarannyModems() []varanny.ModemInfo {
+	a.varannyModemsMu.RLock()
+	defer a.varannyModemsMu.RUnlock()
+
+	modems := make([]varanny.ModemInfo, 0, len(a.varannyModems))
+	for _, m := range a.varannyModems {
+		modems = append(modems, m)
+	}
+	return modems
+}
+
+// GetVarannySessionCount returns the number of active varanny sessions.
+func (a *App) GetVarannySessionCount() int {
+	a.varannySessionsMu.RLock()
+	defer a.varannySessionsMu.RUnlock()
+	return len(a.varannySessions)
+}
+
+// startVarannyContinuousDiscovery runs continuous event-driven mDNS discovery.
+func (a *App) startVarannyContinuousDiscovery() {
+	resolver, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		log.Printf("Failed to create varanny zeroconf resolver: %v", err)
+		return
+	}
+
+	entries := make(chan *zeroconf.ServiceEntry)
+	errChan := make(chan error, 1)
+
+	go func() {
+		errChan <- resolver.Browse(a.varannyCtx, "_vara-modem._tcp", "local.", entries)
+	}()
+
+	go func() {
+		defer close(entries)
+
+		for {
+			select {
+			case entry, ok := <-entries:
+				if !ok {
+					if err := <-errChan; err != nil {
+						log.Printf("Varanny discovery error: %v", err)
+					}
+					return
+				}
+
+				info, err := varanny.ParseZeroconfEntry(entry)
+				if err != nil {
+					log.Printf("Failed to parse varanny entry: %v", err)
+					continue
+				}
+
+				a.varannyModemsMu.Lock()
+				info.FirstSeen = time.Now()
+				info.LastSeen = time.Now()
+				existing, existed := a.varannyModems[info.Name]
+				if existed {
+					info.FirstSeen = existing.FirstSeen
+				}
+				a.varannyModems[info.Name] = info
+				a.varannyModemsMu.Unlock()
+
+				if !existed {
+					log.Printf("Discovered varanny modem: %s (%s) at %s:%d",
+						info.Name, info.Type, info.Host, info.CmdPort)
+				}
+
+			case <-a.varannyCtx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// refreshVarannyModems discovers varanny modems via mDNS (one-shot).
+func (a *App) refreshVarannyModems() error {
+	if !a.config.Varanny.Enable {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(a.varannyCtx,
+		time.Duration(a.config.Varanny.DiscoveryTimeout)*time.Second)
+	defer cancel()
+
+	modems, err := varanny.DiscoverModems(ctx)
+	if err != nil {
+		log.Printf("Varanny discovery failed: %v", err)
+		return err
+	}
+
+	if len(modems) == 0 {
+		log.Printf("No varanny modems found")
+		return nil
+	}
+
+	a.varannyModemsMu.Lock()
+	defer a.varannyModemsMu.Unlock()
+
+	now := time.Now()
+	for _, m := range modems {
+		existing, existed := a.varannyModems[m.Name]
+		if existed {
+			m.FirstSeen = existing.FirstSeen
+		} else {
+			m.FirstSeen = now
+		}
+		m.LastSeen = now
+		a.varannyModems[m.Name] = m
+		if !existed {
+			log.Printf("Discovered varanny modem: %s (%s) at %s:%d",
+				m.Name, m.Type, m.Host, m.CmdPort)
+		}
+	}
+
+	return nil
+}
+
+// pruneExpiredModems removes modems that haven't been seen within TTL.
+func (a *App) pruneExpiredModems() {
+	ttl := time.Duration(a.config.Varanny.ModemTTL) * time.Minute
+
+	var removed []string
+	a.varannyModemsMu.Lock()
+	for name, modem := range a.varannyModems {
+		if modem.IsExpired(ttl) {
+			removed = append(removed, name)
+			// Safe to delete immediately - fast CPU-bound operation
+			delete(a.varannyModems, name)
+		}
+	}
+	a.varannyModemsMu.Unlock()
+
+	// Log outside the lock to avoid I/O while holding mutex
+	for _, name := range removed {
+		log.Printf("Pruned expired varanny modem: %s", name)
+	}
+}
+
+// varannyDiscoveryLoop periodically refreshes varanny modem discovery.
+func (a *App) varannyDiscoveryLoop() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	pruneTicker := time.NewTicker(2 * time.Minute)
+	defer pruneTicker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			a.refreshVarannyModems()
+		case <-pruneTicker.C:
+			a.pruneExpiredModems()
+		case <-a.varannyCtx.Done():
+			return
+		}
+	}
+}
+
+// findVarannyModem finds a varanny modem by type.
+func (a *App) findVarannyModem(modemType string) (varanny.ModemInfo, bool) {
+	a.varannyModemsMu.RLock()
+	defer a.varannyModemsMu.RUnlock()
+
+	// Check for preferred modem based on type
+	preferred := ""
+	if modemType == "hf" {
+		preferred = a.config.Varanny.PreferredHFModem
+	} else if modemType == "fm" {
+		preferred = a.config.Varanny.PreferredFMModem
+	}
+
+	if preferred != "" {
+		if m, ok := a.varannyModems[preferred]; ok && m.Type == modemType {
+			return m, true
+		}
+	}
+
+	// Find first matching type
+	for _, m := range a.varannyModems {
+		if m.Type == modemType {
+			return m, true
+		}
+	}
+
+	return varanny.ModemInfo{}, false
 }

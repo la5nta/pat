@@ -418,9 +418,8 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 			if err == nil {
 				useVaranny = true
 
-				// Track session per scheme
+				// Create session (will be published after fully constructed)
 				varannySession = varanny.NewSession(client, modemInfo, scheme)
-				a.setVarannySession(scheme, varannySession)
 
 				log.Printf("Using varanny for %s: %s", scheme, modemInfo.Name)
 			} else {
@@ -465,7 +464,13 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	m, err := vara.NewModem(scheme, a.options.MyCall, vConf)
 	if err != nil {
 		if useVaranny {
-			a.removeVarannySession(scheme)
+			// Session might not be in map yet if this error occurs early
+			if varannySession != nil {
+				varannySession.Close()
+				varannySession = nil
+			} else {
+				a.removeVarannySession(scheme)
+			}
 		}
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
@@ -480,7 +485,13 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 			if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
 				m.Close()
 				if useVaranny {
-					a.removeVarannySession(scheme)
+					// Session might not be in map yet if this error occurs early
+					if varannySession != nil {
+						varannySession.Close()
+						varannySession = nil
+					} else {
+						a.removeVarannySession(scheme)
+					}
 				}
 				return nil, fmt.Errorf("unable to set bandwidth: %w", err)
 			}
@@ -510,10 +521,15 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 				if varannySession != nil {
 					varannySession.SetCATCloser(hamlibRig)
 				}
-			} else {
-				log.Printf("Failed to connect to varanny CAT: %v", err)
 			}
 		}
+	}
+
+	// Publish the fully-constructed session to prevent data race
+	// (catCloser is set before this point, and the session is only visible
+	// to other goroutines after being published to the map)
+	if useVaranny && varannySession != nil {
+		a.setVarannySession(scheme, varannySession)
 	}
 
 	if conf.PTTControl {
@@ -522,7 +538,13 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 		if !ok {
 			m.Close()
 			if useVaranny {
-				a.removeVarannySession(scheme)
+				// Session might not be in map yet if this error occurs early
+				if varannySession != nil {
+					varannySession.Close()
+					varannySession = nil
+				} else {
+					a.removeVarannySession(scheme)
+				}
 			}
 			return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", rig)
 		}

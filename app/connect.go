@@ -445,7 +445,6 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	// Try varanny if enabled
 	var useVaranny bool
 	var modemInfo varanny.ModemInfo
-	var varannySession *varanny.Session
 
 	if a.config.Varanny.Enable {
 		modemType := "hf"
@@ -461,8 +460,9 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 			if err == nil {
 				useVaranny = true
 
-				// Create session (will be published after fully constructed)
-				varannySession = varanny.NewSession(client, modemInfo, scheme)
+				// Track session per scheme
+				session := varanny.NewSession(client, modemInfo, scheme)
+				a.setVarannySession(scheme, session)
 
 				log.Printf("Using varanny for %s: %s", scheme, modemInfo.Name)
 			} else {
@@ -507,13 +507,7 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	m, err := vara.NewModem(scheme, a.options.MyCall, vConf)
 	if err != nil {
 		if useVaranny {
-			// Session might not be in map yet if this error occurs early
-			if varannySession != nil {
-				varannySession.Close()
-				varannySession = nil
-			} else {
-				a.removeVarannySession(scheme)
-			}
+			a.removeVarannySession(scheme)
 		}
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
@@ -525,19 +519,10 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 	// Setup bandwidth for HF
 	if isHF {
 		if bw := a.config.VaraHF.Bandwidth; bw != 0 {
-			if useVaranny {
-				// Don't set bandwidth via VARA library when using varanny
-				// varanny should handle this via its configuration templates
-			} else if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
+			if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
 				m.Close()
 				if useVaranny {
-					// Session might not be in map yet if this error occurs early
-					if varannySession != nil {
-						varannySession.Close()
-						varannySession = nil
-					} else {
-						a.removeVarannySession(scheme)
-					}
+					a.removeVarannySession(scheme)
 				}
 				return nil, fmt.Errorf("unable to set bandwidth: %w", err)
 			}
@@ -562,22 +547,11 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 				vfo := hamlibRig.CurrentVFO()
 				m.SetPTT(vfo)
 				log.Printf("Using varanny CAT control for %s", scheme)
-
-				// Store the hamlib closer in the session so it's cleaned up properly
-				if varannySession != nil {
-					varannySession.SetCATCloser(hamlibRig)
-				}
+				defer hamlibRig.Close()
+			} else {
+				log.Printf("Failed to connect to varanny CAT: %v", err)
 			}
 		}
-	}
-
-	// Publish the fully-constructed session to prevent data race
-	// (catCloser is set before this point, and the session is only visible
-	// to other goroutines after being published to the map)
-	if useVaranny && varannySession != nil {
-		a.setVarannySession(scheme, varannySession)
-		// Clear local reference so error paths don't double-close
-		varannySession = nil
 	}
 
 	if conf.PTTControl {
@@ -585,7 +559,6 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Mod
 		r, ok := a.rigs[rig]
 		if !ok {
 			m.Close()
-			// Session is already published at this point, remove from map
 			if useVaranny {
 				a.removeVarannySession(scheme)
 			}
@@ -614,37 +587,14 @@ func (a *App) connectVaranny(modemInfo varanny.ModemInfo) (*varanny.Client, erro
 	startupTimeout := time.Duration(a.config.Varanny.StartupTimeout) * time.Second
 	commandTimeout := time.Duration(a.config.Varanny.CommandTimeout) * time.Second
 
-	// Start the modem - use startup timeout for the start command itself
-	// since VARA initialization can take a while, especially on first start
-	startCtx, startCancel := context.WithTimeout(a.varannyCtx, startupTimeout)
-	err = client.StartModem(startCtx, modemInfo.Name)
-	startCancel()
-
-	// If modem is already running, try to connect to existing instance
-	if err != nil && strings.Contains(err.Error(), "already running") {
-		log.Printf("Varanny modem %s is already running, checking if ports are available", modemInfo.Name)
-		// Close control connection since we don't need it for already-running modems
+	// Start the modem with a bounded context
+	startCtx, startCancel := context.WithTimeout(a.varannyCtx, commandTimeout)
+	if err := client.StartModem(startCtx, modemInfo.Name); err != nil {
+		startCancel()
 		client.Close()
-		client = nil
-
-		// Try to connect to the VARA ports directly to verify they're available
-		bindCtx, bindCancel := context.WithTimeout(context.Background(), startupTimeout)
-		defer bindCancel()
-
-		if err = varanny.WaitForPortBinding(bindCtx, modemInfo.Host, modemInfo.CmdPort, modemInfo.DataPort); err != nil {
-			return nil, fmt.Errorf("VARA ports not available: %w", err)
-		}
-		log.Printf("Using existing VARA instance on %s", modemInfo.Host)
-		// Clear the error since we can use the existing instance
-		err = nil
-	}
-
-	if err != nil {
-		if client != nil {
-			client.Close()
-		}
 		return nil, err
 	}
+	startCancel()
 
 	// Wait for VARA to bind to ports (cancellable via context)
 	// Use startup timeout since this is part of the startup sequence

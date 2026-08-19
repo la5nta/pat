@@ -429,7 +429,7 @@ func (v *VarannyConfig) Validate() error {
 		v.StartupTimeout = 30
 	}
 	if v.CommandTimeout <= 0 {
-		v.CommandTimeout = 10 // Increased from 5s to 10s for slower systems
+		v.CommandTimeout = 5
 	}
 	return nil
 }
@@ -496,7 +496,7 @@ var DefaultConfig = Config{
 		ModemTTL:            10,
 		ContinuousDiscovery: true,
 		StartupTimeout:      30,
-		CommandTimeout:      10,
+		CommandTimeout:      5,
 	},
 	GPSd: GPSdConfig{
 		EnableHTTP:    false, // Default to false to help protect privacy of unknowing users (see github.com//issues/146)

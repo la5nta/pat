@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strings"
@@ -102,13 +101,7 @@ func ParseZeroconfEntry(entry *zeroconf.ServiceEntry) (ModemInfo, error) {
 	var info ModemInfo
 
 	// Extract modem name from ServiceInstanceName() (e.g., "IC705HF._vara-modem._tcp.local.")
-	name := strings.TrimSuffix(entry.ServiceInstanceName(), "._vara-modem._tcp.local.")
-
-	// Normalize the name - replace escaped backslashes with spaces
-	// Some varanny instances use backslash as a space separator (e.g., "VARA\\ HF" -> "VARA HF")
-	info.Name = strings.ReplaceAll(name, "\\", " ")
-	// Collapse multiple spaces into single space
-	info.Name = strings.Join(strings.Fields(info.Name), " ")
+	info.Name = strings.TrimSuffix(entry.ServiceInstanceName(), "._vara-modem._tcp.local.")
 	info.CmdPort = entry.Port
 	info.DataPort = entry.Port + 1
 
@@ -132,13 +125,13 @@ func ParseZeroconfEntry(entry *zeroconf.ServiceEntry) (ModemInfo, error) {
 
 		switch key {
 		case "type":
-			info.Type = strings.TrimSuffix(strings.ToLower(value), ";")
+			info.Type = strings.ToLower(value)
 		case "launchport":
 			fmt.Sscanf(value, "%d", &info.LaunchPort)
 		case "catport":
 			fmt.Sscanf(value, "%d", &info.CatPort)
 		case "catdialect":
-			info.CatDialect = strings.TrimSuffix(value, ";")
+			info.CatDialect = value
 		}
 	}
 
@@ -156,7 +149,6 @@ type Session struct {
 	modemInfo ModemInfo
 	scheme    string
 	createdAt time.Time
-	catCloser io.Closer // Closer for varanny's CAT/PTT connection (if used)
 }
 
 // NewSession creates a new varanny session.
@@ -169,32 +161,12 @@ func NewSession(client *Client, modemInfo ModemInfo, scheme string) *Session {
 	}
 }
 
-// SetCATCloser sets the closer for the varanny CAT/PTT connection.
-// This will be closed when the session is closed.
-func (s *Session) SetCATCloser(c io.Closer) {
-	s.catCloser = c
-}
-
-// Close closes the session's varanny client and CAT connection.
+// Close closes the session's varanny client.
 func (s *Session) Close() error {
-	var errs []error
-
-	if s.client != nil {
-		if err := s.client.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("varanny client: %w", err))
-		}
+	if s.client == nil {
+		return nil
 	}
-
-	if s.catCloser != nil {
-		if err := s.catCloser.Close(); err != nil {
-			errs = append(errs, fmt.Errorf("varanny CAT: %w", err))
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("session close errors: %v", errs)
-	}
-	return nil
+	return s.client.Close()
 }
 
 // Scheme returns the transport scheme for this session.
@@ -286,7 +258,7 @@ func (c *Client) StartModem(ctx context.Context, name string) error {
 	// Set read/write deadlines from context, with fallback
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		deadline = time.Now().Add(10 * time.Second) // Increased from 5s to 10s
+		deadline = time.Now().Add(5 * time.Second)
 	}
 	c.conn.SetDeadline(deadline)
 	defer c.conn.SetDeadline(time.Time{})
@@ -375,7 +347,6 @@ func (c *Client) Close() error {
 }
 
 // WaitForPortBinding waits for VARA to bind to both cmd and data ports.
-// The timeout is controlled by the passed context's deadline.
 func WaitForPortBinding(ctx context.Context, host string, cmdPort, dataPort int) error {
 	checkPort := func(port int) bool {
 		dialer := &net.Dialer{Timeout: 500 * time.Millisecond}
@@ -390,12 +361,16 @@ func WaitForPortBinding(ctx context.Context, host string, cmdPort, dataPort int)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
+	timeout := time.After(defaultPortBindingTimeout)
+
 	for {
 		select {
 		case <-ticker.C:
 			if checkPort(cmdPort) && checkPort(dataPort) {
 				return nil
 			}
+		case <-timeout:
+			return fmt.Errorf("VARA did not bind to ports within %v", defaultPortBindingTimeout)
 		case <-ctx.Done():
 			return ctx.Err()
 		}

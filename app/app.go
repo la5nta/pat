@@ -834,20 +834,14 @@ func (a *App) findVarannyModem(modemType string) (varanny.ModemInfo, bool) {
 	}
 
 	if preferred != "" {
-		if m, ok := a.varannyModems[preferred]; ok {
-			// Normalize type comparison (varanny types may have trailing semicolon)
-			normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
-			if normalizedType == modemType {
-				return m, true
-			}
+		if m, ok := a.varannyModems[preferred]; ok && m.Type == modemType {
+			return m, true
 		}
 	}
 
 	// Find first matching type
 	for _, m := range a.varannyModems {
-		// Normalize type comparison (varanny types may have trailing semicolon)
-		normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
-		if normalizedType == modemType {
+		if m.Type == modemType {
 			return m, true
 		}
 	}

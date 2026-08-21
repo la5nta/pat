@@ -167,11 +167,77 @@ func (a *App) VFOForTransport(transport string) (vfo hamlib.VFO, rigName string,
 	default:
 		return vfo, "", false, fmt.Errorf("not supported with transport '%s'", transport)
 	}
+
+	// Check if we should use varanny CAT for VARA transports
+	if (transport == MethodVaraHF || transport == MethodVaraFM) && a.config.Varanny.Enable && a.config.Varanny.UseVarannyCAT {
+		modemType := "hf"
+		if transport == MethodVaraFM {
+			modemType = "fm"
+		}
+
+		a.varannyModemsMu.RLock()
+		var modemInfo varanny.ModemInfo
+		var found bool
+		for _, m := range a.varannyModems {
+			// Normalize type by removing trailing semicolon and whitespace
+			normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
+			if normalizedType == modemType {
+				modemInfo = m
+				found = true
+				log.Printf("Using varanny CAT for QSY: %s:%d", modemInfo.Host, modemInfo.CatPort)
+				break
+			}
+		}
+		a.varannyModemsMu.RUnlock()
+
+		// If not found in cache, try on-demand discovery
+		if !found {
+			log.Printf("VFOForTransport: No matching modem in cache, trying on-demand discovery")
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			modems, err := varanny.DiscoverModems(ctx)
+			if err != nil {
+				log.Printf("VFOForTransport: On-demand discovery failed: %v", err)
+			} else {
+				log.Printf("VFOForTransport: On-demand discovery found %d modems", len(modems))
+				for _, m := range modems {
+					normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
+					if normalizedType == modemType {
+						modemInfo = m
+						found = true
+						log.Printf("VFOForTransport: Found modem via on-demand discovery: %s at %s:%d (CAT port: %d, dialect: %s)", modemInfo.Name, modemInfo.Host, modemInfo.CmdPort, modemInfo.CatPort, modemInfo.CatDialect)
+						break
+					}
+				}
+			}
+		}
+
+		if found && modemInfo.CatPort != 0 && modemInfo.CatDialect == "hamlib" {
+			hamlibRig, err := hamlib.Open("tcp", fmt.Sprintf("%s:%d", modemInfo.Host, modemInfo.CatPort))
+			if err == nil {
+				log.Printf("Using varanny CAT for QSY: %s:%d", modemInfo.Host, modemInfo.CatPort)
+				vfo := hamlibRig.CurrentVFO()
+				return vfo, fmt.Sprintf("varanny:%s", modemInfo.Name), true, nil
+			} else {
+				log.Printf("Failed to connect to varanny CAT at %s:%d: %v", modemInfo.Host, modemInfo.CatPort, err)
+			}
+		} else if found {
+			log.Printf("Varanny modem found but CAT not available: CatPort=%d, CatDialect=%s", modemInfo.CatPort, modemInfo.CatDialect)
+		} else {
+			log.Printf("No matching varanny modem found for type=%s", modemType)
+		}
+	}
+
 	if rig == "" {
 		return vfo, "", false, fmt.Errorf("missing rig reference in config section for %s", transport)
 	}
+
 	vfo, ok = a.VFOForRig(rig)
-	return vfo, rig, ok, nil
+	if ok {
+		return vfo, rig, ok, nil
+	}
+
+	return vfo, "", false, fmt.Errorf("hamlib rig '%s' not loaded", rig)
 }
 
 func (a *App) EnableWebSocket(ctx context.Context, wsHub WSHub) error {
@@ -768,14 +834,20 @@ func (a *App) findVarannyModem(modemType string) (varanny.ModemInfo, bool) {
 	}
 
 	if preferred != "" {
-		if m, ok := a.varannyModems[preferred]; ok && m.Type == modemType {
-			return m, true
+		if m, ok := a.varannyModems[preferred]; ok {
+			// Normalize type comparison (varanny types may have trailing semicolon)
+			normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
+			if normalizedType == modemType {
+				return m, true
+			}
 		}
 	}
 
 	// Find first matching type
 	for _, m := range a.varannyModems {
-		if m.Type == modemType {
+		// Normalize type comparison (varanny types may have trailing semicolon)
+		normalizedType := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(m.Type, ";")))
+		if normalizedType == modemType {
 			return m, true
 		}
 	}

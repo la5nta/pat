@@ -219,6 +219,15 @@
                         <input type="text" class="form-control" id="addrInput" placeholder="user:pass@host:port" />
                       </div>
                     </div>
+                    <div id="varannyModemDiv" style="display: none;">
+                      <label class="col-md-2 control-label">varanny modem:</label>
+                      <div class="col-md-10">
+                        <select class="selectpicker form-control" data-width="100%" id="varannyModemSelect">
+                          <option value="">(manual address)</option>
+                        </select>
+                        <span id="varannyStatus" class="text-muted small" style="margin-left: 10px;"></span>
+                      </div>
+                    </div>
                   </div>
                   <div class="form-group row" id="connectRequestsInputDiv">
                     <label for="connectRequestsInput" class="col-md-2 control-label">tries:</label>

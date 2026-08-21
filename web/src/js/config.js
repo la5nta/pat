@@ -438,6 +438,18 @@ $(document).ready(function() {
       $('#gpsd_update_locator').prop('checked', config.gpsd.update_locator);
       $('#gpsd_addr').val(config.gpsd.addr);
 
+      // Populate Varanny config
+      $('#varanny_enable').prop('checked', config.varanny.enable);
+      $('#varanny_use_varanny_cat').prop('checked', config.varanny.use_varanny_cat);
+      $('#varanny_fallback_to_direct').prop('checked', config.varanny.fallback_to_direct);
+      $('#varanny_continuous_discovery').prop('checked', config.varanny.continuous_discovery);
+      $('#varanny_discovery_timeout').val(config.varanny.discovery_timeout);
+      $('#varanny_modem_ttl').val(config.varanny.modem_ttl);
+      $('#varanny_startup_timeout').val(config.varanny.startup_timeout);
+      $('#varanny_command_timeout').val(config.varanny.command_timeout);
+      $('#varanny_preferred_hf_modem').val(config.varanny.preferred_hf_modem);
+      $('#varanny_preferred_fm_modem').val(config.varanny.preferred_fm_modem);
+
       // Set listen methods checkboxes
       const listenMethods = config.listen || [];
       $('input[name="listen_methods[]"]').each(function() {
@@ -608,6 +620,19 @@ $(document).ready(function() {
       use_server_time: $('#gpsd_use_server_time').is(':checked'),
       update_locator: $('#gpsd_update_locator').is(':checked'),
       addr: $('#gpsd_addr').val()
+    };
+    updatedConfig.varanny = {
+      ...originalConfig.varanny,
+      enable: $('#varanny_enable').is(':checked'),
+      use_varanny_cat: $('#varanny_use_varanny_cat').is(':checked'),
+      fallback_to_direct: $('#varanny_fallback_to_direct').is(':checked'),
+      continuous_discovery: $('#varanny_continuous_discovery').is(':checked'),
+      discovery_timeout: parseInt($('#varanny_discovery_timeout').val(), 10) || undefined,
+      modem_ttl: parseInt($('#varanny_modem_ttl').val(), 10) || undefined,
+      startup_timeout: parseInt($('#varanny_startup_timeout').val(), 10) || undefined,
+      command_timeout: parseInt($('#varanny_command_timeout').val(), 10) || undefined,
+      preferred_hf_modem: $('#varanny_preferred_hf_modem').val(),
+      preferred_fm_modem: $('#varanny_preferred_fm_modem').val()
     };
 
 

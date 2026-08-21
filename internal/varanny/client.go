@@ -102,7 +102,13 @@ func ParseZeroconfEntry(entry *zeroconf.ServiceEntry) (ModemInfo, error) {
 	var info ModemInfo
 
 	// Extract modem name from ServiceInstanceName() (e.g., "IC705HF._vara-modem._tcp.local.")
-	info.Name = strings.TrimSuffix(entry.ServiceInstanceName(), "._vara-modem._tcp.local.")
+	name := strings.TrimSuffix(entry.ServiceInstanceName(), "._vara-modem._tcp.local.")
+
+	// Normalize the name - replace escaped backslashes with spaces
+	// Some varanny instances use backslash as a space separator (e.g., "VARA\\ HF" -> "VARA HF")
+	info.Name = strings.ReplaceAll(name, "\\", " ")
+	// Collapse multiple spaces into single space
+	info.Name = strings.Join(strings.Fields(info.Name), " ")
 	info.CmdPort = entry.Port
 	info.DataPort = entry.Port + 1
 
@@ -126,13 +132,13 @@ func ParseZeroconfEntry(entry *zeroconf.ServiceEntry) (ModemInfo, error) {
 
 		switch key {
 		case "type":
-			info.Type = strings.ToLower(value)
+			info.Type = strings.TrimSuffix(strings.ToLower(value), ";")
 		case "launchport":
 			fmt.Sscanf(value, "%d", &info.LaunchPort)
 		case "catport":
 			fmt.Sscanf(value, "%d", &info.CatPort)
 		case "catdialect":
-			info.CatDialect = value
+			info.CatDialect = strings.TrimSuffix(value, ";")
 		}
 	}
 
@@ -280,7 +286,7 @@ func (c *Client) StartModem(ctx context.Context, name string) error {
 	// Set read/write deadlines from context, with fallback
 	deadline, ok := ctx.Deadline()
 	if !ok {
-		deadline = time.Now().Add(5 * time.Second)
+		deadline = time.Now().Add(10 * time.Second) // Increased from 5s to 10s
 	}
 	c.conn.SetDeadline(deadline)
 	defer c.conn.SetDeadline(time.Time{})

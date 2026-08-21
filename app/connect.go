@@ -18,6 +18,8 @@ import (
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/prehook"
+	"github.com/la5nta/pat/internal/varanny"
+	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
@@ -133,11 +135,25 @@ func (a *App) Connect(connectStr string) (success bool) {
 	if radioOnly {
 		if hasSSID(a.options.MyCall) {
 			log.Println("Radio Only does not support callsign with SSID")
+			// Clean up varanny session before returning
+			if url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM {
+				if _, ok := a.getVarannySession(url.Scheme); ok {
+					log.Printf("Radio Only SSID check failed, cleaning up varanny session for %s", url.Scheme)
+					a.removeVarannySession(url.Scheme)
+				}
+			}
 			return
 		}
 
 		if strings.HasPrefix(url.Scheme, MethodAX25) {
 			log.Printf("Radio-Only is not available for %s", url.Scheme)
+			// Clean up varanny session before returning
+			if url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM {
+				if _, ok := a.getVarannySession(url.Scheme); ok {
+					log.Printf("Radio Only unavailable for transport, cleaning up varanny session for %s", url.Scheme)
+					a.removeVarannySession(url.Scheme)
+				}
+			}
 			return
 		}
 		url.SetUser(url.User.Username() + "-T")
@@ -149,6 +165,13 @@ func (a *App) Connect(connectStr string) (success bool) {
 		revertFreq, err = a.qsy(url.Scheme, freq)
 		if err != nil {
 			log.Printf("Unable to QSY: %s", err)
+			// Clean up varanny session before returning
+			if url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM {
+				if _, ok := a.getVarannySession(url.Scheme); ok {
+					log.Printf("QSY failed, cleaning up varanny session for %s", url.Scheme)
+					a.removeVarannySession(url.Scheme)
+				}
+			}
 			return
 		}
 		defer revertFreq()
@@ -175,6 +198,13 @@ func (a *App) Connect(connectStr string) (success bool) {
 	if prehookScript.File != "" {
 		if err := prehookScript.VerifyFile(); err != nil {
 			log.Printf("invalid prehook: %s", err)
+			// Clean up varanny session before returning
+			if url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM {
+				if _, ok := a.getVarannySession(url.Scheme); ok {
+					log.Printf("Prehook verification failed, cleaning up varanny session for %s", url.Scheme)
+					a.removeVarannySession(url.Scheme)
+				}
+			}
 			return
 		}
 	}
@@ -182,11 +212,31 @@ func (a *App) Connect(connectStr string) (success bool) {
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
 	conn, err := transport.DialURLContext(ctx, url)
 
+	if err != nil {
+		// Check if modem is still alive for varanny
+		if a.varaHF != nil && (url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM) {
+			alive := a.varaHF.Ping()
+			if !alive {
+				log.Printf("VARA modem not responding, will re-initialize on next attempt")
+				// Trigger re-initialization on next connect attempt
+				a.varaHF = nil
+			}
+		}
+	}
+
 	// Signal web gui that we are no longer dialing
 	a.dialing = nil
 	a.websocketHub.UpdateStatus()
 
 	a.eventLog.LogConn("connect "+connectStr, currFreq, conn, err)
+
+	// Clean up varanny session if dial failed and varanny was used
+	if err != nil && (url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM) {
+		if _, ok := a.getVarannySession(url.Scheme); ok {
+			log.Printf("Dial failed, cleaning up varanny session for %s", url.Scheme)
+			a.removeVarannySession(url.Scheme)
+		}
+	}
 
 	switch {
 	case errors.Is(err, context.Canceled):
@@ -219,6 +269,15 @@ func (a *App) Connect(connectStr string) (success bool) {
 	} else {
 		log.Println("Disconnected.")
 		success = true
+	}
+
+	// Clean up varanny connection if this specific connection used varanny
+	// NOTE: Don't clean up for listen mode - that's handled separately in app.Close()
+	if url.Scheme == MethodVaraHF || url.Scheme == MethodVaraFM {
+		if _, ok := a.getVarannySession(url.Scheme); ok {
+			log.Printf("Cleaning up varanny session for %s", url.Scheme)
+			a.removeVarannySession(url.Scheme)
+		}
 	}
 
 	return
@@ -350,16 +409,11 @@ func (a *App) initVARAHF() error {
 	if a.varaHF != nil {
 		a.varaHF.Close()
 	}
-	m, err := a.initVARA(MethodVaraHF, a.config.VaraHF)
+	m, err := a.initVARA(MethodVaraHF, a.config.VaraHF, true)
 	if err != nil {
 		return err
 	}
-	if bw := a.config.VaraHF.Bandwidth; bw != 0 {
-		if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
-			m.Close()
-			return err
-		}
-	}
+	// Bandwidth is now set in initVARA, not here
 	a.varaHF = m
 	return nil
 }
@@ -379,7 +433,7 @@ func (a *App) initVARAFM() error {
 	if a.varaFM != nil {
 		a.varaFM.Close()
 	}
-	m, err := a.initVARA(MethodVaraFM, a.config.VaraFM)
+	m, err := a.initVARA(MethodVaraFM, a.config.VaraFM, false)
 	if err != nil {
 		return err
 	}
@@ -387,30 +441,232 @@ func (a *App) initVARAFM() error {
 	return nil
 }
 
-func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
-	vConf := vara.ModemConfig{
-		Host:     conf.Host(),
-		CmdPort:  conf.CmdPort(),
-		DataPort: conf.DataPort(),
+func (a *App) initVARA(scheme string, conf cfg.VaraConfig, isHF bool) (*vara.Modem, error) {
+	// Try varanny if enabled
+	var useVaranny bool
+	var modemInfo varanny.ModemInfo
+	var varannySession *varanny.Session
+
+	if a.config.Varanny.Enable {
+		modemType := "hf"
+		if !isHF {
+			modemType = "fm"
+		}
+
+		var ok bool
+		modemInfo, ok = a.findVarannyModem(modemType)
+		if ok {
+			// Try to connect via varanny
+			client, err := a.connectVaranny(modemInfo)
+			if err == nil {
+				useVaranny = true
+
+				// Create session (will be published after fully constructed)
+				varannySession = varanny.NewSession(client, modemInfo, scheme)
+
+				log.Printf("Using varanny for %s: %s", scheme, modemInfo.Name)
+			} else {
+				log.Printf("Failed to connect to varanny for %s: %v", scheme, err)
+				if a.config.Varanny.FallbackToDirect {
+					log.Printf("Falling back to direct VARA connection")
+				} else {
+					return nil, fmt.Errorf("varanny connection failed and fallback disabled: %w", err)
+				}
+			}
+		} else {
+			log.Printf("No varanny modems found for type=%s", modemType)
+			if a.config.Varanny.FallbackToDirect {
+				log.Printf("Falling back to direct VARA connection")
+			} else {
+				return nil, fmt.Errorf("varanny enabled but no modems found and fallback disabled")
+			}
+		}
 	}
+
+	// Determine connection parameters
+	var modemHost string
+	var modemCmdPort, modemDataPort int
+
+	if useVaranny {
+		modemHost = modemInfo.Host
+		modemCmdPort = modemInfo.CmdPort
+		modemDataPort = modemInfo.DataPort
+	} else {
+		modemHost = conf.Host()
+		modemCmdPort = conf.CmdPort()
+		modemDataPort = conf.DataPort()
+	}
+
+	// Create VARA modem
+	vConf := vara.ModemConfig{
+		Host:     modemHost,
+		CmdPort:  modemCmdPort,
+		DataPort: modemDataPort,
+	}
+
 	m, err := vara.NewModem(scheme, a.options.MyCall, vConf)
 	if err != nil {
+		if useVaranny {
+			// Session might not be in map yet if this error occurs early
+			if varannySession != nil {
+				varannySession.Close()
+				varannySession = nil
+			} else {
+				a.removeVarannySession(scheme)
+			}
+		}
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
+
+	// Register dialer
 	transport.RegisterDialer(scheme, m)
 	m.SetBusyFunc(a.onBusyChannel)
 
+	// Setup bandwidth for HF
+	if isHF {
+		if bw := a.config.VaraHF.Bandwidth; bw != 0 {
+			if useVaranny {
+				// Don't set bandwidth via VARA library when using varanny
+				// varanny should handle this via its configuration templates
+			} else if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
+				m.Close()
+				if useVaranny {
+					// Session might not be in map yet if this error occurs early
+					if varannySession != nil {
+						varannySession.Close()
+						varannySession = nil
+					} else {
+						a.removeVarannySession(scheme)
+					}
+				}
+				return nil, fmt.Errorf("unable to set bandwidth: %w", err)
+			}
+		}
+	}
+
+	// Setup PTT
+	rig := ""
+	if isHF {
+		rig = a.config.VaraHF.Rig
+	} else {
+		rig = a.config.VaraFM.Rig
+	}
+
+	if useVaranny && a.config.Varanny.UseVarannyCAT {
+		// Use varanny's CAT control if available
+		if modemInfo.CatPort != 0 && modemInfo.CatDialect == "hamlib" {
+			hamlibRig, err := hamlib.Open("tcp",
+				fmt.Sprintf("%s:%d", modemInfo.Host, modemInfo.CatPort))
+			if err == nil {
+				// Get current VFO which implements SetPTT
+				vfo := hamlibRig.CurrentVFO()
+				m.SetPTT(vfo)
+				log.Printf("Using varanny CAT control for %s", scheme)
+
+				// Store the hamlib closer in the session so it's cleaned up properly
+				if varannySession != nil {
+					varannySession.SetCATCloser(hamlibRig)
+				}
+			}
+		}
+	}
+
+	// Publish the fully-constructed session to prevent data race
+	// (catCloser is set before this point, and the session is only visible
+	// to other goroutines after being published to the map)
+	if useVaranny && varannySession != nil {
+		a.setVarannySession(scheme, varannySession)
+		// Clear local reference so error paths don't double-close
+		varannySession = nil
+	}
+
 	if conf.PTTControl {
-		rig, ok := a.rigs[conf.Rig]
+		// Fall back to pat's hamlib
+		r, ok := a.rigs[rig]
 		if !ok {
 			m.Close()
-			return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", conf.Rig)
+			// Session is already published at this point, remove from map
+			if useVaranny {
+				a.removeVarannySession(scheme)
+			}
+			return nil, fmt.Errorf("unable to set PTT rig '%s': not defined or not loaded", rig)
 		}
-		m.SetPTT(rig)
+		m.SetPTT(r)
 	}
+
 	v, _ := m.Version()
-	log.Printf("VARA modem (%s) initialized", v)
+	via := "direct connection"
+	if useVaranny {
+		via = "varanny"
+	}
+	log.Printf("VARA modem (%s) initialized via %s", v, via)
 	return m, nil
+}
+
+// connectVaranny connects to varanny and starts the modem.
+func (a *App) connectVaranny(modemInfo varanny.ModemInfo) (*varanny.Client, error) {
+	client, err := varanny.Connect(a.varannyCtx, modemInfo.Host, modemInfo.LaunchPort)
+	if err != nil {
+		return nil, err
+	}
+
+	// Startup timeout from config (higher for emulation/Wine)
+	startupTimeout := time.Duration(a.config.Varanny.StartupTimeout) * time.Second
+	commandTimeout := time.Duration(a.config.Varanny.CommandTimeout) * time.Second
+
+	// Start the modem - use startup timeout for the start command itself
+	// since VARA initialization can take a while, especially on first start
+	startCtx, startCancel := context.WithTimeout(a.varannyCtx, startupTimeout)
+	err = client.StartModem(startCtx, modemInfo.Name)
+	startCancel()
+
+	// If modem is already running, try to connect to existing instance
+	if err != nil && strings.Contains(err.Error(), "already running") {
+		log.Printf("Varanny modem %s is already running, checking if ports are available", modemInfo.Name)
+		// Close control connection since we don't need it for already-running modems
+		client.Close()
+		client = nil
+
+		// Try to connect to the VARA ports directly to verify they're available
+		bindCtx, bindCancel := context.WithTimeout(context.Background(), startupTimeout)
+		defer bindCancel()
+
+		if err = varanny.WaitForPortBinding(bindCtx, modemInfo.Host, modemInfo.CmdPort, modemInfo.DataPort); err != nil {
+			return nil, fmt.Errorf("VARA ports not available: %w", err)
+		}
+		log.Printf("Using existing VARA instance on %s", modemInfo.Host)
+		// Clear the error since we can use the existing instance
+		err = nil
+	}
+
+	if err != nil {
+		if client != nil {
+			client.Close()
+		}
+		return nil, err
+	}
+
+	// Wait for VARA to bind to ports (cancellable via context)
+	// Use startup timeout since this is part of the startup sequence
+	log.Printf("Waiting for VARA to bind to ports on %s...", modemInfo.Host)
+	bindCtx, bindCancel := context.WithTimeout(a.varannyCtx, startupTimeout)
+	if err := varanny.WaitForPortBinding(bindCtx,
+		modemInfo.Host, modemInfo.CmdPort, modemInfo.DataPort); err != nil {
+		bindCancel()
+		// Stop the modem with a fresh bounded context
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), commandTimeout)
+		if stopErr := client.StopModem(stopCtx); stopErr != nil {
+			stopCancel()
+			log.Printf("Error stopping varanny modem after port bind failure: %v", stopErr)
+		} else {
+			stopCancel()
+		}
+		client.Close()
+		return nil, fmt.Errorf("VARA port binding failed: %w", err)
+	}
+	bindCancel()
+
+	return client, nil
 }
 
 // AGWPE returns the initialized AGWPE TNC, initializing it if necessary.

@@ -12,6 +12,7 @@ class ConnectModal {
     this.rmslistView = new RmslistView();
     this.preserveAliasSelection = false;
     this.promptModal = new PromptModal();
+    this.varannyModems = [];
   }
 
   init() {
@@ -69,6 +70,7 @@ class ConnectModal {
       $('#addrInput').val('').change();
       $('#freqInput').val('').change();
       $('#connectRequestsInput').val('').change();
+      $('#varannyModemSelect').val('').selectpicker('refresh');
       this.setConnectURL('');
 
       // Refresh views
@@ -78,6 +80,9 @@ class ConnectModal {
 
       // Update rmslist view
       this.rmslistView.onTransportChange($(e.target).val());
+
+      // Load varanny modems if applicable
+      this.loadVarannyModems();
     });
     let url = localStorage.getItem(`pat_connect_url_${this.mycall}`);
     if (url != null) {
@@ -89,6 +94,13 @@ class ConnectModal {
     this.updateConnectAliases();
     this.updateAliasActionButton();
     this._initConfigDefaults();
+    this._initVarannyModemSelect();
+
+    // Load varanny modems if a VARA transport is already selected
+    const currentTransport = $('#transportSelect').val();
+    if (currentTransport === 'varahf' || currentTransport === 'varafm') {
+      this.loadVarannyModems();
+    }
   }
 
   _initConfigDefaults() {
@@ -454,6 +466,13 @@ class ConnectModal {
         $('#connectRequestsInputDiv').hide();
     }
 
+    // Show/hide varanny modem selector for VARA transports
+    const isVara = transport === 'varahf' || transport === 'varafm';
+    $('#varannyModemDiv').toggle(isVara);
+    if (!isVara) {
+      $('#addrInputDiv').show();
+    }
+
     if (transport.startsWith('ax25')) {
       $('#radioOnlyInput')[0].checked = false;
       $('#radioOnlyInputDiv').hide();
@@ -595,6 +614,84 @@ class ConnectModal {
       }
     }).fail(function() {
       alert('Connect failed. See console for detailed information.');
+    });
+  }
+
+  _initVarannyModemSelect() {
+    $('#varannyModemSelect').change(() => {
+      const selectedModem = $('#varannyModemSelect').val();
+      if (selectedModem) {
+        const modem = this.varannyModems.find(m => m.host === selectedModem);
+        if (modem) {
+          $('#addrInput').val(selectedModem);
+          // Hide the address input when using varanny selection
+          $('#addrInputDiv').hide();
+        }
+      } else {
+        // Show address input when not using varanny
+        const transport = $('#transportSelect').val();
+        if (transport === 'telnet') {
+          $('#addrInputDiv').show();
+        }
+      }
+      this.onConnectInputChange();
+    });
+  }
+
+  loadVarannyModems() {
+    const transport = $('#transportSelect').val();
+    if (transport !== 'varahf' && transport !== 'varafm') {
+      return;
+    }
+
+    $('#varannyStatus').text('Loading...');
+    $('#varannyModemSelect').prop('disabled', true);
+
+    $.ajax({
+      url: '/api/varanny/status',
+      dataType: 'json',
+      timeout: 5000,
+      success: (data) => {
+        console.log('Varanny status response:', data);
+        this.varannyModems = data.modems || [];
+        const select = $('#varannyModemSelect');
+        select.empty().append($('<option>').val('').text('(manual address)'));
+
+        console.log('All modems:', this.varannyModems);
+        console.log('Transport:', transport);
+
+        // Filter modems by type - handle both 'hf' and 'hf;' formats
+        const modemType = transport === 'varahf' ? 'hf' : 'fm';
+        const matchingModems = this.varannyModems.filter(m => {
+          const typeLower = (m.type || '').toLowerCase().replace(';', '').trim();
+          const matches = typeLower === modemType || typeLower.includes(modemType);
+          console.log(`Checking modem ${m.name}: type='${m.type}' -> '${typeLower}' matches ${modemType}: ${matches}`);
+          return matches;
+        });
+
+        console.log('Matching modems:', matchingModems);
+
+        if (matchingModems.length === 0) {
+          $('#varannyStatus').text('No varanny modems found');
+          $('#varannyModemSelect').prop('disabled', true);
+        } else {
+          $('#varannyStatus').text(`${matchingModems.length} modem(s) found`);
+          $('#varannyModemSelect').prop('disabled', false);
+
+          matchingModems.forEach(modem => {
+            const address = `${modem.host}:${modem.cmd_port}`;
+            const label = `${modem.name} (${address})`;
+            console.log('Adding option:', label, 'with value:', address);
+            select.append($('<option>').val(address).text(label));
+          });
+        }
+        select.selectpicker('refresh');
+      },
+      error: (xhr, status, error) => {
+        console.error('Failed to load varanny modems:', status, error);
+        $('#varannyStatus').text('Failed to load varanny modems: ' + error);
+        $('#varannyModemSelect').prop('disabled', true);
+      }
     });
   }
 }

@@ -650,6 +650,79 @@
               </div>
               <!-- /GPSd Configuration -->
 
+              <!-- Varanny Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">Varanny</h3>
+                  </div>
+                  <div class="panel-body">
+                    <div class="alert alert-info">
+                      <p>Varanny provides automatic VARA modem management and discovery. When enabled, pat can automatically discover and use VARA modems managed by varanny.</p>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="varanny_enable" name="varanny_enable">
+                        Enable Varanny
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Enable automatic varanny support for VARA connections</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="varanny_use_varanny_cat" name="varanny_use_varanny_cat">
+                        Use Varanny CAT
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Use varanny's managed CAT control instead of pat's hamlib</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="varanny_fallback_to_direct" name="varanny_fallback_to_direct">
+                        Fallback to Direct
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Fallback to direct VARA connection if varanny is enabled but unavailable</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="varanny_continuous_discovery" name="varanny_continuous_discovery">
+                        Continuous Discovery
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Use event-driven discovery instead of periodic refresh</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_discovery_timeout">Discovery Timeout (seconds)</label>
+                      <input type="number" class="form-control" id="varanny_discovery_timeout" name="varanny_discovery_timeout" min="1" placeholder="5">
+                      <small class="form-text text-muted">Timeout for mDNS discovery in seconds</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_modem_ttl">Modem TTL (minutes)</label>
+                      <input type="number" class="form-control" id="varanny_modem_ttl" name="varanny_modem_ttl" min="1" placeholder="10">
+                      <small class="form-text text-muted">Time-to-live for discovered modems in minutes</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_startup_timeout">Startup Timeout (seconds)</label>
+                      <input type="number" class="form-control" id="varanny_startup_timeout" name="varanny_startup_timeout" min="1" placeholder="30">
+                      <small class="form-text text-muted">Time to wait for VARA to start and bind. May need higher values for emulation (Wine/Raspberry Pi)</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_command_timeout">Command Timeout (seconds)</label>
+                      <input type="number" class="form-control" id="varanny_command_timeout" name="varanny_command_timeout" min="1" placeholder="5">
+                      <small class="form-text text-muted">Timeout for individual varanny commands (start/stop)</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_preferred_hf_modem">Preferred HF Modem</label>
+                      <input type="text" class="form-control" id="varanny_preferred_hf_modem" name="varanny_preferred_hf_modem" placeholder="">
+                      <small class="form-text text-muted">Preferred modem name for HF connections</small>
+                    </div>
+                    <div class="form-group">
+                      <label for="varanny_preferred_fm_modem">Preferred FM Modem</label>
+                      <input type="text" class="form-control" id="varanny_preferred_fm_modem" name="varanny_preferred_fm_modem" placeholder="">
+                      <small class="form-text text-muted">Preferred modem name for FM connections</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- /Varanny Configuration -->
+
               <!-- Schedule Configuration -->
               <div class="panel-group" style="margin-top: 20px;">
                 <div class="panel panel-default">

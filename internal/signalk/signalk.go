@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/grandcat/zeroconf"
 	"github.com/gorilla/websocket"
+	"github.com/la5nta/pat/internal/debug"
 )
 
 var (
@@ -130,10 +130,10 @@ func discoverServerURL(serverURL string) (string, error) {
 	// Discover via mDNS - look for _signalk-http service
 	servers, err := DiscoverServers(context.Background(), 5*time.Second)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("mDNS discovery failed: %w (consider setting a specific Signal K server address in configuration)", err)
 	}
 	if len(servers) == 0 {
-		return "", ErrNoSignalKServers
+		return "", fmt.Errorf("%s (consider setting a specific Signal K server address in configuration)", ErrNoSignalKServers)
 	}
 
 	// Use the first server found (HTTP service)
@@ -159,6 +159,13 @@ func discoverServerURL(serverURL string) (string, error) {
 		return "", fmt.Errorf("failed to parse Signal K endpoints: %w", err)
 	}
 
+	// Debug: log the response structure (limited keys)
+	keys := make([]string, 0, len(endpoints))
+	for k := range endpoints {
+		keys = append(keys, k)
+	}
+	debug.Printf("Signal K endpoints response keys: %v", keys)
+
 	// Extract self ID and WebSocket URL from endpoints
 	wsURL, selfID, err := extractWebSocketInfo(endpoints)
 	if err != nil {
@@ -178,58 +185,91 @@ func extractWebSocketInfo(endpoints map[string]interface{}) (wsURL, selfID strin
 	// Get self ID from endpoints
 	if self, ok := endpoints["self"].(string); ok {
 		selfID = self
+		debug.Printf("Signal K self ID: %s", selfID)
 	}
 
-	// Get vessels to find the self vessel
-	vessels, ok := endpoints["vessels"].(map[string]interface{})
-	if !ok {
-		return "", "", errors.New("no vessels in Signal K endpoints")
-	}
-
-	// Find the self vessel and get its endpoint
-	for vesselID, vesselData := range vessels {
-		vesselMap, ok := vesselData.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		// Check if this is the self vessel
-		if vesselID == selfID || selfID == "" {
-			// Look for endpoints in this vessel
-			if vEndpoints, ok := vesselMap["endpoints"].(map[string]interface{}); ok {
-				// Look for v1 WebSocket endpoint
-				if v1, ok := vEndpoints["v1"].(map[string]interface{}); ok {
-					if ws, ok := v1["signalk-stream-ws"].(string); ok {
-						wsURL = ws
-						break
-					}
-					// Try alternative keys
-					if ws, ok := v1["signalk-ws"].(string); ok {
-						wsURL = ws
-						break
-					}
-				}
+	// Try top-level endpoints first (Signal K v1 spec)
+	if topEndpoints, ok := endpoints["endpoints"].(map[string]interface{}); ok {
+		debug.Printf("Signal K has top-level endpoints")
+		if v1, ok := topEndpoints["v1"].(map[string]interface{}); ok {
+			debug.Printf("Signal K has v1 endpoints")
+			// Try standard signalk-stream-ws key
+			if ws, ok := v1["signalk-stream-ws"].(string); ok {
+				wsURL = ws
+				debug.Printf("Found signalk-stream-ws: %s", ws)
+			} else if ws, ok := v1["signalk-ws"].(string); ok {
+				// Try alternative key
+				wsURL = ws
+				debug.Printf("Found signalk-ws: %s", ws)
+			} else {
+				debug.Printf("v1 endpoints keys: %v", getMapKeys(v1))
 			}
 		}
+	} else {
+		debug.Printf("Signal K does not have top-level endpoints")
 	}
 
-	// If we didn't find a vessel-specific endpoint, try top-level endpoints
+	// If not found at top-level, try vessels structure (some servers include it)
 	if wsURL == "" {
-		if topEndpoints, ok := endpoints["endpoints"].(map[string]interface{}); ok {
-			if v1, ok := topEndpoints["v1"].(map[string]interface{}); ok {
-				if ws, ok := v1["signalk-stream-ws"].(string); ok {
-					wsURL = ws
+		debug.Printf("Trying vessels structure")
+		vessels, ok := endpoints["vessels"].(map[string]interface{})
+		if ok {
+			debug.Printf("Found vessels with %d entries", len(vessels))
+			// Find the self vessel and get its endpoint
+			for vesselID, vesselData := range vessels {
+				vesselMap, ok := vesselData.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				// Check if this is the self vessel
+				if vesselID == selfID || selfID == "" {
+					debug.Printf("Checking vessel: %s (selfID: %s)", vesselID, selfID)
+					// Look for endpoints in this vessel
+					if vEndpoints, ok := vesselMap["endpoints"].(map[string]interface{}); ok {
+						// Look for v1 WebSocket endpoint
+						if v1, ok := vEndpoints["v1"].(map[string]interface{}); ok {
+							if ws, ok := v1["signalk-stream-ws"].(string); ok {
+								wsURL = ws
+								debug.Printf("Found vessel signalk-stream-ws: %s", ws)
+								break
+							}
+							// Try alternative keys
+							if ws, ok := v1["signalk-ws"].(string); ok {
+								wsURL = ws
+								debug.Printf("Found vessel signalk-ws: %s", ws)
+								break
+							}
+						}
+					}
 				}
 			}
+		} else {
+			debug.Printf("No vessels found in response")
 		}
 	}
 
-	// Fallback: construct WebSocket URL from discovery info
+	// Fallback: if we found a self ID but no explicit WebSocket URL, return just the self ID
+	// The caller can construct the WebSocket URL from the discovered server address
+	if wsURL == "" && selfID != "" {
+		return "", selfID, nil
+	}
+
+	// No WebSocket endpoint found
 	if wsURL == "" {
 		return "", "", errors.New("no WebSocket endpoint found in Signal K response")
 	}
 
 	return wsURL, selfID, nil
+}
+
+// getMapKeys returns the keys from a map as a string slice for debugging
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 // convertToWebSocketURL converts an HTTP URL to WebSocket URL
@@ -285,7 +325,7 @@ func (c *Conn) readMessages() {
 		pos := Position{
 			// Initialize with current values if we want to merge
 		}
-		var hasPos, hasSpeed, hasCourse bool
+		var hasPos bool
 
 		for _, u := range updates {
 			update, ok := u.(map[string]interface{})
@@ -335,12 +375,10 @@ func (c *Conn) readMessages() {
 				case "navigation.speedOverGround":
 					if speed, ok := posValue["value"].(float64); ok {
 						pos.Speed = speed
-						hasSpeed = true
 					}
 				case "navigation.courseOverGroundTrue":
 					if course, ok := posValue["value"].(float64); ok {
 						pos.Track = course
-						hasCourse = true
 					}
 				}
 			}
@@ -430,9 +468,14 @@ func DiscoverServers(ctx context.Context, timeout time.Duration) ([]ServerInfo, 
 	var servers []ServerInfo
 
 	// Discover _signalk-http service per Signal K spec
+	resolver, err := zeroconf.NewResolver(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mDNS resolver: %w", err)
+	}
+
 	entries := make(chan *zeroconf.ServiceEntry)
 	go func() {
-		_ = zeroconf.Browse(ctx, "_signalk-http", "local.", entries)
+		_ = resolver.Lookup(ctx, "", "_signalk-http._tcp", "local.", entries)
 	}()
 
 	// Collect entries within timeout
@@ -443,7 +486,7 @@ func DiscoverServers(ctx context.Context, timeout time.Duration) ([]ServerInfo, 
 			if !ok {
 				goto done
 			}
-			srv := parseZeroconfEntry(entry, false)
+			srv := parseZeroconfEntry(entry)
 			if srv != nil {
 				servers = append(servers, *srv)
 			}
@@ -463,13 +506,13 @@ done:
 }
 
 // parseZeroconfEntry parses a zeroconf service entry into a ServerInfo
-func parseZeroconfEntry(entry *zeroconf.ServiceEntry, isWS bool) *ServerInfo {
+func parseZeroconfEntry(entry *zeroconf.ServiceEntry) *ServerInfo {
 	if len(entry.AddrIPv4) == 0 && len(entry.AddrIPv6) == 0 {
 		return nil
 	}
 
 	info := ServerInfo{
-		Name: entry.ServiceInstance(),
+		Name: entry.Instance,
 		Port: entry.Port,
 	}
 

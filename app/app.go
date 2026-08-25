@@ -14,9 +14,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/harenber/ptc-go/v2/pactor"
@@ -92,6 +94,13 @@ type App struct {
 	pactor *pactor.Modem
 	varaHF *vara.Modem
 	varaFM *vara.Modem
+
+	// launchedMu guards launched, which tracks processes Pat has spawned via
+	// a transport's configured LaunchCmd and not yet seen exit, keyed by
+	// transport method name. Used to avoid spawning a duplicate while one is
+	// already starting, and to terminate them on Close.
+	launchedMu sync.Mutex
+	launched   map[string]*exec.Cmd
 
 	rigs map[string]rig
 
@@ -386,6 +395,9 @@ func (a *App) Close() {
 	debug.Printf("Closing active connection and/or listeners")
 	a.AbortActiveConnection(false)
 	a.listenHub.Close()
+
+	debug.Printf("Terminating launched processes")
+	a.terminateLaunchedProcesses()
 
 	debug.Printf("Closing modems")
 	if a.ardop != nil {

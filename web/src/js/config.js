@@ -438,6 +438,13 @@ $(document).ready(function() {
       $('#gpsd_update_locator').prop('checked', config.gpsd.update_locator);
       $('#gpsd_addr').val(config.gpsd.addr);
 
+      // Populate Signal K config
+      $('#signalk_enable').prop('checked', config.signalk.enable);
+      $('#signalk_allow_forms').prop('checked', config.signalk.allow_forms);
+      $('#signalk_use_server_time').prop('checked', config.signalk.use_server_time);
+      $('#signalk_update_locator').prop('checked', config.signalk.update_locator);
+      $('#signalk_addr').val(config.signalk.addr);
+
       // Set listen methods checkboxes
       const listenMethods = config.listen || [];
       $('input[name="listen_methods[]"]').each(function() {
@@ -608,6 +615,14 @@ $(document).ready(function() {
       use_server_time: $('#gpsd_use_server_time').is(':checked'),
       update_locator: $('#gpsd_update_locator').is(':checked'),
       addr: $('#gpsd_addr').val()
+    };
+    updatedConfig.signalk = {
+      ...originalConfig.signalk,
+      enable: $('#signalk_enable').is(':checked'),
+      allow_forms: $('#signalk_allow_forms').is(':checked'),
+      use_server_time: $('#signalk_use_server_time').is(':checked'),
+      update_locator: $('#signalk_update_locator').is(':checked'),
+      addr: $('#signalk_addr').val()
     };
 
 

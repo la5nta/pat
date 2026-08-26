@@ -23,6 +23,7 @@ import (
 	"github.com/la5nta/pat/internal/buildinfo"
 	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/la5nta/pat/internal/patapi"
+	"github.com/la5nta/pat/internal/signalk"
 	"github.com/la5nta/pat/web"
 
 	"github.com/gorilla/mux"
@@ -316,18 +317,41 @@ func (h Handler) qsyHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h Handler) positionHandler(w http.ResponseWriter, req *http.Request) {
-	// Throw error if GPSd http endpoint is not enabled
+	host, _, _ := net.SplitHostPort(req.RemoteAddr)
+
+	// Try Signal K first if enabled
+	if h.Config().SignalK.Enable {
+		log.Printf("Location data from Signal K served to %s", host)
+
+		conn, err := signalk.DialWithToken(h.Config().SignalK.Addr, h.Config().SignalK.UseServerTime)
+		if err == nil {
+			defer conn.Close()
+
+			pos, err := conn.NextPosTimeout(5 * time.Second)
+			if err == nil {
+				_ = json.NewEncoder(w).Encode(gpsd.Position{
+					Lat:   pos.Lat,
+					Lon:   pos.Lon,
+					Alt:   pos.Alt,
+					Track: pos.Track,
+					Speed: pos.Speed,
+					Time:  pos.Time,
+				})
+				return
+			}
+		}
+	}
+
+	// Fall back to GPSd
 	if !h.Config().GPSd.EnableHTTP || h.Config().GPSd.Addr == "" {
-		http.Error(w, "GPSd not enabled or address not set in config file", http.StatusInternalServerError)
+		http.Error(w, "No position source enabled (Signal K or GPSd)", http.StatusInternalServerError)
 		return
 	}
 
-	host, _, _ := net.SplitHostPort(req.RemoteAddr)
 	log.Printf("Location data from GPSd served to %s", host)
 
 	conn, err := gpsd.Dial(h.Config().GPSd.Addr)
 	if err != nil {
-		// do not pass error message to response as GPSd address might be leaked
 		http.Error(w, "GPSd Dial failed", http.StatusInternalServerError)
 		return
 	}

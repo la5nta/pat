@@ -109,6 +109,9 @@ type Config struct {
 	// See GPSdConfig.
 	GPSd GPSdConfig `json:"gpsd"`
 
+	// See SignalKConfig.
+	SignalK SignalKConfig `json:"signalk"`
+
 	// See PredictionConfig.
 	Prediction PredictionConfig `json:"prediction,omitzero"`
 
@@ -381,6 +384,34 @@ type GPSdConfig struct {
 	Addr string `json:"addr"`
 }
 
+// SignalKConfig holds configuration for Signal K integration.
+type SignalKConfig struct {
+	// Enable Signal K for position updates.
+	//
+	// When enabled, Pat will automatically discover Signal K servers via mDNS
+	// and subscribe to navigation.position updates. The position will be available
+	// for position reports, RMS list pruning, and Winlink forms.
+	Enable bool `json:"enable"`
+
+	// Allow Winlink forms to use Signal K for acquiring your position.
+	//
+	// Caution: Your current GPS position will be automatically injected, without your explicit consent, into forms requesting such information.
+	AllowForms bool `json:"allow_forms"`
+
+	// Use server time instead of timestamp provided by Signal K.
+	UseServerTime bool `json:"use_server_time"`
+
+	// Automatically update the locator field in-memory by polling Signal K every hour.
+	//
+	// Note: This only updates the locator in-memory. The config file is not modified.
+	// On startup, the config's locator value will be used until the first position is received from Signal K.
+	UpdateLocator bool `json:"update_locator"`
+
+	// Optional Signal K server URL (e.g. http://localhost:3000).
+	// If empty, mDNS discovery will be used to find Signal K servers on the local network.
+	Addr string `json:"addr"`
+}
+
 var DefaultConfig = Config{
 	MOTD:                  []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs:              []AuxAddr{},
@@ -439,6 +470,13 @@ var DefaultConfig = Config{
 		UseServerTime: false,
 		UpdateLocator: false,
 		Addr:          "localhost:2947", // Default listen address for GPSd
+	},
+	SignalK: SignalKConfig{
+		Enable:        false, // Disabled by default
+		AllowForms:    false, // Default to false to help protect location privacy of unknowing users
+		UseServerTime: false,
+		UpdateLocator: false,
+		Addr:          "", // Empty means use mDNS discovery
 	},
 	Schedule:   map[string]string{},
 	HamlibRigs: map[string]HamlibConfig{},

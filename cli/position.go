@@ -11,6 +11,7 @@ import (
 
 	"github.com/la5nta/pat/app"
 	"github.com/la5nta/pat/internal/gpsd"
+	"github.com/la5nta/pat/internal/signalk"
 	"github.com/la5nta/wl2k-go/catalog"
 	"github.com/spf13/pflag"
 )
@@ -49,37 +50,71 @@ func PositionHandle(ctx context.Context, app *app.App, args []string) {
 			log.Fatal(err)
 		}
 		report.Lon = &lon
-	} else if app.Config().GPSd.Addr != "" {
-		conn, err := gpsd.Dial(app.Config().GPSd.Addr)
-		if err != nil {
-			log.Fatalf("GPSd daemon: %s", err)
-		}
-		defer conn.Close()
-		conn.Watch(true)
+	} else if app.Config().SignalK.Enable || app.Config().GPSd.Addr != "" {
+		var pos gpsd.Position
+		var source string
 
-		posChan := make(chan gpsd.Position)
-		go func() {
-			defer close(posChan)
-			pos, err := conn.NextPos()
+		// Try Signal K first if enabled
+		if app.Config().SignalK.Enable {
+			conn, err := signalk.DialWithToken(app.Config().SignalK.Addr, app.Config().SignalK.UseServerTime)
+			if err == nil {
+				defer conn.Close()
+				log.Println("Waiting for position from Signal K...")
+				skPos, err := conn.NextPosTimeout(30 * time.Second)
+				if err == nil {
+					pos = gpsd.Position{
+						Lat:   skPos.Lat,
+						Lon:   skPos.Lon,
+						Alt:   skPos.Alt,
+						Track: skPos.Track,
+						Speed: skPos.Speed,
+						Time:  skPos.Time,
+					}
+					source = "Signal K"
+				}
+			}
+		}
+
+		// Fall back to GPSd if Signal K failed or isn't enabled
+		if source == "" && app.Config().GPSd.Addr != "" {
+			conn, err := gpsd.Dial(app.Config().GPSd.Addr)
 			if err != nil {
-				log.Printf("GPSd: %s", err)
+				log.Fatalf("GPSd daemon: %s", err)
+			}
+			defer conn.Close()
+			conn.Watch(true)
+
+			posChan := make(chan gpsd.Position)
+			go func() {
+				defer close(posChan)
+				p, err := conn.NextPos()
+				if err != nil {
+					log.Printf("GPSd: %s", err)
+					return
+				}
+				posChan <- p
+			}()
+
+			log.Println("Waiting for position from GPSd...")
+			select {
+			case p := <-posChan:
+				pos = p
+				source = "GPSd"
+			case <-ctx.Done():
+				log.Println("Cancelled")
 				return
 			}
-			posChan <- pos
-		}()
-
-		log.Println("Waiting for position from GPSd...") // TODO: Spinning bar?
-		var pos gpsd.Position
-		select {
-		case p := <-posChan:
-			pos = p
-		case <-ctx.Done():
-			log.Println("Cancelled")
-			return
 		}
+
+		if source == "" {
+			fmt.Println("No position available from Signal K or GPSd")
+			os.Exit(1)
+		}
+
+		log.Printf("Got position from %s", source)
 		report.Lat = &pos.Lat
 		report.Lon = &pos.Lon
-		if app.Config().GPSd.UseServerTime {
+		if (source == "Signal K" && app.Config().SignalK.UseServerTime) || (source == "GPSd" && app.Config().GPSd.UseServerTime) {
 			report.Date = time.Now()
 		} else {
 			report.Date = pos.Time

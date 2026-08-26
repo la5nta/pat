@@ -111,6 +111,11 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.GPSd = cfg.DefaultConfig.GPSd
 	}
 
+	// Ensure SignalK has a default value
+	if config.SignalK == (cfg.SignalKConfig{}) {
+		config.SignalK = cfg.DefaultConfig.SignalK
+	}
+
 	// Ensure SerialTNC has a default hbaud and serialbaud
 	if config.SerialTNC.HBaud == 0 {
 		config.SerialTNC.HBaud = cfg.DefaultConfig.SerialTNC.HBaud

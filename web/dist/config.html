@@ -650,6 +650,56 @@
               </div>
               <!-- /GPSd Configuration -->
 
+              <!-- Signal K Configuration -->
+              <div class="panel-group" style="margin-top: 20px;">
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">Signal K</h3>
+                  </div>
+                  <div class="panel-body">
+                    <div class="alert alert-info">
+                      <p>Signal K is an open marine data format for vessels. When enabled, Pat will automatically discover Signal K servers via mDNS and subscribe to navigation.position updates.</p>
+                      <p>The position will be available for position reports, RMS list pruning, and Winlink forms.</p>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="signalk_enable" name="signalk_enable">
+                        Enable Signal K
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Enable Signal K for position updates via mDNS discovery</small>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                      <label for="signalk_addr">Server Address</label>
+                      <input type="text" class="form-control" id="signalk_addr" placeholder="http://localhost:3000"
+                        name="signalk_addr">
+                      <small class="form-text text-muted">Optional Signal K server URL (e.g. http://localhost:3000). Leave empty to use mDNS discovery to find Signal K servers on the local network.</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="signalk_update_locator" name="signalk_update_locator">
+                        Update Locator
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Automatically update the locator field in-memory by polling Signal K every hour. On startup, the config's locator value will be used until the first position is received from Signal K.</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="signalk_allow_forms" name="signalk_allow_forms">
+                        Allow Forms Signal K Access
+                      </label>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Automatically injects GPS position from Signal K into forms without explicit consent</small>
+                    </div>
+                    <div class="checkbox">
+                      <label>
+                        <input type="checkbox" id="signalk_use_server_time" name="signalk_use_server_time">
+                        Use Server Time
+                      </label>
+                      <small class="form-text text-muted" style="display: block; margin-left: 20px;">Use server time instead of timestamp provided by Signal K</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- /Signal K Configuration -->
+
               <!-- Schedule Configuration -->
               <div class="panel-group" style="margin-top: 20px;">
                 <div class="panel panel-default">

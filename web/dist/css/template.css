@@ -1,1 +1,113 @@
-#headers_list,#message_content{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}#message_content{max-width:80ch}#headers_list{display:block;line-height:1.5}#headers_list input[type=text]{margin-top:2px!important;margin-bottom:2px!important}.template-select{display:inline-block;vertical-align:middle;width:auto;margin:0 .25rem}.measure-span{visibility:hidden;position:absolute;white-space:pre}.var-input{display:inline-block;border:1px solid #ced4da;border-radius:4px;padding:1px 1px 1px 2px;font-family:inherit;line-height:1.5;background-color:#fff;transition:border-color .15s ease-in-out,box-shadow .15s ease-in-out}.var-input:focus{outline:0}.var-input.linked-active,.var-input:focus{border-color:#86b7fe;box-shadow:0 0 0 .25rem rgba(13,110,253,.25)}.var-input.linked-active{background-color:#fff}.insertion-tag{border-radius:4px;padding:0 4px;font-family:inherit;line-height:1.5;background-color:#f5f5f5}.message-section{max-width:80ch;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-wrap!important;line-height:1.2}.message-section input,.message-section select,.message-section textarea{margin:.245em 0!important}#headers_list input[type=text].form-control,.message-section input[type=text].form-control{width:auto;display:inline-block;vertical-align:baseline;margin:0!important;font-size:inherit;line-height:inherit;height:auto;min-width:120px}.message-section textarea.form-control{width:100%;min-height:150px;background-color:#f8f9fa;border:1px solid #dee2e6;border-radius:3px;padding:4px;font-size:inherit;line-height:inherit;resize:vertical}
+/* Template editor sections */
+#headers_list {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+#message_content {
+  white-space: pre-wrap;
+  max-width: 80ch;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure header lines can wrap properly */
+#headers_list {
+  display: block;
+  line-height: 1.5;
+  /* Add proper wrapping for header lines with inputs */
+}
+#headers_list input[type=text] {
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+/* Form select styling */
+.template-select {
+  display: inline-block;
+  vertical-align: middle;
+  width: auto;
+  margin: 0 0.25rem;
+}
+
+/* Common measurement element */
+.measure-span {
+  visibility: hidden;
+  position: absolute;
+  white-space: pre;
+}
+
+/* Common styles for inline elements */
+.var-input {
+  display: inline-block;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 1px 1px 1px 2px;
+  font-family: inherit;
+  line-height: 1.5;
+  background-color: #fff;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.var-input:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.var-input.linked-active {
+  border-color: #86b7fe;
+  background-color: #fff;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.insertion-tag {
+  border-radius: 4px;
+  padding: 0px 4px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+/* Insertion tags styling */
+.insertion-tag {
+  background-color: #f5f5f5;
+}
+
+/* Message section styling */
+.message-section {
+  max-width: 80ch;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap !important;
+  line-height: 1.2;
+  /* Add spacing for lines containing inputs */
+}
+.message-section input, .message-section select, .message-section textarea {
+  margin: 0.245em 0 !important;
+}
+
+/* Headers and message section inputs */
+.message-section input[type=text].form-control,
+#headers_list input[type=text].form-control {
+  width: auto;
+  display: inline-block;
+  vertical-align: baseline;
+  margin: 0 !important;
+  font-size: inherit;
+  line-height: inherit;
+  height: auto;
+  min-width: 120px;
+}
+
+.message-section textarea.form-control {
+  width: 100%;
+  min-height: 150px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 3px;
+  padding: 4px;
+  font-size: inherit;
+  line-height: inherit;
+  resize: vertical;
+}
+
+/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly8vLi9zY3NzL3RlbXBsYXRlLnNjc3MiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBOztBQUVBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7QUFFQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7QUFFQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7QUFFQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7O0FBRUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBOztBQUVBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7QUFFQTtBQUNBO0FBQ0E7QUFDQTs7QUFFQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7O0FBRUE7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBOztBQUVBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0EsQyIsImZpbGUiOiJjc3MvdGVtcGxhdGUuY3NzIiwic291cmNlc0NvbnRlbnQiOlsiLyogVGVtcGxhdGUgZWRpdG9yIHNlY3Rpb25zICovXG4jaGVhZGVyc19saXN0IHtcbiAgd2hpdGUtc3BhY2U6IHByZS13cmFwO1xuICB3b3JkLXdyYXA6IGJyZWFrLXdvcmQ7XG4gIG92ZXJmbG93LXdyYXA6IGJyZWFrLXdvcmQ7XG59XG5cbiNtZXNzYWdlX2NvbnRlbnQge1xuICB3aGl0ZS1zcGFjZTogcHJlLXdyYXA7XG4gIG1heC13aWR0aDogODBjaDtcbiAgd29yZC13cmFwOiBicmVhay13b3JkO1xuICBvdmVyZmxvdy13cmFwOiBicmVhay13b3JkO1xufVxuXG4vKiBFbnN1cmUgaGVhZGVyIGxpbmVzIGNhbiB3cmFwIHByb3Blcmx5ICovXG4jaGVhZGVyc19saXN0IHtcbiAgZGlzcGxheTogYmxvY2s7XG4gIGxpbmUtaGVpZ2h0OiAxLjU7XG4gIC8qIEFkZCBwcm9wZXIgd3JhcHBpbmcgZm9yIGhlYWRlciBsaW5lcyB3aXRoIGlucHV0cyAqL1xufVxuI2hlYWRlcnNfbGlzdCBpbnB1dFt0eXBlPXRleHRdIHtcbiAgbWFyZ2luLXRvcDogMnB4ICFpbXBvcnRhbnQ7XG4gIG1hcmdpbi1ib3R0b206IDJweCAhaW1wb3J0YW50O1xufVxuXG4vKiBGb3JtIHNlbGVjdCBzdHlsaW5nICovXG4udGVtcGxhdGUtc2VsZWN0IHtcbiAgZGlzcGxheTogaW5saW5lLWJsb2NrO1xuICB2ZXJ0aWNhbC1hbGlnbjogbWlkZGxlO1xuICB3aWR0aDogYXV0bztcbiAgbWFyZ2luOiAwIDAuMjVyZW07XG59XG5cbi8qIENvbW1vbiBtZWFzdXJlbWVudCBlbGVtZW50ICovXG4ubWVhc3VyZS1zcGFuIHtcbiAgdmlzaWJpbGl0eTogaGlkZGVuO1xuICBwb3NpdGlvbjogYWJzb2x1dGU7XG4gIHdoaXRlLXNwYWNlOiBwcmU7XG59XG5cbi8qIENvbW1vbiBzdHlsZXMgZm9yIGlubGluZSBlbGVtZW50cyAqL1xuLnZhci1pbnB1dCB7XG4gIGRpc3BsYXk6IGlubGluZS1ibG9jaztcbiAgYm9yZGVyOiAxcHggc29saWQgI2NlZDRkYTtcbiAgYm9yZGVyLXJhZGl1czogNHB4O1xuICBwYWRkaW5nOiAxcHggMXB4IDFweCAycHg7XG4gIGZvbnQtZmFtaWx5OiBpbmhlcml0O1xuICBsaW5lLWhlaWdodDogMS41O1xuICBiYWNrZ3JvdW5kLWNvbG9yOiAjZmZmO1xuICB0cmFuc2l0aW9uOiBib3JkZXItY29sb3IgMC4xNXMgZWFzZS1pbi1vdXQsIGJveC1zaGFkb3cgMC4xNXMgZWFzZS1pbi1vdXQ7XG59XG4udmFyLWlucHV0OmZvY3VzIHtcbiAgYm9yZGVyLWNvbG9yOiAjODZiN2ZlO1xuICBvdXRsaW5lOiAwO1xuICBib3gtc2hhZG93OiAwIDAgMCAwLjI1cmVtIHJnYmEoMTMsIDExMCwgMjUzLCAwLjI1KTtcbn1cbi52YXItaW5wdXQubGlua2VkLWFjdGl2ZSB7XG4gIGJvcmRlci1jb2xvcjogIzg2YjdmZTtcbiAgYmFja2dyb3VuZC1jb2xvcjogI2ZmZjtcbiAgYm94LXNoYWRvdzogMCAwIDAgMC4yNXJlbSByZ2JhKDEzLCAxMTAsIDI1MywgMC4yNSk7XG59XG5cbi5pbnNlcnRpb24tdGFnIHtcbiAgYm9yZGVyLXJhZGl1czogNHB4O1xuICBwYWRkaW5nOiAwcHggNHB4O1xuICBmb250LWZhbWlseTogaW5oZXJpdDtcbiAgbGluZS1oZWlnaHQ6IDEuNTtcbn1cblxuLyogSW5zZXJ0aW9uIHRhZ3Mgc3R5bGluZyAqL1xuLmluc2VydGlvbi10YWcge1xuICBiYWNrZ3JvdW5kLWNvbG9yOiAjZjVmNWY1O1xufVxuXG4vKiBNZXNzYWdlIHNlY3Rpb24gc3R5bGluZyAqL1xuLm1lc3NhZ2Utc2VjdGlvbiB7XG4gIG1heC13aWR0aDogODBjaDtcbiAgd29yZC13cmFwOiBicmVhay13b3JkO1xuICBvdmVyZmxvdy13cmFwOiBicmVhay13b3JkO1xuICB3aGl0ZS1zcGFjZTogcHJlLXdyYXAgIWltcG9ydGFudDtcbiAgbGluZS1oZWlnaHQ6IDEuMjtcbiAgLyogQWRkIHNwYWNpbmcgZm9yIGxpbmVzIGNvbnRhaW5pbmcgaW5wdXRzICovXG59XG4ubWVzc2FnZS1zZWN0aW9uIGlucHV0LCAubWVzc2FnZS1zZWN0aW9uIHNlbGVjdCwgLm1lc3NhZ2Utc2VjdGlvbiB0ZXh0YXJlYSB7XG4gIG1hcmdpbjogMC4yNDVlbSAwICFpbXBvcnRhbnQ7XG59XG5cbi8qIEhlYWRlcnMgYW5kIG1lc3NhZ2Ugc2VjdGlvbiBpbnB1dHMgKi9cbi5tZXNzYWdlLXNlY3Rpb24gaW5wdXRbdHlwZT10ZXh0XS5mb3JtLWNvbnRyb2wsXG4jaGVhZGVyc19saXN0IGlucHV0W3R5cGU9dGV4dF0uZm9ybS1jb250cm9sIHtcbiAgd2lkdGg6IGF1dG87XG4gIGRpc3BsYXk6IGlubGluZS1ibG9jaztcbiAgdmVydGljYWwtYWxpZ246IGJhc2VsaW5lO1xuICBtYXJnaW46IDAgIWltcG9ydGFudDtcbiAgZm9udC1zaXplOiBpbmhlcml0O1xuICBsaW5lLWhlaWdodDogaW5oZXJpdDtcbiAgaGVpZ2h0OiBhdXRvO1xuICBtaW4td2lkdGg6IDEyMHB4O1xufVxuXG4ubWVzc2FnZS1zZWN0aW9uIHRleHRhcmVhLmZvcm0tY29udHJvbCB7XG4gIHdpZHRoOiAxMDAlO1xuICBtaW4taGVpZ2h0OiAxNTBweDtcbiAgYmFja2dyb3VuZC1jb2xvcjogI2Y4ZjlmYTtcbiAgYm9yZGVyOiAxcHggc29saWQgI2RlZTJlNjtcbiAgYm9yZGVyLXJhZGl1czogM3B4O1xuICBwYWRkaW5nOiA0cHg7XG4gIGZvbnQtc2l6ZTogaW5oZXJpdDtcbiAgbGluZS1oZWlnaHQ6IGluaGVyaXQ7XG4gIHJlc2l6ZTogdmVydGljYWw7XG59Il0sInNvdXJjZVJvb3QiOiIifQ==*/

@@ -233,6 +233,19 @@ type ArdopConfig struct {
 	LaunchCmd LaunchCmd `json:"launch_cmd"`
 }
 
+// IsZero reports whether c is the zero value. Uses reflect.DeepEqual rather
+// than == because LaunchCmd.Args is a slice, which isn't comparable.
+func (c ArdopConfig) IsZero() bool { return reflect.DeepEqual(c, ArdopConfig{}) }
+
+// IsZeroExceptLaunchCmd reports whether c is the zero value, ignoring
+// LaunchCmd. Used to decide whether to apply default values (e.g. Addr) to a
+// config that only sets launch_cmd, which must not be treated as "fully
+// configured, leave it alone".
+func (c ArdopConfig) IsZeroExceptLaunchCmd() bool {
+	c.LaunchCmd = LaunchCmd{}
+	return c.IsZero()
+}
+
 // LaunchCmd is an optional command Pat spawns itself if a transport's TNC/
 // daemon isn't already reachable at its configured address. See CONTEXT.md
 // for how this differs from the unrelated prehook mechanism.
@@ -278,12 +291,15 @@ func (v *VaraConfig) UnmarshalJSON(b []byte) error {
 		legacy.newFormat.Addr = fmt.Sprintf("%s:%d", legacy.Host, legacy.CmdPort)
 	}
 	*v = VaraConfig(legacy.newFormat)
-	// Only validate the port when an address was actually given (directly,
-	// or migrated from the legacy host/cmdPort fields) — a config that
-	// leaves addr unset entirely (e.g. one that only sets launch_cmd) is
-	// valid; v.IsZero() would wrongly reject that, since IsZero is false as
-	// soon as any field (including LaunchCmd, or e.g. Rig) is set.
-	if v.Addr != "" && v.CmdPort() <= 0 {
+	// Only validate the port when the config isn't the "addr left unset
+	// entirely" shape that's allowed to fall back to defaults later (a
+	// config that only sets launch_cmd, or nothing at all). Any other
+	// field set (Rig, PTTControl, ...) without an addr is a mistake and
+	// should fail fast here rather than surface as an obscure dial error,
+	// which is why this checks IsZeroExceptLaunchCmd() rather than just
+	// v.Addr != "" — the latter would also let e.g. "rig set, no addr, no
+	// launch_cmd" load silently.
+	if !v.IsZeroExceptLaunchCmd() && v.CmdPort() <= 0 {
 		return fmt.Errorf("invalid addr format")
 	}
 	return nil

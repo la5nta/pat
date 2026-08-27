@@ -81,6 +81,16 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.AGWPE.LaunchCmd = launchCmd
 	}
 
+	// Ensure we have a default Ardop config. As with AGWPE above, a config
+	// that only sets launch_cmd still needs the other defaults (e.g. Addr),
+	// so LaunchCmd is excluded from the zero check and preserved across the
+	// swap.
+	if config.Ardop.IsZeroExceptLaunchCmd() {
+		launchCmd := config.Ardop.LaunchCmd
+		config.Ardop = cfg.DefaultConfig.Ardop
+		config.Ardop.LaunchCmd = launchCmd
+	}
+
 	// Enforce minimum beacon intervals
 	if config.Ardop.BeaconInterval > 0 && config.Ardop.BeaconInterval < 10 {
 		config.Ardop.BeaconInterval = 10

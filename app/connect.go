@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -74,12 +75,12 @@ func (a *App) Connect(connectStr string) (success bool) {
 	// Init TNCs
 	switch url.Scheme {
 	case MethodAX25AGWPE:
-		if err := a.initAGWPE(); err != nil {
+		if err := a.initAGWPEForConnect(); err != nil {
 			log.Println(err)
 			return
 		}
 	case MethodArdop:
-		if err := a.initARDOP(); err != nil {
+		if err := a.initARDOPForConnect(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -93,12 +94,12 @@ func (a *App) Connect(connectStr string) (success bool) {
 			return
 		}
 	case MethodVaraHF:
-		if err := a.initVARAHF(); err != nil {
+		if err := a.initVARAHFForConnect(); err != nil {
 			log.Println(err)
 			return
 		}
 	case MethodVaraFM:
-		if err := a.initVARAFM(); err != nil {
+		if err := a.initVARAFMForConnect(); err != nil {
 			log.Println(err)
 			return
 		}
@@ -272,21 +273,51 @@ func (a *App) ARDOP() (*ardop.TNC, error) {
 	return a.ardop, nil
 }
 
+// dialARDOP is the actual network dial; overridden in tests.
+var dialARDOP = ardop.OpenTCP
+
+// How long to wait for a freshly launched TNC to come up. Vars, not consts, so tests can shrink them.
+var (
+	launchPollInterval = 500 * time.Millisecond
+	launchPollBudget   = 5 * time.Second
+)
+
 func (a *App) initARDOP() error {
 	if a.ardop != nil && a.ardop.Ping() == nil {
 		return nil
 	}
-
 	if a.ardop != nil {
 		a.ardop.Close()
+		a.ardop = nil
 	}
 
-	var err error
-	a.ardop, err = ardop.OpenTCP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator)
+	tnc, err := a.openARDOP()
 	if err != nil {
 		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
 	}
+	return a.configureARDOP(tnc)
+}
 
+// initARDOPForConnect is like initARDOP, but waits for a launched daemon to come up (see waitForARDOP).
+func (a *App) initARDOPForConnect() error {
+	if a.ardop != nil && a.ardop.Ping() == nil {
+		return nil
+	}
+	if a.ardop != nil {
+		a.ardop.Close()
+		a.ardop = nil
+	}
+
+	tnc, err := a.waitForARDOP()
+	if err != nil {
+		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
+	}
+	return a.configureARDOP(tnc)
+}
+
+// configureARDOP finishes initializing a freshly dialed Ardop TNC and installs it as a.ardop.
+func (a *App) configureARDOP(tnc *ardop.TNC) error {
+	a.ardop = tnc
 	a.ardop.SetBusyFunc(a.onBusyChannel)
 
 	if !a.config.Ardop.ARQBandwidth.IsZero() {
@@ -320,6 +351,101 @@ func (a *App) initARDOP() error {
 	return nil
 }
 
+// openARDOP makes a single dial attempt, launching Ardop.LaunchCmd if
+// configured and unreachable. Shared by Connect and Listen; doesn't wait
+// for the daemon to come up itself — see waitForARDOP for that.
+func (a *App) openARDOP() (*ardop.TNC, error) {
+	tnc, err := dialARDOP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator)
+	if err == nil {
+		return tnc, nil
+	}
+	if a.config.Ardop.LaunchCmd.Path != "" {
+		if startErr := a.startLaunch(MethodArdop, a.config.Ardop.LaunchCmd); startErr != nil {
+			debug.Printf("ardop: launch_cmd failed to start: %s", startErr)
+			log.Printf("Pat failed to launch ardop")
+		}
+	}
+	return nil, err
+}
+
+// waitForARDOP is like openARDOP, but polls up to launchPollBudget for a
+// freshly launched daemon to come up — used only by Connect, which has no
+// retry loop of its own. Doesn't bail early just because the spawned
+// process exited: some launch_cmd scripts daemonize and exit immediately.
+func (a *App) waitForARDOP() (*ardop.TNC, error) {
+	tnc, err := dialARDOP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator)
+	if err == nil || a.config.Ardop.LaunchCmd.Path == "" {
+		return tnc, err
+	}
+
+	if startErr := a.startLaunch(MethodArdop, a.config.Ardop.LaunchCmd); startErr != nil {
+		debug.Printf("ardop: launch_cmd failed to start: %s", startErr)
+		log.Printf("Pat failed to launch ardop")
+		return nil, err
+	}
+
+	deadline := time.Now().Add(launchPollBudget)
+	for time.Now().Before(deadline) {
+		time.Sleep(launchPollInterval)
+		if tnc, err = dialARDOP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator); err == nil {
+			return tnc, nil
+		}
+	}
+
+	log.Printf("Pat failed to launch ardop")
+	return nil, err
+}
+
+// startLaunch spawns cmdCfg for name unless a launch is already in flight,
+// atomically avoiding duplicate spawns from concurrent callers.
+func (a *App) startLaunch(name string, cmdCfg cfg.LaunchCmd) error {
+	a.launchedMu.Lock()
+	if _, inFlight := a.launched[name]; inFlight {
+		a.launchedMu.Unlock()
+		return nil
+	}
+
+	cmd := exec.Command(cmdCfg.Path, cmdCfg.Args...)
+	if err := cmd.Start(); err != nil {
+		a.launchedMu.Unlock()
+		return err
+	}
+	if a.launched == nil {
+		a.launched = make(map[string]*exec.Cmd)
+	}
+	a.launched[name] = cmd
+	a.launchedMu.Unlock()
+
+	go func() {
+		cmd.Wait()
+		a.launchedMu.Lock()
+		if a.launched[name] == cmd {
+			delete(a.launched, name)
+		}
+		a.launchedMu.Unlock()
+	}()
+	return nil
+}
+
+// isLaunchInFlight reports whether name has a spawned process not yet seen to exit.
+func (a *App) isLaunchInFlight(name string) bool {
+	a.launchedMu.Lock()
+	defer a.launchedMu.Unlock()
+	_, ok := a.launched[name]
+	return ok
+}
+
+// terminateLaunchedProcesses kills every process spawned via LaunchCmd.
+func (a *App) terminateLaunchedProcesses() {
+	a.launchedMu.Lock()
+	defer a.launchedMu.Unlock()
+	for name, cmd := range a.launched {
+		if err := cmd.Process.Kill(); err != nil {
+			log.Printf("Failed to terminate launched %s process: %s", name, err)
+		}
+	}
+}
+
 func (a *App) initPACTOR(cmdlineinit string) error {
 	if a.pactor != nil {
 		a.pactor.Close()
@@ -349,11 +475,37 @@ func (a *App) initVARAHF() error {
 	}
 	if a.varaHF != nil {
 		a.varaHF.Close()
+		a.varaHF = nil
 	}
 	m, err := a.initVARA(MethodVaraHF, a.config.VaraHF)
 	if err != nil {
 		return err
 	}
+	return a.finishVARAHF(m)
+}
+
+// initVARAHFForConnect is like initVARAHF, but waits for a launched modem to come up (see waitForVaraModem).
+func (a *App) initVARAHFForConnect() error {
+	if a.varaHF != nil && a.varaHF.Ping() {
+		return nil
+	}
+	if a.varaHF != nil {
+		a.varaHF.Close()
+		a.varaHF = nil
+	}
+	dialed, err := a.waitForVaraModem(MethodVaraHF, a.config.VaraHF)
+	if err != nil {
+		return fmt.Errorf("vara initialization failed: %w", err)
+	}
+	m, err := a.configureVaraModem(dialed, MethodVaraHF, a.config.VaraHF)
+	if err != nil {
+		return err
+	}
+	return a.finishVARAHF(m)
+}
+
+// finishVARAHF applies VaraHF's default bandwidth and installs m as a.varaHF.
+func (a *App) finishVARAHF(m *vara.Modem) error {
 	if bw := a.config.VaraHF.Bandwidth; bw != 0 {
 		if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
 			m.Close()
@@ -378,6 +530,7 @@ func (a *App) initVARAFM() error {
 	}
 	if a.varaFM != nil {
 		a.varaFM.Close()
+		a.varaFM = nil
 	}
 	m, err := a.initVARA(MethodVaraFM, a.config.VaraFM)
 	if err != nil {
@@ -387,16 +540,87 @@ func (a *App) initVARAFM() error {
 	return nil
 }
 
-func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
-	vConf := vara.ModemConfig{
-		Host:     conf.Host(),
-		CmdPort:  conf.CmdPort(),
-		DataPort: conf.DataPort(),
+// initVARAFMForConnect is like initVARAFM, but waits for a launched modem to come up (see waitForVaraModem).
+func (a *App) initVARAFMForConnect() error {
+	if a.varaFM != nil && a.varaFM.Ping() {
+		return nil
 	}
-	m, err := vara.NewModem(scheme, a.options.MyCall, vConf)
+	if a.varaFM != nil {
+		a.varaFM.Close()
+		a.varaFM = nil
+	}
+	dialed, err := a.waitForVaraModem(MethodVaraFM, a.config.VaraFM)
+	if err != nil {
+		return fmt.Errorf("vara initialization failed: %w", err)
+	}
+	m, err := a.configureVaraModem(dialed, MethodVaraFM, a.config.VaraFM)
+	if err != nil {
+		return err
+	}
+	a.varaFM = m
+	return nil
+}
+
+// dialVara is the actual dial+handshake; overridden in tests.
+var dialVara = vara.NewModem
+
+func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
+	m, err := a.openVaraModem(scheme, conf)
 	if err != nil {
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
+	return a.configureVaraModem(m, scheme, conf)
+}
+
+// openVaraModem makes a single dial+handshake attempt for scheme, launching
+// conf.LaunchCmd if configured and unreachable. Shared by Connect and
+// Listen; doesn't wait for the modem to come up itself — see waitForVaraModem.
+func (a *App) openVaraModem(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
+	vConf := vara.ModemConfig{Host: conf.Host(), CmdPort: conf.CmdPort(), DataPort: conf.DataPort()}
+	m, err := dialVara(scheme, a.options.MyCall, vConf)
+	if err == nil {
+		return m, nil
+	}
+	if conf.LaunchCmd.Path != "" {
+		if startErr := a.startLaunch(scheme, conf.LaunchCmd); startErr != nil {
+			debug.Printf("%s: launch_cmd failed to start: %s", scheme, startErr)
+			log.Printf("Pat failed to launch %s", scheme)
+		}
+	}
+	return nil, err
+}
+
+// waitForVaraModem is like openVaraModem, but polls up to launchPollBudget
+// for a freshly launched modem to come up — used only by the *ForConnect
+// paths. Like waitForARDOP, doesn't bail early just because the spawned
+// process exited: some launch_cmd scripts daemonize and exit immediately.
+func (a *App) waitForVaraModem(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
+	vConf := vara.ModemConfig{Host: conf.Host(), CmdPort: conf.CmdPort(), DataPort: conf.DataPort()}
+	m, err := dialVara(scheme, a.options.MyCall, vConf)
+	if err == nil || conf.LaunchCmd.Path == "" {
+		return m, err
+	}
+
+	if startErr := a.startLaunch(scheme, conf.LaunchCmd); startErr != nil {
+		debug.Printf("%s: launch_cmd failed to start: %s", scheme, startErr)
+		log.Printf("Pat failed to launch %s", scheme)
+		return nil, err
+	}
+
+	deadline := time.Now().Add(launchPollBudget)
+	for time.Now().Before(deadline) {
+		time.Sleep(launchPollInterval)
+		if m, err = dialVara(scheme, a.options.MyCall, vConf); err == nil {
+			return m, nil
+		}
+	}
+
+	log.Printf("Pat failed to launch %s", scheme)
+	return nil, err
+}
+
+// configureVaraModem finishes initializing a freshly dialed VARA modem.
+func (a *App) configureVaraModem(m *vara.Modem, scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
 	transport.RegisterDialer(scheme, m)
 	m.SetBusyFunc(a.onBusyChannel)
 
@@ -425,16 +649,38 @@ func (a *App) initAGWPE() error {
 	if a.agwpe != nil && a.agwpe.Ping() == nil {
 		return nil
 	}
-
 	if a.agwpe != nil {
 		a.agwpe.Close()
+		a.agwpe = nil
 	}
 
-	var err error
-	a.agwpe, err = agwpe.OpenPortTCP(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall)
+	tp, err := a.openAGWPE()
 	if err != nil {
 		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
 	}
+	return a.configureAGWPE(tp)
+}
+
+// initAGWPEForConnect is like initAGWPE, but waits for a launched daemon to come up (see waitForAGWPE).
+func (a *App) initAGWPEForConnect() error {
+	if a.agwpe != nil && a.agwpe.Ping() == nil {
+		return nil
+	}
+	if a.agwpe != nil {
+		a.agwpe.Close()
+		a.agwpe = nil
+	}
+
+	tp, err := a.waitForAGWPE()
+	if err != nil {
+		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
+	}
+	return a.configureAGWPE(tp)
+}
+
+// configureAGWPE finishes initializing a freshly dialed AGWPE TNC and installs it as a.agwpe.
+func (a *App) configureAGWPE(tp *agwpe.TNCPort) error {
+	a.agwpe = tp
 
 	if v, err := a.agwpe.Version(); err != nil {
 		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
@@ -444,6 +690,59 @@ func (a *App) initAGWPE() error {
 
 	transport.RegisterContextDialer(MethodAX25AGWPE, a.agwpe)
 	return nil
+}
+
+// dialAGWPE is the actual network dial+registration; overridden in tests.
+var dialAGWPE = agwpe.OpenPortTCP
+
+// agwpeLaunchName is the launch-tracking key and log-message name for
+// AGWPE's launch_cmd — not MethodAX25AGWPE ("ax25+agwpe"), since the terse
+// failure warning must read "Pat failed to launch agwpe".
+const agwpeLaunchName = "agwpe"
+
+// openAGWPE makes a single dial attempt, launching AGWPE.LaunchCmd if
+// configured and unreachable. Shared by Connect and Listen; doesn't wait
+// for the daemon to come up itself — see waitForAGWPE for that.
+func (a *App) openAGWPE() (*agwpe.TNCPort, error) {
+	tp, err := dialAGWPE(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall)
+	if err == nil {
+		return tp, nil
+	}
+	if a.config.AGWPE.LaunchCmd.Path != "" {
+		if startErr := a.startLaunch(agwpeLaunchName, a.config.AGWPE.LaunchCmd); startErr != nil {
+			debug.Printf("agwpe: launch_cmd failed to start: %s", startErr)
+			log.Printf("Pat failed to launch agwpe")
+		}
+	}
+	return nil, err
+}
+
+// waitForAGWPE is like openAGWPE, but polls up to launchPollBudget for a
+// freshly launched daemon to come up — used only by Connect, which has no
+// retry loop of its own. Doesn't bail early just because the spawned
+// process exited: some launch_cmd scripts daemonize and exit immediately.
+func (a *App) waitForAGWPE() (*agwpe.TNCPort, error) {
+	tp, err := dialAGWPE(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall)
+	if err == nil || a.config.AGWPE.LaunchCmd.Path == "" {
+		return tp, err
+	}
+
+	if startErr := a.startLaunch(agwpeLaunchName, a.config.AGWPE.LaunchCmd); startErr != nil {
+		debug.Printf("agwpe: launch_cmd failed to start: %s", startErr)
+		log.Printf("Pat failed to launch agwpe")
+		return nil, err
+	}
+
+	deadline := time.Now().Add(launchPollBudget)
+	for time.Now().Before(deadline) {
+		time.Sleep(launchPollInterval)
+		if tp, err = dialAGWPE(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall); err == nil {
+			return tp, nil
+		}
+	}
+
+	log.Printf("Pat failed to launch agwpe")
+	return nil, err
 }
 
 // defaultAX25Method resolves the generic ax25:// scheme to a implementation specific scheme.

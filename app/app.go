@@ -95,10 +95,8 @@ type App struct {
 	varaHF *vara.Modem
 	varaFM *vara.Modem
 
-	// launchedMu guards launched, which tracks processes Pat has spawned via
-	// a transport's configured LaunchCmd and not yet seen exit, keyed by
-	// transport method name. Used to avoid spawning a duplicate while one is
-	// already starting, and to terminate them on Close.
+	// launched tracks processes spawned via LaunchCmd, keyed by transport
+	// method name, so a launch isn't duplicated and can be killed on Close.
 	launchedMu sync.Mutex
 	launched   map[string]*exec.Cmd
 

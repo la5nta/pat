@@ -70,21 +70,14 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.AX25.Engine = cfg.DefaultAX25Engine()
 	}
 
-	// Ensure we have a default AGWPE config. A config that only sets
-	// launch_cmd (no addr) is not "fully configured, leave it alone" — it
-	// still needs the default Addr, so IsZeroExceptLaunchCmd() ignores
-	// LaunchCmd when deciding whether to apply defaults, and LaunchCmd is
-	// preserved across the swap.
+	// Ensure we have a default AGWPE config, preserving any configured LaunchCmd.
 	if config.AGWPE.IsZeroExceptLaunchCmd() {
 		launchCmd := config.AGWPE.LaunchCmd
 		config.AGWPE = cfg.DefaultConfig.AGWPE
 		config.AGWPE.LaunchCmd = launchCmd
 	}
 
-	// Ensure we have a default Ardop config. As with AGWPE above, a config
-	// that only sets launch_cmd still needs the other defaults (e.g. Addr),
-	// so LaunchCmd is excluded from the zero check and preserved across the
-	// swap.
+	// Ensure we have a default Ardop config, preserving any configured LaunchCmd.
 	if config.Ardop.IsZeroExceptLaunchCmd() {
 		launchCmd := config.Ardop.LaunchCmd
 		config.Ardop = cfg.DefaultConfig.Ardop
@@ -114,10 +107,7 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.Pactor = cfg.DefaultConfig.Pactor
 	}
 
-	// Ensure VARA FM and VARA HF has default values. As with AGWPE above, a
-	// config that only sets launch_cmd still needs the other defaults, so
-	// LaunchCmd is excluded from the zero check and preserved across the
-	// swap.
+	// Ensure VARA FM and VARA HF have default values, preserving any configured LaunchCmd.
 	if config.VaraHF.IsZeroExceptLaunchCmd() {
 		launchCmd := config.VaraHF.LaunchCmd
 		config.VaraHF = cfg.DefaultConfig.VaraHF

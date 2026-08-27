@@ -233,14 +233,10 @@ type ArdopConfig struct {
 	LaunchCmd LaunchCmd `json:"launch_cmd"`
 }
 
-// IsZero reports whether c is the zero value. Uses reflect.DeepEqual rather
-// than == because LaunchCmd.Args is a slice, which isn't comparable.
+// IsZero reports whether c is the zero value (uses reflect.DeepEqual since Args is a slice).
 func (c ArdopConfig) IsZero() bool { return reflect.DeepEqual(c, ArdopConfig{}) }
 
-// IsZeroExceptLaunchCmd reports whether c is the zero value, ignoring
-// LaunchCmd. Used to decide whether to apply default values (e.g. Addr) to a
-// config that only sets launch_cmd, which must not be treated as "fully
-// configured, leave it alone".
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
 func (c ArdopConfig) IsZeroExceptLaunchCmd() bool {
 	c.LaunchCmd = LaunchCmd{}
 	return c.IsZero()
@@ -291,28 +287,18 @@ func (v *VaraConfig) UnmarshalJSON(b []byte) error {
 		legacy.newFormat.Addr = fmt.Sprintf("%s:%d", legacy.Host, legacy.CmdPort)
 	}
 	*v = VaraConfig(legacy.newFormat)
-	// Only validate the port when the config isn't the "addr left unset
-	// entirely" shape that's allowed to fall back to defaults later (a
-	// config that only sets launch_cmd, or nothing at all). Any other
-	// field set (Rig, PTTControl, ...) without an addr is a mistake and
-	// should fail fast here rather than surface as an obscure dial error,
-	// which is why this checks IsZeroExceptLaunchCmd() rather than just
-	// v.Addr != "" — the latter would also let e.g. "rig set, no addr, no
-	// launch_cmd" load silently.
+	// Fail fast unless addr is either set or excused by launch_cmd — a
+	// config with e.g. Rig set but no addr/launch_cmd is a mistake.
 	if !v.IsZeroExceptLaunchCmd() && v.CmdPort() <= 0 {
 		return fmt.Errorf("invalid addr format")
 	}
 	return nil
 }
 
-// IsZero reports whether v is the zero value. Uses reflect.DeepEqual rather
-// than == because LaunchCmd.Args is a slice, which isn't comparable.
+// IsZero reports whether v is the zero value (uses reflect.DeepEqual since Args is a slice).
 func (v VaraConfig) IsZero() bool { return reflect.DeepEqual(v, VaraConfig{}) }
 
-// IsZeroExceptLaunchCmd reports whether v is the zero value, ignoring
-// LaunchCmd. Used to decide whether to apply default values (e.g. Addr) to a
-// config that only sets launch_cmd, which must not be treated as "fully
-// configured, leave it alone".
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
 func (v VaraConfig) IsZeroExceptLaunchCmd() bool {
 	v.LaunchCmd = LaunchCmd{}
 	return v.IsZero()
@@ -378,14 +364,10 @@ type AGWPEConfig struct {
 	LaunchCmd LaunchCmd `json:"launch_cmd"`
 }
 
-// IsZero reports whether c is the zero value. Uses reflect.DeepEqual rather
-// than == because LaunchCmd.Args is a slice, which isn't comparable.
+// IsZero reports whether c is the zero value (uses reflect.DeepEqual since Args is a slice).
 func (c AGWPEConfig) IsZero() bool { return reflect.DeepEqual(c, AGWPEConfig{}) }
 
-// IsZeroExceptLaunchCmd reports whether c is the zero value, ignoring
-// LaunchCmd. Used to decide whether to apply default values (e.g. Addr) to a
-// config that only sets launch_cmd, which must not be treated as "fully
-// configured, leave it alone".
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
 func (c AGWPEConfig) IsZeroExceptLaunchCmd() bool {
 	c.LaunchCmd = LaunchCmd{}
 	return c.IsZero()

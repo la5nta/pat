@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/harenber/Pat-PTB"
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/wl2k-go/rigcontrol/hamlib"
 	"github.com/la5nta/wl2k-go/transport/ardop"
@@ -39,6 +40,9 @@ func (a *App) Listen(listenStr string) {
 		if method == MethodAX25 {
 			method = a.defaultAX25Method()
 		}
+		if method == MethodPactor {
+			method = a.defaultPactorMethod()
+		}
 
 		switch strings.ToLower(method) {
 		case MethodArdop:
@@ -53,7 +57,9 @@ func (a *App) Listen(listenStr string) {
 			a.listenHub.Enable(VaraFMListener{a})
 		case MethodVaraHF:
 			a.listenHub.Enable(VaraHFListener{a})
-		case MethodAX25SerialTNC, MethodSerialTNCDeprecated:
+		case MethodPactorPTB:
+			a.listenHub.Enable(PTBListener{a})
+		case MethodAX25SerialTNC, MethodSerialTNCDeprecated, MethodPactorSerial:
 			log.Printf("%s listen not implemented, ignoring.", method)
 		default:
 			log.Printf("'%s' is not a valid listen method", method)
@@ -198,6 +204,23 @@ func (l VaraHFListener) CurrentFreq() (Frequency, bool) {
 	}
 	return 0, false
 }
+
+type PTBListener struct {
+	a interface {
+		Config() cfg.Config
+		PTB() (*ptb.Modem, error)
+	}
+}
+
+func (l PTBListener) Name() string { return MethodPactorPTB }
+func (l PTBListener) Init() (net.Listener, error) {
+	m, err := l.a.PTB()
+	if err != nil {
+		return nil, err
+	}
+	return m.NewListener()
+}
+func (l PTBListener) CurrentFreq() (Frequency, bool) { return 0, false }
 
 type AX25AGWPEListener struct {
 	a interface {

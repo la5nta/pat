@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/harenber/Pat-PTB"
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/pat/api/types"
 	"github.com/la5nta/pat/cfg"
@@ -40,9 +41,12 @@ import (
 const (
 	MethodArdop  = "ardop"
 	MethodTelnet = "telnet"
-	MethodPactor = "pactor"
 	MethodVaraHF = "varahf"
 	MethodVaraFM = "varafm"
+
+	MethodPactor       = "pactor"
+	MethodPactorSerial = MethodPactor + "+serial"
+	MethodPactorPTB    = MethodPactor + "+ptb"
 
 	MethodAX25          = "ax25"
 	MethodAX25AGWPE     = MethodAX25 + "+agwpe"
@@ -90,6 +94,7 @@ type App struct {
 	ardop  *ardop.TNC
 	agwpe  *agwpe.TNCPort
 	pactor *pactor.Modem
+	ptb    *ptb.Modem
 	varaHF *vara.Modem
 	varaFM *vara.Modem
 
@@ -141,7 +146,7 @@ func (a *App) VFOForTransport(transport string) (vfo hamlib.VFO, rigName string,
 		rig = a.config.Ardop.Rig
 	case transport == MethodAX25, strings.HasPrefix(transport, MethodAX25+"+"):
 		rig = a.config.AX25.Rig
-	case transport == MethodPactor:
+	case transport == MethodPactor, strings.HasPrefix(transport, MethodPactor+"+"):
 		rig = a.config.Pactor.Rig
 	case transport == MethodVaraHF:
 		rig = a.config.VaraHF.Rig
@@ -396,6 +401,11 @@ func (a *App) Close() {
 	if a.pactor != nil {
 		if err := a.pactor.Close(); err != nil {
 			log.Printf("Failure to close pactor modem: %s", err)
+		}
+	}
+	if a.ptb != nil {
+		if err := a.ptb.Close(); err != nil {
+			log.Printf("Failure to close ptb modem: %s", err)
 		}
 	}
 	if a.varaFM != nil {

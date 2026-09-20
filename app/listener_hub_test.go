@@ -2,37 +2,48 @@ package app
 
 import (
 	"net"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 type mockListener struct {
-	closed    bool
-	acceptErr error
+	closed chan struct{}
+	close  func()
+}
+
+func newMockListener() *mockListener {
+	m := &mockListener{
+		closed: make(chan struct{}),
+	}
+	m.close = sync.OnceFunc(func() { close(m.closed) })
+	return m
 }
 
 func (m *mockListener) Accept() (net.Conn, error) {
-	if m.acceptErr != nil {
-		return nil, m.acceptErr
-	}
-	select {} // Block forever to simulate working listener
+	<-m.closed
+	return nil, net.ErrClosed
 }
 
-func (m *mockListener) Close() error   { m.closed = true; m.acceptErr = net.ErrClosed; return nil }
+func (m *mockListener) Close() error {
+	m.close()
+	return nil
+}
 func (m *mockListener) Addr() net.Addr { return nil }
 
 type mockTransportListener struct {
 	name          string
 	initErr       error
-	initCallCount int
+	initCallCount atomic.Int32
 }
 
 func (m *mockTransportListener) Init() (net.Listener, error) {
-	m.initCallCount++
+	m.initCallCount.Add(1)
 	if m.initErr != nil {
 		return nil, m.initErr
 	}
-	return &mockListener{}, nil
+	return newMockListener(), nil
 }
 
 func (m *mockTransportListener) Name() string                   { return m.name }
@@ -84,7 +95,7 @@ func TestListener_RetriesOnFailure(t *testing.T) {
 	// Wait for multiple retry attempts
 	time.Sleep(2500 * time.Millisecond)
 
-	if transport.initCallCount < 2 {
-		t.Errorf("Expected at least 2 Init calls due to retries, got %d", transport.initCallCount)
+	if transport.initCallCount.Load() < 2 {
+		t.Errorf("Expected at least 2 Init calls due to retries, got %d", transport.initCallCount.Load())
 	}
 }

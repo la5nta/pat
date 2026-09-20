@@ -36,10 +36,10 @@ require (
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/paulrosania/go-charset v0.0.0-20190326053356-55c9d7a5834c // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/mod v0.39.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20240522233618-39ace7a40ae7 // indirect
-	golang.org/x/tools v0.29.0 // indirect
-	golang.org/x/vuln v1.1.4 // indirect
+	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
+	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/vuln v1.7.0 // indirect
 )

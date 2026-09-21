@@ -126,6 +126,61 @@ body > .container {
   color: maroon;
 }
 
+#folder thead th {
+  white-space: nowrap;
+  user-select: none;
+}
+
+#folder thead th.sortable {
+  cursor: pointer;
+}
+
+/* Every sortable header shows a faint marker until it is the active sort */
+#folder thead th.sortable::after {
+  content: ' \21C5';
+  font-size: 80%;
+  opacity: 0.35;
+}
+
+#folder thead th.sortable.sorted::after {
+  opacity: 1;
+}
+
+#folder thead th.sorted-asc::after {
+  content: ' \25B2';
+  font-size: 80%;
+}
+
+#folder thead th.sorted-desc::after {
+  content: ' \25BC';
+  font-size: 80%;
+}
+
+#bulk_actions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  font-size: 85%;
+}
+
+#bulk_actions #bulk_count {
+  display: inline-block;
+  min-width: 80px;
+}
+
+#folder .select-col {
+  width: 24px;
+  text-align: center;
+}
+
+#folder .select-col input {
+  margin: 0;
+  cursor: pointer;
+}
+
 /*
  * Message viewer
  */

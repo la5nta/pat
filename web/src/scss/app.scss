@@ -292,6 +292,16 @@ body > .container {
   height: 120px;
 }
 
+#version_tag {
+  position: fixed;
+  right: 8px;
+  bottom: 0;
+  font-size: 10px;
+  line-height: 14px;
+  color: #999;
+  pointer-events: none;
+}
+
 #console {
   height: 120px;
   overflow-y: auto;

@@ -1,11 +1,11 @@
 module github.com/la5nta/pat
 
-go 1.25.0
+go 1.26.0
 
 tool golang.org/x/vuln/cmd/govulncheck
 
 require (
-	github.com/adhocore/gronx v1.20.0
+	github.com/adhocore/gronx v1.20.4
 	github.com/adrg/xdg v0.5.3
 	github.com/bndr/gotabulate v1.1.3-0.20170315142410-bc555436bfd5
 	github.com/fsnotify/fsnotify v1.10.1
@@ -20,9 +20,9 @@ require (
 	github.com/pd0mz/go-maidenhead v1.0.0
 	github.com/peterh/liner v1.2.2
 	github.com/spf13/pflag v1.0.10
-	golang.org/x/image v0.44.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/term v0.45.0
+	golang.org/x/image v0.46.0
+	golang.org/x/sync v0.23.0
+	golang.org/x/term v0.46.0
 )
 
 require (
@@ -33,13 +33,13 @@ require (
 	github.com/creack/goselect v0.1.3 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/paulrosania/go-charset v0.0.0-20190326053356-55c9d7a5834c // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/mod v0.39.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
-	golang.org/x/tools v0.49.0 // indirect
-	golang.org/x/vuln v1.7.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect
+	golang.org/x/tools v0.50.0 // indirect
+	golang.org/x/vuln v1.8.0 // indirect
 )

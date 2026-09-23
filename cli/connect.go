@@ -26,7 +26,8 @@ const (
 transport:
   telnet:          TCP/IP
   ardop:           ARDOP TNC
-  pactor:          SCS PTC modems
+  pactor:          SCS PTC modems (legacy driver)
+  ptb:             PTB (PACTOR-TCP-Bridge) - modern PACTOR driver
   varahf:          VARA HF TNC
   varafm:          VARA FM TNC
   ax25:            AX.25 (Default - uses engine specified in config)
@@ -63,7 +64,8 @@ params:
   connect ax25:///LA1B/LA5NTA          Peer-to-peer connection with LA5NTA via LA1B digipeater.
   connect ardop:///LA3F                Connect to the RMS HF Gateway LA3F using ARDOP on the default tcp address and port.
   connect ardop:///LA3F?freq=5350      Same as above, but set dial frequency of the radio using rigcontrol.  
-  connect pactor:///LA3F               Connect to RMS HF Gateway LA3F using PACTOR.
+  connect pactor:///LA3F               Connect to RMS HF Gateway LA3F using PACTOR engine as per configuration.
+  connect pactor+ptb:///LA3F           Connect to LA3F using the PACTOR-TCP-Bridge (PTB) engine.
   connect varahf:///LA1B               Connect to RMS HF Gateway LA1B using VARA HF TNC.
   connect varafm:///LA5NTA             Connect to LA5NTA using VARA FM TNC.
 `

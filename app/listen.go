@@ -208,6 +208,7 @@ func (l VaraHFListener) CurrentFreq() (Frequency, bool) {
 type PTBListener struct {
 	a interface {
 		Config() cfg.Config
+		VFOForRig(string) (hamlib.VFO, bool)
 		PTB() (*ptb.Modem, error)
 	}
 }
@@ -220,7 +221,13 @@ func (l PTBListener) Init() (net.Listener, error) {
 	}
 	return m.NewListener()
 }
-func (l PTBListener) CurrentFreq() (Frequency, bool) { return 0, false }
+func (l PTBListener) CurrentFreq() (Frequency, bool) {
+	if rig, ok := l.a.VFOForRig(l.a.Config().PTB.Rig); ok {
+		f, _ := rig.GetFreq()
+		return Frequency(f), ok
+	}
+	return 0, false
+}
 
 type AX25AGWPEListener struct {
 	a interface {

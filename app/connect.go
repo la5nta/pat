@@ -513,9 +513,9 @@ func (a *App) initAGWPE() error {
 // defaultPactorMethod resolves the generic pactor:// scheme to a implementation specific scheme.
 func (a *App) defaultPactorMethod() string {
 	switch a.config.Pactor.Engine {
-	case cfg.PactorEngineSerial:
+	case cfg.PactorEngine("serial"):
 		return MethodPactorSerial
-	case cfg.PactorEnginePTB:
+	case cfg.PactorEngine("ptb"):
 		return MethodPactorPTB
 	case "":
 		// Unset (e.g. legacy config not passed through UnmarshalJSON): fall

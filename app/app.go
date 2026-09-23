@@ -146,8 +146,10 @@ func (a *App) VFOForTransport(transport string) (vfo hamlib.VFO, rigName string,
 		rig = a.config.Ardop.Rig
 	case transport == MethodAX25, strings.HasPrefix(transport, MethodAX25+"+"):
 		rig = a.config.AX25.Rig
-	case transport == MethodPactor, strings.HasPrefix(transport, MethodPactor+"+"):
+	case transport == MethodPactor || transport == MethodPactorSerial:
 		rig = a.config.Pactor.Rig
+	case transport == MethodPactorPTB:
+		rig = a.config.PTB.Rig
 	case transport == MethodVaraHF:
 		rig = a.config.VaraHF.Rig
 	case transport == MethodVaraFM:

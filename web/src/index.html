@@ -501,6 +501,27 @@
 
     <!-- Begin folder -->
     <div class="table-responsive panel panel-default" id="folder">
+      <div id="bulk_actions" style="display: none">
+        <span id="bulk_count">0 selected</span>
+        <div class="btn-group btn-group-xs" role="group">
+          <button type="button" class="btn btn-default" id="bulk_read_btn">
+            <span class="glyphicon glyphicon-eye-open"></span> Mark read
+          </button>
+          <button type="button" class="btn btn-default" id="bulk_unread_btn">
+            <span class="glyphicon glyphicon-eye-close"></span> Mark unread
+          </button>
+          <button type="button" class="btn btn-default" id="bulk_archive_btn">
+            <span class="glyphicon glyphicon-folder-close"></span> Archive
+          </button>
+          <button type="button" class="btn btn-default" id="bulk_unarchive_btn">
+            <span class="glyphicon glyphicon-inbox"></span> Move to Inbox
+          </button>
+          <button type="button" class="btn btn-danger" id="bulk_delete_btn">
+            <span class="glyphicon glyphicon-trash"></span> Delete
+          </button>
+        </div>
+        <button type="button" class="btn btn-link btn-xs" id="bulk_clear_btn">Clear</button>
+      </div>
       <table class="table table-striped table-condensed table-hover"></table>
     </div>
     <!-- End folder -->
@@ -544,6 +565,11 @@
                 <li>
                   <a href="#" id="archive_btn">
                     <span class="glyphicon glyphicon-briefcase"></span> Archive
+                  </a>
+                </li>
+                <li>
+                  <a href="#" id="unarchive_btn">
+                    <span class="glyphicon glyphicon-inbox"></span> Move to Inbox
                   </a>
                 </li>
                 <li>
@@ -591,6 +617,8 @@
       <pre id="console"></pre>
     </div>
   </div>
+
+  <div id="version_tag">{{.AppName}} {{.Version}}</div>
 
   <script src="dist/js/app.js"></script>
 </body>

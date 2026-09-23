@@ -17,6 +17,7 @@ export class Viewer {
     this.editAsNewBtn = $('#edit_as_new_btn');
     this.deleteBtn = $('#delete_btn');
     this.archiveBtn = $('#archive_btn');
+    this.unarchiveBtn = $('#unarchive_btn');
     this.confirmDelete = $('#confirm_delete');
   }
 
@@ -58,7 +59,11 @@ export class Viewer {
   }
 
   _archiveMessage(box, mid) {
-    $.ajax('/api/mailbox/archive', {
+    this._moveMessage(box, mid, 'archive', 'Message archived');
+  }
+
+  _moveMessage(box, mid, target, doneText) {
+    $.ajax('/api/mailbox/' + encodeURIComponent(target), {
       headers: {
         'X-Pat-SourcePath': this._buildMessagePath(box, mid),
       },
@@ -66,7 +71,7 @@ export class Viewer {
       type: 'POST',
       success: resp => {
         this.view.modal('hide');
-        alert('Message archived');
+        alert(doneText);
       },
       error: function(xhr, st, resp) {
         alert(resp + ': ' + xhr.responseText);
@@ -188,11 +193,18 @@ export class Viewer {
         this._archiveMessage(currentFolder, mid);
       });
 
-      // Archive button should be hidden for already archived messages
+      this.unarchiveBtn.off('click');
+      this.unarchiveBtn.click(evt => {
+        this._moveMessage(currentFolder, mid, 'in', 'Message moved to inbox');
+      });
+
+      // Archived messages can move back to the inbox, all others can be archived
       if (currentFolder == 'archive') {
         this.archiveBtn.parent().hide();
+        this.unarchiveBtn.parent().show();
       } else {
         this.archiveBtn.parent().show();
+        this.unarchiveBtn.parent().hide();
       }
 
       this.view.show();

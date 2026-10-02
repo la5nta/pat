@@ -1,4 +1,5 @@
 import { alert, isImageSuffix, formatFileSize, formXmlToFormName } from '../utils/index.js';
+import { messagePath, setRead, moveMessage, deleteMessage } from '../message-api/index.js';
 
 export class Viewer {
   constructor(composer) {
@@ -17,24 +18,13 @@ export class Viewer {
     this.editAsNewBtn = $('#edit_as_new_btn');
     this.deleteBtn = $('#delete_btn');
     this.archiveBtn = $('#archive_btn');
+    this.unarchiveBtn = $('#unarchive_btn');
     this.confirmDelete = $('#confirm_delete');
   }
 
-  _buildMessagePath(folder, mid) {
-    return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
-  }
-
   _setRead(box, mid) {
-    const data = { read: true };
-
-    $.ajax(this._buildMessagePath(box, mid) + '/read', {
-      data: JSON.stringify(data),
-      contentType: 'application/json',
-      type: 'POST',
-      success: function(resp) { },
-      error: function(xhr, st, resp) {
-        alert(resp + ': ' + xhr.responseText);
-      },
+    setRead(box, mid, true).fail(function(xhr, st, resp) {
+      alert(resp + ': ' + xhr.responseText);
     });
   }
 
@@ -42,40 +32,36 @@ export class Viewer {
     this.confirmDelete.on('click', '.btn-ok', e => {
       this.view.modal('hide');
       const $modalDiv = $(e.delegateTarget);
-      $.ajax(this._buildMessagePath(box, mid), {
-        type: 'DELETE',
-        success: function(resp) {
+      deleteMessage(box, mid)
+        .done(function(resp) {
           $modalDiv.modal('hide');
           alert('Message deleted');
-        },
-        error: function(xhr, st, resp) {
+        })
+        .fail(function(xhr, st, resp) {
           $modalDiv.modal('hide');
           alert(resp + ': ' + xhr.responseText);
-        },
-      });
+        });
     });
     this.confirmDelete.modal('show');
   }
 
   _archiveMessage(box, mid) {
-    $.ajax('/api/mailbox/archive', {
-      headers: {
-        'X-Pat-SourcePath': this._buildMessagePath(box, mid),
-      },
-      contentType: 'application/json',
-      type: 'POST',
-      success: resp => {
+    this._moveMessage(box, mid, 'archive', 'Message archived');
+  }
+
+  _moveMessage(box, mid, target, doneText) {
+    moveMessage(box, mid, target)
+      .done(resp => {
         this.view.modal('hide');
-        alert('Message archived');
-      },
-      error: function(xhr, st, resp) {
+        alert(doneText);
+      })
+      .fail(function(xhr, st, resp) {
         alert(resp + ': ' + xhr.responseText);
-      },
-    });
+      });
   }
 
   displayMessage(currentFolder, mid) {
-    const msg_url = this._buildMessagePath(currentFolder, mid);
+    const msg_url = messagePath(currentFolder, mid);
 
     $.getJSON(msg_url, data => {
       this.subject.text(data.Subject);
@@ -188,11 +174,18 @@ export class Viewer {
         this._archiveMessage(currentFolder, mid);
       });
 
-      // Archive button should be hidden for already archived messages
+      this.unarchiveBtn.off('click');
+      this.unarchiveBtn.click(evt => {
+        this._moveMessage(currentFolder, mid, 'in', 'Message moved to inbox');
+      });
+
+      // Archived messages can move back to the inbox, all others can be archived
       if (currentFolder == 'archive') {
         this.archiveBtn.parent().hide();
+        this.unarchiveBtn.parent().show();
       } else {
         this.archiveBtn.parent().show();
+        this.unarchiveBtn.parent().hide();
       }
 
       this.view.show();

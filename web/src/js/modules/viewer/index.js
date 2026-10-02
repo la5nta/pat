@@ -1,4 +1,5 @@
 import { alert, isImageSuffix, formatFileSize, formXmlToFormName, htmlEscape } from '../utils/index.js';
+import { messagePath, setRead, moveMessage, deleteMessage } from '../message-api/index.js';
 
 export class Viewer {
   constructor(composer) {
@@ -21,21 +22,9 @@ export class Viewer {
     this.confirmDelete = $('#confirm_delete');
   }
 
-  _buildMessagePath(folder, mid) {
-    return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
-  }
-
   _setRead(box, mid) {
-    const data = { read: true };
-
-    $.ajax(this._buildMessagePath(box, mid) + '/read', {
-      data: JSON.stringify(data),
-      contentType: 'application/json',
-      type: 'POST',
-      success: function(resp) { },
-      error: function(xhr, st, resp) {
-        alert(resp + ': ' + xhr.responseText);
-      },
+    setRead(box, mid, true).fail(function(xhr, st, resp) {
+      alert(resp + ': ' + xhr.responseText);
     });
   }
 
@@ -43,17 +32,15 @@ export class Viewer {
     this.confirmDelete.on('click', '.btn-ok', e => {
       this.view.modal('hide');
       const $modalDiv = $(e.delegateTarget);
-      $.ajax(this._buildMessagePath(box, mid), {
-        type: 'DELETE',
-        success: function(resp) {
+      deleteMessage(box, mid)
+        .done(function(resp) {
           $modalDiv.modal('hide');
           alert('Message deleted');
-        },
-        error: function(xhr, st, resp) {
+        })
+        .fail(function(xhr, st, resp) {
           $modalDiv.modal('hide');
           alert(resp + ': ' + xhr.responseText);
-        },
-      });
+        });
     });
     this.confirmDelete.modal('show');
   }
@@ -63,24 +50,18 @@ export class Viewer {
   }
 
   _moveMessage(box, mid, target, doneText) {
-    $.ajax('/api/mailbox/' + encodeURIComponent(target), {
-      headers: {
-        'X-Pat-SourcePath': this._buildMessagePath(box, mid),
-      },
-      contentType: 'application/json',
-      type: 'POST',
-      success: resp => {
+    moveMessage(box, mid, target)
+      .done(resp => {
         this.view.modal('hide');
         alert(doneText);
-      },
-      error: function(xhr, st, resp) {
+      })
+      .fail(function(xhr, st, resp) {
         alert(resp + ': ' + xhr.responseText);
-      },
-    });
+      });
   }
 
   displayMessage(currentFolder, mid) {
-    const msg_url = this._buildMessagePath(currentFolder, mid);
+    const msg_url = messagePath(currentFolder, mid);
 
     $.getJSON(msg_url, data => {
       this.subject.text(data.Subject);

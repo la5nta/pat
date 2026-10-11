@@ -1,0 +1,10 @@
+[Unit]
+Description=pat - Winlink client
+Documentation=https://github.com/la5nta/pat/wiki
+
+[Service]
+ExecStart=/usr/bin/pat http
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

@@ -2,6 +2,7 @@ import 'jquery';
 import 'bootstrap/dist/js/bootstrap';
 import 'bootstrap-select';
 import 'bootstrap-tokenfield';
+import { initA11y } from './modules/a11y/index.js';
 
 $(document).ready(function() {
   // Function to enforce minimum beacon interval
@@ -779,3 +780,5 @@ $(document).ready(function() {
     $('#scheduleContainer').append(newRow);
   });
 });
+
+$(document).ready(() => initA11y());

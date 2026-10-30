@@ -27,7 +27,7 @@
         <a class="navbar-brand" href="#">
           <span id="gui_status_light" class="btn status-light btn-danger"></span> <span id="mycall">{{.Mycall}}</span>
         </a>
-        <div class="navbar-text"><a href="#" class="navbar-link" id="status_text"></a></div>
+        <div class="navbar-text" role="status"><a href="#" class="navbar-link" id="status_text"></a></div>
       </div>
       <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
@@ -42,18 +42,18 @@
             <ul class="dropdown-menu" role="menu">
               <li>
                 <a href="#" data-toggle="modal" data-target="#connectModal">
-                  <span class="glyphicon glyphicon-refresh"></span> Connect...
+                  <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Connect...
                 </a>
               </li>
               <li class="divider"></li>
               <li>
                 <a href="#" data-toggle="modal" data-target="#composer">
-                  <span class="glyphicon glyphicon-edit"></span> Compose...
+                  <span class="glyphicon glyphicon-edit" aria-hidden="true"></span> Compose...
                 </a>
               </li>
               <li>
                 <a href="#" data-toggle="modal" data-target="#posModal">
-                  <span class="glyphicon glyphicon-map-marker"></span> Position...
+                  <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span> Position...
                 </a>
               </li>
               <li class="divider"></li>
@@ -165,7 +165,7 @@
                     </select>
                     <span class="input-group-btn">
                       <button class="btn btn-default" type="button" id="aliasActionBtn" title="Save current configuration as new alias" style="display: none;">
-                        <span class="glyphicon glyphicon-plus"></span>
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                       </button>
                     </span>
                   </div>
@@ -227,7 +227,7 @@
                 </div>
               </div>
             </form>
-            <input id="connectURLInput" class="text-muted"
+            <input id="connectURLInput" class="text-muted" aria-label="Connect URL"
               style="border: none; width: 80%; float: left; position: relative; bottom: 5px">
             <span id="qsyWarning" class="text-danger" style="float: right; position: relative; bottom: 5px" hidden>
             </span>
@@ -307,7 +307,7 @@
                 </div>
               </div>
               <div id="rmslistSpinner" class="text-center" style="display: none;">
-                <span class="glyphicon glyphicon-refresh icon-spin text-muted"
+                <span class="glyphicon glyphicon-refresh icon-spin text-muted" aria-hidden="true"
                   style="font-size: 24px; margin: 12px 0;"></span>
               </div>
             </div>
@@ -329,15 +329,15 @@
           <div class="modal-body" id="posView">
             <div class="row">
               <div class="form-group col-xs-6">
-                <label for="lat">latitude</label>
+                <label for="pos_lat">latitude</label>
                 <input type="text" id="pos_lat" name="lat" class="form-control" placeholder="60.1234" />
               </div>
               <div class="form-group col-xs-6">
-                <label for="long">longitude</label>
+                <label for="pos_long">longitude</label>
                 <input type="text" id="pos_long" name="long" class="form-control" placeholder="5.0123" />
               </div>
               <div class="form-group col-xs-12">
-                <label for="comment">Comment</label>
+                <label for="pos_comment">Comment</label>
                 <input type="text" id="pos_comment" name="comment" class="form-control" placeholder="" />
               </div>
             </div>
@@ -396,7 +396,7 @@
           </div>
           <div class="modal-body" id="posView">
             <p id="version">{{.AppName}} {{.Version}}</p>
-            <img src="dist/static/pat_logo.png" width="35%" class="center-block" />
+            <img src="dist/static/pat_logo.png" width="35%" class="center-block" alt="Pat" />
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
@@ -417,15 +417,15 @@
               <h4 class="modal-title" id="composer_subject">New message...</h4>
               <div class="input-group input-group-sm composer-field">
                 <span class="input-group-addon">To</span>
-                <input type="text" id="msg_to" name="to" class="form-control" placeholder="" />
+                <input type="text" id="msg_to" name="to" class="form-control" placeholder="" aria-label="To" />
               </div>
               <div class="input-group input-group-sm composer-field">
                 <span class="input-group-addon">Cc</span>
-                <input type="text" id="msg_cc" name="cc" class="form-control" placeholder="" />
+                <input type="text" id="msg_cc" name="cc" class="form-control" placeholder="" aria-label="Cc" />
               </div>
               <div class="input-group input-group-sm composer-field">
                 <span class="input-group-addon">Subject</span>
-                <input type="text" id="msg_subject" name="subject" class="form-control" placeholder="Look ma!" />
+                <input type="text" id="msg_subject" name="subject" class="form-control" placeholder="Look ma!" aria-label="Subject" />
               </div>
               <span id="composer_error" class="label label-danger pull-right">
                 This is an error</span>
@@ -434,21 +434,21 @@
               </div>
             </div>
             <div class="modal-body primary">
-              <textarea name="body" class="form-control" id="msg_body"></textarea>
+              <textarea name="body" class="form-control" id="msg_body" aria-label="Message"></textarea>
             </div>
             <div class="modal-footer primary">
               <div id="composer_actions">
                 <div class="input-group pull-right">
                   <button id="post_btn" type="submit" class="btn btn-primary">
-                    Post <span class="glyphicon glyphicon-send"></span>
+                    Post <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
                   </button>
                 </div>
                 <div class="input-group">
                   <span class="btn btn-default btn-file">
                     Add attachment&hellip;
-                    <input id="msg_attachments_input" name="files" type="file" multiple /></span>
+                    <input id="msg_attachments_input" name="files" type="file" multiple aria-label="Add attachment" /></span>
                   <a href="#" id="formsSelectBtn" class="btn btn-default" data-toggle="modal" data-target="#selectForm">
-                    Template&hellip; <span class="glyphicon glyphicon-edit"> </span>
+                    Template&hellip; <span class="glyphicon glyphicon-edit" aria-hidden="true"> </span>
                   </a>
                 </div>
               </div>
@@ -483,7 +483,7 @@
                   <div class="search-container">
                     <input type="text" class="form-control" id="formSearchInput" placeholder="Search forms...">
                     <button class="search-clear" type="button" id="clearSearchButton">
-                      <span class="glyphicon glyphicon-remove"></span>
+                      <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>
                     </button>
                   </div>
                 </div>
@@ -520,35 +520,35 @@
               <ul class="dropdown-menu" role="menu">
                 <li>
                   <a href="#" id="reply_btn">
-                    <span class="glyphicon glyphicon-share-alt icon-flip"></span> Reply...
+                    <span class="glyphicon glyphicon-share-alt icon-flip" aria-hidden="true"></span> Reply...
                   </a>
                 </li>
                 <li>
                   <a href="#" id="reply_all_btn">
-                    <span class="glyphicon glyphicon-share-alt icon-flip" style="visibility: hidden"></span> Reply
+                    <span class="glyphicon glyphicon-share-alt icon-flip" aria-hidden="true" style="visibility: hidden"></span> Reply
                     All...
                   </a>
                 </li>
                 <li class="divider"></li>
                 <li>
                   <a href="#" id="forward_btn">
-                    <span class="glyphicon glyphicon-share-alt"></span> Forward...
+                    <span class="glyphicon glyphicon-share-alt" aria-hidden="true"></span> Forward...
                   </a>
                 </li>
                 <li>
                   <a href="#" id="edit_as_new_btn">
-                    <span class="glyphicon glyphicon-edit"></span> Edit as new...
+                    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span> Edit as new...
                   </a>
                 </li>
                 <li class="divider"></li>
                 <li>
                   <a href="#" id="archive_btn">
-                    <span class="glyphicon glyphicon-briefcase"></span> Archive
+                    <span class="glyphicon glyphicon-briefcase" aria-hidden="true"></span> Archive
                   </a>
                 </li>
                 <li>
                   <a href="#" id="delete_btn">
-                    <span class="glyphicon glyphicon-trash"></span> Delete
+                    <span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Delete
                   </a>
                 </li>
               </ul>
@@ -588,7 +588,7 @@
 
   <div class="footer">
     <div class="container">
-      <pre id="console"></pre>
+      <pre id="console" role="log" aria-live="polite" aria-label="Connection log"></pre>
     </div>
   </div>
 

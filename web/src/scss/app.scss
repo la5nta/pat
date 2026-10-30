@@ -591,3 +591,38 @@ input[type='radio'] {
     width: 100%;
   }
 }
+
+// Accessibility: text contrast of at least 4.5:1 (WCAG 2.2 AA) where
+// Bootstrap's greys and button colours fall short, and a visible focus
+// on message rows.
+.navbar-default .navbar-nav > li > a,
+.navbar-default .navbar-brand,
+.navbar-default .navbar-text,
+.navbar-default .navbar-link {
+  color: #555;
+}
+
+.text-muted,
+.panel-heading small {
+  color: #595959;
+}
+
+.btn-primary {
+  background-color: #2a6496;
+  border-color: #245580;
+}
+
+.btn-success {
+  background-color: #2d7a32;
+  border-color: #266a2b;
+}
+
+.btn-danger {
+  background-color: #b52b27;
+  border-color: #9f2622;
+}
+
+#folder tbody tr:focus {
+  outline: 2px solid #2a6496;
+  outline-offset: -2px;
+}

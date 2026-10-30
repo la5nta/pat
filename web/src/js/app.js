@@ -2,6 +2,7 @@ import 'jquery';
 import 'bootstrap/dist/js/bootstrap';
 import 'bootstrap-select';
 import 'bootstrap-tokenfield';
+import { initA11y } from './modules/a11y/index.js';
 
 import { alert } from './modules/utils/index.js';
 import { Version } from './modules/version/index.js';
@@ -177,3 +178,5 @@ function updateConsole(msg) {
   pre.append('<span class="terminal">' + msg + '</span>');
   pre.scrollTop(pre.prop('scrollHeight'));
 }
+
+$(document).ready(() => initA11y());

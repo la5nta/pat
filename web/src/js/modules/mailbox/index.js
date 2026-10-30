@@ -55,12 +55,12 @@ export class Mailbox {
 
         const p2p_html = is_from
           ? ''
-          : `<td>${msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : ''}</td>`;
+          : `<td>${msg.P2POnly ? '<span class="glyphicon glyphicon-ok" aria-hidden="true"></span><span class="sr-only">P2P</span>' : ''}</td>`;
 
         const elem = $(`
-          <tr id="${msg.MID}" class="active${msg.Unread ? ' strong' : ''}">
-            <td>${msg.Files.length > 0 ? '<span class="glyphicon glyphicon-paperclip"></span>' : ''}</td>
-            <td>${htmlEscape(msg.Subject)}</td>
+          <tr id="${msg.MID}" class="active${msg.Unread ? ' strong' : ''}" tabindex="0">
+            <td>${msg.Files.length > 0 ? '<span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span><span class="sr-only">Attachment</span>' : ''}</td>
+            <td>${msg.Unread ? '<span class="sr-only">Unread: </span>' : ''}${htmlEscape(msg.Subject)}</td>
             <td>${to_from_html}</td>
             ${p2p_html}
             <td>${msg.Date}</td>
@@ -69,12 +69,20 @@ export class Mailbox {
         `);
 
         tbody.append(elem);
-        elem.click((evt) => {
+        const open = () => {
           // Handle active class for the message list
           tbody.find('tr.active').removeClass('active');
           elem.addClass('active');
 
           this.onMessageClick(this.currentFolder, elem.attr('id'));
+        };
+        elem.click(open);
+        // Rows open with Enter or Space too, not just a click.
+        elem.keydown((evt) => {
+          if (evt.key === 'Enter' || evt.key === ' ') {
+            evt.preventDefault();
+            open();
+          }
         });
       });
     });

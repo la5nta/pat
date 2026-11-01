@@ -318,8 +318,8 @@ func (m *Manager) readProcessedTemplate(templatePath, inReplyTo, mboxRoot string
 }
 
 // serveTemplateEditor serves the text-only template editor with the processed template content injected.
-func (m *Manager) serveTemplateEditor(w http.ResponseWriter, r *http.Request, templatePath string) {
-	templateContent, err := m.readProcessedTemplate(templatePath, r.URL.Query().Get("in-reply-to"), "")
+func (m *Manager) serveTemplateEditor(w http.ResponseWriter, r *http.Request, templatePath, mboxRoot string) {
+	templateContent, err := m.readProcessedTemplate(templatePath, r.URL.Query().Get("in-reply-to"), mboxRoot)
 	if err != nil {
 		if os.IsNotExist(err) {
 			http.NotFound(w, r)
@@ -335,48 +335,50 @@ func (m *Manager) serveTemplateEditor(w http.ResponseWriter, r *http.Request, te
 }
 
 // GetFormTemplateHandler serves a template's HTML form (filled-in with instance values)
-func (m *Manager) GetFormTemplateHandler(w http.ResponseWriter, r *http.Request) {
-	templatePath := r.URL.Query().Get("template")
-	if templatePath == "" {
-		http.Error(w, "template query param missing", http.StatusBadRequest)
-		log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
-		return
-	}
-	templatePath = m.abs(templatePath)
-	// Make sure we don't escape FormsPath
-	if !directories.IsInPath(m.config.FormsPath, templatePath) {
-		http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
-		return
-	}
+func (m *Manager) GetFormTemplateHandler(mboxRoot string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		templatePath := r.URL.Query().Get("template")
+		if templatePath == "" {
+			http.Error(w, "template query param missing", http.StatusBadRequest)
+			log.Printf("template query param missing %s %s", r.Method, r.URL.Path)
+			return
+		}
+		templatePath = m.abs(templatePath)
+		// Make sure we don't escape FormsPath
+		if !directories.IsInPath(m.config.FormsPath, templatePath) {
+			http.Error(w, fmt.Sprintf("%s escapes forms directory", templatePath), http.StatusForbidden)
+			return
+		}
 
-	template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
-	switch {
-	case os.IsNotExist(err):
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	case err != nil:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("failed to parse requested template (%q): %v", m.rel(templatePath), err)
-		return
-	}
-	formPath := template.InputFormPath
-	if formPath == "" {
-		// This is a text-only template. Serve the template editor.
-		m.serveTemplateEditor(w, r, templatePath)
-		return
-	}
+		template, err := readTemplate(templatePath, formFilesFromPath(m.config.FormsPath))
+		switch {
+		case os.IsNotExist(err):
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		case err != nil:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Printf("failed to parse requested template (%q): %v", m.rel(templatePath), err)
+			return
+		}
+		formPath := template.InputFormPath
+		if formPath == "" {
+			// This is a text-only template. Serve the template editor.
+			m.serveTemplateEditor(w, r, templatePath, mboxRoot)
+			return
+		}
 
-	responseText, err := m.fillFormTemplate(formPath, nil, "/api/form?"+r.URL.Query().Encode(), nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
-		return
-	}
-	_, err = io.WriteString(w, responseText)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Printf("can't write form into response %s %s: %s", r.Method, r.URL.Path, err)
-		return
+		responseText, err := m.fillFormTemplate(formPath, nil, "/api/form?"+r.URL.Query().Encode(), nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)
+			return
+		}
+		_, err = io.WriteString(w, responseText)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			log.Printf("can't write form into response %s %s: %s", r.Method, r.URL.Path, err)
+			return
+		}
 	}
 }
 

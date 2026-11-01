@@ -58,7 +58,7 @@ export class Mailbox {
           : `<td>${msg.P2POnly ? '<span class="glyphicon glyphicon-ok"></span>' : ''}</td>`;
 
         const elem = $(`
-          <tr id="${htmlEscape(msg.MID)}" class="active${msg.Unread ? ' strong' : ''}">
+          <tr class="active${msg.Unread ? ' strong' : ''}">
             <td>${msg.Files.length > 0 ? '<span class="glyphicon glyphicon-paperclip"></span>' : ''}</td>
             <td>${htmlEscape(msg.Subject)}</td>
             <td>${to_from_html}</td>
@@ -67,6 +67,7 @@ export class Mailbox {
             <td>${htmlEscape(msg.MID)}</td>
           </tr>
         `);
+        elem.attr('id', msg.MID);
 
         tbody.append(elem);
         elem.click((evt) => {

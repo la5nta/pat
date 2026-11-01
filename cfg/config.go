@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -226,6 +227,30 @@ type ArdopConfig struct {
 
 	// Send FSK CW ID after an ID frame.
 	CWID bool `json:"cwid_enabled"`
+
+	// (optional) Command Pat should launch itself if the TNC at Addr isn't
+	// already reachable (e.g. {"path": "ardopcf", "args": ["--webgui", "8514"]}).
+	LaunchCmd LaunchCmd `json:"launch_cmd"`
+}
+
+// IsZero reports whether c is the zero value (uses reflect.DeepEqual since Args is a slice).
+func (c ArdopConfig) IsZero() bool { return reflect.DeepEqual(c, ArdopConfig{}) }
+
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
+func (c ArdopConfig) IsZeroExceptLaunchCmd() bool {
+	c.LaunchCmd = LaunchCmd{}
+	return c.IsZero()
+}
+
+// LaunchCmd is an optional command Pat spawns itself if a transport's TNC/
+// daemon isn't already reachable at its configured address. See CONTEXT.md
+// for how this differs from the unrelated prehook mechanism.
+type LaunchCmd struct {
+	// Path to the executable to run (resolved via $PATH if not absolute).
+	Path string `json:"path,omitempty"`
+
+	// Arguments passed to the executable.
+	Args []string `json:"args,omitempty"`
 }
 
 type VaraConfig struct {
@@ -240,6 +265,10 @@ type VaraConfig struct {
 
 	// Set to true if hamlib should control PTT (SignaLink=false, most rigexpert=true).
 	PTTControl bool `json:"ptt_ctrl"`
+
+	// (optional) Command Pat should launch itself if the modem isn't already
+	// reachable (e.g. {"path": "...", "args": [...]}).
+	LaunchCmd LaunchCmd `json:"launch_cmd"`
 }
 
 // UnmarshalJSON implements VaraConfig JSON unmarshalling with support for legacy format.
@@ -258,13 +287,22 @@ func (v *VaraConfig) UnmarshalJSON(b []byte) error {
 		legacy.newFormat.Addr = fmt.Sprintf("%s:%d", legacy.Host, legacy.CmdPort)
 	}
 	*v = VaraConfig(legacy.newFormat)
-	if !v.IsZero() && v.CmdPort() <= 0 {
+	// Fail fast unless addr is either set or excused by launch_cmd — a
+	// config with e.g. Rig set but no addr/launch_cmd is a mistake.
+	if !v.IsZeroExceptLaunchCmd() && v.CmdPort() <= 0 {
 		return fmt.Errorf("invalid addr format")
 	}
 	return nil
 }
 
-func (v VaraConfig) IsZero() bool { return v == (VaraConfig{}) }
+// IsZero reports whether v is the zero value (uses reflect.DeepEqual since Args is a slice).
+func (v VaraConfig) IsZero() bool { return reflect.DeepEqual(v, VaraConfig{}) }
+
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
+func (v VaraConfig) IsZeroExceptLaunchCmd() bool {
+	v.LaunchCmd = LaunchCmd{}
+	return v.IsZero()
+}
 
 func (v VaraConfig) Host() string {
 	host, _, _ := net.SplitHostPort(v.Addr)
@@ -320,6 +358,19 @@ type AGWPEConfig struct {
 
 	// The AGWPE "radio port" (0-3).
 	RadioPort int `json:"radio_port"`
+
+	// (optional) Command Pat should launch itself if the TNC at Addr isn't
+	// already reachable (e.g. {"path": "direwolf", "args": [...]}).
+	LaunchCmd LaunchCmd `json:"launch_cmd"`
+}
+
+// IsZero reports whether c is the zero value (uses reflect.DeepEqual since Args is a slice).
+func (c AGWPEConfig) IsZero() bool { return reflect.DeepEqual(c, AGWPEConfig{}) }
+
+// IsZeroExceptLaunchCmd is IsZero but ignoring LaunchCmd, so a config that only sets launch_cmd still gets its other defaults applied.
+func (c AGWPEConfig) IsZeroExceptLaunchCmd() bool {
+	c.LaunchCmd = LaunchCmd{}
+	return c.IsZero()
 }
 
 type AX25Config struct {

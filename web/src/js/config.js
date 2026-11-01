@@ -331,6 +331,21 @@ $(document).ready(function() {
     createTokensOnBlur: true,
   };
   $('#auxiliary_addresses').tokenfield(tokenfieldConfig);
+  $('#ardop_launch_cmd_args, #vara_hf_launch_cmd_args, #vara_fm_launch_cmd_args, #agwpe_launch_cmd_args')
+    .tokenfield(tokenfieldConfig);
+
+  function setLaunchCmdArgsTokens(selector, args) {
+    const tokens = (args || [])
+      .filter(arg => arg && arg.trim())
+      .map(arg => ({ value: arg, label: arg }));
+    $(selector).tokenfield('setTokens', tokens);
+  }
+
+  function getLaunchCmdArgsTokens(selector) {
+    return $(selector).tokenfield('getTokens')
+      .filter(t => t.value.trim())
+      .map(token => token.value);
+  }
   // Load current config
   let originalConfig;
 
@@ -399,6 +414,16 @@ $(document).ready(function() {
       $('#vara_hf_addr').val(config.varahf.addr);
       $('#vara_hf_bandwidth').val(config.varahf.bandwidth || '').selectpicker('refresh');
       $('#vara_fm_addr').val(config.varafm.addr);
+
+      // Populate launch commands
+      $('#ardop_launch_cmd_path').val((config.ardop.launch_cmd || {}).path);
+      setLaunchCmdArgsTokens('#ardop_launch_cmd_args', (config.ardop.launch_cmd || {}).args);
+      $('#vara_hf_launch_cmd_path').val((config.varahf.launch_cmd || {}).path);
+      setLaunchCmdArgsTokens('#vara_hf_launch_cmd_args', (config.varahf.launch_cmd || {}).args);
+      $('#vara_fm_launch_cmd_path').val((config.varafm.launch_cmd || {}).path);
+      setLaunchCmdArgsTokens('#vara_fm_launch_cmd_args', (config.varafm.launch_cmd || {}).args);
+      $('#agwpe_launch_cmd_path').val((config.agwpe.launch_cmd || {}).path);
+      setLaunchCmdArgsTokens('#agwpe_launch_cmd_args', (config.agwpe.launch_cmd || {}).args);
 
       // Populate transport rig selections
       $('#ardop_rig').val(config.ardop.rig);
@@ -540,7 +565,11 @@ $(document).ready(function() {
       cwid_enabled: $('#ardop_cwid_enabled').is(':checked'),
       rig: $('#ardop_rig').val(),
       ptt_ctrl: $('#ardop_ptt_ctrl').is(':checked'),
-      beacon_interval: parseInt($('#ardop_beacon_interval').val(), 10)
+      beacon_interval: parseInt($('#ardop_beacon_interval').val(), 10),
+      launch_cmd: {
+        path: $('#ardop_launch_cmd_path').val(),
+        args: getLaunchCmdArgsTokens('#ardop_launch_cmd_args')
+      }
     };
     // Merge pactor config with existing values
     updatedConfig.pactor = {
@@ -556,14 +585,22 @@ $(document).ready(function() {
       addr: $('#vara_hf_addr').val(),
       bandwidth: parseInt($('#vara_hf_bandwidth').val(), 10),
       rig: $('#vara_hf_rig').val(),
-      ptt_ctrl: $('#vara_hf_ptt_ctrl').is(':checked')
+      ptt_ctrl: $('#vara_hf_ptt_ctrl').is(':checked'),
+      launch_cmd: {
+        path: $('#vara_hf_launch_cmd_path').val(),
+        args: getLaunchCmdArgsTokens('#vara_hf_launch_cmd_args')
+      }
     };
     // Merge varafm config with existing values
     updatedConfig.varafm = {
       ...originalConfig.varafm,
       addr: $('#vara_fm_addr').val(),
       rig: $('#vara_fm_rig').val(),
-      ptt_ctrl: $('#vara_fm_ptt_ctrl').is(':checked')
+      ptt_ctrl: $('#vara_fm_ptt_ctrl').is(':checked'),
+      launch_cmd: {
+        path: $('#vara_fm_launch_cmd_path').val(),
+        args: getLaunchCmdArgsTokens('#vara_fm_launch_cmd_args')
+      }
     };
     // Merge telnet config with existing values
     updatedConfig.telnet = {
@@ -591,7 +628,11 @@ $(document).ready(function() {
     updatedConfig.agwpe = {
       ...originalConfig.agwpe,
       addr: $('#agwpe_addr').val(),
-      radio_port: parseInt($('#agwpe_radio_port').val(), 10)
+      radio_port: parseInt($('#agwpe_radio_port').val(), 10),
+      launch_cmd: {
+        path: $('#agwpe_launch_cmd_path').val(),
+        args: getLaunchCmdArgsTokens('#agwpe_launch_cmd_args')
+      }
     };
     // Merge serial-tnc config with existing values
     updatedConfig['serial-tnc'] = {

@@ -1,3 +1,14 @@
+pat (1.0.1) stable; urgency=medium
+
+  * Add support for PNG and BMP image conversion
+  * Use original image if resize does not reduce file size
+  * Make connect dialog and RMS list responsive
+  * Harden web UI against untrusted message and form content
+  * Require Go 1.26 or later (due to updated dependencies)
+  * Various internal improvements and maintenance
+
+ -- Martin Hebnes Pedersen <martin.h.pedersen@gmail.com>  Tue, 22 Sep 2026 13:58:25 +0200
+
 pat (1.0.0) stable; urgency=medium
 
   * Fix panic on invalid schedule expressions

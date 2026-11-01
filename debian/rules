@@ -20,10 +20,12 @@ binary-arch: clean build
 	mkdir -p $(PKGDIR)/usr/bin
 	mkdir -p $(PKGDIR)/usr/share/pat
 	mkdir -p $(PKGDIR)/lib/systemd/system
+	mkdir -p $(PKGDIR)/lib/systemd/user
 
 	mv ./pat $(PKGDIR)/usr/bin/
 	cp -r share/* $(PKGDIR)/usr/share/pat/
 	cp debian/pat@.service $(PKGDIR)/lib/systemd/system/
+	cp debian/pat.service $(PKGDIR)/lib/systemd/user/
 
 	dh_installman
 	dh_strip

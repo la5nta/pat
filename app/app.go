@@ -34,8 +34,6 @@ import (
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/ax25"
-	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
-	"github.com/n8jja/Pat-Vara/vara"
 )
 
 const (
@@ -88,11 +86,8 @@ type App struct {
 	websocketHub WSHub
 
 	// Persistent modem connections
-	ardop  *ardop.TNC
-	agwpe  *agwpe.TNCPort
+	modems *ModemHub
 	pactor *pactor.Modem
-	varaHF *vara.Modem
-	varaFM *vara.Modem
 
 	rigs map[string]rig
 
@@ -174,6 +169,7 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 	debug.Printf("Event log file is\t'%s'", a.options.EventLogPath)
 	directories.MigrateLegacyDataDir()
 
+	a.modems = a.newModemHub()
 	a.listenHub = NewListenerHub(a)
 	a.listenHub.websocketHub = a.websocketHub
 	a.promptHub = NewPromptHub()
@@ -260,14 +256,14 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 
 	// init forms subsystem
 	a.formsMgr = forms.NewManager(forms.Config{
-		FormsPath:       a.options.FormsPath,
-		SequencePath:    filepath.Join(directories.StateDir(), "template-sequence-number.json"),
-		SequenceFormat:  "%03d",
-		MyCall:          a.options.MyCall,
-		AppVersion:      buildinfo.AppName + " " + buildinfo.VersionStringShort(),
-		UserAgent:       buildinfo.UserAgent(),
-		GPSd:            a.config.GPSd,
-		LocatorProvider: a,
+		FormsPath:            a.options.FormsPath,
+		SequencePath:         filepath.Join(directories.StateDir(), "template-sequence-number.json"),
+		SequenceFormat:       "%03d",
+		MyCall:               a.options.MyCall,
+		AppVersion:           buildinfo.AppName + " " + buildinfo.VersionStringShort(),
+		UserAgent:            buildinfo.UserAgent(),
+		GPSd:                 a.config.GPSd,
+		LocatorProvider:      a,
 		RenderTemplateEditor: web.RenderTemplateEditor,
 	})
 
@@ -330,8 +326,8 @@ func (a *App) ActiveListeners() []string {
 
 func (a *App) Heard() map[string][]Heard {
 	heard := make(map[string][]Heard)
-	if a.ardop != nil {
-		for callsign, time := range a.ardop.Heard() {
+	if tnc, ok := a.modems.Current(MethodArdop).(*ardop.TNC); ok {
+		for callsign, time := range tnc.Heard() {
 			heard[MethodArdop] = append(heard[MethodArdop], Heard{
 				Callsign: callsign,
 				Time:     time,
@@ -390,29 +386,10 @@ func (a *App) Close() {
 	a.listenHub.Close()
 
 	debug.Printf("Closing modems")
-	if a.ardop != nil {
-		if err := a.ardop.Close(); err != nil {
-			log.Printf("Failure to close ardop TNC: %s", err)
-		}
-	}
+	a.modems.Close()
 	if a.pactor != nil {
 		if err := a.pactor.Close(); err != nil {
 			log.Printf("Failure to close pactor modem: %s", err)
-		}
-	}
-	if a.varaFM != nil {
-		if err := a.varaFM.Close(); err != nil {
-			log.Printf("Failure to close varafm modem: %s", err)
-		}
-	}
-	if a.varaHF != nil {
-		if err := a.varaHF.Close(); err != nil {
-			log.Printf("Failure to close varahf modem: %s", err)
-		}
-	}
-	if a.agwpe != nil {
-		if err := a.agwpe.Close(); err != nil {
-			log.Printf("Failure to close AGWPE TNC: %s", err)
 		}
 	}
 

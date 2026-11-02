@@ -17,7 +17,6 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ax25"
 	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
 	"github.com/la5nta/wl2k-go/transport/telnet"
-	"github.com/n8jja/Pat-Vara/vara"
 )
 
 func (a *App) Unlisten(param string) {
@@ -42,11 +41,11 @@ func (a *App) Listen(listenStr string) {
 
 		switch strings.ToLower(method) {
 		case MethodArdop:
-			a.listenHub.Enable(&ARDOPListener{a, nil})
+			a.listenHub.Enable(&ARDOPListener{a: a})
 		case MethodTelnet:
 			a.listenHub.Enable(TelnetListener{a})
 		case MethodAX25AGWPE:
-			a.listenHub.Enable(&AX25AGWPEListener{a, nil})
+			a.listenHub.Enable(&AX25AGWPEListener{a: a})
 		case MethodAX25Linux:
 			a.listenHub.Enable(&AX25LinuxListener{a, nil})
 		case MethodVaraFM:
@@ -105,21 +104,23 @@ func (l *AX25LinuxListener) Name() string                   { return MethodAX25L
 
 type ARDOPListener struct {
 	a interface {
-		ARDOP() (*ardop.TNC, error)
+		listenModem(string) (Modem, net.Listener, error)
 		VFOForRig(string) (hamlib.VFO, bool)
 		Config() cfg.Config
 	}
 
+	tnc        *ardop.TNC
 	stopBeacon func()
 }
 
 func (l ARDOPListener) Name() string { return MethodArdop }
-func (l ARDOPListener) Init() (net.Listener, error) {
-	m, err := l.a.ARDOP()
+func (l *ARDOPListener) Init() (net.Listener, error) {
+	m, ln, err := l.a.listenModem(MethodArdop)
 	if err != nil {
 		return nil, err
 	}
-	return m.Listen()
+	l.tnc = m.(*ardop.TNC)
+	return ln, nil
 }
 
 func (l ARDOPListener) CurrentFreq() (Frequency, bool) {
@@ -135,10 +136,7 @@ func (l *ARDOPListener) BeaconStart() error {
 	if interval <= 0 {
 		return nil
 	}
-	m, err := l.a.ARDOP()
-	if err != nil {
-		return err
-	}
+	m := l.tnc
 	l.stopBeacon = func() { m.BeaconEvery(0) }
 	return m.BeaconEvery(interval)
 }
@@ -153,17 +151,14 @@ type VaraFMListener struct {
 	a interface {
 		Config() cfg.Config
 		VFOForRig(string) (hamlib.VFO, bool)
-		VARAFM() (*vara.Modem, error)
+		listenModem(string) (Modem, net.Listener, error)
 	}
 }
 
 func (l VaraFMListener) Name() string { return MethodVaraFM }
 func (l VaraFMListener) Init() (net.Listener, error) {
-	m, err := l.a.VARAFM()
-	if err != nil {
-		return nil, err
-	}
-	return m.Listen()
+	_, ln, err := l.a.listenModem(MethodVaraFM)
+	return ln, err
 }
 
 func (l VaraFMListener) CurrentFreq() (Frequency, bool) {
@@ -178,17 +173,14 @@ type VaraHFListener struct {
 	a interface {
 		Config() cfg.Config
 		VFOForRig(string) (hamlib.VFO, bool)
-		VARAHF() (*vara.Modem, error)
+		listenModem(string) (Modem, net.Listener, error)
 	}
 }
 
 func (l VaraHFListener) Name() string { return MethodVaraHF }
 func (l VaraHFListener) Init() (net.Listener, error) {
-	m, err := l.a.VARAHF()
-	if err != nil {
-		return nil, err
-	}
-	return m.Listen()
+	_, ln, err := l.a.listenModem(MethodVaraHF)
+	return ln, err
 }
 
 func (l VaraHFListener) CurrentFreq() (Frequency, bool) {
@@ -202,20 +194,22 @@ func (l VaraHFListener) CurrentFreq() (Frequency, bool) {
 type AX25AGWPEListener struct {
 	a interface {
 		Config() cfg.Config
-		AGWPE() (*agwpe.TNCPort, error)
+		listenModem(string) (Modem, net.Listener, error)
 	}
 
+	port       *agwpe.TNCPort
 	stopBeacon func()
 }
 
 func (l *AX25AGWPEListener) Name() string { return MethodAX25AGWPE }
 
 func (l *AX25AGWPEListener) Init() (net.Listener, error) {
-	m, err := l.a.AGWPE()
+	m, ln, err := l.a.listenModem(MethodAX25AGWPE)
 	if err != nil {
 		return nil, err
 	}
-	return m.Listen()
+	l.port = m.(*agwpe.TNCPort)
+	return ln, nil
 }
 
 func (l *AX25AGWPEListener) CurrentFreq() (Frequency, bool) { return 0, false }
@@ -226,10 +220,7 @@ func (l *AX25AGWPEListener) BeaconStart() error {
 	if interval <= 0 {
 		return nil
 	}
-	m, err := l.a.AGWPE()
-	if err != nil {
-		return err
-	}
+	m := l.port
 	l.stopBeacon = doEvery(interval, func() {
 		if err := m.SendUI([]byte(b.Message), b.Destination); err != nil {
 			log.Printf("%s beacon failed: %s", l.Name(), err)

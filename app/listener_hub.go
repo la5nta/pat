@@ -72,6 +72,15 @@ func (l *Listener) listenLoop(h *ListenerHub) {
 		default:
 			ln, err := l.t.Init()
 			l.mu.Lock()
+			select {
+			case <-l.done:
+				l.mu.Unlock()
+				if ln != nil {
+					ln.Close()
+				}
+				return
+			default:
+			}
 			l.ln, l.err = ln, err
 			l.mu.Unlock()
 			if err != nil {
@@ -107,6 +116,7 @@ func (l *Listener) listenLoop(h *ListenerHub) {
 			if b, ok := l.t.(Beaconer); ok {
 				b.BeaconStop()
 			}
+			ln.Close()
 		}
 	}
 }

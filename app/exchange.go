@@ -18,6 +18,7 @@ import (
 	"github.com/la5nta/pat/internal/buildinfo"
 
 	"github.com/la5nta/wl2k-go/fbb"
+	"github.com/la5nta/wl2k-go/transport/ardop"
 )
 
 type ex struct {
@@ -269,42 +270,45 @@ func (a *App) AbortActiveConnection(dirty bool) (ok bool) {
 	// User is attempting to abort something, so try to identify any non-idling transports and abort.
 	// It might be a "dirty disconnect" of an already cancelled connection or dial operation which is in the
 	// process of gracefully terminating. It might also be an attempt to close an inbound P2P connection.
+	ardopTNC, _ := a.modems.Current(MethodArdop).(*ardop.TNC)
+	varaFM, _ := a.modems.Current(MethodVaraFM).(varaModem)
+	varaHF, _ := a.modems.Current(MethodVaraHF).(varaModem)
 	switch {
-	case a.ardop != nil && !a.ardop.Idle():
+	case ardopTNC != nil && !ardopTNC.Idle():
 		if dirty {
 			log.Println("Dirty disconnecting ardop...")
-			a.ardop.Abort()
+			ardopTNC.Abort()
 			return true
 		}
 		log.Println("Disconnecting ardop...")
 		go func() {
-			if err := a.ardop.Disconnect(); err != nil {
+			if err := ardopTNC.Disconnect(); err != nil {
 				log.Println(err)
 			}
 		}()
 		return true
-	case a.varaFM != nil && !a.varaFM.Idle():
+	case varaFM.Modem != nil && !varaFM.Idle():
 		if dirty {
 			log.Println("Dirty disconnecting varafm...")
-			a.varaFM.Abort()
+			varaFM.Abort()
 			return true
 		}
 		log.Println("Disconnecting varafm...")
 		go func() {
-			if err := a.varaFM.Close(); err != nil {
+			if err := varaFM.Close(); err != nil {
 				log.Println(err)
 			}
 		}()
 		return true
-	case a.varaHF != nil && !a.varaHF.Idle():
+	case varaHF.Modem != nil && !varaHF.Idle():
 		if dirty {
 			log.Println("Dirty disconnecting varahf...")
-			a.varaHF.Abort()
+			varaHF.Abort()
 			return true
 		}
 		log.Println("Disconnecting varahf...")
 		go func() {
-			if err := a.varaHF.Close(); err != nil {
+			if err := varaHF.Close(); err != nil {
 				log.Println(err)
 			}
 		}()

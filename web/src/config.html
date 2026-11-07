@@ -74,6 +74,8 @@
                           </button>
                         </span>
                       </div>
+                      <input type="hidden" id="station_lat">
+                      <input type="hidden" id="station_lon">
                       <div id="locate-status" class="text-info" style="display: none; margin-top: 5px;"></div>
                       <small class="form-text text-muted">This field is required. 4-6 character grid locator</small>
                     </div>
@@ -629,7 +631,7 @@
                         <input type="checkbox" id="gpsd_allow_forms" name="gpsd_allow_forms">
                         Allow Forms GPS Access
                       </label>
-                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Automatically injects GPS position into forms without explicit consent</small>
+                      <small class="form-text text-muted text-danger" style="display: block; margin-left: 20px;">Caution: Automatically injects GPS position (and the position saved by the locator lookup) into forms without explicit consent</small>
                     </div>
                     <div class="checkbox">
                       <label>

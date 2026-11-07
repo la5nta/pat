@@ -60,3 +60,17 @@ func TestReadRigsFromEnv(t *testing.T) {
 		}
 	})
 }
+
+func TestLoadConfigNoStationPosition(t *testing.T) {
+	path := t.TempDir() + "/config.json"
+	if err := os.WriteFile(path, []byte(`{"mycall":"N0CALL"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := LoadConfig(path, cfg.DefaultConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.StationPosition != nil {
+		t.Fatalf("expected nil StationPosition, got %+v", c.StationPosition)
+	}
+}

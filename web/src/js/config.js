@@ -232,6 +232,8 @@ $(document).ready(function() {
         success: function(response) {
           var locator = response.locator;
           locatorField.val(locator);
+          $('#station_lat').val(lat);
+          $('#station_lon').val(lon);
           var sourceText = source === 'gps' ? 'GPS device' : 'geolocation';
           var accuracyText = accuracy ? ' (accuracy: ' + Math.round(accuracy) + 'm)' : '';
           statusDiv.removeClass('text-info text-danger').addClass('text-success').text('Locator updated from ' + sourceText + accuracyText).show();
@@ -343,6 +345,8 @@ $(document).ready(function() {
         originalConfig = JSON.parse(JSON.stringify(config)); // Deep clone
       $('#mycall').val(config.mycall).trigger('blur');
       $('#locator').val(config.locator);
+      $('#station_lat').val(config.station_position ? config.station_position.lat : '');
+      $('#station_lon').val(config.station_position ? config.station_position.lon : '');
       $('#auto_download_limit').val(typeof config.auto_download_size_limit === 'number' ? config.auto_download_size_limit : -1);
       $('#secure_login_password').val(config.secure_login_password ? '[REDACTED]' : '')
         .on('focus', function() {
@@ -515,6 +519,12 @@ $(document).ready(function() {
     // Update GUI-managed fields
     updatedConfig.mycall = $('#mycall').val();
     updatedConfig.locator = $('#locator').val();
+    const lat = parseFloat($('#station_lat').val()), lon = parseFloat($('#station_lon').val());
+    if (isNaN(lat) || isNaN(lon)) {
+      delete updatedConfig.station_position;
+    } else {
+      updatedConfig.station_position = { lat, lon };
+    }
     updatedConfig.secure_login_password = $('#secure_login_password').val() || originalConfig.secure_login_password;
     updatedConfig.auto_download_size_limit = $('#auto_download_limit').val() === '' ? -1 : parseInt($('#auto_download_limit').val());
 

@@ -61,6 +61,9 @@ type Config struct {
 	// Maidenhead grid square (e.g. JP20qe).
 	Locator string `json:"locator"`
 
+	// Fixed station position, used by forms when GPSd has no fix. Gated by gpsd.allow_forms.
+	StationPosition *StationPosition `json:"station_position,omitempty" ignored:"true"`
+
 	// Message size limit (in bytes) for automatic download of pending messages.
 	//
 	// When receiving messages larger than this limit, the user will be prompted
@@ -355,6 +358,12 @@ type BeaconConfig struct {
 
 	// Beacon destination (e.g. IDENT)
 	Destination string `json:"destination"`
+}
+
+// StationPosition is a fixed position in signed decimal degrees.
+type StationPosition struct {
+	Lat float64 `json:"lat"`
+	Lon float64 `json:"lon"`
 }
 
 type GPSdConfig struct {

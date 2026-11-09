@@ -267,6 +267,7 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 		AppVersion:      buildinfo.AppName + " " + buildinfo.VersionStringShort(),
 		UserAgent:       buildinfo.UserAgent(),
 		GPSd:            a.config.GPSd,
+		StationPosition: a.config.StationPosition,
 		LocatorProvider: a,
 		RenderTemplateEditor: web.RenderTemplateEditor,
 	})

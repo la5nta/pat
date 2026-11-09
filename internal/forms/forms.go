@@ -84,6 +84,7 @@ type Config struct {
 	AppVersion           string
 	UserAgent            string
 	GPSd                 cfg.GPSdConfig
+	StationPosition      *cfg.StationPosition
 	LocatorProvider      LocatorProvider
 	RenderTemplateEditor func(http.ResponseWriter, string) error
 }
@@ -644,19 +645,28 @@ const gpsMockAddr = "mock" // Hack for unit testing
 // gpsPos returns the current GPS Position
 func (m *Manager) gpsPos() (gpsd.Position, error) {
 	addr := m.config.GPSd.Addr
-	if addr == "" {
-		return gpsd.Position{}, errors.New("GPSd: not configured.")
-	}
 	if addr == gpsMockAddr {
 		return gpsd.Position{Lat: 59.41378, Lon: 5.268}, nil
 	}
 	if !m.config.GPSd.AllowForms {
-		return gpsd.Position{}, errors.New("GPSd: allow_forms is disabled. GPS position will not be available in form templates.")
+		return gpsd.Position{}, errors.New("allow_forms is disabled. Position will not be available in form templates.")
 	}
+	pos, err := m.gpsdPos(addr)
+	if err != nil {
+		if sp := m.config.StationPosition; sp != nil {
+			return gpsd.Position{Lat: sp.Lat, Lon: sp.Lon}, nil
+		}
+		log.Printf("GPSd daemon: %s", err)
+	}
+	return pos, err
+}
 
+func (m *Manager) gpsdPos(addr string) (gpsd.Position, error) {
+	if addr == "" {
+		return gpsd.Position{}, errors.New("GPSd: not configured.")
+	}
 	conn, err := gpsd.Dial(addr)
 	if err != nil {
-		log.Printf("GPSd daemon: %s", err)
 		return gpsd.Position{}, err
 	}
 	defer conn.Close()

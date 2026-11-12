@@ -29,7 +29,8 @@ export class Viewer {
   }
 
   _deleteMessage(box, mid) {
-    this.confirmDelete.on('click', '.btn-ok', e => {
+    // Drop the handler from an earlier, cancelled delete so it can't fire too
+    this.confirmDelete.off('click', '.btn-ok').on('click', '.btn-ok', e => {
       this.view.modal('hide');
       const $modalDiv = $(e.delegateTarget);
       deleteMessage(box, mid)

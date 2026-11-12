@@ -66,14 +66,20 @@ export class Mailbox {
     });
   }
 
+  // Reloads the current folder, for UpdateMailbox events. During a bulk run
+  // the run reloads once it is done, and a folder switch must not be undone.
+  refresh() {
+    if (this.bulkBusy) {
+      return;
+    }
+    this.displayFolder(this.currentFolder);
+  }
+
   displayFolder(dir) {
     if (this.bulkBusy) {
-      // The run refreshes the list when it is done; a folder switch waits for
-      // it. UpdateMailbox events from the run's own writes arrive here as
-      // refreshes of the current folder and must not displace that switch.
-      if (dir !== this.currentFolder) {
-        this.pendingFolder = dir;
-      }
+      // Only nav clicks get here. The last one wins once the run is done, and
+      // clicking back to the current folder cancels an earlier switch.
+      this.pendingFolder = dir === this.currentFolder ? null : dir;
       return;
     }
     if (dir !== this.currentFolder) {
@@ -226,8 +232,9 @@ export class Mailbox {
     const count = this.selected.size;
     this.bulkCount.text(`${count} selected`);
     this.bulkBar.toggle(count > 0);
-    // Archiving from the archive folder makes no sense
-    $('#bulk_archive_btn').toggle(this.currentFolder !== 'archive');
+    // No archiving from the archive itself, or from the outbox, where it
+    // would silently unqueue messages with no way back to 'out'
+    $('#bulk_archive_btn').toggle(!['archive', 'out'].includes(this.currentFolder));
     $('#bulk_unarchive_btn').toggle(this.currentFolder === 'archive');
 
     const boxes = this.table.find('td.select-col input');

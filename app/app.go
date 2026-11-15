@@ -260,14 +260,14 @@ func (a *App) Run(ctx context.Context, cmd Command, args []string) {
 
 	// init forms subsystem
 	a.formsMgr = forms.NewManager(forms.Config{
-		FormsPath:       a.options.FormsPath,
-		SequencePath:    filepath.Join(directories.StateDir(), "template-sequence-number.json"),
-		SequenceFormat:  "%03d",
-		MyCall:          a.options.MyCall,
-		AppVersion:      buildinfo.AppName + " " + buildinfo.VersionStringShort(),
-		UserAgent:       buildinfo.UserAgent(),
-		GPSd:            a.config.GPSd,
-		LocatorProvider: a,
+		FormsPath:            a.options.FormsPath,
+		SequencePath:         filepath.Join(directories.StateDir(), "template-sequence-number.json"),
+		SequenceFormat:       "%03d",
+		MyCall:               a.options.MyCall,
+		AppVersion:           buildinfo.AppName + " " + buildinfo.VersionStringShort(),
+		UserAgent:            buildinfo.UserAgent(),
+		GPSd:                 a.config.GPSd,
+		LocatorProvider:      a,
 		RenderTemplateEditor: web.RenderTemplateEditor,
 	})
 

@@ -116,6 +116,7 @@ func (h Handler) messageDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	_ = json.NewEncoder(w).Encode("OK")

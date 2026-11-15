@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/la5nta/pat/internal/cmsapi"
@@ -20,6 +21,7 @@ func (h Handler) winlinkAccountRegistrationHandler(w http.ResponseWriter, r *htt
 		}
 		exists, err := cmsapi.AccountExists(r.Context(), callsign)
 		if err != nil {
+			log.Printf("API request to check Winlink account existence failed: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -47,6 +49,7 @@ func (h Handler) winlinkAccountRegistrationHandler(w http.ResponseWriter, r *htt
 			return
 		}
 		if err := cmsapi.AccountAdd(r.Context(), v.Callsign, v.Password, v.RecoveryEmail); err != nil {
+			log.Printf("API request for account creation failed: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -73,6 +76,7 @@ func (h Handler) winlinkPasswordRecoveryEmailHandler(w http.ResponseWriter, r *h
 	case http.MethodGet:
 		email, err := cmsapi.PasswordRecoveryEmailGet(ctx, callsign, password)
 		if err != nil {
+			log.Printf("API request to get password recovery email failed: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -85,6 +89,7 @@ func (h Handler) winlinkPasswordRecoveryEmailHandler(w http.ResponseWriter, r *h
 			return
 		}
 		if err := cmsapi.PasswordRecoveryEmailSet(ctx, callsign, password, v.RecoveryEmail); err != nil {
+			log.Printf("API request to set password recovery email failed: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -154,13 +154,8 @@ export class PasswordRecovery {
                 }, 5000);
               },
               error: (xhr) => {
-                let errorMessage = 'An unknown error occurred.';
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                  errorMessage = xhr.responseJSON.error;
-                } else if (xhr.responseText) {
-                  errorMessage = xhr.responseText;
-                }
-                errorContainer.html(errorMessage).show();
+                const errorMessage = (xhr.responseText || '').trim() || 'An unknown error occurred.';
+                errorContainer.text(errorMessage).show();
                 saveButton.prop('disabled', false);
                 icon.remove();
                 textNode.textContent = ' Retry';

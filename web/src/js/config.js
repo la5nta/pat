@@ -181,7 +181,7 @@ $(document).ready(function() {
       },
       error: function(xhr) {
         btn.prop('disabled', false).html('Create Account');
-        alert('Failed to create account: ' + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.statusText));
+        alert('Failed to create account: ' + (xhr.responseText || xhr.statusText).trim());
       }
     });
   });
@@ -659,7 +659,7 @@ $(document).ready(function() {
         $('#restartNow').prop('disabled', false).html('<span class="glyphicon glyphicon-refresh" style="margin-right: 5px;"></span> Restart Now');
       },
       error: function(xhr) {
-        showError('Save failed: ' + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.statusText));
+        showError('Save failed: ' + (xhr.responseText || xhr.statusText).trim());
       }
     });
   });

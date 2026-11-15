@@ -380,6 +380,7 @@ func (h Handler) ConnectHandler(w http.ResponseWriter, req *http.Request) {
 
 	if success := h.Connect(connectStr); !success {
 		http.Error(w, "Session failure", http.StatusInternalServerError)
+		return
 	}
 
 	_ = json.NewEncoder(w).Encode(struct{ NumReceived int }{
@@ -454,7 +455,9 @@ func (h Handler) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := app.WriteConfig(newConfig, h.Options().ConfigPath); err != nil {
+		log.Printf("API request to save config failed: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	_ = json.NewEncoder(w).Encode("OK")
 }

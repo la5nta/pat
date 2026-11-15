@@ -60,8 +60,9 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		log.Printf("Alias(es) %s uses deprecated transport scheme %s://. Please use %s:// instead.", strings.Join(deprecatedAliases, ", "), MethodSerialTNCDeprecated, MethodAX25SerialTNC)
 	}
 
-	// Ensure ServiceCodes has a default value
-	if len(config.ServiceCodes) == 0 {
+	// Ensure ServiceCodes has a default value, and migrate legacy configs that
+	// only requested PUBLIC to the new default (which also includes MERCURY).
+	if len(config.ServiceCodes) == 0 || (len(config.ServiceCodes) == 1 && config.ServiceCodes[0] == "PUBLIC") {
 		config.ServiceCodes = cfg.DefaultConfig.ServiceCodes
 	}
 

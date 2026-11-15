@@ -384,7 +384,7 @@ type GPSdConfig struct {
 var DefaultConfig = Config{
 	MOTD:                  []string{"Open source Winlink client - getpat.io"},
 	AuxAddrs:              []AuxAddr{},
-	ServiceCodes:          []string{"PUBLIC"},
+	ServiceCodes:          []string{"PUBLIC", "MERCURY"},
 	AutoDownloadSizeLimit: -1,
 	ConnectAliases: map[string]string{
 		"telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k",

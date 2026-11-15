@@ -129,13 +129,27 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 		return nil, err
 	}
 
+	// Mercury gateways report as VARA transport with a MERCURY service code.
+	// Surface them as their own mode in the RMS list so they can be told apart
+	// from genuine VARA gateways.
+	isMercury := func(serviceCode, modes string) bool {
+		modes = strings.ToUpper(modes)
+		return strings.EqualFold(serviceCode, "MERCURY") &&
+			strings.HasPrefix(modes, "VARA") &&
+			!strings.HasPrefix(modes, "VARA FM")
+	}
+
 	slice := []RMS{}
 	for _, gw := range status.Gateways {
 		for _, channel := range gw.Channels {
+			modes := channel.SupportedModes
+			if isMercury(channel.ServiceCode, modes) {
+				modes = "Mercury" + modes[4:]
+			}
 			r := RMS{
 				Callsign:   gw.Callsign,
 				Gridsquare: channel.Gridsquare,
-				Modes:      channel.SupportedModes,
+				Modes:      modes,
 				Freq:       Frequency(channel.Frequency),
 				Dial:       Frequency(channel.Frequency).Dial(channel.SupportedModes),
 			}

@@ -123,7 +123,7 @@ function initWs() {
       updateConsole(msg.LogLine + '\n');
     }
     if (msg.UpdateMailbox) {
-      mailbox.displayFolder(mailbox.currentFolder);
+      mailbox.refresh();
     }
     if (msg.Status) {
       if (configHash && configHash !== msg.Status.config_hash) {

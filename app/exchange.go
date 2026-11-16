@@ -158,7 +158,7 @@ func (a *App) sessionExchange(conn net.Conn, targetCall string, master bool) err
 	session := fbb.NewSession(
 		a.options.MyCall,
 		targetCall,
-		a.config.Locator,
+		a.config.Locator.String(),
 		NotifyMBox{a.mbox, a},
 	)
 
@@ -228,7 +228,7 @@ func (a *App) sessionExchange(conn net.Conn, targetCall string, master bool) err
 		"remote_fw":           session.RemoteForwarders(),
 		"remote_sid":          session.RemoteSID(),
 		"master":              master,
-		"local_locator":       a.config.Locator,
+		"local_locator":       a.config.Locator.String(),
 		"auxiliary_addresses": a.config.AuxAddrs,
 		"network":             conn.RemoteAddr().Network(),
 		"remote_addr":         conn.RemoteAddr().String(),

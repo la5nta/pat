@@ -17,13 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/cmsapi"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/directories"
 	"github.com/la5nta/pat/internal/propagation"
 	"github.com/la5nta/pat/internal/propagation/silso"
-
-	"github.com/pd0mz/go-maidenhead"
 )
 
 type JSONURL struct{ url.URL }
@@ -106,7 +105,7 @@ func (r ByDist) Less(i, j int) bool {
 }
 
 func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func(rms RMS) (keep bool)) ([]RMS, error) {
-	me, err := maidenhead.ParseLocator(a.config.Locator)
+	me, err := a.config.Locator.Point()
 	if err != nil {
 		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
 	}
@@ -156,8 +155,8 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 			if chURL := toURL(channel, gw.Callsign); chURL != nil {
 				r.URL = &JSONURL{*chURL}
 			}
-			hasLocator := me != maidenhead.Point{}
-			if them, err := maidenhead.ParseLocator(channel.Gridsquare); err == nil && hasLocator {
+			hasLocator := me != cfg.MaidenheadPoint{}
+			if them, err := cfg.MaidenheadLocator(channel.Gridsquare).Point(); err == nil && hasLocator {
 				r.Distance = JSONFloat64(me.Distance(them))
 				r.Azimuth = JSONFloat64(me.Bearing(them))
 			}
@@ -193,7 +192,7 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 	params := make([]propagation.PredictionParams, len(slice))
 	for i, r := range slice {
 		params[i] = propagation.PredictionParams{
-			From:          propagation.Maidenhead(a.Config().Locator),
+			From:          propagation.Maidenhead(a.Config().Locator.String()),
 			To:            propagation.Maidenhead(r.Gridsquare),
 			Frequency:     int(r.Freq),
 			SSN:           ssn,

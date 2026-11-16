@@ -59,7 +59,7 @@ type Config struct {
 	AuxAddrs []AuxAddr `json:"auxiliary_addresses"`
 
 	// Maidenhead grid square (e.g. JP20qe).
-	Locator string `json:"locator"`
+	Locator MaidenheadLocator `json:"locator"`
 
 	// Message size limit (in bytes) for automatic download of pending messages.
 	//

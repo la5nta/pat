@@ -10,7 +10,7 @@ import (
 func (a *App) Env() []string {
 	return []string{
 		`PAT_MYCALL="` + a.options.MyCall + `"`,
-		`PAT_LOCATOR="` + a.config.Locator + `"`,
+		`PAT_LOCATOR="` + a.config.Locator.String() + `"`,
 		`PAT_VERSION="` + buildinfo.Version + `"`,
 		`PAT_ARCH="` + runtime.GOARCH + `"`,
 		`PAT_OS="` + runtime.GOOS + `"`,

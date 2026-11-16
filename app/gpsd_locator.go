@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/debug"
 	"github.com/la5nta/pat/internal/gpsd"
 	"github.com/pd0mz/go-maidenhead"
@@ -46,11 +47,11 @@ func (a *App) updateLocatorFromGPSd() error {
 	switch {
 	case err != nil:
 		return fmt.Errorf("failed to convert coordinates to locator: %w", err)
-	case a.config.Locator == locator:
+	case a.config.Locator == cfg.MaidenheadLocator(locator):
 		return nil // Locator is up to date
 	}
 
-	log.Printf("Locator changed from %s to %s", a.config.Locator, locator)
-	a.config.Locator = locator
+	log.Printf("Locator changed from %s to %s", a.config.Locator.String(), locator)
+	a.config.Locator = cfg.MaidenheadLocator(locator)
 	return nil
 }

@@ -282,7 +282,7 @@ func (a *App) initARDOP() error {
 	}
 
 	var err error
-	a.ardop, err = ardop.OpenTCP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator)
+	a.ardop, err = ardop.OpenTCP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator.String())
 	if err != nil {
 		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
 	}

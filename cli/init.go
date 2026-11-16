@@ -12,15 +12,13 @@ import (
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/cmsapi"
 	"github.com/la5nta/pat/internal/debug"
-
-	"github.com/pd0mz/go-maidenhead"
 )
 
 func InitHandle(ctx context.Context, a *app.App, args []string) {
 	cancel := exitOnContextCancellation(ctx)
 	defer cancel()
 
-	cfg, err := app.LoadConfig(a.Options().ConfigPath, cfg.DefaultConfig)
+	config, err := app.LoadConfig(a.Options().ConfigPath, cfg.DefaultConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,38 +28,43 @@ func InitHandle(ctx context.Context, a *app.App, args []string) {
 	fmt.Print("(Press ctrl+c at any time to abort)\n\n")
 
 	// Prompt for callsign
-	callsign := prompt("Enter your callsign", cfg.MyCall)
+	callsign := prompt("Enter your callsign", config.MyCall)
 	if callsign == "" {
 		log.Fatal("Callsign is required")
 	}
-	cfg.MyCall = strings.ToUpper(callsign)
+	config.MyCall = strings.ToUpper(callsign)
 
 	// Prompt for Maidenhead grid square
-	locator := prompt("Enter your Maidenhead locator", cfg.Locator)
-	if locator == "" {
-		log.Fatal("Maidenhead locator is required")
+	for {
+		locator := prompt("Enter your Maidenhead locator", config.Locator.String())
+		if locator == "" {
+			fmt.Println("✗ Maidenhead locator is required")
+			continue
+		}
+		if !cfg.MaidenheadLocator(locator).Valid() {
+			fmt.Println("✗ Invalid Maidenhead locator. Use 6 characters (e.g., JP20QG)")
+			continue
+		}
+		config.Locator = cfg.MaidenheadLocator(locator)
+		break
 	}
-	if _, err := maidenhead.ParseLocator(locator); err != nil {
-		fmt.Printf("⚠ %q might be an invalid locator. Using it anyway.\n", locator)
-	}
-	cfg.Locator = locator
 
 	// Check if account exists via Winlink API
 	fmt.Printf("\nChecking Winlink account: %s...\n", callsign)
 	switch exists, err := accountExists(ctx, callsign); {
 	case err != nil:
 		fmt.Println("⚠ Check failed due to network error. Assuming account exists.")
-		handleExistingAccount(ctx, &cfg)
+		handleExistingAccount(ctx, &config)
 	case exists:
 		fmt.Println("✓ Account exists")
-		handleExistingAccount(ctx, &cfg)
+		handleExistingAccount(ctx, &config)
 	case !exists:
 		fmt.Println("✗ Account does not exist")
-		handleNewAccount(ctx, &cfg)
+		handleNewAccount(ctx, &config)
 	}
 
 	// Write the new/modified config
-	if err := app.WriteConfig(cfg, a.Options().ConfigPath); err != nil {
+	if err := app.WriteConfig(config, a.Options().ConfigPath); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("\nThat's it! Basic configuration is set. For advanced settings, run '%s configure' or use the web gui.\n", os.Args[0])

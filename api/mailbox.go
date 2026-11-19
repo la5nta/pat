@@ -259,7 +259,7 @@ func (h Handler) postMessageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) postOutboundMessageHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(10 * (1024 ^ 2)) // 10Mb
+	err := r.ParseMultipartForm(10 << 20) // 10Mb
 	if err != nil {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -278,8 +278,10 @@ func (h Handler) postOutboundMessageHandler(w http.ResponseWriter, r *http.Reque
 				// No problem
 			case HTTPError:
 				http.Error(w, err.Error(), err.StatusCode)
+				return
 			default:
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 	}

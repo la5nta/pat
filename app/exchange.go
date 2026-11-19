@@ -17,6 +17,7 @@ import (
 	"github.com/la5nta/pat/api/types"
 	"github.com/la5nta/pat/internal/buildinfo"
 
+	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/fbb"
 	"github.com/la5nta/wl2k-go/transport/ardop"
 )
@@ -273,6 +274,10 @@ func (a *App) AbortActiveConnection(dirty bool) (ok bool) {
 	ardopTNC, _ := a.modems.Current(MethodArdop).(*ardop.TNC)
 	varaFM, _ := a.modems.Current(MethodVaraFM).(varaModem)
 	varaHF, _ := a.modems.Current(MethodVaraHF).(varaModem)
+	var ptc *pactor.Modem
+	if p, ok := a.modems.Current(MethodPactor).(*pactorModem); ok {
+		ptc = p.current()
+	}
 	switch {
 	case ardopTNC != nil && !ardopTNC.Idle():
 		if dirty {
@@ -313,9 +318,9 @@ func (a *App) AbortActiveConnection(dirty bool) (ok bool) {
 			}
 		}()
 		return true
-	case a.pactor != nil:
+	case ptc != nil:
 		log.Println("Disconnecting pactor...")
-		err := a.pactor.Close()
+		err := ptc.Close()
 		if err != nil {
 			log.Println(err)
 		}

@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/la5nta/pat/cfg"
@@ -22,12 +24,10 @@ import (
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
+	"github.com/la5nta/wl2k-go/transport/ax25"
 	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
+	"github.com/la5nta/wl2k-go/transport/telnet"
 	"github.com/n8jja/Pat-Vara/vara"
-
-	// Register stateless dialers
-	_ "github.com/la5nta/wl2k-go/transport/ax25"
-	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -58,7 +58,10 @@ func (a *App) Connect(connectStr string) (success bool) {
 		log.Println(err)
 		return false
 	}
+	return a.connectURL(connectStr, url)
+}
 
+func (a *App) connectURL(connectStr string, url *transport.URL) (success bool) {
 	// TODO: Remove after some release cycles (2023-05-21)
 	// Rewrite legacy serial-tnc scheme.
 	if url.Scheme == MethodSerialTNCDeprecated {
@@ -75,25 +78,20 @@ func (a *App) Connect(connectStr string) (success bool) {
 	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
 	defer a.dialCancelFunc()
 
-	// Init TNCs
-	switch url.Scheme {
-	case MethodAX25AGWPE, MethodArdop, MethodVaraHF, MethodVaraFM:
-		_, release, err := a.modems.Acquire(ctx, url.Scheme)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		defer release()
-	case MethodPactor:
-		ptCmdInit := ""
-		if val, ok := url.Params["init"]; ok {
-			ptCmdInit = strings.Join(val, "\n")
-		}
-		if err := a.initPACTOR(ptCmdInit); err != nil {
-			log.Println(err)
-			return
-		}
+	// Signal web gui that we are dialing, so an abort can cancel a stuck Acquire too.
+	a.dialing = url
+	a.websocketHub.UpdateStatus()
+
+	modem, release, err := a.modems.Acquire(ctx, url.Scheme)
+	switch {
+	case errors.Is(err, context.Canceled):
+		log.Printf("Connect cancelled")
+		return
+	case err != nil:
+		log.Println(err)
+		return
 	}
+	defer release()
 
 	// Set default userinfo (mycall)
 	if url.User == nil {
@@ -150,10 +148,6 @@ func (a *App) Connect(connectStr string) (success bool) {
 		currFreq = Frequency(f)
 	}
 
-	// Signal web gui that we are dialing a connection
-	a.dialing = url
-	a.websocketHub.UpdateStatus()
-
 	prehookScript := prehook.Script{
 		Dir:  a.options.PrehooksPath,
 		File: url.Params.Get("prehook"),
@@ -167,7 +161,7 @@ func (a *App) Connect(connectStr string) (success bool) {
 	}
 
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
-	conn, err := transport.DialURLContext(ctx, url)
+	conn, err := modem.DialURLContext(ctx, url)
 
 	// Signal web gui that we are no longer dialing
 	a.dialing = nil
@@ -253,11 +247,42 @@ func (a *App) onBusyChannel(ctx context.Context) (abort bool) {
 
 func (a *App) newModemHub() *ModemHub {
 	return NewModemHub(map[string]ModemOpener{
-		MethodArdop:     a.openARDOP,
-		MethodVaraHF:    a.openVARAHF,
-		MethodVaraFM:    a.openVARAFM,
-		MethodAX25AGWPE: a.openAGWPE,
+		MethodArdop:         a.openARDOP,
+		MethodVaraHF:        a.openVARAHF,
+		MethodVaraFM:        a.openVARAFM,
+		MethodAX25AGWPE:     a.openAGWPE,
+		MethodPactor:        a.openPactor,
+		MethodTelnet:        statelessOpener(telnet.DefaultDialer, a.listenTelnet),
+		MethodAX25Linux:     statelessOpener(ax25.DefaultDialer, a.listenAX25Linux),
+		MethodAX25SerialTNC: statelessOpener(ax25.DefaultDialer, nil),
 	})
+}
+
+// statelessModem adapts a dialer with no connection state to the Modem interface.
+type statelessModem struct {
+	transport.ContextDialer
+	listen func() (net.Listener, error)
+}
+
+func (m statelessModem) Ping() error  { return nil }
+func (m statelessModem) Close() error { return nil }
+func (m statelessModem) Listen() (net.Listener, error) {
+	if m.listen == nil {
+		return nil, errors.New("listen not implemented")
+	}
+	return m.listen()
+}
+
+func statelessOpener(d transport.ContextDialer, listen func() (net.Listener, error)) ModemOpener {
+	return func() (Modem, error) { return statelessModem{d, listen}, nil }
+}
+
+func (a *App) listenTelnet() (net.Listener, error) {
+	return telnet.Listen(a.config.Telnet.ListenAddr)
+}
+
+func (a *App) listenAX25Linux() (net.Listener, error) {
+	return ax25.ListenAX25(a.config.AX25Linux.Port, a.options.MyCall)
 }
 
 func (a *App) openARDOP() (Modem, error) {
@@ -265,58 +290,86 @@ func (a *App) openARDOP() (Modem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ARDOP TNC initialization failed: %w", err)
 	}
-	if err := a.configureARDOP(tnc); err != nil {
+	fail := func(err error) (Modem, error) {
 		tnc.Close()
 		return nil, err
 	}
-	transport.RegisterDialer(MethodArdop, tnc)
-	return tnc, nil
-}
 
-func (a *App) configureARDOP(tnc *ardop.TNC) error {
 	tnc.SetBusyFunc(a.onBusyChannel)
 
 	if !a.config.Ardop.ARQBandwidth.IsZero() {
 		if err := tnc.SetARQBandwidth(a.config.Ardop.ARQBandwidth); err != nil {
-			return fmt.Errorf("unable to set ARQ bandwidth for ardop TNC: %w", err)
+			return fail(fmt.Errorf("unable to set ARQ bandwidth for ardop TNC: %w", err))
 		}
 	}
 
 	if err := tnc.SetCWID(a.config.Ardop.CWID); err != nil {
-		return fmt.Errorf("unable to configure CWID for ardop TNC: %w", err)
+		return fail(fmt.Errorf("unable to configure CWID for ardop TNC: %w", err))
 	}
 
-	if v, err := tnc.Version(); err != nil {
-		return fmt.Errorf("ARDOP TNC initialization failed: %s", err)
-	} else {
-		log.Printf("ARDOP TNC (%s) initialized", v)
+	v, err := tnc.Version()
+	if err != nil {
+		return fail(fmt.Errorf("ARDOP TNC initialization failed: %w", err))
 	}
+	log.Printf("ARDOP TNC (%s) initialized", v)
 
-	if !a.config.Ardop.PTTControl {
-		return nil
+	if a.config.Ardop.PTTControl {
+		rig, ok := a.rigs[a.config.Ardop.Rig]
+		if !ok {
+			return fail(fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", a.config.Ardop.Rig))
+		}
+		tnc.SetPTT(rig)
 	}
-
-	rig, ok := a.rigs[a.config.Ardop.Rig]
-	if !ok {
-		return fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", a.config.Ardop.Rig)
-	}
-
-	tnc.SetPTT(rig)
-	return nil
+	return tnc, nil
 }
 
-func (a *App) initPACTOR(cmdlineinit string) error {
-	if a.pactor != nil {
-		a.pactor.Close()
-	}
-	var err error
-	a.pactor, err = pactor.OpenModem(a.config.Pactor.Path, a.config.Pactor.Baudrate, a.options.MyCall, a.config.Pactor.InitScript, cmdlineinit)
-	if err != nil || a.pactor == nil {
-		return fmt.Errorf("pactor initialization failed: %w", err)
-	}
+// pactorModem reopens the PTC on every dial, applying that connect's init commands.
+type pactorModem struct {
+	a  *App
+	mu sync.Mutex
+	m  *pactor.Modem
+}
 
-	transport.RegisterDialer(MethodPactor, a.pactor)
+func (a *App) openPactor() (Modem, error) { return &pactorModem{a: a}, nil }
 
+func (p *pactorModem) current() *pactor.Modem {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.m
+}
+
+func (p *pactorModem) DialURLContext(ctx context.Context, url *transport.URL) (net.Conn, error) {
+	p.Close()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	conf := p.a.config.Pactor
+	m, err := pactor.OpenModem(conf.Path, conf.Baudrate, p.a.options.MyCall, conf.InitScript, strings.Join(url.Params["init"], "\n"))
+	if err != nil || m == nil {
+		return nil, fmt.Errorf("pactor initialization failed: %w", err)
+	}
+	p.mu.Lock()
+	p.m = m
+	p.mu.Unlock()
+	// The PTC call ignores ctx; closing the modem is the only way to abort it.
+	stop := context.AfterFunc(ctx, func() { m.Close() })
+	defer stop()
+	conn, err := m.DialURL(url)
+	if err == nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return conn, err
+}
+
+func (p *pactorModem) Ping() error { return nil }
+func (p *pactorModem) Listen() (net.Listener, error) {
+	return nil, errors.New("pactor listen not implemented")
+}
+
+func (p *pactorModem) Close() error {
+	if m := p.current(); m != nil {
+		return m.Close()
+	}
 	return nil
 }
 
@@ -361,7 +414,6 @@ func (a *App) openVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
-	transport.RegisterDialer(scheme, m)
 	m.SetBusyFunc(a.onBusyChannel)
 
 	if conf.PTTControl {
@@ -390,7 +442,6 @@ func (a *App) openAGWPE() (Modem, error) {
 		log.Printf("AGWPE TNC (%s) initialized", v)
 	}
 
-	transport.RegisterContextDialer(MethodAX25AGWPE, port)
 	return port, nil
 }
 

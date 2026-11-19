@@ -4,16 +4,25 @@ import (
 	"context"
 	"errors"
 	"net"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport"
 )
 
 type fakeModem struct {
 	dead   atomic.Bool
 	closed atomic.Bool
 	hang   chan struct{} // if set, Ping blocks until closed
+	dialed atomic.Pointer[transport.URL]
+}
+
+func (m *fakeModem) DialURLContext(_ context.Context, url *transport.URL) (net.Conn, error) {
+	m.dialed.Store(url)
+	return nil, errors.New("fake dial")
 }
 
 func (m *fakeModem) Close() error                  { m.closed.Store(true); return nil }
@@ -193,4 +202,33 @@ func TestModemHub(t *testing.T) {
 			t.Errorf("Acquire after Close: %v", err)
 		}
 	})
+}
+
+func TestConnectDialsAcquiredModem(t *testing.T) {
+	ev, err := NewEventLogger(filepath.Join(t.TempDir(), "events.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ev.Close()
+	h, o := newTestModemHub(t)
+	defer h.Close()
+	a := &App{options: Options{MyCall: "N0CALL"}, websocketHub: noopWSSocket{}, eventLog: ev, modems: h}
+
+	url, err := transport.ParseURL("test:///LA1B")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.connectURL("test:///LA1B", url) {
+		t.Fatal("connect succeeded despite failing dial")
+	}
+	m := o.last.Load()
+	if m == nil {
+		t.Fatal("modem never opened")
+	}
+	if got := m.dialed.Load(); got == nil || got.Target != "LA1B" {
+		t.Fatalf("acquired modem dialed %v, want target LA1B", got)
+	}
+	if a.dialing != nil {
+		t.Error("dialing state not cleared")
+	}
 }

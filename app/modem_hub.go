@@ -72,7 +72,7 @@ func (h *ModemHub) Acquire(ctx context.Context, scheme string) (Modem, func(), e
 	}
 
 	if m != nil {
-		pinged := m // m is reassigned below while an abandoned ping may still run.
+		pinged := m // m is reassigned below.
 		ping := func() (struct{}, error) { return struct{}{}, pinged.Ping() }
 		if _, err := within(ctx, modemPingTimeout, ping, func(struct{}, error) {}); err != nil {
 			if ctx.Err() != nil {
@@ -82,7 +82,7 @@ func (h *ModemHub) Acquire(ctx context.Context, scheme string) (Modem, func(), e
 			h.mu.Lock()
 			h.drop(s)
 			h.mu.Unlock()
-			go m.Close() // May hang talking to a wedged TNC.
+			go m.Close() // May hang on a wedged TNC.
 			m = nil
 		}
 	}
@@ -150,13 +150,13 @@ func (h *ModemHub) release(s *modemSlot, m Modem) {
 	}
 	var t *time.Timer
 	t = time.AfterFunc(modemGracePeriod, func() {
-		s.busy <- struct{}{} // Wait out any in-flight Acquire, which may re-hold m.
+		s.busy <- struct{}{} // Wait out in-flight Acquire.
 		defer func() { <-s.busy }()
 		h.mu.Lock()
 		defer h.mu.Unlock()
 		if s.timer == t { // Not cancelled or superseded meanwhile.
 			h.drop(s)
-			m.Close()
+			go m.Close()
 		}
 	})
 	s.timer = t
@@ -181,16 +181,19 @@ func (h *ModemHub) Current(scheme string) Modem {
 
 func (h *ModemHub) Close() {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	h.closed = true
+	open := make(map[string]Modem)
 	for scheme, s := range h.slots {
-		if s.m == nil {
-			continue
+		if s.m != nil {
+			open[scheme] = s.m
+			h.drop(s)
 		}
-		if err := s.m.Close(); err != nil {
+	}
+	h.mu.Unlock()
+	for scheme, m := range open {
+		if err := m.Close(); err != nil {
 			log.Printf("Failure to close %s modem: %s", scheme, err)
 		}
-		h.drop(s)
 	}
 }
 

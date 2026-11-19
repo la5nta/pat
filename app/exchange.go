@@ -276,7 +276,7 @@ func (a *App) AbortActiveConnection(dirty bool) (ok bool) {
 	varaHF, _ := a.modems.Current(MethodVaraHF).(varaModem)
 	var ptc *pactor.Modem
 	if p, ok := a.modems.Current(MethodPactor).(*pactorModem); ok {
-		ptc = p.current()
+		ptc = p.modem()
 	}
 	switch {
 	case ardopTNC != nil && !ardopTNC.Idle():

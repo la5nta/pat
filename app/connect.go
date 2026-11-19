@@ -71,10 +71,14 @@ func (a *App) Connect(connectStr string) (success bool) {
 		url.Scheme = a.defaultAX25Method()
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
+	defer a.dialCancelFunc()
+
 	// Init TNCs
 	switch url.Scheme {
 	case MethodAX25AGWPE, MethodArdop, MethodVaraHF, MethodVaraFM:
-		_, release, err := a.modems.Acquire(url.Scheme)
+		_, release, err := a.modems.Acquire(ctx, url.Scheme)
 		if err != nil {
 			log.Println(err)
 			return
@@ -145,10 +149,6 @@ func (a *App) Connect(connectStr string) (success bool) {
 		f, _ := vfo.GetFreq()
 		currFreq = Frequency(f)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
-	defer a.dialCancelFunc()
 
 	// Signal web gui that we are dialing a connection
 	a.dialing = url

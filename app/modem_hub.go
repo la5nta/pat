@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -17,7 +19,11 @@ type Modem interface {
 
 type ModemOpener func() (Modem, error)
 
-var modemGracePeriod = 10 * time.Second
+var (
+	modemGracePeriod = 10 * time.Second
+	modemOpenTimeout = 15 * time.Second
+	modemPingTimeout = 3 * time.Second
+)
 
 var errModemHubClosed = errors.New("modem hub closed")
 
@@ -29,7 +35,7 @@ type ModemHub struct {
 
 type modemSlot struct {
 	open  ModemOpener
-	init  sync.Mutex // serializes open/ping per scheme, so only one open runs at a time
+	busy  chan struct{} // 1-buffered semaphore serializing open/ping per scheme
 	m     Modem
 	holds int
 	timer *time.Timer
@@ -38,18 +44,22 @@ type modemSlot struct {
 func NewModemHub(openers map[string]ModemOpener) *ModemHub {
 	slots := make(map[string]*modemSlot, len(openers))
 	for scheme, open := range openers {
-		slots[scheme] = &modemSlot{open: open}
+		slots[scheme] = &modemSlot{open: open, busy: make(chan struct{}, 1)}
 	}
 	return &ModemHub{slots: slots}
 }
 
-func (h *ModemHub) Acquire(scheme string) (Modem, func(), error) {
+func (h *ModemHub) Acquire(ctx context.Context, scheme string) (Modem, func(), error) {
 	s, ok := h.slots[scheme]
 	if !ok {
 		return nil, nil, errors.New("no modem for scheme " + scheme)
 	}
-	s.init.Lock()
-	defer s.init.Unlock()
+	select {
+	case s.busy <- struct{}{}:
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	}
+	defer func() { <-s.busy }()
 
 	h.mu.Lock()
 	m, closed := s.m, h.closed
@@ -59,19 +69,29 @@ func (h *ModemHub) Acquire(scheme string) (Modem, func(), error) {
 	}
 
 	if m != nil {
-		if err := m.Ping(); err != nil {
+		pinged := m // m is reassigned below while an abandoned ping may still run.
+		ping := func() (struct{}, error) { return struct{}{}, pinged.Ping() }
+		if _, err := within(ctx, modemPingTimeout, ping, func(struct{}, error) {}); err != nil {
+			if ctx.Err() != nil {
+				return nil, nil, ctx.Err() // Caller gave up; the modem may be fine.
+			}
 			log.Printf("%s modem unresponsive, reopening: %s", scheme, err)
 			h.mu.Lock()
 			h.drop(s)
 			h.mu.Unlock()
-			m.Close()
+			go m.Close() // May hang talking to a wedged TNC.
 			m = nil
 		}
 	}
 	if m == nil {
 		var err error
-		if m, err = s.open(); err != nil {
-			return nil, nil, err
+		m, err = within(ctx, modemOpenTimeout, s.open, func(m Modem, err error) {
+			if err == nil {
+				m.Close()
+			}
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("open %s modem: %w", scheme, err)
 		}
 	}
 
@@ -90,19 +110,45 @@ func (h *ModemHub) Acquire(scheme string) (Modem, func(), error) {
 	return m, sync.OnceFunc(func() { h.release(s, m) }), nil
 }
 
+// within runs f bounded by ctx and d. If abandoned, late gets f's eventual result.
+func within[T any](ctx context.Context, d time.Duration, f func() (T, error), late func(T, error)) (T, error) {
+	ctx, cancel := context.WithTimeout(ctx, d)
+	defer cancel()
+	type result struct {
+		v   T
+		err error
+	}
+	ch := make(chan result)
+	go func() {
+		v, err := f()
+		select {
+		case ch <- result{v, err}:
+		case <-ctx.Done():
+			late(v, err)
+		}
+	}()
+	select {
+	case r := <-ch:
+		return r.v, r.err
+	case <-ctx.Done():
+		var zero T
+		return zero, ctx.Err()
+	}
+}
+
 func (h *ModemHub) release(s *modemSlot, m Modem) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if s.m != m {
 		return
 	}
-	if s.holds--; s.holds > 0 || h.closed {
+	if s.holds--; s.holds > 0 {
 		return
 	}
 	var t *time.Timer
 	t = time.AfterFunc(modemGracePeriod, func() {
-		s.init.Lock() // Wait out any in-flight Acquire, which may re-hold m.
-		defer s.init.Unlock()
+		s.busy <- struct{}{} // Wait out any in-flight Acquire, which may re-hold m.
+		defer func() { <-s.busy }()
 		h.mu.Lock()
 		defer h.mu.Unlock()
 		if s.timer == t { // Not cancelled or superseded meanwhile.
@@ -156,7 +202,7 @@ func (l releasingListener) Close() error {
 }
 
 func (a *App) listenModem(scheme string) (Modem, net.Listener, error) {
-	m, release, err := a.modems.Acquire(scheme)
+	m, release, err := a.modems.Acquire(context.Background(), scheme)
 	if err != nil {
 		return nil, nil, err
 	}

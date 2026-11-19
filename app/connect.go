@@ -76,6 +76,7 @@ func (a *App) connectURL(connectStr string, url *transport.URL) (success bool) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
+	defer a.websocketHub.UpdateStatus() // Runs after dialing is cleared.
 	defer a.dialCancelFunc()
 
 	// Signal web gui that we are dialing, so an abort can cancel a stuck Acquire too.
@@ -258,6 +259,8 @@ func (a *App) newModemHub() *ModemHub {
 	})
 }
 
+var errListenNotImplemented = errors.New("listen not implemented")
+
 // statelessModem adapts a dialer with no connection state to the Modem interface.
 type statelessModem struct {
 	transport.ContextDialer
@@ -268,7 +271,7 @@ func (m statelessModem) Ping() error  { return nil }
 func (m statelessModem) Close() error { return nil }
 func (m statelessModem) Listen() (net.Listener, error) {
 	if m.listen == nil {
-		return nil, errors.New("listen not implemented")
+		return nil, errListenNotImplemented
 	}
 	return m.listen()
 }
@@ -325,52 +328,66 @@ func (a *App) openARDOP() (Modem, error) {
 
 // pactorModem reopens the PTC on every dial, applying that connect's init commands.
 type pactorModem struct {
-	a  *App
-	mu sync.Mutex
-	m  *pactor.Modem
+	app *App
+	mu  sync.Mutex
+	ptc *pactor.Modem
 }
 
-func (a *App) openPactor() (Modem, error) { return &pactorModem{a: a}, nil }
+func (a *App) openPactor() (Modem, error) { return &pactorModem{app: a}, nil }
 
-func (p *pactorModem) current() *pactor.Modem {
+func (p *pactorModem) modem() *pactor.Modem {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.m
+	return p.ptc
 }
 
 func (p *pactorModem) DialURLContext(ctx context.Context, url *transport.URL) (net.Conn, error) {
-	p.Close()
-	if err := ctx.Err(); err != nil {
+	ptc, err := p.reopen(ctx, url)
+	if err != nil {
 		return nil, err
 	}
-	conf := p.a.config.Pactor
-	m, err := pactor.OpenModem(conf.Path, conf.Baudrate, p.a.options.MyCall, conf.InitScript, strings.Join(url.Params["init"], "\n"))
-	if err != nil || m == nil {
-		return nil, fmt.Errorf("pactor initialization failed: %w", err)
-	}
-	p.mu.Lock()
-	p.m = m
-	p.mu.Unlock()
 	// The PTC call ignores ctx; closing the modem is the only way to abort it.
-	stop := context.AfterFunc(ctx, func() { m.Close() })
+	stop := context.AfterFunc(ctx, func() { ptc.Close() })
 	defer stop()
-	conn, err := m.DialURL(url)
+	conn, err := ptc.DialURL(url)
 	if err == nil && ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 	return conn, err
 }
 
-func (p *pactorModem) Ping() error { return nil }
-func (p *pactorModem) Listen() (net.Listener, error) {
-	return nil, errors.New("pactor listen not implemented")
+// reopen holds p.mu throughout so overlapping dials can't both open the serial port.
+func (p *pactorModem) reopen(ctx context.Context, url *transport.URL) (*pactor.Modem, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.ptc != nil {
+		p.ptc.Close()
+		p.ptc = nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	conf := p.app.config.Pactor
+	ptc, err := pactor.OpenModem(conf.Path, conf.Baudrate, p.app.options.MyCall, conf.InitScript, strings.Join(url.Params["init"], "\n"))
+	if err != nil || ptc == nil {
+		return nil, fmt.Errorf("pactor initialization failed: %w", err)
+	}
+	p.ptc = ptc
+	return ptc, nil
 }
 
+func (p *pactorModem) Ping() error                   { return nil }
+func (p *pactorModem) Listen() (net.Listener, error) { return nil, errListenNotImplemented }
+
 func (p *pactorModem) Close() error {
-	if m := p.current(); m != nil {
-		return m.Close()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.ptc == nil {
+		return nil
 	}
-	return nil
+	err := p.ptc.Close()
+	p.ptc = nil
+	return err
 }
 
 type varaModem struct{ *vara.Modem }

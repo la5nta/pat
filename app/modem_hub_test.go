@@ -17,6 +17,7 @@ type fakeModem struct {
 	dead   atomic.Bool
 	closed atomic.Bool
 	hang   chan struct{} // if set, Ping blocks until closed
+	block  chan struct{} // if set, Close blocks until closed
 	dialed atomic.Pointer[transport.URL]
 }
 
@@ -25,7 +26,13 @@ func (m *fakeModem) DialURLContext(_ context.Context, url *transport.URL) (net.C
 	return nil, errors.New("fake dial")
 }
 
-func (m *fakeModem) Close() error                  { m.closed.Store(true); return nil }
+func (m *fakeModem) Close() error {
+	m.closed.Store(true)
+	if m.block != nil {
+		<-m.block
+	}
+	return nil
+}
 func (m *fakeModem) Listen() (net.Listener, error) { return newMockListener(), nil }
 func (m *fakeModem) Ping() error {
 	if m.hang != nil {
@@ -108,6 +115,32 @@ func TestModemHub(t *testing.T) {
 		time.Sleep(2 * modemGracePeriod)
 		if m2.(*fakeModem).closed.Load() {
 			t.Error("stale release tore down the replacement")
+		}
+	})
+
+	t.Run("BlockingCloseDoesNotFreezeHub", func(t *testing.T) {
+		h, _ := newTestModemHub(t)
+		defer h.Close()
+		m, release, _ := h.Acquire(context.Background(), "test")
+		block := make(chan struct{})
+		defer close(block)
+		m.(*fakeModem).block = block
+		release()
+		if !eventually(t, m.(*fakeModem).closed.Load) {
+			t.Fatal("not closed after grace period")
+		}
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			h.Current("test")
+			if _, release, err := h.Acquire(context.Background(), "test"); err == nil {
+				release()
+			}
+		}()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("hub blocked behind modem Close")
 		}
 	})
 
@@ -230,5 +263,28 @@ func TestConnectDialsAcquiredModem(t *testing.T) {
 	}
 	if a.dialing != nil {
 		t.Error("dialing state not cleared")
+	}
+}
+
+type statusRecorder struct {
+	noopWSSocket
+	a       *App
+	dialing bool // as of the last UpdateStatus
+}
+
+func (r *statusRecorder) UpdateStatus() { r.dialing = r.a.dialing != nil }
+
+func TestConnectEarlyReturnClearsDialingStatus(t *testing.T) {
+	h, o := newTestModemHub(t)
+	defer h.Close()
+	o.err = errors.New("no tnc")
+	a := &App{options: Options{MyCall: "N0CALL"}, modems: h}
+	ws := &statusRecorder{a: a}
+	a.websocketHub = ws
+
+	url, _ := transport.ParseURL("test:///LA1B")
+	a.connectURL("test:///LA1B", url)
+	if ws.dialing {
+		t.Error("web gui last told dialing after failed acquire")
 	}
 }

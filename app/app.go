@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/pat/api/types"
 	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/buildinfo"
@@ -87,7 +86,6 @@ type App struct {
 
 	// Persistent modem connections
 	modems *ModemHub
-	pactor *pactor.Modem
 
 	rigs map[string]rig
 
@@ -387,11 +385,6 @@ func (a *App) Close() {
 
 	debug.Printf("Closing modems")
 	a.modems.Close()
-	if a.pactor != nil {
-		if err := a.pactor.Close(); err != nil {
-			log.Printf("Failure to close pactor modem: %s", err)
-		}
-	}
 
 	// Close rigs
 	debug.Printf("Closing rigs")

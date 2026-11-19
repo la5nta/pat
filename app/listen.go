@@ -16,7 +16,6 @@ import (
 	"github.com/la5nta/wl2k-go/transport/ardop"
 	"github.com/la5nta/wl2k-go/transport/ax25"
 	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
-	"github.com/la5nta/wl2k-go/transport/telnet"
 )
 
 func (a *App) Unlisten(param string) {
@@ -66,13 +65,15 @@ type AX25LinuxListener struct {
 	a interface {
 		Options() Options
 		Config() cfg.Config
+		listenModem(string) (Modem, net.Listener, error)
 	}
 
 	stopBeacon func()
 }
 
 func (l *AX25LinuxListener) Init() (net.Listener, error) {
-	return ax25.ListenAX25(l.a.Config().AX25Linux.Port, l.a.Options().MyCall)
+	_, ln, err := l.a.listenModem(MethodAX25Linux)
+	return ln, err
 }
 
 func (l *AX25LinuxListener) BeaconStart() error {
@@ -238,13 +239,14 @@ func (l AX25AGWPEListener) BeaconStop() {
 
 type TelnetListener struct {
 	a interface {
-		Config() cfg.Config
+		listenModem(string) (Modem, net.Listener, error)
 	}
 }
 
 func (l TelnetListener) Name() string { return MethodTelnet }
 func (l TelnetListener) Init() (net.Listener, error) {
-	return telnet.Listen(l.a.Config().Telnet.ListenAddr)
+	_, ln, err := l.a.listenModem(MethodTelnet)
+	return ln, err
 }
 func (l TelnetListener) CurrentFreq() (Frequency, bool) { return 0, false }
 

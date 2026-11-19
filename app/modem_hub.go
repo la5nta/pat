@@ -9,12 +9,15 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/la5nta/wl2k-go/transport"
 )
 
 type Modem interface {
 	io.Closer
 	Listen() (net.Listener, error)
 	Ping() error
+	DialURLContext(context.Context, *transport.URL) (net.Conn, error)
 }
 
 type ModemOpener func() (Modem, error)

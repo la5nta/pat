@@ -104,11 +104,6 @@ func (b messageBuilder) setDefaultFormValues() {
 }
 
 func (b messageBuilder) buildXML() []byte {
-	type Variable struct {
-		XMLName xml.Name
-		Value   string `xml:",chardata"`
-	}
-
 	filename := func(path string) string {
 		// Avoid "." for empty paths
 		if path == "" {
@@ -118,29 +113,25 @@ func (b messageBuilder) buildXML() []byte {
 	}
 
 	form := struct {
-		XMLName            xml.Name   `xml:"RMS_Express_Form"`
-		XMLFileVersion     string     `xml:"form_parameters>xml_file_version"`
-		RMSExpressVersion  string     `xml:"form_parameters>rms_express_version"`
-		SubmissionDatetime string     `xml:"form_parameters>submission_datetime"`
-		SendersCallsign    string     `xml:"form_parameters>senders_callsign"`
-		GridSquare         string     `xml:"form_parameters>grid_square"`
-		DisplayForm        string     `xml:"form_parameters>display_form"`
-		ReplyTemplate      string     `xml:"form_parameters>reply_template"`
-		Variables          []Variable `xml:"variables>name"`
+		XMLName   xml.Name       `xml:"RMS_Express_Form"`
+		Params    formParams     `xml:"form_parameters"`
+		Variables []formVariable `xml:"variables>name"`
 	}{
-		XMLFileVersion:     "1.0",
-		RMSExpressVersion:  b.FormsMgr.config.AppVersion,
-		SubmissionDatetime: now().UTC().Format("20060102150405"),
-		SendersCallsign:    b.FormsMgr.config.MyCall,
-		GridSquare:         b.FormsMgr.config.LocatorProvider.Locator(),
-		DisplayForm:        filename(b.Template.DisplayFormPath),
-		ReplyTemplate:      filename(b.Template.ReplyTemplatePath),
+		Params: formParams{
+			XMLFileVersion:     "1.0",
+			RMSExpressVersion:  b.FormsMgr.config.AppVersion,
+			SubmissionDatetime: now().UTC().Format("20060102150405"),
+			SendersCallsign:    b.FormsMgr.config.MyCall,
+			GridSquare:         b.FormsMgr.config.LocatorProvider.Locator(),
+			DisplayForm:        escapeXMLText(filename(b.Template.DisplayFormPath)),
+			ReplyTemplate:      escapeXMLText(filename(b.Template.ReplyTemplatePath)),
+		},
 	}
 	for k, v := range b.FormValues {
 		// Trim leading and trailing whitespace. Winlink Express does
 		// this, judging from the produced XML attachments.
 		v = strings.TrimSpace(v)
-		form.Variables = append(form.Variables, Variable{xml.Name{Local: k}, v})
+		form.Variables = append(form.Variables, formVariable{xml.Name{Local: k}, escapeXMLText(v)})
 	}
 	// Sort vars by name to make sure the output is deterministic.
 	sort.Slice(form.Variables, func(i, j int) bool {

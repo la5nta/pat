@@ -44,6 +44,12 @@ func (m *fakeModem) Ping() error {
 	return nil
 }
 
+// uncomparableModem is a value type with a func field, like statelessModem.
+type uncomparableModem struct {
+	*fakeModem
+	_ func()
+}
+
 type fakeOpener struct {
 	opens atomic.Int32
 	err   error
@@ -115,6 +121,21 @@ func TestModemHub(t *testing.T) {
 		time.Sleep(2 * modemGracePeriod)
 		if m2.(*fakeModem).closed.Load() {
 			t.Error("stale release tore down the replacement")
+		}
+	})
+
+	t.Run("UncomparableModem", func(t *testing.T) {
+		h, _ := newTestModemHub(t)
+		defer h.Close()
+		inner := &fakeModem{}
+		h.slots["test"].open = func() (Modem, error) { return uncomparableModem{fakeModem: inner}, nil }
+		_, release, err := h.Acquire(context.Background(), "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		release()
+		if !eventually(t, inner.closed.Load) {
+			t.Error("modem not closed after grace period")
 		}
 	})
 

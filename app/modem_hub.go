@@ -40,6 +40,7 @@ type modemSlot struct {
 	open  ModemOpener
 	busy  chan struct{} // 1-buffered semaphore serializing open/ping per scheme
 	m     Modem
+	gen   uint64 // bumped on drop; identifies m without comparing interfaces
 	holds int
 	timer *time.Timer
 }
@@ -110,7 +111,8 @@ func (h *ModemHub) Acquire(ctx context.Context, scheme string) (Modem, func(), e
 		s.timer = nil
 	}
 	s.holds++
-	return m, sync.OnceFunc(func() { h.release(s, m) }), nil
+	gen := s.gen
+	return m, sync.OnceFunc(func() { h.release(s, m, gen) }), nil
 }
 
 // within runs f bounded by ctx and d. If abandoned, late gets f's eventual result.
@@ -139,10 +141,10 @@ func within[T any](ctx context.Context, d time.Duration, f func() (T, error), la
 	}
 }
 
-func (h *ModemHub) release(s *modemSlot, m Modem) {
+func (h *ModemHub) release(s *modemSlot, m Modem, gen uint64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if s.m != m {
+	if s.gen != gen || s.m == nil {
 		return
 	}
 	if s.holds--; s.holds > 0 {
@@ -168,6 +170,7 @@ func (h *ModemHub) drop(s *modemSlot) {
 		s.timer = nil
 	}
 	s.m, s.holds = nil, 0
+	s.gen++
 }
 
 func (h *ModemHub) Current(scheme string) Modem {

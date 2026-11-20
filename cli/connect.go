@@ -26,8 +26,9 @@ const (
 transport:
   telnet:          TCP/IP
   ardop:           ARDOP TNC
-  pactor:          SCS PTC modems (legacy driver)
-  ptb:             PTB (PACTOR-TCP-Bridge) - modern PACTOR driver
+  pactor:          SCS PTC modems (Default: use serial, see below)
+  pactor+serial:   SCS PTC modems (using legacy driver)
+  pactor+ptb:      SCS PTB modems using PTB (PACTOR-TCP-Bridge - modern PACTOR driver)
   varahf:          VARA HF TNC
   varafm:          VARA FM TNC
   ax25:            AX.25 (Default - uses engine specified in config)

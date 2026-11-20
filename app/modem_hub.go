@@ -200,14 +200,20 @@ func (h *ModemHub) Close() {
 	}
 }
 
+// releasingListener closes the wrapped listener once, since shutdown and listenLoop both close it.
 type releasingListener struct {
 	net.Listener
 	release func()
+	once    sync.Once
+	err     error
 }
 
-func (l releasingListener) Close() error {
-	defer l.release()
-	return l.Listener.Close()
+func (l *releasingListener) Close() error {
+	l.once.Do(func() {
+		defer l.release()
+		l.err = l.Listener.Close()
+	})
+	return l.err
 }
 
 func (a *App) listenModem(scheme string) (Modem, net.Listener, error) {
@@ -220,5 +226,5 @@ func (a *App) listenModem(scheme string) (Modem, net.Listener, error) {
 		release()
 		return nil, nil, err
 	}
-	return m, releasingListener{ln, release}, nil
+	return m, &releasingListener{Listener: ln, release: release}, nil
 }

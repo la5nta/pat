@@ -82,6 +82,40 @@ func TestListenerHub_EnableDisable(t *testing.T) {
 	})
 }
 
+type blockingTransportListener struct {
+	initStarted chan struct{}
+	unblock     chan struct{}
+	ln          *mockListener
+}
+
+func (m *blockingTransportListener) Init() (net.Listener, error) {
+	close(m.initStarted)
+	<-m.unblock
+	return m.ln, nil
+}
+
+func (m *blockingTransportListener) Name() string                   { return "blocking" }
+func (m *blockingTransportListener) CurrentFreq() (Frequency, bool) { return 0, false }
+
+func TestListener_CloseDuringInitClosesListener(t *testing.T) {
+	hub := NewListenerHub(createTestApp())
+	tl := &blockingTransportListener{
+		initStarted: make(chan struct{}),
+		unblock:     make(chan struct{}),
+		ln:          newMockListener(),
+	}
+	hub.Enable(tl)
+	<-tl.initStarted
+	hub.Disable("blocking")
+	close(tl.unblock)
+
+	select {
+	case <-tl.ln.closed:
+	case <-time.After(time.Second):
+		t.Fatal("listener returned by Init after Close was never closed")
+	}
+}
+
 func TestListener_RetriesOnFailure(t *testing.T) {
 	hub := NewListenerHub(createTestApp())
 	defer hub.Close()

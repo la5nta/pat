@@ -9,9 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/la5nta/pat/cfg"
@@ -22,12 +24,10 @@ import (
 	"github.com/harenber/ptc-go/v2/pactor"
 	"github.com/la5nta/wl2k-go/transport"
 	"github.com/la5nta/wl2k-go/transport/ardop"
+	"github.com/la5nta/wl2k-go/transport/ax25"
 	"github.com/la5nta/wl2k-go/transport/ax25/agwpe"
+	"github.com/la5nta/wl2k-go/transport/telnet"
 	"github.com/n8jja/Pat-Vara/vara"
-
-	// Register stateless dialers
-	_ "github.com/la5nta/wl2k-go/transport/ax25"
-	_ "github.com/la5nta/wl2k-go/transport/telnet"
 )
 
 func hasSSID(str string) bool { return strings.Contains(str, "-") }
@@ -58,7 +58,10 @@ func (a *App) Connect(connectStr string) (success bool) {
 		log.Println(err)
 		return false
 	}
+	return a.connectURL(connectStr, url)
+}
 
+func (a *App) connectURL(connectStr string, url *transport.URL) (success bool) {
 	// TODO: Remove after some release cycles (2023-05-21)
 	// Rewrite legacy serial-tnc scheme.
 	if url.Scheme == MethodSerialTNCDeprecated {
@@ -71,38 +74,25 @@ func (a *App) Connect(connectStr string) (success bool) {
 		url.Scheme = a.defaultAX25Method()
 	}
 
-	// Init TNCs
-	switch url.Scheme {
-	case MethodAX25AGWPE:
-		if err := a.initAGWPE(); err != nil {
-			log.Println(err)
-			return
-		}
-	case MethodArdop:
-		if err := a.initARDOP(); err != nil {
-			log.Println(err)
-			return
-		}
-	case MethodPactor:
-		ptCmdInit := ""
-		if val, ok := url.Params["init"]; ok {
-			ptCmdInit = strings.Join(val, "\n")
-		}
-		if err := a.initPACTOR(ptCmdInit); err != nil {
-			log.Println(err)
-			return
-		}
-	case MethodVaraHF:
-		if err := a.initVARAHF(); err != nil {
-			log.Println(err)
-			return
-		}
-	case MethodVaraFM:
-		if err := a.initVARAFM(); err != nil {
-			log.Println(err)
-			return
-		}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
+	defer a.websocketHub.UpdateStatus() // Runs after dialing is cleared.
+	defer a.dialCancelFunc()
+
+	// Signal web gui that we are dialing, so an abort can cancel a stuck Acquire too.
+	a.dialing = url
+	a.websocketHub.UpdateStatus()
+
+	modem, release, err := a.modems.Acquire(ctx, url.Scheme)
+	switch {
+	case errors.Is(err, context.Canceled):
+		log.Printf("Connect cancelled")
+		return
+	case err != nil:
+		log.Println(err)
+		return
 	}
+	defer release()
 
 	// Set default userinfo (mycall)
 	if url.User == nil {
@@ -159,14 +149,6 @@ func (a *App) Connect(connectStr string) (success bool) {
 		currFreq = Frequency(f)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	a.dialCancelFunc = func() { a.dialing = nil; cancel() }
-	defer a.dialCancelFunc()
-
-	// Signal web gui that we are dialing a connection
-	a.dialing = url
-	a.websocketHub.UpdateStatus()
-
 	prehookScript := prehook.Script{
 		Dir:  a.options.PrehooksPath,
 		File: url.Params.Get("prehook"),
@@ -180,7 +162,7 @@ func (a *App) Connect(connectStr string) (success bool) {
 	}
 
 	log.Printf("Connecting to %s (%s)...", url.Target, url.Scheme)
-	conn, err := transport.DialURLContext(ctx, url)
+	conn, err := modem.DialURLContext(ctx, url)
 
 	// Signal web gui that we are no longer dialing
 	a.dialing = nil
@@ -264,130 +246,182 @@ func (a *App) onBusyChannel(ctx context.Context) (abort bool) {
 	}
 }
 
-// ARDOP returns the initialized ARDOP modem, initializing it if necessary.
-func (a *App) ARDOP() (*ardop.TNC, error) {
-	if err := a.initARDOP(); err != nil {
-		return nil, err
-	}
-	return a.ardop, nil
+func (a *App) newModemHub() *ModemHub {
+	return NewModemHub(map[string]ModemOpener{
+		MethodArdop:         a.openARDOP,
+		MethodVaraHF:        a.openVARAHF,
+		MethodVaraFM:        a.openVARAFM,
+		MethodAX25AGWPE:     a.openAGWPE,
+		MethodPactor:        a.openPactor,
+		MethodTelnet:        statelessOpener(telnet.DefaultDialer, a.listenTelnet),
+		MethodAX25Linux:     statelessOpener(ax25.DefaultDialer, a.listenAX25Linux),
+		MethodAX25SerialTNC: statelessOpener(ax25.DefaultDialer, nil),
+	})
 }
 
-func (a *App) initARDOP() error {
-	if a.ardop != nil && a.ardop.Ping() == nil {
-		return nil
-	}
+var errListenNotImplemented = errors.New("listen not implemented")
 
-	if a.ardop != nil {
-		a.ardop.Close()
-	}
+// statelessModem adapts a dialer with no connection state to the Modem interface.
+type statelessModem struct {
+	transport.ContextDialer
+	listen func() (net.Listener, error)
+}
 
-	var err error
-	a.ardop, err = ardop.OpenTCP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator.String())
+func (m statelessModem) Ping() error  { return nil }
+func (m statelessModem) Close() error { return nil }
+func (m statelessModem) Listen() (net.Listener, error) {
+	if m.listen == nil {
+		return nil, errListenNotImplemented
+	}
+	return m.listen()
+}
+
+func statelessOpener(d transport.ContextDialer, listen func() (net.Listener, error)) ModemOpener {
+	return func() (Modem, error) { return statelessModem{d, listen}, nil }
+}
+
+func (a *App) listenTelnet() (net.Listener, error) {
+	return telnet.Listen(a.config.Telnet.ListenAddr)
+}
+
+func (a *App) listenAX25Linux() (net.Listener, error) {
+	return ax25.ListenAX25(a.config.AX25Linux.Port, a.options.MyCall)
+}
+
+func (a *App) openARDOP() (Modem, error) {
+	tnc, err := ardop.OpenTCP(a.config.Ardop.Addr, a.options.MyCall, a.config.Locator.String())
 	if err != nil {
-		return fmt.Errorf("ARDOP TNC initialization failed: %w", err)
+		return nil, fmt.Errorf("ARDOP TNC initialization failed: %w", err)
+	}
+	fail := func(err error) (Modem, error) {
+		tnc.Close()
+		return nil, err
 	}
 
-	a.ardop.SetBusyFunc(a.onBusyChannel)
+	tnc.SetBusyFunc(a.onBusyChannel)
 
 	if !a.config.Ardop.ARQBandwidth.IsZero() {
-		if err := a.ardop.SetARQBandwidth(a.config.Ardop.ARQBandwidth); err != nil {
-			return fmt.Errorf("unable to set ARQ bandwidth for ardop TNC: %w", err)
+		if err := tnc.SetARQBandwidth(a.config.Ardop.ARQBandwidth); err != nil {
+			return fail(fmt.Errorf("unable to set ARQ bandwidth for ardop TNC: %w", err))
 		}
 	}
 
-	if err := a.ardop.SetCWID(a.config.Ardop.CWID); err != nil {
-		return fmt.Errorf("unable to configure CWID for ardop TNC: %w", err)
+	if err := tnc.SetCWID(a.config.Ardop.CWID); err != nil {
+		return fail(fmt.Errorf("unable to configure CWID for ardop TNC: %w", err))
 	}
 
-	if v, err := a.ardop.Version(); err != nil {
-		return fmt.Errorf("ARDOP TNC initialization failed: %s", err)
-	} else {
-		log.Printf("ARDOP TNC (%s) initialized", v)
+	v, err := tnc.Version()
+	if err != nil {
+		return fail(fmt.Errorf("ARDOP TNC initialization failed: %w", err))
 	}
+	log.Printf("ARDOP TNC (%s) initialized", v)
 
-	transport.RegisterDialer(MethodArdop, a.ardop)
-
-	if !a.config.Ardop.PTTControl {
-		return nil
+	if a.config.Ardop.PTTControl {
+		rig, ok := a.rigs[a.config.Ardop.Rig]
+		if !ok {
+			return fail(fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", a.config.Ardop.Rig))
+		}
+		tnc.SetPTT(rig)
 	}
-
-	rig, ok := a.rigs[a.config.Ardop.Rig]
-	if !ok {
-		return fmt.Errorf("unable to set PTT rig '%s': Not defined or not loaded", a.config.Ardop.Rig)
-	}
-
-	a.ardop.SetPTT(rig)
-	return nil
+	return tnc, nil
 }
 
-func (a *App) initPACTOR(cmdlineinit string) error {
-	if a.pactor != nil {
-		a.pactor.Close()
-	}
-	var err error
-	a.pactor, err = pactor.OpenModem(a.config.Pactor.Path, a.config.Pactor.Baudrate, a.options.MyCall, a.config.Pactor.InitScript, cmdlineinit)
-	if err != nil || a.pactor == nil {
-		return fmt.Errorf("pactor initialization failed: %w", err)
-	}
-
-	transport.RegisterDialer(MethodPactor, a.pactor)
-
-	return nil
+// pactorModem reopens the PTC on every dial, applying that connect's init commands.
+type pactorModem struct {
+	app *App
+	mu  sync.Mutex
+	ptc *pactor.Modem
 }
 
-// VARAHF returns the initialized VARA HF modem, initializing it if necessary.
-func (a *App) VARAHF() (*vara.Modem, error) {
-	if err := a.initVARAHF(); err != nil {
+func (a *App) openPactor() (Modem, error) { return &pactorModem{app: a}, nil }
+
+func (p *pactorModem) modem() *pactor.Modem {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ptc
+}
+
+func (p *pactorModem) DialURLContext(ctx context.Context, url *transport.URL) (net.Conn, error) {
+	ptc, err := p.reopen(ctx, url)
+	if err != nil {
 		return nil, err
 	}
-	return a.varaHF, nil
+	// The PTC call ignores ctx; closing the modem is the only way to abort it.
+	stop := context.AfterFunc(ctx, func() { ptc.Close() })
+	defer stop()
+	conn, err := ptc.DialURL(url)
+	if err == nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return conn, err
 }
 
-func (a *App) initVARAHF() error {
-	if a.varaHF != nil && a.varaHF.Ping() {
+// reopen holds p.mu throughout so overlapping dials can't both open the serial port.
+func (p *pactorModem) reopen(ctx context.Context, url *transport.URL) (*pactor.Modem, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.ptc != nil {
+		p.ptc.Close()
+		p.ptc = nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	conf := p.app.config.Pactor
+	ptc, err := pactor.OpenModem(conf.Path, conf.Baudrate, p.app.options.MyCall, conf.InitScript, strings.Join(url.Params["init"], "\n"))
+	if err != nil || ptc == nil {
+		return nil, fmt.Errorf("pactor initialization failed: %w", err)
+	}
+	p.ptc = ptc
+	return ptc, nil
+}
+
+func (p *pactorModem) Ping() error                   { return nil }
+func (p *pactorModem) Listen() (net.Listener, error) { return nil, errListenNotImplemented }
+
+func (p *pactorModem) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.ptc == nil {
 		return nil
 	}
-	if a.varaHF != nil {
-		a.varaHF.Close()
+	err := p.ptc.Close()
+	p.ptc = nil
+	return err
+}
+
+type varaModem struct{ *vara.Modem }
+
+func (m varaModem) Ping() error {
+	if !m.Modem.Ping() {
+		return errors.New("ping failed")
 	}
-	m, err := a.initVARA(MethodVaraHF, a.config.VaraHF)
+	return nil
+}
+
+func (a *App) openVARAHF() (Modem, error) {
+	m, err := a.openVARA(MethodVaraHF, a.config.VaraHF)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if bw := a.config.VaraHF.Bandwidth; bw != 0 {
 		if err := m.SetBandwidth(fmt.Sprint(bw)); err != nil {
 			m.Close()
-			return err
+			return nil, err
 		}
 	}
-	a.varaHF = m
-	return nil
+	return varaModem{m}, nil
 }
 
-// VARAFM returns the initialized VARA FM modem, initializing it if necessary.
-func (a *App) VARAFM() (*vara.Modem, error) {
-	if err := a.initVARAFM(); err != nil {
+func (a *App) openVARAFM() (Modem, error) {
+	m, err := a.openVARA(MethodVaraFM, a.config.VaraFM)
+	if err != nil {
 		return nil, err
 	}
-	return a.varaFM, nil
+	return varaModem{m}, nil
 }
 
-func (a *App) initVARAFM() error {
-	if a.varaFM != nil && a.varaFM.Ping() {
-		return nil
-	}
-	if a.varaFM != nil {
-		a.varaFM.Close()
-	}
-	m, err := a.initVARA(MethodVaraFM, a.config.VaraFM)
-	if err != nil {
-		return err
-	}
-	a.varaFM = m
-	return nil
-}
-
-func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
+func (a *App) openVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) {
 	vConf := vara.ModemConfig{
 		Host:     conf.Host(),
 		CmdPort:  conf.CmdPort(),
@@ -397,7 +431,6 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) 
 	if err != nil {
 		return nil, fmt.Errorf("vara initialization failed: %w", err)
 	}
-	transport.RegisterDialer(scheme, m)
 	m.SetBusyFunc(a.onBusyChannel)
 
 	if conf.PTTControl {
@@ -413,37 +446,20 @@ func (a *App) initVARA(scheme string, conf cfg.VaraConfig) (*vara.Modem, error) 
 	return m, nil
 }
 
-// AGWPE returns the initialized AGWPE TNC, initializing it if necessary.
-func (a *App) AGWPE() (*agwpe.TNCPort, error) {
-	if err := a.initAGWPE(); err != nil {
-		return nil, err
-	}
-	return a.agwpe, nil
-}
-
-func (a *App) initAGWPE() error {
-	if a.agwpe != nil && a.agwpe.Ping() == nil {
-		return nil
-	}
-
-	if a.agwpe != nil {
-		a.agwpe.Close()
-	}
-
-	var err error
-	a.agwpe, err = agwpe.OpenPortTCP(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall)
+func (a *App) openAGWPE() (Modem, error) {
+	port, err := agwpe.OpenPortTCP(a.config.AGWPE.Addr, a.config.AGWPE.RadioPort, a.options.MyCall)
 	if err != nil {
-		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
+		return nil, fmt.Errorf("AGWPE TNC initialization failed: %w", err)
 	}
 
-	if v, err := a.agwpe.Version(); err != nil {
-		return fmt.Errorf("AGWPE TNC initialization failed: %w", err)
+	if v, err := port.Version(); err != nil {
+		port.Close()
+		return nil, fmt.Errorf("AGWPE TNC initialization failed: %w", err)
 	} else {
 		log.Printf("AGWPE TNC (%s) initialized", v)
 	}
 
-	transport.RegisterContextDialer(MethodAX25AGWPE, a.agwpe)
-	return nil
+	return port, nil
 }
 
 // defaultAX25Method resolves the generic ax25:// scheme to a implementation specific scheme.

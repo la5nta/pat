@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/la5nta/pat/cfg"
 )
@@ -96,6 +97,40 @@ func TestBuildXML(t *testing.T) {
 	`)
 	if got := b.buildXML(); !xmlEqual(t, got, expect) {
 		t.Errorf("Got unexpected XML:\n%s\n", string(got))
+	}
+}
+
+func TestBuildXMLEscapesNonASCII(t *testing.T) {
+	// Winlink Express does not honor the XML encoding declaration when
+	// reading form XML: raw UTF-8 is rendered as '?' on its side. The
+	// document must therefore be pure ASCII, with non-ASCII text encoded
+	// as numeric character references, as Winlink Express itself does.
+	location = time.FixedZone("UTC+1", 1*60*60)
+	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }
+	b := messageBuilder{
+		FormsMgr: &Manager{config: Config{
+			MyCall:          "LA5NTA",
+			AppVersion:      "v1.0.0",
+			GPSd:            cfg.GPSdConfig{Addr: gpsMockAddr},
+			LocatorProvider: mockLocatorProvider("JO29PJ"),
+		}},
+		Template:   Template{DisplayFormPath: "viewer.html", ReplyTemplatePath: "Accusé de réception.txt"},
+		FormValues: map[string]string{"var1": "éèçàù"},
+	}
+
+	got := b.buildXML()
+	for i, c := range got {
+		if c > unicode.MaxASCII {
+			t.Fatalf("Non-ASCII byte %#x at offset %d:\n%s", c, i, got)
+		}
+	}
+	for _, want := range []string{
+		"<var1>&#233;&#232;&#231;&#224;&#249;</var1>",
+		"<reply_template>Accus&#233; de r&#233;ception.txt</reply_template>",
+	} {
+		if !bytes.Contains(got, []byte(want)) {
+			t.Errorf("Missing %q in:\n%s", want, got)
+		}
 	}
 }
 

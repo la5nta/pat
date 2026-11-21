@@ -42,7 +42,8 @@ host:
 
   telnet:       [user:pass]@host:port
   ax25+linux:   (optional) host=axport
-  pactor:       (optional) serial device (e.g. COM1 or /dev/ttyUSB0)
+  pactor+serial: (optional) serial device (e.g. COM1 or /dev/ttyUSB0)
+  pactor+ptb:    (ignored) bridge address is read from pactor_ptb.addr in config
 
 path:
   The last element of the path is the target station's callsign. If the path has

@@ -102,7 +102,7 @@ type Config struct {
 	SerialTNC SerialTNCConfig `json:"serial-tnc"` // See SerialTNCConfig.
 	Ardop     ArdopConfig     `json:"ardop"`      // See ArdopConfig.
 	Pactor    PactorConfig    `json:"pactor"`     // See PactorConfig.
-	PTB       PTBConfig       `json:"ptb"`        // See PTBConfig
+	PactorPTB PTBConfig       `json:"pactor_ptb"` // See PTBConfig
 	Telnet    TelnetConfig    `json:"telnet"`     // See TelnetConfig.
 	VaraHF    VaraConfig      `json:"varahf"`     // See VaraConfig.
 	VaraFM    VaraConfig      `json:"varafm"`     // See VaraConfig.
@@ -286,8 +286,8 @@ type PactorConfig struct {
 	//   - serial (serial-attached TNC via ptc-go)
 	//   - ptb    (PACTOR-TCP-Bridge)
 	//
-	// When "ptb" is selected, the connection details are read from the
-	// separate PTB config section.
+	// When "ptb" is selected, the bridge address is read from the
+	// pactor_ptb config section.
 	Engine PactorEngine `json:"engine"`
 
 	// Path/port to TNC device (e.g. /dev/ttyUSB0 or COM1).
@@ -307,12 +307,6 @@ type PactorConfig struct {
 type PTBConfig struct {
 	// Network address of the PTB command socket (e.g. localhost:8300).
 	Addr string `json:"addr"`
-
-	// (optional) Reference name to the Hamlib rig to control frequency and ptt.
-	Rig string `json:"rig"`
-
-	// Enable PTT control through the rig.
-	PTTControl bool `json:"ptt_ctrl"`
 }
 
 func (p PTBConfig) IsZero() bool { return p == (PTBConfig{}) }
@@ -448,6 +442,7 @@ var DefaultConfig = Config{
 		Path:     "/dev/ttyUSB0",
 		Baudrate: 57600,
 	},
+	PactorPTB: PTBConfig{Addr: "localhost:8300"},
 	Telnet: TelnetConfig{
 		ListenAddr: ":8774",
 		Password:   "",

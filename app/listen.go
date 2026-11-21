@@ -222,7 +222,7 @@ func (l PTBListener) Init() (net.Listener, error) {
 	return m.NewListener()
 }
 func (l PTBListener) CurrentFreq() (Frequency, bool) {
-	if rig, ok := l.a.VFOForRig(l.a.Config().PTB.Rig); ok {
+	if rig, ok := l.a.VFOForRig(l.a.Config().Pactor.Rig); ok {
 		f, _ := rig.GetFreq()
 		return Frequency(f), ok
 	}

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -364,26 +363,11 @@ func (a *App) initPTB() error {
 		a.ptb.Close()
 	}
 
-	// Get addresses from config
-	addr := a.config.PTB.Addr
-	if addr == "" {
-		addr = ptb.DefaultAddr
-	}
+	addr := a.config.PactorPTB.Addr
 
-	host, portStr, err := net.SplitHostPort(addr)
-	if err != nil {
-		return fmt.Errorf("PTB modem initialization failed: invalid host:port pair: %w", err)
-	}
-
-	var port int
-	port, err = strconv.Atoi(portStr)
-	if err != nil {
-		return fmt.Errorf("PTB modem initialization failed: invalid port: %w", err)
-	}
-
-	dataAddr := net.JoinHostPort(host, strconv.Itoa(port+1))
-
-	a.ptb, err = ptb.OpenTCP(addr, dataAddr, a.options.MyCall)
+	// Empty dataAddr: ptb derives it as the command port + 1.
+	var err error
+	a.ptb, err = ptb.OpenTCP(addr, "", a.options.MyCall)
 	if err != nil {
 		return fmt.Errorf("PTB modem initialization failed: %w", err)
 	}
@@ -394,9 +378,8 @@ func (a *App) initPTB() error {
 	}
 
 	transport.RegisterDialer(MethodPactorPTB, a.ptb)
-	log.Printf("PTB modem initialized at %s (data: %s)", addr, dataAddr)
+	log.Printf("PTB modem initialized at %s", addr)
 	return nil
-
 }
 
 // VARAHF returns the initialized VARA HF modem, initializing it if necessary.
@@ -513,14 +496,10 @@ func (a *App) initAGWPE() error {
 // defaultPactorMethod resolves the generic pactor:// scheme to a implementation specific scheme.
 func (a *App) defaultPactorMethod() string {
 	switch a.config.Pactor.Engine {
-	case cfg.PactorEngine("serial"):
+	case cfg.PactorEngineSerial:
 		return MethodPactorSerial
-	case cfg.PactorEngine("ptb"):
+	case cfg.PactorEnginePTB:
 		return MethodPactorPTB
-	case "":
-		// Unset (e.g. legacy config not passed through UnmarshalJSON): fall
-		// back to the default engine.
-		return MethodPactorSerial
 	default:
 		panic(fmt.Sprintf("invalid pactor engine: %s", a.config.Pactor.Engine))
 	}

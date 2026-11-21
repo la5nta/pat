@@ -5,11 +5,16 @@ import (
 	"fmt"
 )
 
+const (
+	PactorEngineSerial PactorEngine = "serial"
+	PactorEnginePTB    PactorEngine = "ptb"
+)
+
 // DefaultPactorEngine is the engine used when none is configured.
 //
 // It defaults to the serial (ptc-go) driver for backwards compatibility with
 // existing pactor configurations.
-func DefaultPactorEngine() PactorEngine { return "serial" }
+func DefaultPactorEngine() PactorEngine { return PactorEngineSerial }
 
 type PactorEngine string
 
@@ -19,10 +24,7 @@ func (p *PactorEngine) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	switch v := PactorEngine(str); v {
-	case "":
-		*p = DefaultPactorEngine()
-		return nil
-	case "serial", "ptb":
+	case PactorEngineSerial, PactorEnginePTB:
 		*p = v
 		return nil
 	default:

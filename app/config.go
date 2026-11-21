@@ -98,6 +98,16 @@ func LoadConfig(cfgPath string, fallback cfg.Config) (config cfg.Config, err err
 		config.Pactor = cfg.DefaultConfig.Pactor
 	}
 
+	// Ensure we have a default Pactor engine
+	if config.Pactor.Engine == "" {
+		config.Pactor.Engine = cfg.DefaultPactorEngine()
+	}
+
+	// Ensure PactorPTB has default values
+	if config.PactorPTB.IsZero() {
+		config.PactorPTB = cfg.DefaultConfig.PactorPTB
+	}
+
 	// Ensure VARA FM and VARA HF has default values
 	if config.VaraHF.IsZero() {
 		config.VaraHF = cfg.DefaultConfig.VaraHF

@@ -687,6 +687,9 @@ func (m *Manager) fillFormTemplate(templatePath string, inReplyToMsg *fbb.Messag
 	data = insertionTagReplacer(m, inReplyToMsg, templatePath, "{", "}")(data)
 	data = variableReplacer("{", "}", formVars)(data)
 
+	// Install a Web Storage shim for the CSP sandbox's opaque origin (issue #561).
+	data = injectHeadScript(data, webStorageShim)
+
 	return data, nil
 }
 

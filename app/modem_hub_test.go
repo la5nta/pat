@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/la5nta/wl2k-go/transport"
@@ -71,28 +72,25 @@ func (o *fakeOpener) open() (Modem, error) {
 	return m, nil
 }
 
-func eventually(t *testing.T, cond func() bool) bool {
-	t.Helper()
-	for range 100 {
-		if cond() {
-			return true
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	return false
+// hubTest runs f in a synctest bubble, then outlasts every hub deadline so
+// abandoned opens, pings and closes must finish or fail the test as a leak.
+func hubTest(t *testing.T, name string, f func(t *testing.T)) {
+	t.Run(name, func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			f(t)
+			time.Sleep(modemOpenTimeout)
+		})
+	})
 }
 
-func newTestModemHub(t *testing.T) (*ModemHub, *fakeOpener) {
-	oldGrace, oldOpen, oldPing := modemGracePeriod, modemOpenTimeout, modemPingTimeout
-	modemGracePeriod, modemOpenTimeout, modemPingTimeout = 50*time.Millisecond, 100*time.Millisecond, 50*time.Millisecond
-	t.Cleanup(func() { modemGracePeriod, modemOpenTimeout, modemPingTimeout = oldGrace, oldOpen, oldPing })
+func newTestModemHub() (*ModemHub, *fakeOpener) {
 	o := &fakeOpener{}
 	return NewModemHub(map[string]ModemOpener{"test": o.open}), o
 }
 
 func TestModemHub(t *testing.T) {
-	t.Run("ConcurrentAcquireOpensOnce", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "ConcurrentAcquireOpensOnce", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		var wg sync.WaitGroup
 		for range 5 {
@@ -108,24 +106,25 @@ func TestModemHub(t *testing.T) {
 		}
 	})
 
-	t.Run("ReplacesDeadModemAndIgnoresStaleRelease", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "ReplacesDeadModemAndIgnoresStaleRelease", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		m1, release1, _ := h.Acquire(context.Background(), "test")
 		m1.(*fakeModem).dead.Store(true)
 		m2, _, _ := h.Acquire(context.Background(), "test")
-		if m1 == m2 || !eventually(t, m1.(*fakeModem).closed.Load) || o.opens.Load() != 2 {
+		synctest.Wait()
+		if m1 == m2 || !m1.(*fakeModem).closed.Load() || o.opens.Load() != 2 {
 			t.Fatal("dead modem was not closed and replaced")
 		}
 		release1()
-		time.Sleep(2 * modemGracePeriod)
+		time.Sleep(modemGracePeriod + time.Second)
 		if m2.(*fakeModem).closed.Load() {
 			t.Error("stale release tore down the replacement")
 		}
 	})
 
-	t.Run("UncomparableModem", func(t *testing.T) {
-		h, _ := newTestModemHub(t)
+	hubTest(t, "UncomparableModem", func(t *testing.T) {
+		h, _ := newTestModemHub()
 		defer h.Close()
 		inner := &fakeModem{}
 		h.slots["test"].open = func() (Modem, error) { return uncomparableModem{fakeModem: inner}, nil }
@@ -134,57 +133,56 @@ func TestModemHub(t *testing.T) {
 			t.Fatal(err)
 		}
 		release()
-		if !eventually(t, inner.closed.Load) {
+		time.Sleep(modemGracePeriod + time.Second)
+		if !inner.closed.Load() {
 			t.Error("modem not closed after grace period")
 		}
 	})
 
-	t.Run("BlockingCloseDoesNotFreezeHub", func(t *testing.T) {
-		h, _ := newTestModemHub(t)
+	hubTest(t, "BlockingCloseDoesNotFreezeHub", func(t *testing.T) {
+		h, _ := newTestModemHub()
 		defer h.Close()
 		m, release, _ := h.Acquire(context.Background(), "test")
 		block := make(chan struct{})
 		defer close(block)
 		m.(*fakeModem).block = block
 		release()
-		if !eventually(t, m.(*fakeModem).closed.Load) {
+		time.Sleep(modemGracePeriod + time.Second)
+		if !m.(*fakeModem).closed.Load() {
 			t.Fatal("not closed after grace period")
 		}
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			h.Current("test")
-			if _, release, err := h.Acquire(context.Background(), "test"); err == nil {
-				release()
-			}
-		}()
-		select {
-		case <-done:
-		case <-time.After(time.Second):
-			t.Fatal("hub blocked behind modem Close")
+		h.Current("test")
+		if _, release, err := h.Acquire(context.Background(), "test"); err != nil {
+			t.Fatal(err)
+		} else {
+			release()
 		}
 	})
 
-	t.Run("GracePeriod", func(t *testing.T) {
-		h, _ := newTestModemHub(t)
+	hubTest(t, "GracePeriod", func(t *testing.T) {
+		h, _ := newTestModemHub()
 		defer h.Close()
 		m, release, _ := h.Acquire(context.Background(), "test")
 		release()
 		release()
 		_, release, _ = h.Acquire(context.Background(), "test")
-		time.Sleep(2 * modemGracePeriod)
+		time.Sleep(modemGracePeriod + time.Second)
 		if m.(*fakeModem).closed.Load() {
 			t.Fatal("closed while held")
 		}
 		release()
-		time.Sleep(2 * modemGracePeriod)
+		time.Sleep(modemGracePeriod - time.Second)
+		if m.(*fakeModem).closed.Load() {
+			t.Fatal("closed before grace period")
+		}
+		time.Sleep(2 * time.Second)
 		if !m.(*fakeModem).closed.Load() || h.Current("test") != nil {
 			t.Error("not closed after grace period")
 		}
 	})
 
-	t.Run("FailedOpenLeavesNoState", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "FailedOpenLeavesNoState", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		o.err = errors.New("unreachable")
 		if _, _, err := h.Acquire(context.Background(), "test"); err == nil {
@@ -196,13 +194,13 @@ func TestModemHub(t *testing.T) {
 		}
 	})
 
-	t.Run("CancelledAcquireReturnsWhileOpenWedged", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "CancelledAcquireReturnsWhileOpenWedged", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		o.gate = make(chan struct{})
 		defer close(o.gate)
 		go h.Acquire(context.Background(), "test")
-		eventually(t, func() bool { return o.opens.Load() == 1 })
+		synctest.Wait()
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		if _, _, err := h.Acquire(ctx, "test"); err != context.Canceled {
@@ -210,15 +208,20 @@ func TestModemHub(t *testing.T) {
 		}
 	})
 
-	t.Run("LateOpenIsClosedNotInstalled", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "LateOpenIsClosedNotInstalled", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		o.gate = make(chan struct{})
+		start := time.Now()
 		if _, _, err := h.Acquire(context.Background(), "test"); !errors.Is(err, context.DeadlineExceeded) {
 			t.Fatalf("err = %v, want deadline exceeded", err)
 		}
+		if d := time.Since(start); d < modemOpenTimeout {
+			t.Errorf("gave up after %v, want %v", d, modemOpenTimeout)
+		}
 		close(o.gate)
-		if !eventually(t, func() bool { m := o.last.Load(); return m != nil && m.closed.Load() }) {
+		synctest.Wait()
+		if m := o.last.Load(); m == nil || !m.closed.Load() {
 			t.Error("late modem not closed")
 		}
 		if h.Current("test") != nil {
@@ -226,23 +229,28 @@ func TestModemHub(t *testing.T) {
 		}
 	})
 
-	t.Run("PingTimeoutReplacesModem", func(t *testing.T) {
-		h, o := newTestModemHub(t)
+	hubTest(t, "PingTimeoutReplacesModem", func(t *testing.T) {
+		h, o := newTestModemHub()
 		defer h.Close()
 		m1, _, _ := h.Acquire(context.Background(), "test")
 		m1.(*fakeModem).hang = make(chan struct{})
 		defer close(m1.(*fakeModem).hang)
+		start := time.Now()
 		m2, _, err := h.Acquire(context.Background(), "test")
 		if err != nil || m2 == m1 || o.opens.Load() != 2 {
 			t.Fatalf("hung modem not replaced: err=%v opens=%d", err, o.opens.Load())
 		}
-		if !eventually(t, m1.(*fakeModem).closed.Load) {
+		if d := time.Since(start); d < modemPingTimeout {
+			t.Errorf("replaced after %v, want ping timeout %v", d, modemPingTimeout)
+		}
+		synctest.Wait()
+		if !m1.(*fakeModem).closed.Load() {
 			t.Error("hung modem not closed")
 		}
 	})
 
-	t.Run("CloseIgnoresHolds", func(t *testing.T) {
-		h, _ := newTestModemHub(t)
+	hubTest(t, "CloseIgnoresHolds", func(t *testing.T) {
+		h, _ := newTestModemHub()
 		m, release, _ := h.Acquire(context.Background(), "test")
 		h.Close()
 		release()
@@ -256,6 +264,19 @@ func TestModemHub(t *testing.T) {
 			t.Errorf("Acquire after Close: %v", err)
 		}
 	})
+
+	hubTest(t, "CloseBoundsWedgedModem", func(t *testing.T) {
+		h, _ := newTestModemHub()
+		m, _, _ := h.Acquire(context.Background(), "test")
+		block := make(chan struct{})
+		defer close(block)
+		m.(*fakeModem).block = block
+		start := time.Now()
+		h.Close()
+		if d := time.Since(start); d != modemPingTimeout {
+			t.Errorf("Close took %v, want %v", d, modemPingTimeout)
+		}
+	})
 }
 
 func TestConnectDialsAcquiredModem(t *testing.T) {
@@ -264,7 +285,7 @@ func TestConnectDialsAcquiredModem(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ev.Close()
-	h, o := newTestModemHub(t)
+	h, o := newTestModemHub()
 	defer h.Close()
 	a := &App{options: Options{MyCall: "N0CALL"}, websocketHub: noopWSSocket{}, eventLog: ev, modems: h}
 
@@ -296,7 +317,7 @@ type statusRecorder struct {
 func (r *statusRecorder) UpdateStatus() { r.dialing = r.a.dialing != nil }
 
 func TestConnectEarlyReturnClearsDialingStatus(t *testing.T) {
-	h, o := newTestModemHub(t)
+	h, o := newTestModemHub()
 	defer h.Close()
 	o.err = errors.New("no tnc")
 	a := &App{options: Options{MyCall: "N0CALL"}, modems: h}

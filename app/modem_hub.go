@@ -22,7 +22,7 @@ type Modem interface {
 
 type ModemOpener func() (Modem, error)
 
-var (
+const (
 	modemGracePeriod = 10 * time.Second
 	modemOpenTimeout = 15 * time.Second
 	modemPingTimeout = 3 * time.Second
@@ -102,7 +102,7 @@ func (h *ModemHub) Acquire(ctx context.Context, scheme string) (Modem, func(), e
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
-		m.Close()
+		go m.Close()
 		return nil, nil, errModemHubClosed
 	}
 	s.m = m
@@ -194,7 +194,8 @@ func (h *ModemHub) Close() {
 	}
 	h.mu.Unlock()
 	for scheme, m := range open {
-		if err := m.Close(); err != nil {
+		closeModem := func() (struct{}, error) { return struct{}{}, m.Close() }
+		if _, err := within(context.Background(), modemPingTimeout, closeModem, func(struct{}, error) {}); err != nil {
 			log.Printf("Failure to close %s modem: %s", scheme, err)
 		}
 	}

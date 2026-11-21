@@ -282,9 +282,17 @@
                 <input type="text" class="form-control" id="targetFilterInput" placeholder="(any target)">
               </div>
               <div class="col-xs-6 col-sm-3 rms-filter-col">
-                <button id="updateRmslistButton" class="btn btn-default btn-link">
-                  Update cache
-                </button>
+                <div class="btn-group">
+                  <button id="updateRmslistButton" class="btn btn-default">Update list</button>
+                  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-label="More update options">
+                    <span class="caret"></span>
+                  </button>
+                  <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" id="updateRmslistInternet">Via internet</a></li>
+                    <li id="requestRmslistViaRadioItem"><a href="#" id="requestRmslistViaRadioButton"
+                      title="Post a request to the outbox. The reply is applied when received in a later session.">Via radio&hellip;</a></li>
+                  </ul>
+                </div>
               </div>
             </div>
             <div class="table-responsive rms-table-container">

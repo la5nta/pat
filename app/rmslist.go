@@ -110,12 +110,7 @@ func (a *App) ReadRMSList(ctx context.Context, forceDownload bool, filterFn func
 		log.Print("Missing or Invalid Locator, will not compute distance and Azimuth")
 	}
 
-	fileName := "rmslist"
-	isDefaultServiceCode := len(a.config.ServiceCodes) == 1 && a.config.ServiceCodes[0] == "PUBLIC"
-	if !isDefaultServiceCode {
-		fileName += "-" + strings.Join(a.config.ServiceCodes, "-")
-	}
-	filePath := filepath.Join(directories.DataDir(), fileName+".json")
+	filePath := a.rmsListPath()
 	debug.Printf("RMS list file is %s", filePath)
 
 	f, err := cmsapi.GetGatewayStatusCached(ctx, filePath, forceDownload, a.config.ServiceCodes...)

@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { alert } from '../utils';
 import { PredictionPopover } from './prediction-popover';
 import { PredictionModal } from './prediction-modal';
 
@@ -27,6 +28,16 @@ class RmslistView {
 
     $('#modeSearchSelect').change(() => {
       this.updateRmslist();
+      this.updateRequestViaRadioButton();
+    });
+    this.updateRequestViaRadioButton();
+    $('#updateRmslistInternet').click((e) => {
+      e.preventDefault();
+      $('#updateRmslistButton').click();
+    });
+    $('#requestRmslistViaRadioButton').click((e) => {
+      e.preventDefault();
+      this.requestViaRadio();
     });
 
     $('#bandSearchSelect').change(() => {
@@ -75,6 +86,20 @@ class RmslistView {
 
     // Refresh the RMS list with the new filter
     this.updateRmslist();
+  }
+
+  // The reply size depends on the mode, so a specific mode is required.
+  updateRequestViaRadioButton() {
+    $('#requestRmslistViaRadioItem').toggleClass('disabled', !$('#modeSearchSelect').val());
+  }
+
+  requestViaRadio() {
+    // The Winlink API has no separate VARA FM/HF lists.
+    if ($('#requestRmslistViaRadioItem').hasClass('disabled')) return;
+    const mode = $('#modeSearchSelect').val().replace(/^vara.*/, 'vara');
+    $.post('/api/rmslist/request', { mode })
+      .done(() => alert('Request posted to the outbox. Connect to send it, then connect again later to receive the updated list.'))
+      .fail((xhr) => alert('Request failed: ' + xhr.responseText));
   }
 
   updateRmslist(forceDownload) {

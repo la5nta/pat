@@ -22,7 +22,17 @@ func RMSListHandle(ctx context.Context, a *app.App, args []string) {
 	forceDownload := set.BoolP("force-download", "d", false, "")
 	byDistance := set.BoolP("sort-distance", "s", false, "")
 	byLinkQuality := set.BoolP("sort-link-quality", "q", false, "Sort by predicted link quality")
+	viaRF := set.StringP("request-via-radio", "r", "", "")
 	set.Parse(args)
+
+	if *viaRF != "" {
+		mid, err := a.RequestRMSListViaRF(strings.ToLower(*viaRF))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Request %s posted to outbox. Connect twice: once to send it, and again later to receive the reply.\n", mid)
+		return
+	}
 
 	var query string
 	if len(set.Args()) > 0 {

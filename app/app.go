@@ -438,6 +438,11 @@ func (a *App) onServiceMessageReceived(msg *fbb.Message) {
 		}
 	}()
 
+	// RMS list replies are large JSON documents. Apply them silently.
+	if a.applyRMSListReply(msg) {
+		return
+	}
+
 	// Write all service messages to the log
 	body, _ := msg.Body()
 	subject := msg.Subject()

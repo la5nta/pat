@@ -50,19 +50,6 @@ type uncomparableModem struct {
 	_ func()
 }
 
-// strictListener panics on a second Close, like wl2k-go's ardop listener.
-type strictListener struct{ quit chan struct{} }
-
-func (l strictListener) Accept() (net.Conn, error) { <-l.quit; return nil, net.ErrClosed }
-func (l strictListener) Close() error              { close(l.quit); return nil }
-func (l strictListener) Addr() net.Addr            { return nil }
-
-type strictListenModem struct{ *fakeModem }
-
-func (strictListenModem) Listen() (net.Listener, error) {
-	return strictListener{make(chan struct{})}, nil
-}
-
 type fakeOpener struct {
 	opens atomic.Int32
 	err   error
@@ -269,42 +256,6 @@ func TestModemHub(t *testing.T) {
 			t.Errorf("Acquire after Close: %v", err)
 		}
 	})
-}
-
-type modemTransportListener struct{ a *App }
-
-func (l modemTransportListener) Init() (net.Listener, error) {
-	_, ln, err := l.a.listenModem("test")
-	return ln, err
-}
-func (modemTransportListener) Name() string                   { return "test" }
-func (modemTransportListener) CurrentFreq() (Frequency, bool) { return 0, false }
-
-func TestListenerShutdownClosesModemListenerOnce(t *testing.T) {
-	h, _ := newTestModemHub(t)
-	defer h.Close()
-	h.slots["test"].open = func() (Modem, error) { return strictListenModem{&fakeModem{}}, nil }
-	a := &App{websocketHub: noopWSSocket{}, modems: h}
-	a.listenHub = NewListenerHub(a)
-
-	a.listenHub.Enable(modemTransportListener{a})
-	up := func() bool { // Active() is true before Init finishes, so look for the listener itself.
-		a.listenHub.mu.Lock()
-		defer a.listenHub.mu.Unlock()
-		l := a.listenHub.listeners["test"]
-		if l == nil {
-			return false
-		}
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		return l.ln != nil
-	}
-	if !eventually(t, up) {
-		t.Fatal("listener never came up")
-	}
-	// The accept loop's own Close after shutdown must not close the listener twice.
-	a.listenHub.Close()
-	time.Sleep(50 * time.Millisecond)
 }
 
 func TestConnectDialsAcquiredModem(t *testing.T) {

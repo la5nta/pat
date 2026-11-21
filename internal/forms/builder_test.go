@@ -58,6 +58,59 @@ func TestInsertionTagReplacer(t *testing.T) {
 	}
 }
 
+func TestDefaultFormValues(t *testing.T) {
+	m := &Manager{config: Config{MyCall: "LA5NTA"}}
+	tests := []struct {
+		isReply   bool
+		msgIsRepl string
+	}{
+		{isReply: false, msgIsRepl: "False"},
+		{isReply: true, msgIsRepl: "True"},
+	}
+	for _, test := range tests {
+		vars := m.defaultFormValues(test.isReply)
+		if got := vars["msgsender"]; got != "LA5NTA" {
+			t.Errorf("msgsender = %q, want %q", got, "LA5NTA")
+		}
+		if got := vars["msgisreply"]; got != test.msgIsRepl {
+			t.Errorf("msgisreply = %q, want %q", got, test.msgIsRepl)
+		}
+		for _, key := range []string{"msgto", "msgcc", "msgsubject", "msgbody", "msgp2p", "txtstr"} {
+			if got := vars[key]; got != "" {
+				t.Errorf("%s = %q, want empty string", key, got)
+			}
+		}
+		for key, want := range map[string]string{
+			"msgisforward":         "False",
+			"msgisacknowledgement": "False",
+			"msgseqnum":            "0",
+		} {
+			if got := vars[key]; got != want {
+				t.Errorf("%s = %q, want %q", key, got, want)
+			}
+		}
+	}
+}
+
+// TestVariableReplacerWithDefaultFormValues ensures the implicit message
+// variables are substituted in HTML forms, which reference them with the
+// {var ...} pattern (e.g. the ICS213 form's hidden theMsgSender input #567).
+func TestVariableReplacerWithDefaultFormValues(t *testing.T) {
+	m := &Manager{config: Config{MyCall: "LA5NTA"}}
+	replaceVars := variableReplacer("{", "}", m.defaultFormValues(false))
+	tests := map[string]string{
+		`value="{var MsgSender}"`: `value="LA5NTA"`, // #567
+		`Sender: {var msgsender}`: `Sender: LA5NTA`, // Tags are case-insensitive
+		`Reply: {var MsgIsReply}`: `Reply: False`,
+		`{var UnknownVar}`:        `{var UnknownVar}`, // Unknown variables are left as-is
+	}
+	for in, want := range tests {
+		if got := replaceVars(in); got != want {
+			t.Errorf("variableReplacer(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestBuildXML(t *testing.T) {
 	location = time.FixedZone("UTC+1", 1*60*60)
 	now = func() time.Time { return time.Date(1988, 3, 21, 0, 0, 0, 0, location).In(time.UTC) }

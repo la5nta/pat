@@ -57,12 +57,57 @@ func (b messageBuilder) build() (Message, error) {
 	return msg, nil
 }
 
-// TODO: What are these "default form vars"? It looks to be a subset of the
-// official insertion tags, but there is no mention of these special vars in
-// the forms documentation. Consider doing insertion tag replacement with the
-// {var ...} pattern instead of this.
+// defaultFormValues returns the implicit Winlink Express "message variables".
+//
+// These are not part of the documented template specification (see the
+// RMSE_FORMS documentation copied under internal/forms/docs), which only
+// defines variables assigned by Def: statements and a fixed set of insertion
+// tags. However, the official standard forms reference them heavily anyway
+// (<var MsgSender> in text templates, {var MsgSender} in HTML forms), so
+// Winlink Express evidently defines them implicitly. We emulate that
+// behavior.
+func (m *Manager) defaultFormValues(isReply bool) map[string]string {
+	vars := map[string]string{
+		// The documented <MsgSender> insertion tag is defined as "the
+		// callsign or tactical address of the message sender".
+		"msgsender": m.config.MyCall,
+
+		// Some defaults that we can't set yet. Winlink doesn't seem to care about these.
+		"msgto":      "",
+		"msgcc":      "",
+		"msgsubject": "",
+		"msgbody":    "",
+		"msgp2p":     "",
+		"txtstr":     "",
+
+		"msgisforward":         "False",
+		"msgisacknowledgement": "False",
+
+		// TODO: Implement sequences
+		"msgseqnum": "0",
+	}
+	if isReply {
+		vars["msgisreply"] = "True"
+	} else {
+		vars["msgisreply"] = "False"
+	}
+	return vars
+}
+
+// setDefaultFormValues seeds b.FormValues with the implicit Winlink Express
+// "message variables" (see defaultFormValues), without overriding explicitly
+// set values.
 func (b messageBuilder) setDefaultFormValues() {
-	if b.InReplyToMsg != nil {
+	isReply := b.InReplyToMsg != nil
+	for key, value := range b.FormsMgr.defaultFormValues(isReply) {
+		if _, ok := b.FormValues[key]; !ok {
+			b.FormValues[key] = value
+		}
+	}
+
+	// Unlike the other defaults, MsgIsReply reflects the actual reply state
+	// and overrides any posted form value (preserving historic behavior).
+	if isReply {
 		b.FormValues["msgisreply"] = "True"
 
 		// Here be dragons.
@@ -75,31 +120,6 @@ func (b messageBuilder) setDefaultFormValues() {
 		}
 	} else {
 		b.FormValues["msgisreply"] = "False"
-	}
-	for _, key := range []string{"msgsender"} {
-		if _, ok := b.FormValues[key]; !ok {
-			b.FormValues[key] = b.FormsMgr.config.MyCall
-		}
-	}
-
-	// some defaults that we can't set yet. Winlink doesn't seem to care about these
-	// Set only if they're not set by form values.
-	for _, key := range []string{"msgto", "msgcc", "msgsubject", "msgbody", "msgp2p", "txtstr"} {
-		if _, ok := b.FormValues[key]; !ok {
-			b.FormValues[key] = ""
-		}
-	}
-	for _, key := range []string{"msgisforward", "msgisacknowledgement"} {
-		if _, ok := b.FormValues[key]; !ok {
-			b.FormValues[key] = "False"
-		}
-	}
-
-	// TODO: Implement sequences
-	for _, key := range []string{"msgseqnum"} {
-		if _, ok := b.FormValues[key]; !ok {
-			b.FormValues[key] = "0"
-		}
 	}
 }
 

@@ -367,7 +367,13 @@ func (m *Manager) GetFormTemplateHandler(mboxRoot string) http.HandlerFunc {
 			return
 		}
 
-		responseText, err := m.fillFormTemplate(formPath, nil, "/api/form?"+r.URL.Query().Encode(), nil)
+		// Seed the implicit message variables so that {var MsgSender} and
+		// friends are substituted when the form is served. Winlink Express
+		// defines these implicitly (see defaultFormValues); if left
+		// unresolved, the literal ends up verbatim in the composed message
+		// (issue #567).
+		formVars := m.defaultFormValues(r.URL.Query().Get("in-reply-to") != "")
+		responseText, err := m.fillFormTemplate(formPath, nil, "/api/form?"+r.URL.Query().Encode(), formVars)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			log.Printf("problem filling form template file %s %s: can't open template %s. Err: %s", r.Method, r.URL.Path, formPath, err)

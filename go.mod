@@ -14,7 +14,7 @@ require (
 	github.com/harenber/ptc-go/v2 v2.2.4
 	github.com/hashicorp/go-version v1.9.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/la5nta/wl2k-go v1.0.1
+	github.com/la5nta/wl2k-go v1.0.2
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/n8jja/Pat-Vara v1.2.0
 	github.com/pd0mz/go-maidenhead v1.0.0

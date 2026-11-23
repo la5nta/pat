@@ -1,4 +1,5 @@
 import { alert, isImageSuffix, formatFileSize, formXmlToFormName, setCookie, deleteCookie } from '../utils/index.js';
+import { messagePath } from '../message-api/index.js';
 
 const tokenfieldConfig = {
   delimiter: [',', ';', ' '], // Must be in sync with SplitFunc (utils.go)
@@ -322,7 +323,7 @@ export class Composer {
     $('#msg_body')[0].setSelectionRange(0, 0);
 
     // Add attachments
-    this._reAttachFiles(this._buildMessagePath(folder, data.MID), data.Files);
+    this._reAttachFiles(messagePath(folder, data.MID), data.Files);
 
     $('#composer').modal('show');
     $('#msg_to-tokenfield').focus();
@@ -338,7 +339,7 @@ export class Composer {
     $('#msg_body')[0].setSelectionRange(0, 0);
 
     // Add attachments
-    this._reAttachFiles(this._buildMessagePath(folder, data.MID), data.Files);
+    this._reAttachFiles(messagePath(folder, data.MID), data.Files);
 
     $('#composer').modal('show');
     $('#msg_to-tokenfield').focus();
@@ -374,7 +375,7 @@ export class Composer {
   }
 
   _showReplyForm(folder, mid, msg) {
-    const orgMsgUrl = this._buildMessagePath(folder, mid);
+    const orgMsgUrl = messagePath(folder, mid);
     for (let i = 0; msg.Files && i < msg.Files.length; i++) {
       const file = msg.Files[i];
       const formName = formXmlToFormName(file.Name);
@@ -407,9 +408,5 @@ export class Composer {
       );
       return;
     }
-  }
-
-  _buildMessagePath(folder, mid) {
-    return '/api/mailbox/' + encodeURIComponent(folder) + '/' + encodeURIComponent(mid);
   }
 }

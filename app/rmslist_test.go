@@ -1,11 +1,17 @@
 package app
 
 import (
+	"github.com/adrg/xdg"
 	"net/url"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/la5nta/pat/cfg"
 	"github.com/la5nta/pat/internal/cmsapi"
+	"github.com/la5nta/wl2k-go/fbb"
+	"github.com/la5nta/wl2k-go/mailbox"
 )
 
 func Test_toURL(t *testing.T) {
@@ -178,4 +184,45 @@ func Test_toURL(t *testing.T) {
 func parseURL(str string) *url.URL {
 	parse, _ := url.Parse(str)
 	return parse
+}
+
+func Test_applyRMSListReply(t *testing.T) {
+	// xdg reads the environment at init, so set its variable directly.
+	dataHome := t.TempDir()
+	old := xdg.DataHome
+	xdg.DataHome = dataHome
+	t.Cleanup(func() { xdg.DataHome = old })
+	a := &App{config: cfg.Config{ServiceCodes: []string{"PUBLIC"}}, mbox: mailbox.NewDirHandler(t.TempDir(), false)}
+	if err := a.mbox.Prepare(); err != nil {
+		t.Fatal(err)
+	}
+	mk := func(subject, body string) *fbb.Message {
+		m := fbb.NewMessage(fbb.Private, "SERVICE")
+		m.AddTo("N0CALL")
+		m.SetSubject(subject)
+		m.SetBody(body)
+		return m
+	}
+	if a.applyRMSListReply(mk("Hello", `{"Gateways":[{}]}`)) {
+		t.Error("applied reply with wrong subject")
+	}
+	if a.applyRMSListReply(mk("INQUIRY: ABC", `no json`)) {
+		t.Error("applied non-JSON reply")
+	}
+	if p := a.rmsListPath(); !strings.HasPrefix(p, dataHome) {
+		t.Fatalf("cache path %s is outside the test data dir", p)
+	}
+	valid := mk("INQUIRY: ABC", `{"Gateways":[{"Callsign":"N0GW"}]}`)
+	if err := a.mbox.ProcessInbound(valid); err != nil {
+		t.Fatal(err)
+	}
+	if !a.applyRMSListReply(valid) {
+		t.Fatal("did not apply valid reply")
+	}
+	if a.mbox.InboxCount() != 0 || a.mbox.ArchiveCount() != 1 {
+		t.Errorf("reply not archived: inbox=%d archive=%d", a.mbox.InboxCount(), a.mbox.ArchiveCount())
+	}
+	if b, err := os.ReadFile(a.rmsListPath()); err != nil || !strings.Contains(string(b), "N0GW") {
+		t.Errorf("cache not written: %v %s", err, b)
+	}
 }

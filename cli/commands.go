@@ -116,6 +116,7 @@ var Commands = []app.Command{
 			"--mode, -m":              "Mode filter.",
 			"--band, -b":              "Band filter (e.g. '80m').",
 			"--force-download, -d":    "Force download of latest list from winlink.org.",
+			"--request-via-radio, -r": "Post a request for an updated list for the given mode (e.g. vara) to the outbox. The reply updates the list on next receive.",
 			"--sort-distance, -s":     "Sort by distance",
 			"--sort-link-quality, -q": "Sort by predicted link quality (requires VOACAP)",
 		},

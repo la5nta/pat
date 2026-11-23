@@ -103,6 +103,7 @@ func NewHandler(app *app.App) *Handler {
 	r.HandleFunc("/api/coords_to_locator", h.coordsToLocatorHandler).Methods("POST")
 	r.HandleFunc("/api/qsy", h.qsyHandler).Methods("POST")
 	r.HandleFunc("/api/rmslist", h.rmslistHandler).Methods("GET")
+	r.HandleFunc("/api/rmslist/request", h.rmslistRequestHandler).Methods("POST")
 
 	r.HandleFunc("/api/config", h.configHandler).Methods("GET", "PUT")
 	r.HandleFunc("/api/config/connect_aliases", h.connectAliasesHandler).Methods("GET")
@@ -252,6 +253,16 @@ func (h Handler) bandwidthsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h Handler) rmslistRequestHandler(w http.ResponseWriter, req *http.Request) {
+	mid, err := h.RequestRMSListViaRF(strings.ToLower(req.FormValue("mode")))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"mid": mid})
 }
 
 func (h Handler) rmslistHandler(w http.ResponseWriter, req *http.Request) {
